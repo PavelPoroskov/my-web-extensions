@@ -1,0 +1,22 @@
+{
+  "manifest_version": 2,
+  "name": "Bookmark Folder",
+  "version": "1.0",
+  "description": "Show bookmark folder for current url",
+
+  "permissions": [
+    "activeTab",
+    "bookmarks",
+    "tabs"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [{
+    "matches": [
+      "http://*/*",
+      "https://*/*"
+    ],
+    "js": ["show-folder.js"]
+  }]
+}

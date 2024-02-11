@@ -1,0 +1,12 @@
+// TODO extensions options: what show
+//  show folder only: Cat
+//  show full path (reverse): Cat / Predators / Animals
+//  show full path (direct): Animals \ Predators \ Cat
+
+// TODO hide notification with folder from page
+//  red cross at right top corner
+
+// TODO message position
+//    top right corner
+//    top left corner
+//    top middle

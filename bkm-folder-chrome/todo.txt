@@ -1,0 +1,11 @@
+// TODO from manifest_version 2 -> 3 until July 2024
+// FROM
+// "manifest_version": 2, 
+// "background": {
+//   "scripts": ["background.js"]
+// }
+// TO
+// "manifest_version": 3, 
+// "background": {
+//   "service-worker": "background.js"
+// }
