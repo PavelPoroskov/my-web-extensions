@@ -5,10 +5,10 @@ let bookmarkFolder;
 const SHOW_LOG = false
 const log = SHOW_LOG ? console.log : () => { };
 
-function updateActiveTab(tabs) {
+function updateActiveTab() {
 
   function isSupportedProtocol(urlString) {
-    let supportedProtocols = ["https:", "http:", "ftp:", "file:"];
+    let supportedProtocols = ["https:", "http:"];
     let url = document.createElement('a');
     url.href = urlString;
     return supportedProtocols.indexOf(url.protocol) != -1;

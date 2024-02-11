@@ -1,4 +1,4 @@
-// TODO from manifest_version 2 -> 3 until July 2024
+// TODO from manifest_version 2 -> 3 until June 2024
 // FROM
 // "manifest_version": 2, 
 // "background": {
@@ -9,3 +9,8 @@
 // "background": {
 //   "service-worker": "background.js"
 // }
+//
+//    TODO use async/await for manifest 3
+// chrome.tabs.query()
+// chrome.bookmarks.search()
+// chrome.bookmarks.get()
