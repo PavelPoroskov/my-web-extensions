@@ -1,58 +1,82 @@
-let currentTab;
-let currentBookmark;
-let bookmarkFolder;
 
-const SHOW_LOG = false
+const SHOW_LOG = true;
 const log = SHOW_LOG ? console.log : () => { };
 
-function updateActiveTab(tabs) {
+const supportedProtocols = ["https:", "http:"];
 
-  function isSupportedProtocol(urlString) {
-    let supportedProtocols = ["https:", "http:"];
-    let url = document.createElement('a');
-    url.href = urlString;
-    return supportedProtocols.indexOf(url.protocol) != -1;
-  }
+function isSupportedProtocol(urlString) {
+  let url = document.createElement('a');
+  url.href = urlString;
 
-  function doGetBookmarkParent(parent) {
-    log('parent', parent);
-    bookmarkFolder = parent[0].title;
-    log('bookmarkFolder', bookmarkFolder);
-    log('currentTab.id', currentTab.id);
-    chrome.tabs.sendMessage(currentTab.id, {
-      command: "bookmarkFolder",
-      bookmarkFolder,
-    });
-  }
-  function doBookmarkSearchResult(bookmarks) {
-    log('searching result', bookmarks);
-    currentBookmark = bookmarks[0];
-    const parentId = currentBookmark && currentBookmark.parentId;
+  return supportedProtocols.indexOf(url.protocol) != -1;
+}
 
-    if (parentId) {
-      chrome.bookmarks.get(parentId, doGetBookmarkParent);
-    } else {
-      bookmarkFolder = undefined;
-      chrome.tabs.sendMessage(currentTab.id, {
-        command: "bookmarkFolder",
-        bookmarkFolder,
-      });
-    }
-  }
+function getBookmarkInfo(url, fnResolve) {
+  chrome.bookmarks.search(
+    { url },
+    (bookmarks) => {
+      const bookmark = bookmarks[0];
+      const parentId = bookmark && bookmark.parentId;
 
-  function updateTab(tabs) {
-    if (tabs[0]) {
-      currentTab = tabs[0];
-      if (isSupportedProtocol(currentTab.url)) {
-        let searching = chrome.bookmarks.search({ url: currentTab.url }, doBookmarkSearchResult);
+      if (parentId) {
+        chrome.bookmarks.get(
+          parentId, 
+          (bookmarkFolder) => {
+            fnResolve({
+              folderName: bookmarkFolder[0].title,
+            });
+          }
+        );
       } else {
-        console.log(`Bookmark it! does not support the '${currentTab.url}' URL.`)
+        fnResolve();
+      }
+    },
+  );
+}
+
+function updateTab(tab) {
+  log('updateTab 00', tab)
+  if (isSupportedProtocol(tab.url)) {
+    log('updateTab 11')
+    getBookmarkInfo(
+      tab.url,
+      (bookmarkInfo) => {
+        log('updateTab 22')
+        chrome.tabs.sendMessage(tab.id, {
+          command: "bookmarkInfo",
+          folderName: bookmarkInfo?.folderName,
+        });    
+      }
+    )
+  }
+}
+
+function updateActiveTab() {
+  chrome.tabs.query(
+    { active: true, lastFocusedWindow: true },
+    (tabs) => {
+      if (tabs[0]) {
+        updateTab(tabs[0]);
       }
     }
-  }
+  );
+}
 
-  let gettingActiveTab = chrome.tabs.query({ active: true, lastFocusedWindow: true }, updateTab);
-  // gettingActiveTab.then(updateTab);
+const tabsOnUpdated = (tabId, changeInfo, Tab) => {
+  log('tabsOnUpdated')
+  log('   changeInfo', changeInfo)
+  log('   changeInfo.url', changeInfo.url)
+  if (changeInfo.url || changeInfo?.status === 'complete') {
+    updateTab(Tab);
+  }
+}
+const tabsOnActivated = ({ tabId }) => {
+  chrome.tabs.get(
+    tabId,
+    (Tab) => {
+      updateTab(Tab);
+    }
+  )
 }
 
 // listen for bookmarks being created
@@ -61,12 +85,13 @@ chrome.bookmarks.onCreated.addListener(updateActiveTab);
 // listen for bookmarks being removed
 chrome.bookmarks.onRemoved.addListener(updateActiveTab);
 chrome.bookmarks.onMoved.addListener(updateActiveTab);
+//? chrome.bookmarks.onChanged
 
 // listen to tab URL changes
-chrome.tabs.onUpdated.addListener(updateActiveTab);
+chrome.tabs.onUpdated.addListener(tabsOnUpdated);
 
 // listen to tab switching
-chrome.tabs.onActivated.addListener(updateActiveTab);
+chrome.tabs.onActivated.addListener(tabsOnActivated);
 
 // listen for window switching
 chrome.windows.onFocusChanged.addListener(updateActiveTab);

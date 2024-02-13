@@ -10,3 +10,13 @@
 //    top right corner
 //    top left corner
 //    top middle
+
+// [done] position: fixed
+
+// ?cache last 200 results
+// ger result for all opened tabs and cache
+
+// start search folder on opening link
+
+// colour bookmarked link in page. add overtext with FolderName for link
+
