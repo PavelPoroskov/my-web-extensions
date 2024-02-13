@@ -2,7 +2,7 @@ const SHOW_LOG = false
 const log = SHOW_LOG ? console.log : () => {};
 
 (function() {
-  log('IN content-script');
+  console.log('IN content-script');
   /**
    * Check and set a global guard variable.
    * If this content script is injected into the same page again,
@@ -13,32 +13,56 @@ const log = SHOW_LOG ? console.log : () => {};
   }
   window.hasRun = true;
 
-  const uniqBkmNotifyId = 'uniqBkmNotifyId'
+  const uniqBookmarkInfoId = 'uniqBookmarkInfoId';
 
-  function showFolder(text) {
-    log('showNotification 00');
+  const rootInfoStyle = [
+    'position: absolute',
+    'position: -webkit-sticky',
+    // 'position: sticky',
+    'position: fixed',
+    'right: 0',
+    'top: 0',
+    'z-index: 999',
+    'display: flex',
+    'background-color: transparent',
+  ].join(';');
+
+  function showBookmarkInfo(text) {
+    log('showBookmarkInfo 00');
     if (text) {
-      log('showNotification 11');  
-      let el = document.getElementById(uniqBkmNotifyId);
+      log('showBookmarkInfo 11');  
+      let el = document.getElementById(uniqBookmarkInfoId);
   
+      // createTextNode is safe method. createTextNode
+      const textNode = document.createTextNode(`${text} :bkm`);
+
       if (el) {
-        log('showNotification 11 11');
-        const textNode = document.createTextNode(`${text} :bkmk`);
+        log('showBookmarkInfo 11 11');
         log('update', el.childNodes[0]);
         el.replaceChild(textNode, el.childNodes[0]);
       } else {
-        log('showNotification 22');
-        el = document.createElement('div');
-        el.setAttribute('id',uniqBkmNotifyId);
-        const textNode = document.createTextNode(`${text} :bkmk`);
-        el.appendChild(textNode);
-        // el.style = "position: absolute; position: -webkit-sticky; position: sticky; right: 0; top: 0; z-index: 999; background-color: yellow; color: black"
-        el.style = "position: absolute; right: 0; top: 0; z-index: 999; background-color: yellow; color: black"
+        log('showBookmarkInfo 22');
+        const rootInfo = document.createElement('div');
+        rootInfo.style = rootInfoStyle;
+        const divL = document.createElement('div');
+        divL.style = "flex: 1;"
+        const divM = document.createElement('div');
+
+        const divR = document.createElement('div');
+        divR.setAttribute('id',uniqBookmarkInfoId);
+        divR.style = "background-color: yellow; color: black"
+        divR.appendChild(textNode);
+
+        rootInfo.appendChild(divL);
+        rootInfo.appendChild(divM);
+        rootInfo.appendChild(divR);
+
+        // el.style = "position: absolute; right: 0; top: 0; z-index: 999; background-color: yellow; color: black"
         // document.body.appendChild(el);
         if (document.body.firstChild) {
-          document.body.insertBefore(el, document.body.firstChild);
+          document.body.insertBefore(rootInfo, document.body.firstChild);
         } else {
-          document.body.appendChild(el);
+          document.body.appendChild(rootInfo);
         }
         
       }
@@ -51,9 +75,9 @@ const log = SHOW_LOG ? console.log : () => {};
   }
   
   browser.runtime.onMessage.addListener((message) => {
-    if (message.command === "bookmarkFolder") {
-      log('content-script: ', message.bookmarkFolder);
-      showFolder(message.bookmarkFolder);
+    if (message.command === "bookmarkInfo") {
+      log('content-script: ', message.folderName);
+      showBookmarkInfo(message.folderName);
     }
   });
 })();

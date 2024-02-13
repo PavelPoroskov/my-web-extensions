@@ -1,72 +1,94 @@
-let currentTab;
-let currentBookmark;
-let bookmarkFolder;
-
-const SHOW_LOG = false
+const SHOW_LOG = false;
 const log = SHOW_LOG ? console.log : () => { };
 
-function updateActiveTab() {
+const supportedProtocols = ["https:", "http:"];
 
-  function isSupportedProtocol(urlString) {
-    let supportedProtocols = ["https:", "http:"];
-    let url = document.createElement('a');
-    url.href = urlString;
-    return supportedProtocols.indexOf(url.protocol) != -1;
-  }
+function isSupportedProtocol(urlString) {
+  let url = document.createElement('a');
+  url.href = urlString;
 
-  function updateTab(tabs) {
-    if (tabs[0]) {
-      currentTab = tabs[0];
-      if (isSupportedProtocol(currentTab.url)) {
-        let searching = browser.bookmarks.search({ url: currentTab.url });
-        searching.then((bookmarks) => {
-          log('searching result', bookmarks);
-          currentBookmark = bookmarks[0];
-          const parentId = currentBookmark && currentBookmark.parentId;
+  return supportedProtocols.indexOf(url.protocol) != -1;
+}
 
-          if (parentId) {
-            browser.bookmarks.get(parentId).then((parent) => {
-              log('parent', parent);
-              bookmarkFolder = parent[0].title;
-              log('bookmarkFolder', bookmarkFolder);
-              log('currentTab.id', currentTab.id);
-              browser.tabs.sendMessage(currentTab.id, {
-                command: "bookmarkFolder",
-                bookmarkFolder,
-              });
-            });
-          } else {
-            bookmarkFolder = undefined;
-            browser.tabs.sendMessage(currentTab.id, {
-              command: "bookmarkFolder",
-              bookmarkFolder,
-            });
-          }
+function getBookmarkInfo(url, fnResolve) {
+  browser.bookmarks.search(
+    { url },
+  ).then((bookmarks) => {
+    const bookmark = bookmarks[0];
+    const parentId = bookmark && bookmark.parentId;
+
+    if (parentId) {
+      browser.bookmarks.get(
+        parentId, 
+      ).then((bookmarkFolder) => {
+        fnResolve({
+          folderName: bookmarkFolder[0].title,
         });
-      } else {
-        console.log(`Bookmark it! does not support the '${currentTab.url}' URL.`)
-      }
+      });
+    } else {
+      fnResolve();
     }
-  }
+  });
+}
 
-  let gettingActiveTab = browser.tabs.query({ active: true, currentWindow: true });
-  gettingActiveTab.then(updateTab);
+function updateTab(tab) {
+  log('updateTab 00', tab)
+  if (isSupportedProtocol(tab.url)) {
+    log('updateTab 11')
+    getBookmarkInfo(
+      tab.url,
+      (bookmarkInfo) => {
+        log('updateTab 22')
+        browser.tabs.sendMessage(tab.id, {
+          command: "bookmarkInfo",
+          folderName: bookmarkInfo?.folderName,
+        });    
+      }
+    )
+  }
+}
+
+function updateActiveTab() {
+  browser.tabs.query(
+    { active: true, currentWindow: true },
+  ).then((tabs) => {
+    if (tabs[0]) {
+      updateTab(tabs[0]);
+    }
+  });
+}
+
+const tabsOnUpdated = (tabId, changeInfo, Tab) => {
+  log('tabsOnUpdated')
+  log('   changeInfo', changeInfo)
+  log('   changeInfo.url', changeInfo.url)
+  if (changeInfo.url || changeInfo?.status === 'complete') {
+    updateTab(Tab);
+  }
+}
+const tabsOnActivated = ({ tabId }) => {
+  browser.tabs.get(
+    tabId,
+  ).then((Tab) => {
+      updateTab(Tab);
+  });
 }
 
 // listen for bookmarks being created
-browser.bookmarks.onCreated.addListener(updateActiveTab);
+chrome.bookmarks.onCreated.addListener(updateActiveTab);
 
 // listen for bookmarks being removed
-browser.bookmarks.onRemoved.addListener(updateActiveTab);
-browser.bookmarks.onMoved.addListener(updateActiveTab);
+chrome.bookmarks.onRemoved.addListener(updateActiveTab);
+chrome.bookmarks.onMoved.addListener(updateActiveTab);
+//? chrome.bookmarks.onChanged
 
 // listen to tab URL changes
-browser.tabs.onUpdated.addListener(updateActiveTab);
+chrome.tabs.onUpdated.addListener(tabsOnUpdated);
 
 // listen to tab switching
-browser.tabs.onActivated.addListener(updateActiveTab);
+chrome.tabs.onActivated.addListener(tabsOnActivated);
 
 // listen for window switching
-browser.windows.onFocusChanged.addListener(updateActiveTab);
+chrome.windows.onFocusChanged.addListener(updateActiveTab);
 
 updateActiveTab();
