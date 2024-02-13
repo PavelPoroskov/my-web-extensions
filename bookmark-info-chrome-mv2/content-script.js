@@ -22,7 +22,7 @@ const log = SHOW_LOG ? console.log : () => {};
     'position: fixed',
     'right: 0',
     'top: 0',
-    'z-index: 999',
+    'z-index: 9999',
     'display: flex',
     'background-color: transparent',
   ].join(';');
