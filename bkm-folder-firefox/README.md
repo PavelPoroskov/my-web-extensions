@@ -1,4 +1,4 @@
-# bookmark-folder
+# bookmark-info
 
 ## What it does
 

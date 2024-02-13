@@ -1,5 +1,5 @@
 
-const SHOW_LOG = true;
+const SHOW_LOG = false;
 const log = SHOW_LOG ? console.log : () => { };
 
 const supportedProtocols = ["https:", "http:"];
