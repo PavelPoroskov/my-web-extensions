@@ -1,0 +1,42 @@
+
+link (link from html) to db
+  context menu (context: [link])
+  or injected button near the link
+
+current page to db: 
+  context menu (context: [page])
+  or injected button from right top corner of page
+
+context menu 
+  All bookmarks to db
+  All opened tabs to db OR auto, simplified save tags [profile, opened-tabs]
+
+form editing link
+  if link broken show in dialog
+
+STEPS
+  1) save link to db without tags
+  2) try save link from step 1.
+    dialog show (star) link stored
+  3)store current page
+  4) get title from url
+    get tags from title 
+      user can remove tags
+      user can add tags
+
+  5)store all bookmarks
+  6)store all opened tabs
+
+
+  get date from url
+
+
+
+we can save link to images and classify them with tags
+  context menu (context: [??])
+  onClickData.src onClickData.mediaType
+
+  FAR
+    get link list from db using tags
+    get html with this images (input tags)
+      and pagination
