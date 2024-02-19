@@ -1,9 +1,9 @@
 import {
   updateActiveTab,
-} from '../main-api.js'
+} from '../api/main-api.js'
 import {
   log,
-} from '../utils.js'
+} from '../api/debug.js'
 
 export const BkmsController = {
   onCreated: () => {

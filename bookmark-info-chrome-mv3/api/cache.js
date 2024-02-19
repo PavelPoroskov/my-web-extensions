@@ -1,6 +1,6 @@
 import {
   log,
-} from './utils.js'
+} from './debug.js'
 
 const CACHE_SIZE_LIMIT = 100;
 
@@ -8,7 +8,7 @@ const cache = new Map();
 
 export const addToCache = (url,folder) => {
   cache.set(url, folder);
-  log('cache.add: folder, url', folder, url);
+  log('   cache.add: folder, url', folder, url);
 
   if (CACHE_SIZE_LIMIT < cache.size) {
     let deleteCount = cache.size - CACHE_SIZE_LIMIT;
@@ -31,7 +31,7 @@ export const addToCache = (url,folder) => {
 
 export const getFromCache = (url) => {
   const result = cache.get(url);
-  log('cache.get: folder, url', result, url);
+  log('   cache.get: folder, url', result, url);
 
   return result;
 }

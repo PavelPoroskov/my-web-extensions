@@ -4,7 +4,7 @@ import {
 } from './cache.js'
 import {
   log,
-} from './utils.js'
+} from './debug.js'
 
 const supportedProtocols = ["https:", "http:"];
 
@@ -59,9 +59,9 @@ export function updateBookmarkInfoInPage({ tabId, folderName }) {
 }
 
 export async function updateActiveTab({ useCache=false } = {}) {
-  log('updateActiveTab 00')
+  log(' updateActiveTab 00')
   const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-  log('updateActiveTab 11', tabs)
+  log(' updateActiveTab 11', tabs)
   const [Tab] = tabs;
 
   if (Tab) {
