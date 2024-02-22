@@ -38,6 +38,10 @@ class CacheWithLimit {
   
     return value;
   }
+
+  delete(key) {
+    this.cache.delete(key);
+  }
 }
 
 export const cacheUrlToInfo = new CacheWithLimit({ name: 'cacheUrlToInfo', size: 100 });

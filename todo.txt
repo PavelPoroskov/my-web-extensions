@@ -1,5 +1,5 @@
 // TODO extensions options: what show
-//  show folder only: Cat
+//  DONE show folder only: Cat 
 //  show full path (reverse): Cat / Predators / Animals
 //  show full path (direct): Animals \ Predators \ Cat
 
@@ -7,16 +7,17 @@
 //  red cross at right top corner
 
 // TODO message position
-//    top right corner
+//    DONE top right corner
 //    top left corner
 //    top middle
 
-// [done] position: fixed
+DONE position: fixed
 
-// ?cache last 200 results
-// ger result for all opened tabs and cache
+DONE cache last 100 results
 
-// start search folder on opening link
+DONE start search folder on opening link
 
-// colour bookmarked link in page. add overtext with FolderName for link
 
+get result for all opened tabs and cache
+
+colour bookmarked link in page. add overtext with FolderName for link

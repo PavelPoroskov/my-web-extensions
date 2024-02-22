@@ -20,6 +20,7 @@ export const TabsController = {
       case (changeInfo?.status == 'loading' && changeInfo?.url && isSupportedProtocol(changeInfo.url)): {
         const url = changeInfo?.url;
         log('tabs.onUpdated11 tabId, status, url', tabId, changeInfo?.status, url);
+        cacheTabToInfo.delete(tabId);
         getBookmarkInfoUni({ url, useCache: true });
         break;
       };
