@@ -1,6 +1,6 @@
 import {
-  addToCache,
-  getFromCache,
+  cacheUrlToInfo,
+  cacheTabToInfo,
 } from './cache.js'
 import {
   log,
@@ -22,12 +22,17 @@ async function getBookmarkInfo(url) {
   const bookmarks = await chrome.bookmarks.search({ url });
   const bookmark = bookmarks[0];
   const parentId = bookmark && bookmark.parentId;
+  const resultCount = bookmarks.length;
 
   if (parentId) {
     const bookmarkFolder = await chrome.bookmarks.get(parentId)
 
+    const folderName = resultCount > 1
+      ? `${bookmarkFolder[0].title} d${resultCount}`
+      : bookmarkFolder[0].title;
+  
     return {
-      folderName: bookmarkFolder[0].title,
+      folderName,
     };
   }
 }
@@ -36,37 +41,51 @@ export async function getBookmarkInfoUni({ url, useCache=false }) {
   let bookmarkInfo;
 
   if (useCache) {
-    const folderName = getFromCache(url);
+    const folderName = cacheUrlToInfo.get(url);
     
     if (folderName !== undefined) {
       bookmarkInfo = { folderName };
+      log(' getBookmarkInfoUni: OPTIMIZATION(from cache folderName !== undefined)')
     }
   } 
   
   if (!bookmarkInfo) {
     bookmarkInfo = await getBookmarkInfo(url);
-    addToCache(url, bookmarkInfo?.folderName || null);
+    cacheUrlToInfo.add(url, bookmarkInfo?.folderName || null);
   }
 
   return bookmarkInfo;
 }
 
-export function updateBookmarkInfoInPage({ tabId, folderName }) {
-  chrome.tabs.sendMessage(tabId, {
-    command: "bookmarkInfo",
-    folderName,
-  });    
+export async function updateBookmarkInfoInPage({ tabId, folderName }) {
+  try {
+    const oldFolderName = cacheTabToInfo.get(tabId);
+
+    if (folderName === oldFolderName) {
+      log(' updateBookmarkInfoInPage: OPTIMIZATION(folderName === oldFolderName), not update')
+      return;
+    }
+
+    await chrome.tabs.sendMessage(tabId, {
+      command: "bookmarkInfo",
+      folderName,
+    });    
+    cacheTabToInfo.add(tabId, folderName);
+  
+  } catch (e) {
+    log(' IGNORING error: updateBookmarkInfoInPage()', e);
+  }
 }
 
 export async function updateActiveTab({ useCache=false } = {}) {
   log(' updateActiveTab 00')
   const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-  log(' updateActiveTab 11', tabs)
   const [Tab] = tabs;
 
   if (Tab) {
     const url = Tab.url;
     if (isSupportedProtocol(url)) {
+      log(' updateActiveTab 11', Tab)
       const bookmarkInfo = await getBookmarkInfoUni({ url, useCache });
       updateBookmarkInfoInPage({
         tabId: Tab.id,

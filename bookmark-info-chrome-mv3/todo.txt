@@ -1,22 +1,13 @@
-
-bkm-info-sw.js:1 Uncaught (in promise) Error: Could not establish connection. Receiving end does not exist.
-  may be too early chrome.tabs.sendMessage(tabId
-    tab is not ready
-      tabs.onUpdate(status='complete')
-  after comment. no errors
-     // // listen for tab switching
-     // chrome.tabs.onActivated.addListener(TabsController.onActivated);
-
 TODO other way to display bookmark info
   I show bookmark info in page now.
   I must wait when page loading complete.
   Better way must be.
 
-TODO? cache (url to bookmark folder) is not required?
+DONE? cache (url to bookmark folder) is not required?
   It complicated code.
   Do not give optimization?
 
-optimization
+DONE optimization
   events tab.onCreate? tab.onUpdate(2), tab.onActivate, windows.onFocusChanged
     results in I get bookmarkInfo three+ times
 
@@ -27,3 +18,14 @@ optimization
     open link from page
     new tab, type url
     tab with content, enter new url
+
+DONE show number if bookmarks has one+ bookmarks for this url
+
+DONE bkm-info-sw.js:1 Uncaught (in promise) Error: Could not establish connection. Receiving end does not exist.
+  may be too early chrome.tabs.sendMessage(tabId
+    tab is not ready
+      tabs.onUpdate(status='complete')
+  after comment. no errors
+     // // listen for tab switching
+     // chrome.tabs.onActivated.addListener(TabsController.onActivated);
+

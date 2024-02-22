@@ -2,36 +2,43 @@ import {
   log,
 } from './debug.js'
 
-const CACHE_SIZE_LIMIT = 100;
-
-const cache = new Map();
-
-export const addToCache = (url,folder) => {
-  cache.set(url, folder);
-  log('   cache.add: folder, url', folder, url);
-
-  if (CACHE_SIZE_LIMIT < cache.size) {
-    let deleteCount = cache.size - CACHE_SIZE_LIMIT;
-    const keyToDelete = [];
-    
-    // Map.key() returns keys in insertion order
-    for (const key of cache.keys()) {
-      keyToDelete.push(key);
-      deleteCount -= 1;
-      if (deleteCount <= 0) {
-        break;
+class CacheWithLimit {
+  constructor ({ name='cache', size = 100 }) {
+    this.cache = new Map();
+    this.LIMIT = size;
+    this.name = name;
+  }
+  // addToCache = (url,folder) => {
+  add (key,value) {
+    this.cache.set(key, value);
+    log(`   ${this.name}.add:', ${key}, ${value}`);
+  
+    if (this.LIMIT < this.cache.size) {
+      let deleteCount = this.cache.size - CACHE_SIZE_LIMIT;
+      const keyToDelete = [];
+      
+      // Map.key() returns keys in insertion order
+      for (const key of this.cache.keys()) {
+        keyToDelete.push(key);
+        deleteCount -= 1;
+        if (deleteCount <= 0) {
+          break;
+        }
+      }
+  
+      for (const key of keyToDelete) {
+        this.cache.delete(key);
       }
     }
-
-    for (const key of keyToDelete) {
-      cache.delete(key);
-    }
+  }
+  
+  get(key) {
+    const value = this.cache.get(key);
+    log(`   ${this.name}.get:', ${key}, ${value}`);
+  
+    return value;
   }
 }
 
-export const getFromCache = (url) => {
-  const result = cache.get(url);
-  log('   cache.get: folder, url', result, url);
-
-  return result;
-}
+export const cacheUrlToInfo = new CacheWithLimit({ name: 'cacheUrlToInfo', size: 100 });
+export const cacheTabToInfo = new CacheWithLimit({ name: 'cacheTabToInfo', size: 10 });

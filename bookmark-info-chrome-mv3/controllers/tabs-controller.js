@@ -8,12 +8,12 @@ import {
 } from '../api/debug.js'
 
 export const TabsController = {
-  // onCreated: ({ pendingUrl: url }) => {
-  //   log('tabs.onCreated pendingUrl', url);
-  //   if (url && isSupportedProtocol(url)) {
-  //     getBookmarkInfoUni({ url, useCache: true });
-  //   }
-  // },
+  onCreated: ({ pendingUrl: url }) => {
+    log('tabs.onCreated pendingUrl', url);
+    if (url && isSupportedProtocol(url)) {
+      getBookmarkInfoUni({ url, useCache: true });
+    }
+  },
   onUpdated: async (tabId, changeInfo, Tab) => {
     // log('tabs.onUpdated 00', changeInfo);
     switch (true) {
@@ -35,17 +35,17 @@ export const TabsController = {
       };
     }
   },
-  // onActivated: async ({ tabId }) => {
-  //   log('tabs.onActivated tabId', tabId);
-  //   const Tab = await chrome.tabs.get(tabId);
-  //   const url = Tab.url;
+  onActivated: async ({ tabId }) => {
+    log('tabs.onActivated tabId', tabId);
+    const Tab = await chrome.tabs.get(tabId);
+    const url = Tab.url;
     
-  //   if (isSupportedProtocol(url)) {
-  //     const bookmarkInfo = await getBookmarkInfoUni({ url, useCache: true });
-  //     updateBookmarkInfoInPage({
-  //       tabId,
-  //       folderName: bookmarkInfo?.folderName,
-  //     })
-  //   }
-  // },
+    if (isSupportedProtocol(url)) {
+      const bookmarkInfo = await getBookmarkInfoUni({ url, useCache: true });
+      updateBookmarkInfoInPage({
+        tabId,
+        folderName: bookmarkInfo?.folderName,
+      })
+    }
+  },
 }

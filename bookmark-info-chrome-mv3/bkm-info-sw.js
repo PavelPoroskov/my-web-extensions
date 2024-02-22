@@ -16,11 +16,11 @@ async function onInstalled() {
   
   chrome.tabs.onCreated.addListener(TabsController.onCreated);
   chrome.tabs.onUpdated.addListener(TabsController.onUpdated);
-  // // listen for tab switching
-  // chrome.tabs.onActivated.addListener(TabsController.onActivated);
+  // listen for tab switching
+  chrome.tabs.onActivated.addListener(TabsController.onActivated);
 
   // listen for window switching
-  // chrome.windows.onFocusChanged.addListener(WindowsController.onFocusChanged);
+  chrome.windows.onFocusChanged.addListener(WindowsController.onFocusChanged);
   
   updateActiveTab();  
   // log('bkm-info-sw.js 22 onInstalled');
