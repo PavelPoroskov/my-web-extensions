@@ -143,33 +143,32 @@ async function updateActiveTab({ useCache=false } = {}) {
   }
 }
 
-const BkmsController = {
-  onCreated: () => {
-    log('bkm.onCreated');
+const bookmarksController = {
+  onCreated() {
+    log('bookmark.onCreated');
     updateActiveTab();
   },
-  onChanged: () => {
-    log('bkm.onChanged');
+  onChanged() {
+    log('bookmark.onChanged');
     updateActiveTab();
   },
-  onMoved: () => {
-    log('bkm.onMoved');
+  onMoved() {
+    log('bookmark.onMoved');
     updateActiveTab();
   },
-  onRemoved: () => {
-    log('bkm.onRemoved');
+  onRemoved() {
+    log('bookmark.onRemoved');
     updateActiveTab();
   },
 }
-
-const TabsController = {
-  onCreated: ({ pendingUrl: url }) => {
+const tabsController = {
+  onCreated({ pendingUrl: url }) {
     log('tabs.onCreated pendingUrl', url);
     if (url && isSupportedProtocol(url)) {
       getBookmarkInfoUni({ url, useCache: true });
     }
   },
-  onUpdated: async (tabId, changeInfo, Tab) => {
+  async onUpdated(tabId, changeInfo, Tab) {
     // log('tabs.onUpdated 00', changeInfo);
     switch (true) {
       case (changeInfo?.status == 'loading' && changeInfo?.url && isSupportedProtocol(changeInfo.url)): {
@@ -191,9 +190,9 @@ const TabsController = {
       };
     }
   },
-  onActivated: async ({ tabId }) => {
+  async onActivated({ tabId }) {
     log('tabs.onActivated tabId', tabId);
-    const Tab = await browser.tabs.get(tabId);
+    const Tab = await chrome.tabs.get(tabId);
     const url = Tab.url;
     
     if (isSupportedProtocol(url)) {
@@ -206,32 +205,38 @@ const TabsController = {
   },
 }
 
-const WindowsController = {
-  onFocusChanged: () => {
+const windowsController = {
+  onFocusChanged() {
     log('windows.onFocusChanged');
     updateActiveTab({ useCache: true });
+  },
+};
+
+const runtimeController = {
+  onStartup() {
+    log('runtime.onStartup');
+    updateActiveTab();
+  },
+  onInstalled () {
+    log('runtime.onInstalled');
+    updateActiveTab();
   }
 };
 
 log('bkm-info-sw.js 00');
 
-function onInstalled() {
-  log('bkm-info-sw.js 11 onInstalled');
-  browser.bookmarks.onCreated.addListener(BkmsController.onCreated);
-  browser.bookmarks.onMoved.addListener(BkmsController.onMoved);
-  browser.bookmarks.onChanged.addListener(BkmsController.onChanged);
-  browser.bookmarks.onRemoved.addListener(BkmsController.onRemoved);
-  
-  browser.tabs.onCreated.addListener(TabsController.onCreated);
-  browser.tabs.onUpdated.addListener(TabsController.onUpdated);
-  // listen for tab switching
-  browser.tabs.onActivated.addListener(TabsController.onActivated);
+chrome.bookmarks.onCreated.addListener(bookmarksController.onCreated);
+chrome.bookmarks.onMoved.addListener(bookmarksController.onMoved);
+chrome.bookmarks.onChanged.addListener(bookmarksController.onChanged);
+chrome.bookmarks.onRemoved.addListener(bookmarksController.onRemoved);
 
-  // listen for window switching
-  browser.windows.onFocusChanged.addListener(WindowsController.onFocusChanged);
-  
-  updateActiveTab();  
-  log('bkm-info-sw.js 22 onInstalled');
-}
+chrome.tabs.onCreated.addListener(tabsController.onCreated);
+chrome.tabs.onUpdated.addListener(tabsController.onUpdated);
+// listen for tab switching
+chrome.tabs.onActivated.addListener(tabsController.onActivated);
 
-onInstalled();
+// listen for window switching
+chrome.windows.onFocusChanged.addListener(windowsController.onFocusChanged);
+
+chrome.runtime.onStartup.addListener(runtimeController.onStartup)
+chrome.runtime.onInstalled.addListener(runtimeController.onInstalled);

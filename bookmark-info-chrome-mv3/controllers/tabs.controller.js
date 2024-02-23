@@ -4,17 +4,20 @@ import {
   updateBookmarkInfoInPage,
 } from '../api/main-api.js'
 import {
+  cacheTabToInfo,
+} from '../api/cache.js'
+import {
   log,
 } from '../api/debug.js'
 
-export const TabsController = {
-  onCreated: ({ pendingUrl: url }) => {
+export const tabsController = {
+  onCreated({ pendingUrl: url }) {
     log('tabs.onCreated pendingUrl', url);
     if (url && isSupportedProtocol(url)) {
       getBookmarkInfoUni({ url, useCache: true });
     }
   },
-  onUpdated: async (tabId, changeInfo, Tab) => {
+  async onUpdated(tabId, changeInfo, Tab) {
     // log('tabs.onUpdated 00', changeInfo);
     switch (true) {
       case (changeInfo?.status == 'loading' && changeInfo?.url && isSupportedProtocol(changeInfo.url)): {
@@ -36,7 +39,7 @@ export const TabsController = {
       };
     }
   },
-  onActivated: async ({ tabId }) => {
+  async onActivated({ tabId }) {
     log('tabs.onActivated tabId', tabId);
     const Tab = await chrome.tabs.get(tabId);
     const url = Tab.url;
