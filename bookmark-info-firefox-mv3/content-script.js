@@ -31,6 +31,7 @@ const log = SHOW_LOG ? console.log : () => {};
     'line-height: 20px',
     'padding-left: 6px',
     'border-radius: 10px 0 0 10px',
+    'font-family: sans-serif'
   ].join(';');
 
   function showBookmarkInfo(text) {
