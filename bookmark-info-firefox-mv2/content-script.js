@@ -1,8 +1,8 @@
-const SHOW_LOG = true
+const SHOW_LOG = false
 const log = SHOW_LOG ? console.log : () => {};
 
 (function() {
-  console.log('IN content-script');
+  log('IN content-script');
   /**
    * Check and set a global guard variable.
    * If this content script is injected into the same page again,
@@ -16,9 +16,6 @@ const log = SHOW_LOG ? console.log : () => {};
   const uniqBookmarkInfoId = 'uniqBookmarkInfoId';
 
   const rootInfoStyle = [
-    'position: absolute',
-    'position: -webkit-sticky',
-    // 'position: sticky',
     'position: fixed',
     'right: 0',
     'top: 0',
@@ -26,6 +23,7 @@ const log = SHOW_LOG ? console.log : () => {};
     'display: flex',
     'background-color: transparent',
   ].join(';');
+
   const labelStyle = [
     'background-color: yellow',
     'color: black',
@@ -45,7 +43,7 @@ const log = SHOW_LOG ? console.log : () => {};
       const textNode = document.createTextNode(`${text} :bkm`);
 
       if (el) {
-        log('showBookmarkInfo 11 11');
+        log('showBookmarkInfo 11 11 1');
         log('update', el.firstChild);
         if (el.firstChild) {
           el.replaceChild(textNode, el.firstChild);
@@ -53,7 +51,7 @@ const log = SHOW_LOG ? console.log : () => {};
           el.appendChild(textNode);
         }
       } else {
-        log('showBookmarkInfo 22');
+        log('showBookmarkInfo 22 2');
         const rootInfo = document.createElement('div');
         rootInfo.style = rootInfoStyle;
         const divL = document.createElement('div');

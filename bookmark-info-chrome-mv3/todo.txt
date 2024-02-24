@@ -3,6 +3,11 @@ TODO other way to display bookmark info
   I must wait when page loading complete.
   Better way must be.
 
+When we open profile with opened tabs
+  we have tabs.onUpdate for every tab 
+    do i need handle this events
+    My intention was handle tabs.onUpdate for new tab or user interaction with tab
+
 DONE? cache (url to bookmark folder) is not required?
   It complicated code.
   Do not give optimization?

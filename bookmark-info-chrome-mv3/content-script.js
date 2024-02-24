@@ -1,8 +1,8 @@
-const SHOW_LOG = true
+const SHOW_LOG = false
 const log = SHOW_LOG ? console.log : () => {};
 
 (function() {
-  console.log('IN content-script');
+  log('IN content-script');
   /**
    * Check and set a global guard variable.
    * If this content script is injected into the same page again,

@@ -14,7 +14,7 @@ class CacheWithLimit {
     log(`   ${this.name}.add:', ${key}, ${value}`);
   
     if (this.LIMIT < this.cache.size) {
-      let deleteCount = this.cache.size - CACHE_SIZE_LIMIT;
+      let deleteCount = this.cache.size - this.LIMIT;
       const keyToDelete = [];
       
       // Map.key() returns keys in insertion order

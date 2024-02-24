@@ -18,25 +18,28 @@ export const tabsController = {
     }
   },
   async onUpdated(tabId, changeInfo, Tab) {
-    // log('tabs.onUpdated 00', changeInfo);
+    log('tabs.onUpdated 00', changeInfo);
     switch (true) {
-      case (changeInfo?.status == 'loading' && changeInfo?.url && isSupportedProtocol(changeInfo.url)): {
-        const url = changeInfo?.url;
-        log('tabs.onUpdated11 tabId, status, url', tabId, changeInfo?.status, url);
+      case (changeInfo?.status == 'loading'): {
         cacheTabToInfo.delete(tabId);
-        getBookmarkInfoUni({ url, useCache: true });
+        const url = changeInfo?.url;
+  
+        if (url && isSupportedProtocol(url)) {
+          log('tabs.onUpdated LOADING', tabId, url);
+          getBookmarkInfoUni({ url, useCache: true });  
+        }
         break;
-      };
+      }
       case (changeInfo?.status == 'complete' && Tab.url && isSupportedProtocol(Tab.url)): {
         const url = Tab.url;
-        log('tabs.onUpdated22 tabId, status, Tab.url', tabId, changeInfo?.status, url);
+        log('tabs.onUpdated COMPLETE', tabId, url);
         const bookmarkInfo = await getBookmarkInfoUni({ url, useCache: true });
         updateBookmarkInfoInPage({
           tabId,
           folderName: bookmarkInfo?.folderName,
         })
         break;
-      };
+      }
     }
   },
   async onActivated({ tabId }) {

@@ -19,22 +19,26 @@ export function isSupportedProtocol(urlString) {
 }
 
 async function getBookmarkInfo(url) {
+  let folderName = null;
   const bookmarks = await chrome.bookmarks.search({ url });
-  const bookmark = bookmarks[0];
-  const parentId = bookmark && bookmark.parentId;
-  const resultCount = bookmarks.length;
 
-  if (parentId) {
-    const bookmarkFolder = await chrome.bookmarks.get(parentId)
+  if (bookmarks.length > 0) {
+    const bookmark = bookmarks[0];
+    const parentId = bookmark && bookmark.parentId;
+    const resultCount = bookmarks.length;
 
-    const folderName = resultCount > 1
-      ? `${bookmarkFolder[0].title} d${resultCount}`
-      : bookmarkFolder[0].title;
-  
-    return {
-      folderName,
-    };
+    if (parentId) {
+      const bookmarkFolder = await chrome.bookmarks.get(parentId)
+
+      folderName = resultCount > 1
+        ? `${bookmarkFolder[0].title} d${resultCount}`
+        : bookmarkFolder[0].title;
+    }
   }
+
+  return {
+    folderName,
+  };
 }
 
 export async function getBookmarkInfoUni({ url, useCache=false }) {

@@ -1,11 +1,4 @@
-// import { BkmsController } from './controllers/bkms-controller.js';
-// import { TabsController } from './controllers/tabs-controller.js';
-// import { WindowsController } from './controllers/windows-controller.js';
-
-// import { updateActiveTab } from './api/main-api.js';
-// import { log } from './api/debug.js';
-
-const SHOW_LOG = true;
+const SHOW_LOG = false;
 
 const log = SHOW_LOG ? console.log : () => { };
 
@@ -21,7 +14,7 @@ class CacheWithLimit {
     log(`   ${this.name}.add:', ${key}, ${value}`);
   
     if (this.LIMIT < this.cache.size) {
-      let deleteCount = this.cache.size - CACHE_SIZE_LIMIT;
+      let deleteCount = this.cache.size - this.LIMIT;
       const keyToDelete = [];
       
       // Map.key() returns keys in insertion order
@@ -67,22 +60,26 @@ function isSupportedProtocol(urlString) {
 }
 
 async function getBookmarkInfo(url) {
+  let folderName = null;
   const bookmarks = await browser.bookmarks.search({ url });
-  const bookmark = bookmarks[0];
-  const parentId = bookmark && bookmark.parentId;
-  const resultCount = bookmarks.length;
 
-  if (parentId) {
-    const bookmarkFolder = await browser.bookmarks.get(parentId)
+  if (bookmarks.length > 0) {
+    const bookmark = bookmarks[0];
+    const parentId = bookmark && bookmark.parentId;
+    const resultCount = bookmarks.length;
 
-    const folderName = resultCount > 1
-      ? `${bookmarkFolder[0].title} d${resultCount}`
-      : bookmarkFolder[0].title;
-  
-    return {
-      folderName,
-    };
+    if (parentId) {
+      const bookmarkFolder = await browser.bookmarks.get(parentId)
+
+      folderName = resultCount > 1
+        ? `${bookmarkFolder[0].title} d${resultCount}`
+        : bookmarkFolder[0].title;
+    }
   }
+
+  return {
+    folderName,
+  };
 }
 
 async function getBookmarkInfoUni({ url, useCache=false }) {
@@ -161,6 +158,7 @@ const bookmarksController = {
     updateActiveTab();
   },
 }
+
 const tabsController = {
   onCreated({ pendingUrl: url }) {
     log('tabs.onCreated pendingUrl', url);
@@ -169,30 +167,33 @@ const tabsController = {
     }
   },
   async onUpdated(tabId, changeInfo, Tab) {
-    // log('tabs.onUpdated 00', changeInfo);
+    log('tabs.onUpdated 00', changeInfo);
     switch (true) {
-      case (changeInfo?.status == 'loading' && changeInfo?.url && isSupportedProtocol(changeInfo.url)): {
-        const url = changeInfo?.url;
-        log('tabs.onUpdated11 tabId, status, url', tabId, changeInfo?.status, url);
+      case (changeInfo?.status == 'loading'): {
         cacheTabToInfo.delete(tabId);
-        getBookmarkInfoUni({ url, useCache: true });
+        const url = changeInfo?.url;
+  
+        if (url && isSupportedProtocol(url)) {
+          log('tabs.onUpdated LOADING', tabId, url);
+          getBookmarkInfoUni({ url, useCache: true });  
+        }
         break;
-      };
+      }
       case (changeInfo?.status == 'complete' && Tab.url && isSupportedProtocol(Tab.url)): {
         const url = Tab.url;
-        log('tabs.onUpdated22 tabId, status, Tab.url', tabId, changeInfo?.status, url);
+        log('tabs.onUpdated COMPLETE', tabId, url);
         const bookmarkInfo = await getBookmarkInfoUni({ url, useCache: true });
         updateBookmarkInfoInPage({
           tabId,
           folderName: bookmarkInfo?.folderName,
         })
         break;
-      };
+      }
     }
   },
   async onActivated({ tabId }) {
     log('tabs.onActivated tabId', tabId);
-    const Tab = await chrome.tabs.get(tabId);
+    const Tab = await browser.tabs.get(tabId);
     const url = Tab.url;
     
     if (isSupportedProtocol(url)) {
@@ -225,18 +226,18 @@ const runtimeController = {
 
 log('bkm-info-sw.js 00');
 
-chrome.bookmarks.onCreated.addListener(bookmarksController.onCreated);
-chrome.bookmarks.onMoved.addListener(bookmarksController.onMoved);
-chrome.bookmarks.onChanged.addListener(bookmarksController.onChanged);
-chrome.bookmarks.onRemoved.addListener(bookmarksController.onRemoved);
+browser.bookmarks.onCreated.addListener(bookmarksController.onCreated);
+browser.bookmarks.onMoved.addListener(bookmarksController.onMoved);
+browser.bookmarks.onChanged.addListener(bookmarksController.onChanged);
+browser.bookmarks.onRemoved.addListener(bookmarksController.onRemoved);
 
-chrome.tabs.onCreated.addListener(tabsController.onCreated);
-chrome.tabs.onUpdated.addListener(tabsController.onUpdated);
+browser.tabs.onCreated.addListener(tabsController.onCreated);
+browser.tabs.onUpdated.addListener(tabsController.onUpdated);
 // listen for tab switching
-chrome.tabs.onActivated.addListener(tabsController.onActivated);
+browser.tabs.onActivated.addListener(tabsController.onActivated);
 
 // listen for window switching
-chrome.windows.onFocusChanged.addListener(windowsController.onFocusChanged);
+browser.windows.onFocusChanged.addListener(windowsController.onFocusChanged);
 
-chrome.runtime.onStartup.addListener(runtimeController.onStartup)
-chrome.runtime.onInstalled.addListener(runtimeController.onInstalled);
+browser.runtime.onStartup.addListener(runtimeController.onStartup)
+browser.runtime.onInstalled.addListener(runtimeController.onInstalled);
