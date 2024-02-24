@@ -26,6 +26,14 @@ const log = SHOW_LOG ? console.log : () => {};
     'display: flex',
     'background-color: transparent',
   ].join(';');
+  const labelStyle = [
+    'background-color: yellow',
+    'color: black',
+    'font-size: 14px',
+    'line-height: 20px',
+    'padding-left: 6px',
+    'border-radius: 10px 0 0 10px',
+  ].join(';');
 
   function showBookmarkInfo(text) {
     log('showBookmarkInfo 00');
@@ -54,7 +62,7 @@ const log = SHOW_LOG ? console.log : () => {};
 
         const divR = document.createElement('div');
         divR.setAttribute('id',uniqBookmarkInfoId);
-        divR.style = "background-color: yellow; color: black"
+        divR.style = labelStyle;
         divR.appendChild(textNode);
 
         rootInfo.appendChild(divL);
