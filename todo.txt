@@ -24,6 +24,8 @@ font
   i use fixed font size in pixels
     may be use other units for responsive
 
+  user select in options: font size, font color, background-color
+
 DONE position: fixed
 
 DONE cache last 100 results
