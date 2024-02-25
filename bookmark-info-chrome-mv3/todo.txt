@@ -4,8 +4,8 @@ TODO other way to display bookmark info
   Better way must be.
 
 When we open profile with opened tabs
-  we have tabs.onUpdate for every tab 
-    do i need handle this events
+  we have tabs.onCreate/onUpdate/onActivate for every tab 
+    do i need handle this events?
     My intention was handle tabs.onUpdate for new tab or user interaction with tab
 
 DONE? cache (url to bookmark folder) is not required?

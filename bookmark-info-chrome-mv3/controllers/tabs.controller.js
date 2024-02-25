@@ -11,14 +11,14 @@ import {
 } from '../api/debug.js'
 
 export const tabsController = {
-  onCreated({ pendingUrl: url }) {
-    log('tabs.onCreated pendingUrl', url);
+  onCreated({ pendingUrl: url, index, id }) {
+    log('tabs.onCreated', index, id, url);
     if (url && isSupportedProtocol(url)) {
       getBookmarkInfoUni({ url, useCache: true });
     }
   },
   async onUpdated(tabId, changeInfo, Tab) {
-    log('tabs.onUpdated 00', changeInfo);
+    log('tabs.onUpdated', Tab.index, tabId, changeInfo);
     switch (true) {
       case (changeInfo?.status == 'loading'): {
         cacheTabToInfo.delete(tabId);
@@ -36,7 +36,7 @@ export const tabsController = {
         const bookmarkInfo = await getBookmarkInfoUni({ url, useCache: true });
         updateBookmarkInfoInPage({
           tabId,
-          folderName: bookmarkInfo?.folderName,
+          bookmarkInfo,
         })
         break;
       }
@@ -51,7 +51,7 @@ export const tabsController = {
       const bookmarkInfo = await getBookmarkInfoUni({ url, useCache: true });
       updateBookmarkInfoInPage({
         tabId,
-        folderName: bookmarkInfo?.folderName,
+        bookmarkInfo,
       })
     }
   },

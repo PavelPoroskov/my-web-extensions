@@ -20,24 +20,23 @@ export function isSupportedProtocol(urlString) {
 
 async function getBookmarkInfo(url) {
   let folderName = null;
+  let double;
   const bookmarks = await chrome.bookmarks.search({ url });
 
   if (bookmarks.length > 0) {
     const bookmark = bookmarks[0];
     const parentId = bookmark && bookmark.parentId;
-    const resultCount = bookmarks.length;
+    double = bookmarks.length;
 
     if (parentId) {
       const bookmarkFolder = await chrome.bookmarks.get(parentId)
-
-      folderName = resultCount > 1
-        ? `${bookmarkFolder[0].title} d${resultCount}`
-        : bookmarkFolder[0].title;
+      folderName = bookmarkFolder[0].title;
     }
   }
 
   return {
     folderName,
+    double
   };
 }
 
@@ -45,36 +44,38 @@ export async function getBookmarkInfoUni({ url, useCache=false }) {
   let bookmarkInfo;
 
   if (useCache) {
-    const folderName = cacheUrlToInfo.get(url);
+    bookmarkInfo = cacheUrlToInfo.get(url);
     
-    if (folderName !== undefined) {
-      bookmarkInfo = { folderName };
-      log(' getBookmarkInfoUni: OPTIMIZATION(from cache folderName !== undefined)')
+    if (bookmarkInfo) {
+      log(' getBookmarkInfoUni: OPTIMIZATION(from cache bookmarkInfo)')
     }
   } 
   
   if (!bookmarkInfo) {
     bookmarkInfo = await getBookmarkInfo(url);
-    cacheUrlToInfo.add(url, bookmarkInfo?.folderName || null);
+    cacheUrlToInfo.add(url, bookmarkInfo);
   }
 
   return bookmarkInfo;
 }
 
-export async function updateBookmarkInfoInPage({ tabId, folderName }) {
+export async function updateBookmarkInfoInPage({ tabId, bookmarkInfo }) {
+  log(' updateBookmarkInfoInPage: 00', tabId)
   try {
-    const oldFolderName = cacheTabToInfo.get(tabId);
+    const oldBookmarkInfo = cacheTabToInfo.get(tabId);
 
-    if (folderName === oldFolderName) {
-      log(' updateBookmarkInfoInPage: OPTIMIZATION(folderName === oldFolderName), not update')
+    if (bookmarkInfo.folderName === oldBookmarkInfo?.folderName
+      && bookmarkInfo.double === oldBookmarkInfo?.double) {
+      log(' updateBookmarkInfoInPage: OPTIMIZATION(bookmarkInfo === oldBookmarkInfo), not update')
       return;
     }
 
     await chrome.tabs.sendMessage(tabId, {
       command: "bookmarkInfo",
-      folderName,
+      folderName: bookmarkInfo.folderName,
+      double: bookmarkInfo.double,
     });    
-    cacheTabToInfo.add(tabId, folderName);
+    cacheTabToInfo.add(tabId, bookmarkInfo);
   
   } catch (e) {
     log(' IGNORING error: updateBookmarkInfoInPage()', e);
@@ -93,7 +94,7 @@ export async function updateActiveTab({ useCache=false } = {}) {
       const bookmarkInfo = await getBookmarkInfoUni({ url, useCache });
       updateBookmarkInfoInPage({
         tabId: Tab.id,
-        folderName: bookmarkInfo?.folderName,
+        bookmarkInfo,
       })
     }
   }
