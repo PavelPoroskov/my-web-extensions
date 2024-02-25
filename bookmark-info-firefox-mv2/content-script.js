@@ -34,14 +34,14 @@ const log = SHOW_LOG ? console.log : () => {};
     'font-family: sans-serif'
   ].join(';');
 
-  function showBookmarkInfo(text) {
+  function showBookmarkInfo(message) {
     log('showBookmarkInfo 00');
-    if (text) {
+    if (message) {
       log('showBookmarkInfo 11');  
       let el = document.getElementById(uniqBookmarkInfoId);
   
       // createTextNode is safe method. createTextNode
-      const textNode = document.createTextNode(`${text} :bkm`);
+      const textNode = document.createTextNode(message);
 
       if (el) {
         log('showBookmarkInfo 11 11 1');
@@ -80,8 +80,17 @@ const log = SHOW_LOG ? console.log : () => {};
   
   browser.runtime.onMessage.addListener((message) => {
     if (message.command === "bookmarkInfo") {
-      log('content-script: ', message.folderName);
-      showBookmarkInfo(message.folderName);
+      log('content-script: ', message.folderName, message.double);
+
+      if (message.folderName) {
+        const strMessage = message.double > 1
+        ? `${message.folderName} :d${message.double} bkm`
+        : `${message.folderName} :bkm`;
+        showBookmarkInfo(strMessage);
+      } else {
+        //clear
+        showBookmarkInfo();
+      }
     }
   });
 })();

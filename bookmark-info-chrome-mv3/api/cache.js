@@ -11,7 +11,7 @@ class CacheWithLimit {
   // addToCache = (url,folder) => {
   add (key,value) {
     this.cache.set(key, value);
-    log(`   ${this.name}.add:', ${key}, ${value}`);
+    log(`   ${this.name}.add: ${key}`, value);
   
     if (this.LIMIT < this.cache.size) {
       let deleteCount = this.cache.size - this.LIMIT;
@@ -34,7 +34,7 @@ class CacheWithLimit {
   
   get(key) {
     const value = this.cache.get(key);
-    log(`   ${this.name}.get:', ${key}, ${value}`);
+    log(`   ${this.name}.get: ${key}`, value);
   
     return value;
   }
@@ -45,4 +45,4 @@ class CacheWithLimit {
 }
 
 export const cacheUrlToInfo = new CacheWithLimit({ name: 'cacheUrlToInfo', size: 100 });
-export const cacheTabToInfo = new CacheWithLimit({ name: 'cacheTabToInfo', size: 10 });
+export const cacheTabToInfo = new CacheWithLimit({ name: 'cacheTabToInfo', size: 20 });

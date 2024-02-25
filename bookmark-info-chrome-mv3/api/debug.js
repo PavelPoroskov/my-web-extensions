@@ -1,4 +1,4 @@
-const SHOW_LOG = true;
+const SHOW_LOG = false;
 
 const makeLogWithTimer = () => {
   let startTime;

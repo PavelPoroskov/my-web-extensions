@@ -1,6 +1,27 @@
 const SHOW_LOG = false;
 
-const log = SHOW_LOG ? console.log : () => { };
+const makeLogWithTimer = () => {
+  let startTime;
+  let prevLogTime;
+
+  return function () {
+    if (!startTime) {
+      startTime = Date.now();
+      prevLogTime = startTime;
+    }
+
+    const newLogTime = Date.now();
+    // const dif = (newLogTime - prevLogTime)/1000;
+    const dif = (newLogTime - prevLogTime);
+    prevLogTime = newLogTime;
+  
+    const ar = Array.from(arguments);
+    ar.unshift(`+${dif}`);
+    console.log(...ar);
+  }
+}
+
+const log = SHOW_LOG ? makeLogWithTimer() : () => { };
 
 class CacheWithLimit {
   constructor ({ name='cache', size = 100 }) {
@@ -11,7 +32,7 @@ class CacheWithLimit {
   // addToCache = (url,folder) => {
   add (key,value) {
     this.cache.set(key, value);
-    log(`   ${this.name}.add:', ${key}, ${value}`);
+    log(`   ${this.name}.add: ${key}`, value);
   
     if (this.LIMIT < this.cache.size) {
       let deleteCount = this.cache.size - this.LIMIT;
@@ -34,7 +55,7 @@ class CacheWithLimit {
   
   get(key) {
     const value = this.cache.get(key);
-    log(`   ${this.name}.get:', ${key}, ${value}`);
+    log(`   ${this.name}.get: ${key}`, value);
   
     return value;
   }
@@ -45,7 +66,7 @@ class CacheWithLimit {
 }
 
 const cacheUrlToInfo = new CacheWithLimit({ name: 'cacheUrlToInfo', size: 100 });
-const cacheTabToInfo = new CacheWithLimit({ name: 'cacheTabToInfo', size: 10 });
+const cacheTabToInfo = new CacheWithLimit({ name: 'cacheTabToInfo', size: 20 });
 
 const supportedProtocols = ["https:", "http:"];
 
@@ -61,24 +82,23 @@ function isSupportedProtocol(urlString) {
 
 async function getBookmarkInfo(url) {
   let folderName = null;
+  let double;
   const bookmarks = await browser.bookmarks.search({ url });
 
   if (bookmarks.length > 0) {
     const bookmark = bookmarks[0];
     const parentId = bookmark && bookmark.parentId;
-    const resultCount = bookmarks.length;
+    double = bookmarks.length;
 
     if (parentId) {
       const bookmarkFolder = await browser.bookmarks.get(parentId)
-
-      folderName = resultCount > 1
-        ? `${bookmarkFolder[0].title} d${resultCount}`
-        : bookmarkFolder[0].title;
+      folderName = bookmarkFolder[0].title;
     }
   }
 
   return {
     folderName,
+    double
   };
 }
 
@@ -86,36 +106,38 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
   let bookmarkInfo;
 
   if (useCache) {
-    const folderName = cacheUrlToInfo.get(url);
+    bookmarkInfo = cacheUrlToInfo.get(url);
     
-    if (folderName !== undefined) {
-      bookmarkInfo = { folderName };
-      log(' getBookmarkInfoUni: OPTIMIZATION(from cache folderName !== undefined)')
+    if (bookmarkInfo) {
+      log(' getBookmarkInfoUni: OPTIMIZATION(from cache bookmarkInfo)')
     }
   } 
   
   if (!bookmarkInfo) {
     bookmarkInfo = await getBookmarkInfo(url);
-    cacheUrlToInfo.add(url, bookmarkInfo?.folderName || null);
+    cacheUrlToInfo.add(url, bookmarkInfo);
   }
 
   return bookmarkInfo;
 }
 
-async function updateBookmarkInfoInPage({ tabId, folderName }) {
+async function updateBookmarkInfoInPage({ tabId, bookmarkInfo }) {
+  log(' updateBookmarkInfoInPage: 00', tabId)
   try {
-    const oldFolderName = cacheTabToInfo.get(tabId);
+    const oldBookmarkInfo = cacheTabToInfo.get(tabId);
 
-    if (folderName === oldFolderName) {
-      log(' updateBookmarkInfoInPage: OPTIMIZATION(folderName === oldFolderName), not update')
+    if (bookmarkInfo.folderName === oldBookmarkInfo?.folderName
+      && bookmarkInfo.double === oldBookmarkInfo?.double) {
+      log(' updateBookmarkInfoInPage: OPTIMIZATION(bookmarkInfo === oldBookmarkInfo), not update')
       return;
     }
 
     await browser.tabs.sendMessage(tabId, {
       command: "bookmarkInfo",
-      folderName,
+      folderName: bookmarkInfo.folderName,
+      double: bookmarkInfo.double,
     });    
-    cacheTabToInfo.add(tabId, folderName);
+    cacheTabToInfo.add(tabId, bookmarkInfo);
   
   } catch (e) {
     log(' IGNORING error: updateBookmarkInfoInPage()', e);
@@ -134,7 +156,7 @@ async function updateActiveTab({ useCache=false } = {}) {
       const bookmarkInfo = await getBookmarkInfoUni({ url, useCache });
       updateBookmarkInfoInPage({
         tabId: Tab.id,
-        folderName: bookmarkInfo?.folderName,
+        bookmarkInfo,
       })
     }
   }
@@ -160,14 +182,14 @@ const bookmarksController = {
 }
 
 const tabsController = {
-  onCreated({ pendingUrl: url }) {
-    log('tabs.onCreated pendingUrl', url);
+  onCreated({ pendingUrl: url, index, id }) {
+    log('tabs.onCreated', index, id, url);
     if (url && isSupportedProtocol(url)) {
       getBookmarkInfoUni({ url, useCache: true });
     }
   },
   async onUpdated(tabId, changeInfo, Tab) {
-    log('tabs.onUpdated 00', changeInfo);
+    log('tabs.onUpdated', Tab.index, tabId, changeInfo);
     switch (true) {
       case (changeInfo?.status == 'loading'): {
         cacheTabToInfo.delete(tabId);
@@ -185,7 +207,7 @@ const tabsController = {
         const bookmarkInfo = await getBookmarkInfoUni({ url, useCache: true });
         updateBookmarkInfoInPage({
           tabId,
-          folderName: bookmarkInfo?.folderName,
+          bookmarkInfo,
         })
         break;
       }
@@ -200,7 +222,7 @@ const tabsController = {
       const bookmarkInfo = await getBookmarkInfoUni({ url, useCache: true });
       updateBookmarkInfoInPage({
         tabId,
-        folderName: bookmarkInfo?.folderName,
+        bookmarkInfo,
       })
     }
   },
@@ -223,6 +245,8 @@ const runtimeController = {
     updateActiveTab();
   }
 };
+
+log('bkm-info-sw.js 00');
 
 log('bkm-info-sw.js 00');
 
