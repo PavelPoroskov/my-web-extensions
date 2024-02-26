@@ -19,7 +19,7 @@ const log = SHOW_LOG ? console.log : () => {};
     'position: fixed',
     'right: 0',
     'top: 0',
-    'z-index: 9999',
+    'z-index: 999999',
     'display: flex',
     'background-color: transparent',
   ].join(';');
@@ -31,7 +31,8 @@ const log = SHOW_LOG ? console.log : () => {};
     'line-height: 20px',
     'padding-left: 6px',
     'border-radius: 10px 0 0 10px',
-    'font-family: sans-serif'
+    'font-family: sans-serif',
+    'font-weight: normal',
   ].join(';');
 
   function showBookmarkInfo(message) {
@@ -40,7 +41,7 @@ const log = SHOW_LOG ? console.log : () => {};
       log('showBookmarkInfo 11');  
       let el = document.getElementById(uniqBookmarkInfoId);
   
-      // createTextNode is safe method. createTextNode
+      // createTextNode is safe method for XSS-injection
       const textNode = document.createTextNode(message);
 
       if (el) {
