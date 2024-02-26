@@ -44,5 +44,5 @@ class CacheWithLimit {
   }
 }
 
-export const cacheUrlToInfo = new CacheWithLimit({ name: 'cacheUrlToInfo', size: 100 });
-export const cacheTabToInfo = new CacheWithLimit({ name: 'cacheTabToInfo', size: 20 });
+export const cacheUrlToInfo = new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 });
+export const cacheTabToInfo = new CacheWithLimit({ name: 'cacheTabToInfo', size: 50 });
