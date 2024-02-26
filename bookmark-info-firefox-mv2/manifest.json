@@ -1,12 +1,11 @@
 {
   "manifest_version": 2,
   "name": "Bookmark Info",
-  "version": "1.0",
+  "version": "2.2",
   "description": "Show bookmark folder for current url",
-  "homepage_url": "https://github.com/PavelPoroskov/my-web-extensions/bkm-folder-firefox",
+  "homepage_url": "https://github.com/PavelPoroskov/my-web-extensions/bookmark-info-firefox-mv2",
 
   "permissions": [
-    "activeTab",
     "bookmarks",
     "tabs"
   ],

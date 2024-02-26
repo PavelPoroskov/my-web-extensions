@@ -15,7 +15,7 @@ on sending to Chrome Web Store
         Accepting a suggestion from the omnibox API
 
   I think my current solution has better performance and UX.
-    
+    my solution does not required click from user
 
 TODO other way to display bookmark info
   I show bookmark info in page now.

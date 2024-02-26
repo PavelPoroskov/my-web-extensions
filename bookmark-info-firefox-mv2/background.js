@@ -65,8 +65,8 @@ class CacheWithLimit {
   }
 }
 
-const cacheUrlToInfo = new CacheWithLimit({ name: 'cacheUrlToInfo', size: 100 });
-const cacheTabToInfo = new CacheWithLimit({ name: 'cacheTabToInfo', size: 20 });
+const cacheUrlToInfo = new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 });
+const cacheTabToInfo = new CacheWithLimit({ name: 'cacheTabToInfo', size: 50 });
 
 const supportedProtocols = ["https:", "http:"];
 
@@ -129,6 +129,11 @@ async function updateBookmarkInfoInPage({ tabId, bookmarkInfo }) {
     if (bookmarkInfo.folderName === oldBookmarkInfo?.folderName
       && bookmarkInfo.double === oldBookmarkInfo?.double) {
       log(' updateBookmarkInfoInPage: OPTIMIZATION(bookmarkInfo === oldBookmarkInfo), not update')
+      return;
+    }
+
+    if (bookmarkInfo.folderName === null && oldBookmarkInfo?.folderName === undefined) {
+      log(' updateBookmarkInfoInPage: OPTIMIZATION(!bookmarkInfo && !oldBookmarkInfo), not update')
       return;
     }
 
@@ -246,7 +251,6 @@ const runtimeController = {
   }
 };
 
-log('bkm-info-sw.js 00');
 
 log('bkm-info-sw.js 00');
 
