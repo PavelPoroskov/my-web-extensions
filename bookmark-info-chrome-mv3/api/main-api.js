@@ -70,6 +70,11 @@ export async function updateBookmarkInfoInPage({ tabId, bookmarkInfo }) {
       return;
     }
 
+    if (bookmarkInfo.folderName === null && oldBookmarkInfo?.folderName === undefined) {
+      log(' updateBookmarkInfoInPage: OPTIMIZATION(!bookmarkInfo && !oldBookmarkInfo), not update')
+      return;
+    }
+
     await chrome.tabs.sendMessage(tabId, {
       command: "bookmarkInfo",
       folderName: bookmarkInfo.folderName,
