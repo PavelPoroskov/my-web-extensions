@@ -21,7 +21,12 @@ export const tabsController = {
     log('tabs.onUpdated', Tab.index, tabId, changeInfo);
     switch (true) {
       case (changeInfo?.status == 'loading'): {
-        cacheTabToInfo.delete(tabId);
+        if (Object.keys(changeInfo).length === 1) {
+          // reloading the same page changeInfo = { status: 'loading' }
+          cacheTabToInfo.delete(tabId);
+          // on changing page changeInfo = { status: 'loading', url='ht..' }
+        }
+
         const url = changeInfo?.url;
   
         if (url && isSupportedProtocol(url)) {

@@ -70,6 +70,14 @@ export async function updateBookmarkInfoInPage({ tabId, bookmarkInfo }) {
       return;
     }
 
+    // WHY after changing url bookmark label stay for prev page
+    // 1) on page with bookmark in folder. Bookmark folder is visible in page
+    //    https://medium.com/@irenemmassyy/5-coding-projects-to-make-you-stand-out-during-a-job-interview-d52bb9633c30
+    // 2) click on link in page. loaded second page than does not have bookmark
+    //    https://medium.com/@irenemmassyy
+    //  It is new page with new content. Why prev label is in page?
+    // 
+    // this code create case above
     if (bookmarkInfo.folderName === null && oldBookmarkInfo?.folderName === undefined) {
       log(' updateBookmarkInfoInPage: OPTIMIZATION(!bookmarkInfo && !oldBookmarkInfo), not update')
       return;

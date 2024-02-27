@@ -1,4 +1,4 @@
-const SHOW_LOG = false;
+import { CONFIG } from '../config.js'
 
 const makeLogWithTimer = () => {
   let startTime;
@@ -21,4 +21,4 @@ const makeLogWithTimer = () => {
   }
 }
 
-export const log = SHOW_LOG ? makeLogWithTimer() : () => { };
+export const log = CONFIG.SHOW_LOG ? makeLogWithTimer() : () => { };
