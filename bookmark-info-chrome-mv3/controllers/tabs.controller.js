@@ -1,11 +1,7 @@
 import {
   getBookmarkInfoUni,
-  isSupportedProtocol,
-  updateBookmarkInfoInPage,
+  updateTab,
 } from '../api/main-api.js'
-import {
-  cacheTabToInfo,
-} from '../api/cache.js'
 import {
   log,
 } from '../api/debug.js'
@@ -13,51 +9,40 @@ import {
 export const tabsController = {
   onCreated({ pendingUrl: url, index, id }) {
     log('tabs.onCreated', index, id, url);
-    if (url && isSupportedProtocol(url)) {
-      getBookmarkInfoUni({ url, useCache: true });
-    }
+    getBookmarkInfoUni({ url, useCache: true });
   },
   async onUpdated(tabId, changeInfo, Tab) {
     log('tabs.onUpdated', Tab.index, tabId, changeInfo);
     switch (true) {
       case (changeInfo?.status == 'loading'): {
-        if (Object.keys(changeInfo).length === 1) {
-          // reloading the same page changeInfo = { status: 'loading' }
-          cacheTabToInfo.delete(tabId);
-          // on changing page changeInfo = { status: 'loading', url='ht..' }
+        if (changeInfo?.url) {
+          log('tabs.onUpdated LOADING', Tab.index, tabId, changeInfo.url);
+          getBookmarkInfoUni({ url: changeInfo.url, useCache: true });
         }
 
-        const url = changeInfo?.url;
-  
-        if (url && isSupportedProtocol(url)) {
-          log('tabs.onUpdated LOADING', tabId, url);
-          getBookmarkInfoUni({ url, useCache: true });  
-        }
         break;
       }
-      case (changeInfo?.status == 'complete' && Tab.url && isSupportedProtocol(Tab.url)): {
-        const url = Tab.url;
-        log('tabs.onUpdated COMPLETE', tabId, url);
-        const bookmarkInfo = await getBookmarkInfoUni({ url, useCache: true });
-        updateBookmarkInfoInPage({
-          tabId,
-          bookmarkInfo,
-        })
+      case (changeInfo?.status == 'complete'): {
+        log('tabs.onUpdated COMPLETE', Tab.index, tabId, Tab.url);
+        updateTab({
+          tabId, 
+          url: Tab.url, 
+          useCache: true,
+        });
+    
         break;
       }
     }
   },
   async onActivated({ tabId }) {
-    log('tabs.onActivated tabId', tabId);
+    log('tabs.onActivated 00', tabId);
     const Tab = await chrome.tabs.get(tabId);
-    const url = Tab.url;
+    log('tabs.onActivated 11', Tab.index, tabId, Tab.url);
     
-    if (isSupportedProtocol(url)) {
-      const bookmarkInfo = await getBookmarkInfoUni({ url, useCache: true });
-      updateBookmarkInfoInPage({
-        tabId,
-        bookmarkInfo,
-      })
-    }
+    updateTab({
+      tabId, 
+      url: Tab.url, 
+      useCache: true,
+    });
   },
 }

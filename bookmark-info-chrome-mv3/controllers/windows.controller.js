@@ -6,8 +6,10 @@ import {
 } from '../api/debug.js'
 
 export const windowsController = {
-  onFocusChanged() {
-    log('windows.onFocusChanged');
-    updateActiveTab({ useCache: true });
+  onFocusChanged(windowId) {
+    if (0 < windowId) {
+      log('windows.onFocusChanged', windowId);
+      updateActiveTab({ useCache: true });
+    }
   },
 };

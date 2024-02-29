@@ -8,10 +8,10 @@ import {
 export const runtimeController = {
   onStartup() {
     log('runtime.onStartup');
-    updateActiveTab();
+    updateActiveTab({ useCache: true });
   },
   onInstalled () {
     log('runtime.onInstalled');
-    updateActiveTab();
+    updateActiveTab({ useCache: true });
   }
 };
