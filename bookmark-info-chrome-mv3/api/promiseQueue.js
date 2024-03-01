@@ -10,7 +10,7 @@ class PromiseQueue {
     this.cache = new CacheWithLimit({ name: 'cachePromiseQueue', size: 50 });
   }
 
-  add ({ key, fn, isOverwrite }) {
+  add ({ key, fn }) {
     let promiseInQueue = this.cache.get(key);
 
     const getStepPromise = () => fn()
@@ -29,17 +29,11 @@ class PromiseQueue {
         key,
         getStepPromise()
       )
-    } else if (isOverwrite) {
+    } else {
       log(' PromiseQueue: repeat after always');
       this.cache.add(
         key,
         promiseInQueue.finally(() => getStepPromise())
-      )
-    } else {
-      log(' PromiseQueue: repeat if error');
-      this.cache.add(
-        key,
-        promiseInQueue.then((v) => v?.isError && getStepPromise())
       )
     }
   }

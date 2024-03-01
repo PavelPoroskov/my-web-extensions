@@ -1,4 +1,6 @@
-const SHOW_LOG = false;
+const CONFIG = {
+  SHOW_LOG: false,
+}
 
 const makeLogWithTimer = () => {
   let startTime;
@@ -21,7 +23,8 @@ const makeLogWithTimer = () => {
   }
 }
 
-const log = SHOW_LOG ? makeLogWithTimer() : () => { };
+const log = CONFIG.SHOW_LOG ? makeLogWithTimer() : () => { };
+
 
 class CacheWithLimit {
   constructor ({ name='cache', size = 100 }) {
@@ -29,11 +32,7 @@ class CacheWithLimit {
     this.LIMIT = size;
     this.name = name;
   }
-  // addToCache = (url,folder) => {
-  add (key,value) {
-    this.cache.set(key, value);
-    log(`   ${this.name}.add: ${key}`, value);
-  
+  removeStale () {
     if (this.LIMIT < this.cache.size) {
       let deleteCount = this.cache.size - this.LIMIT;
       const keyToDelete = [];
@@ -52,6 +51,13 @@ class CacheWithLimit {
       }
     }
   }
+
+  add (key,value) {
+    this.cache.set(key, value);
+    log(`   ${this.name}.add: ${key}`, value);
+    
+    this.removeStale();
+  }
   
   get(key) {
     const value = this.cache.get(key);
@@ -62,11 +68,47 @@ class CacheWithLimit {
 
   delete(key) {
     this.cache.delete(key);
+    log(`   ${this.name}.delete: ${key}`);
   }
 }
 
 const cacheUrlToInfo = new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 });
-const cacheTabToInfo = new CacheWithLimit({ name: 'cacheTabToInfo', size: 50 });
+
+class PromiseQueue {
+  constructor () {
+    this.cache = new CacheWithLimit({ name: 'cachePromiseQueue', size: 50 });
+  }
+
+  add ({ key, fn }) {
+    let promiseInQueue = this.cache.get(key);
+
+    const getStepPromise = () => fn()
+      .then(() => {
+        this.cache.delete(key) 
+      })
+      .catch((e) => {
+        log(' IGNORING error: PromiseQueue', e);
+
+        return { isError: true }
+      })
+
+    if (!promiseInQueue) {
+      log(' PromiseQueue: create first');
+      this.cache.add(
+        key,
+        getStepPromise()
+      )
+    } else {
+      log(' PromiseQueue: repeat after always');
+      this.cache.add(
+        key,
+        promiseInQueue.finally(() => getStepPromise())
+      )
+    }
+  }
+}
+
+const promiseQueue = new PromiseQueue();
 
 const supportedProtocols = ["https:", "http:"];
 
@@ -103,6 +145,10 @@ async function getBookmarkInfo(url) {
 }
 
 async function getBookmarkInfoUni({ url, useCache=false }) {
+  if (!url || !isSupportedProtocol(url)) {
+    return;
+  }
+
   let bookmarkInfo;
 
   if (useCache) {
@@ -121,31 +167,23 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
   return bookmarkInfo;
 }
 
-async function updateBookmarkInfoInPage({ tabId, bookmarkInfo }) {
-  log(' updateBookmarkInfoInPage: 00', tabId)
-  try {
-    const oldBookmarkInfo = cacheTabToInfo.get(tabId);
+async function updateTab00({ tabId, url, useCache=false }) {
+  const bookmarkInfo = await getBookmarkInfoUni({ url, useCache });
+  log('browser.tabs.sendMessage(', tabId, bookmarkInfo.folderName);
 
-    if (bookmarkInfo.folderName === oldBookmarkInfo?.folderName
-      && bookmarkInfo.double === oldBookmarkInfo?.double) {
-      log(' updateBookmarkInfoInPage: OPTIMIZATION(bookmarkInfo === oldBookmarkInfo), not update')
-      return;
-    }
+  return browser.tabs.sendMessage(tabId, {
+    command: "bookmarkInfo",
+    folderName: bookmarkInfo.folderName,
+    double: bookmarkInfo.double,
+  })
+}
 
-    if (bookmarkInfo.folderName === null && oldBookmarkInfo?.folderName === undefined) {
-      log(' updateBookmarkInfoInPage: OPTIMIZATION(!bookmarkInfo && !oldBookmarkInfo), not update')
-      return;
-    }
-
-    await browser.tabs.sendMessage(tabId, {
-      command: "bookmarkInfo",
-      folderName: bookmarkInfo.folderName,
-      double: bookmarkInfo.double,
-    });    
-    cacheTabToInfo.add(tabId, bookmarkInfo);
-  
-  } catch (e) {
-    log(' IGNORING error: updateBookmarkInfoInPage()', e);
+async function updateTab({ tabId, url, useCache=false }) {
+  if (url && isSupportedProtocol(url)) {
+    promiseQueue.add({
+      key: `${tabId}`,
+      fn: () => updateTab00({ tabId, url, useCache }),
+    });
   }
 }
 
@@ -155,15 +193,12 @@ async function updateActiveTab({ useCache=false } = {}) {
   const [Tab] = tabs;
 
   if (Tab) {
-    const url = Tab.url;
-    if (isSupportedProtocol(url)) {
-      log(' updateActiveTab 11', Tab)
-      const bookmarkInfo = await getBookmarkInfoUni({ url, useCache });
-      updateBookmarkInfoInPage({
-        tabId: Tab.id,
-        bookmarkInfo,
-      })
-    }
+    log('updateActiveTab CALL UPDATETAB');
+    updateTab({
+      tabId: Tab.id, 
+      url: Tab.url, 
+      useCache,
+    });
   }
 }
 
@@ -189,69 +224,61 @@ const bookmarksController = {
 const tabsController = {
   onCreated({ pendingUrl: url, index, id }) {
     log('tabs.onCreated', index, id, url);
-    if (url && isSupportedProtocol(url)) {
-      getBookmarkInfoUni({ url, useCache: true });
-    }
+    getBookmarkInfoUni({ url, useCache: true });
   },
   async onUpdated(tabId, changeInfo, Tab) {
     log('tabs.onUpdated', Tab.index, tabId, changeInfo);
     switch (true) {
       case (changeInfo?.status == 'loading'): {
-        if (Object.keys(changeInfo).length === 1) {
-          // reloading the same page changeInfo = { status: 'loading' }
-          cacheTabToInfo.delete(tabId);
-          // on changing page changeInfo = { status: 'loading', url='ht..' }
+        if (changeInfo?.url) {
+          log('tabs.onUpdated LOADING', Tab.index, tabId, changeInfo.url);
+          getBookmarkInfoUni({ url: changeInfo.url, useCache: true });
         }
-        const url = changeInfo?.url;
-  
-        if (url && isSupportedProtocol(url)) {
-          log('tabs.onUpdated LOADING', tabId, url);
-          getBookmarkInfoUni({ url, useCache: true });  
-        }
+
         break;
       }
-      case (changeInfo?.status == 'complete' && Tab.url && isSupportedProtocol(Tab.url)): {
-        const url = Tab.url;
-        log('tabs.onUpdated COMPLETE', tabId, url);
-        const bookmarkInfo = await getBookmarkInfoUni({ url, useCache: true });
-        updateBookmarkInfoInPage({
-          tabId,
-          bookmarkInfo,
-        })
+      case (changeInfo?.status == 'complete'): {
+        log('tabs.onUpdated COMPLETE', Tab.index, tabId, Tab.url);
+        updateTab({
+          tabId, 
+          url: Tab.url, 
+          useCache: true,
+        });
+    
         break;
       }
     }
   },
   async onActivated({ tabId }) {
-    log('tabs.onActivated tabId', tabId);
+    log('tabs.onActivated 00', tabId);
     const Tab = await browser.tabs.get(tabId);
-    const url = Tab.url;
+    log('tabs.onActivated 11', Tab.index, tabId, Tab.url);
     
-    if (isSupportedProtocol(url)) {
-      const bookmarkInfo = await getBookmarkInfoUni({ url, useCache: true });
-      updateBookmarkInfoInPage({
-        tabId,
-        bookmarkInfo,
-      })
-    }
+    updateTab({
+      tabId, 
+      url: Tab.url, 
+      useCache: true,
+    });
   },
 }
 
 const windowsController = {
-  onFocusChanged() {
-    log('windows.onFocusChanged');
-    updateActiveTab({ useCache: true });
+  onFocusChanged(windowId) {
+    if (0 < windowId) {
+      log('windows.onFocusChanged', windowId);
+      updateActiveTab({ useCache: true });
+    }
   },
 };
 
 const runtimeController = {
   onStartup() {
     log('runtime.onStartup');
-    updateActiveTab();
+    updateActiveTab({ useCache: true });
   },
   onInstalled () {
     log('runtime.onInstalled');
-    updateActiveTab();
+    updateActiveTab({ useCache: true });
   }
 };
 

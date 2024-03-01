@@ -79,9 +79,8 @@ async function updateTab00({ tabId, url, useCache=false }) {
 export async function updateTab({ tabId, url, useCache=false }) {
   if (url && isSupportedProtocol(url)) {
     promiseQueue.add({
-      key: `${tabId}#${url}`,
+      key: `${tabId}`,
       fn: () => updateTab00({ tabId, url, useCache }),
-      isOverwrite: !useCache,
     });
   }
 }
