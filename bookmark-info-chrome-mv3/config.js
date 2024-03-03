@@ -1,3 +1,3 @@
 export const CONFIG = {
-  SHOW_LOG: true,
+  SHOW_LOG: false,
 }

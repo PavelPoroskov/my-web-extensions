@@ -1,0 +1,63 @@
+if change bookmark in bookmark manager (mv to other folder) and reload page with that url
+  no changes in label for folder name
+    I get value from cache
+      ? remove cache
+
+TODO other way to display bookmark info
+  I show bookmark info in page now.
+  I must wait when page loading complete.
+  Better way must be.
+
+  I do not know other way
+
+If page is protected with content-security-policy from injecting scripting
+  label with bookmark will not be shown
+
+When we open profile with opened tabs
+  I have tabs.onCreate/onUpdate for every tab 
+    do i need handle this events?
+    My intention was handle tabs.onUpdate for new tab or user interaction with tab
+
+  I have runtime.onStartup/windows.onFocus/tabs.onActivate calls updateActiveTab->updateTab for the same tab
+
+  I use promise queue to handle this.
+    first call of updateTab caches result
+    second call of updateTab uses result from first call
+DONE optimization
+  events tab.onCreate? tab.onUpdate(2), tab.onActivate, windows.onFocusChanged
+    results in I get bookmarkInfo three+ times
+
+    need caching for last tab
+
+  scenario
+    open link from bookmark
+    open link from page
+    new tab, type url
+    tab with content, enter new url
+
+on sending to Chrome Web Store
+  recommendation
+    replace host permissions ("matches": [ "http://*/*", "https://*/*" ])
+    to use permission activeTab 
+      ?using chrome.scripting to inject on active tab
+
+    question: Do activeTab can do without user action (press extension action)
+      NO 
+      an extension with the "activeTab" permission only obtains access to a tab 
+      in response to an explicit user gesture.
+      The following user gestures enable the "activeTab" permission:
+        Executing an action
+        Executing a context menu item
+        Executing a keyboard shortcut from the commands API
+        Accepting a suggestion from the omnibox API
+
+  I think my current solution has better performance and UX.
+    my solution does not required click from user
+
+DONE bkm-info-sw.js:1 Uncaught (in promise) Error: Could not establish connection. Receiving end does not exist.
+  may be too early chrome.tabs.sendMessage(tabId
+    tab is not ready
+      tabs.onUpdate(status='complete')
+  after comment. no errors
+     // // listen for tab switching
+     // chrome.tabs.onActivated.addListener(TabsController.onActivated);

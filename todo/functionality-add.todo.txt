@@ -1,0 +1,29 @@
+Add functionality
+=================
+
+) close all tabs
+    tabs without bookmark: bookmark and close
+    tabs with bookmark: close
+    tabs with bookmark: bookmark and close 
+    tabs: bookmark and close
+  from context menu
+
+color bookmarked link in page. add overtext with FolderName for link
+
+?get result for all opened tabs and cache
+
+// extensions options: what show
+//  DONE show folder only: Cat 
+TODO  show full path (reverse): Cat / Predators / Animals
+//  show full path (direct): Animals \ Predators \ Cat
+
+    firefox has tags for bookmark
+      we can show tags or folder <- need option
+
+// TODO hide notification with folder from page
+//  red cross at right top corner
+
+// TODONO message position
+//    DONE top right corner
+//    top left corner
+//    top middle
