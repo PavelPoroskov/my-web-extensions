@@ -2,6 +2,7 @@ if change bookmark in bookmark manager (mv to other folder) and reload page with
   no changes in label for folder name
     I get value from cache
       ? remove cache
+  FIXED
 
 TODO other way to display bookmark info
   I show bookmark info in page now.

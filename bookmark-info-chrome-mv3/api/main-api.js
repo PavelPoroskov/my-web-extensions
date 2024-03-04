@@ -23,12 +23,14 @@ export function isSupportedProtocol(urlString) {
 async function getBookmarkInfo(url) {
   let folderName = null;
   let double;
+  let id;
   const bookmarks = await chrome.bookmarks.search({ url });
 
   if (bookmarks.length > 0) {
     const bookmark = bookmarks[0];
     const parentId = bookmark && bookmark.parentId;
     double = bookmarks.length;
+    id = bookmark?.id;
 
     if (parentId) {
       const bookmarkFolder = await chrome.bookmarks.get(parentId)
@@ -38,7 +40,8 @@ async function getBookmarkInfo(url) {
 
   return {
     folderName,
-    double
+    double,
+    id
   };
 }
 
@@ -76,8 +79,9 @@ async function updateTab00({ tabId, url, useCache=false }) {
   })
 }
 
-export async function updateTab({ tabId, url, useCache=false }) {
+export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
   if (url && isSupportedProtocol(url)) {
+    log(`${debugCaller} -> updateTab()`);
     promiseQueue.add({
       key: `${tabId}`,
       fn: () => updateTab00({ tabId, url, useCache }),
@@ -85,17 +89,17 @@ export async function updateTab({ tabId, url, useCache=false }) {
   }
 }
 
-export async function updateActiveTab({ useCache=false } = {}) {
-  log(' updateActiveTab 00')
+export async function updateActiveTab({ useCache=false, debugCaller } = {}) {
+  log(' updateActiveTab() 00')
   const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   const [Tab] = tabs;
 
   if (Tab) {
-    log('updateActiveTab CALL UPDATETAB');
     updateTab({
       tabId: Tab.id, 
       url: Tab.url, 
       useCache,
+      debugCaller: `${debugCaller} -> updateActiveTab()`
     });
   }
 }
