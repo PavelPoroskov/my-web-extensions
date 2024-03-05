@@ -1,8 +1,15 @@
 const CONFIG = {
+  SHOW_LOG_EVENT: false,
+  SHOW_LOG_OPTIMIZATION: false,
   SHOW_LOG: false,
 }
 
-const makeLogWithTimer = () => {
+const SOURCE = {
+  CACHE: 'CACHE',
+  ACTUAL: 'ACTUAL',
+};
+
+const makeLogWithTime = () => {
   let startTime;
   let prevLogTime;
 
@@ -23,7 +30,23 @@ const makeLogWithTimer = () => {
   }
 }
 
-const log = CONFIG.SHOW_LOG ? makeLogWithTimer() : () => { };
+const logWithTime = makeLogWithTime();
+
+const makeLogWithPrefix = (prefix = '') => {
+  return function () {  
+    const ar = Array.from(arguments);
+
+    if (prefix) {
+      ar.unshift(prefix);
+    }
+
+    logWithTime(...ar);
+  }
+}
+
+const logEvent = CONFIG.SHOW_LOG_EVENT ? makeLogWithPrefix('EVENT') : () => { };
+const logOptimization = CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OPTIMIZATION') : () => { };
+const log = CONFIG.SHOW_LOG ? makeLogWithPrefix() : () => { };
 
 
 class CacheWithLimit {
@@ -76,34 +99,49 @@ const cacheUrlToInfo = new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 })
 
 class PromiseQueue {
   constructor () {
-    this.cache = new CacheWithLimit({ name: 'cachePromiseQueue', size: 50 });
+    this.promise = {};
+    this.tasks = {};
   }
 
-  add ({ key, fn }) {
-    let promiseInQueue = this.cache.get(key);
+  async continueQueue(key, prevResult) {
+    // console.log('this.tasks[key]', this.tasks[key]);
+    const task = this.tasks[key]?.shift()
 
-    const getStepPromise = () => fn()
-      .then(() => {
-        this.cache.delete(key) 
-      })
-      .catch((e) => {
-        log(' IGNORING error: PromiseQueue', e);
+    if (task) {
+      const isActual = prevResult?.url === task.options.url && prevResult?.source === SOURCE.ACTUAL && prevResult?.sendMessage;
+      log('task', task);
+      log('prevResult', prevResult);
+      log('isActual', isActual);
 
-        return { isError: true }
-      })
-
-    if (!promiseInQueue) {
-      log(' PromiseQueue: create first');
-      this.cache.add(
-        key,
-        getStepPromise()
-      )
+      if (isActual) {
+        log(' PromiseQueue: exec task, skip : source actual', key, task.options);
+        return this.continueQueue(key, prevResult);
+      } else {
+        log(' PromiseQueue: exec task', key, task.options);
+        return task.fn(task.options)
+          .catch((er) => {
+            log(' IGNORING error: PromiseQueue', er);
+            return this.continueQueue(key);
+          })
+          .then((result) => this.continueQueue(key,result));
+      }  
     } else {
-      log(' PromiseQueue: repeat after always');
-      this.cache.add(
-        key,
-        promiseInQueue.finally(() => getStepPromise())
-      )
+      log(' PromiseQueue: finish', key)
+      delete this.promise[key];
+      delete this.tasks[key];
+
+      return prevResult;
+    }
+  }
+
+  add ({ key, fn, options }) {
+    if (!this.promise[key]) {
+      log(' PromiseQueue: start', key, options)
+      this.tasks[key] = [{ fn, options }]
+      this.promise[key] = this.continueQueue(key);
+    } else {
+      log(' PromiseQueue: add task', key, options)
+      this.tasks[key].push({ fn, options })
     }
   }
 }
@@ -125,12 +163,14 @@ function isSupportedProtocol(urlString) {
 async function getBookmarkInfo(url) {
   let folderName = null;
   let double;
+  let id;
   const bookmarks = await browser.bookmarks.search({ url });
 
   if (bookmarks.length > 0) {
     const bookmark = bookmarks[0];
     const parentId = bookmark && bookmark.parentId;
     double = bookmarks.length;
+    id = bookmark?.id;
 
     if (parentId) {
       const bookmarkFolder = await browser.bookmarks.get(parentId)
@@ -140,7 +180,8 @@ async function getBookmarkInfo(url) {
 
   return {
     folderName,
-    double
+    double,
+    id
   };
 }
 
@@ -150,21 +191,27 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
   }
 
   let bookmarkInfo;
+  let source;
 
   if (useCache) {
     bookmarkInfo = cacheUrlToInfo.get(url);
     
     if (bookmarkInfo) {
-      log(' getBookmarkInfoUni: OPTIMIZATION(from cache bookmarkInfo)')
+      source = SOURCE.CACHE;
+      logOptimization(' getBookmarkInfoUni: from cache bookmarkInfo')
     }
   } 
   
   if (!bookmarkInfo) {
     bookmarkInfo = await getBookmarkInfo(url);
+    source = SOURCE.ACTUAL;
     cacheUrlToInfo.add(url, bookmarkInfo);
   }
 
-  return bookmarkInfo;
+  return {
+    ...bookmarkInfo,
+    source,
+  };
 }
 
 async function updateTab00({ tabId, url, useCache=false }) {
@@ -176,88 +223,137 @@ async function updateTab00({ tabId, url, useCache=false }) {
     folderName: bookmarkInfo.folderName,
     double: bookmarkInfo.double,
   })
+    .then(() => ({
+      ...bookmarkInfo,
+      sendMessage: true,
+      url,
+    }));
 }
 
-async function updateTab({ tabId, url, useCache=false }) {
+async function updateTab({ tabId, url, useCache=false, debugCaller }) {
   if (url && isSupportedProtocol(url)) {
+    log(`${debugCaller} -> updateTab()`);
     promiseQueue.add({
       key: `${tabId}`,
-      fn: () => updateTab00({ tabId, url, useCache }),
+      fn: updateTab00,
+      options: { tabId, url, useCache },
     });
   }
 }
 
-async function updateActiveTab({ useCache=false } = {}) {
-  log(' updateActiveTab 00')
+async function updateActiveTab({ useCache=false, debugCaller } = {}) {
+  logEvent(' updateActiveTab() 00')
   const tabs = await browser.tabs.query({ active: true, currentWindow: true });
   const [Tab] = tabs;
 
   if (Tab) {
-    log('updateActiveTab CALL UPDATETAB');
     updateTab({
       tabId: Tab.id, 
       url: Tab.url, 
       useCache,
+      debugCaller: `${debugCaller} -> updateActiveTab()`
     });
   }
 }
 
 const bookmarksController = {
-  onCreated() {
-    log('bookmark.onCreated');
-    updateActiveTab();
+  async onCreated(_, node) {
+    logEvent('bookmark.onCreated');
+
+    // changes in active tab
+    await updateActiveTab({
+      debugCaller: 'bookmark.onCreated'
+    });
+
+    // changes in bookmark manager
+    getBookmarkInfoUni({ url: node?.url });
   },
-  onChanged() {
-    log('bookmark.onChanged');
-    updateActiveTab();
+  async onChanged(bookmarkId, changeInfo) {
+    logEvent('bookmark.onChanged 00', changeInfo);
+    // changes in active tab
+    await updateActiveTab({
+      debugCaller: 'bookmark.onChanged'
+    });
+
+    // changes in bookmark manager
+    const [bookmark] = await browser.bookmarks.get(bookmarkId)
+    getBookmarkInfoUni({ url: bookmark.url });
   },
-  onMoved() {
-    log('bookmark.onMoved');
-    updateActiveTab();
+  async onMoved(bookmarkId) {
+    logEvent('bookmark.onMoved');
+    // changes in active tab
+    await updateActiveTab({
+      debugCaller: 'bookmark.onMoved'
+    });
+
+    // changes in bookmark manager
+    const [bookmark] = await browser.bookmarks.get(bookmarkId)
+    getBookmarkInfoUni({ url: bookmark.url });
   },
-  onRemoved() {
-    log('bookmark.onRemoved');
-    updateActiveTab();
+  async onRemoved(_, { node }) {
+    logEvent('bookmark.onRemoved');
+    // changes in active tab
+    await updateActiveTab({
+      debugCaller: 'bookmark.onRemoved'
+    });
+
+    // changes in bookmark manager
+    getBookmarkInfoUni({ url: node?.url });
   },
 }
 
+let activeTabId;
+
 const tabsController = {
   onCreated({ pendingUrl: url, index, id }) {
-    log('tabs.onCreated', index, id, url);
+    logEvent('tabs.onCreated', index, id, url);
     getBookmarkInfoUni({ url, useCache: true });
   },
   async onUpdated(tabId, changeInfo, Tab) {
-    log('tabs.onUpdated', Tab.index, tabId, changeInfo);
+    logEvent('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
     switch (true) {
       case (changeInfo?.status == 'loading'): {
         if (changeInfo?.url) {
-          log('tabs.onUpdated LOADING', Tab.index, tabId, changeInfo.url);
+          logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, changeInfo.url);
           getBookmarkInfoUni({ url: changeInfo.url, useCache: true });
         }
 
         break;
       }
       case (changeInfo?.status == 'complete'): {
-        log('tabs.onUpdated COMPLETE', Tab.index, tabId, Tab.url);
-        updateTab({
-          tabId, 
-          url: Tab.url, 
-          useCache: true,
-        });
+        logEvent('tabs.onUpdated 11 complete tabId activeTabId', tabId, activeTabId);
+        
+        if (tabId === activeTabId) {
+          logEvent('tabs.onUpdated 22 COMPLETE', Tab.index, tabId, Tab.url);
+          updateTab({
+            tabId, 
+            url: Tab.url, 
+            useCache: true,
+            debugCaller: 'tabs.onUpdated(complete)'
+          });  
+        }
     
         break;
       }
     }
   },
   async onActivated({ tabId }) {
-    log('tabs.onActivated 00', tabId);
+    activeTabId = tabId;
+    logEvent('tabs.onActivated 00', tabId);
     const Tab = await browser.tabs.get(tabId);
-    log('tabs.onActivated 11', Tab.index, tabId, Tab.url);
+    logEvent('tabs.onActivated 11', Tab.index, tabId, Tab.url);
     
-    updateTab({
+    await updateTab({
       tabId, 
       url: Tab.url, 
       useCache: true,
+      debugCaller: 'tabs.onActivated(useCache: true)'
+    });
+    await updateTab({
+      tabId, 
+      url: Tab.url, 
+      useCache: false,
+      debugCaller: 'tabs.onActivated(useCache: false)'
     });
   },
 }
@@ -265,25 +361,33 @@ const tabsController = {
 const windowsController = {
   onFocusChanged(windowId) {
     if (0 < windowId) {
-      log('windows.onFocusChanged', windowId);
-      updateActiveTab({ useCache: true });
+      logEvent('windows.onFocusChanged', windowId);
+      updateActiveTab({
+        useCache: true,
+        debugCaller: 'windows.onFocusChanged'
+      });
     }
   },
 };
 
 const runtimeController = {
   onStartup() {
-    log('runtime.onStartup');
-    updateActiveTab({ useCache: true });
+    logEvent('runtime.onStartup');
+    updateActiveTab({
+      useCache: true,
+      debugCaller: 'runtime.onStartup'
+    });
   },
   onInstalled () {
-    log('runtime.onInstalled');
-    updateActiveTab({ useCache: true });
+    logEvent('runtime.onInstalled');
+    updateActiveTab({
+      useCache: true,
+      debugCaller: 'runtime.onInstalled'
+    });
   }
 };
 
-
-log('bkm-info-sw.js 00');
+logEvent('loading bkm-info-sw.js');
 
 browser.bookmarks.onCreated.addListener(bookmarksController.onCreated);
 browser.bookmarks.onMoved.addListener(bookmarksController.onMoved);
