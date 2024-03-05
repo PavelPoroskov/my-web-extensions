@@ -1,6 +1,6 @@
 import { CONFIG } from '../config.js'
 
-const makeLogWithTimer = () => {
+const makeLogWithTime = () => {
   let startTime;
   let prevLogTime;
 
@@ -21,4 +21,20 @@ const makeLogWithTimer = () => {
   }
 }
 
-export const log = CONFIG.SHOW_LOG ? makeLogWithTimer() : () => { };
+const logWithTime = makeLogWithTime();
+
+const makeLogWithPrefix = (prefix = '') => {
+  return function () {  
+    const ar = Array.from(arguments);
+
+    if (prefix) {
+      ar.unshift(prefix);
+    }
+
+    logWithTime(...ar);
+  }
+}
+
+export const logEvent = CONFIG.SHOW_LOG_EVENT ? makeLogWithPrefix('EVENT') : () => { };
+export const logOptimization = CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OPTIMIZATION') : () => { };
+export const log = CONFIG.SHOW_LOG ? makeLogWithPrefix() : () => { };

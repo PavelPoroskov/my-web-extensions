@@ -2,9 +2,9 @@ import { bookmarksController } from './controllers/bookmarks.controller.js';
 import { tabsController } from './controllers/tabs.controller.js';
 import { windowsController } from './controllers/windows.controller.js';
 import { runtimeController } from './controllers/runtime.controller.js';
-import { log } from './api/debug.js';
+import { logEvent } from './api/debug.js';
 
-log('bkm-info-sw.js 00');
+logEvent('loading bkm-info-sw.js');
 
 chrome.bookmarks.onCreated.addListener(bookmarksController.onCreated);
 chrome.bookmarks.onMoved.addListener(bookmarksController.onMoved);

@@ -6,7 +6,12 @@ import {
 } from './promiseQueue.js'
 import {
   log,
+  logOptimization,
+  logEvent,
 } from './debug.js'
+import {
+  SOURCE,
+} from '../constants.js'
 
 const supportedProtocols = ["https:", "http:"];
 
@@ -51,21 +56,27 @@ export async function getBookmarkInfoUni({ url, useCache=false }) {
   }
 
   let bookmarkInfo;
+  let source;
 
   if (useCache) {
     bookmarkInfo = cacheUrlToInfo.get(url);
     
     if (bookmarkInfo) {
-      log(' getBookmarkInfoUni: OPTIMIZATION(from cache bookmarkInfo)')
+      source = SOURCE.CACHE;
+      logOptimization(' getBookmarkInfoUni: from cache bookmarkInfo')
     }
   } 
   
   if (!bookmarkInfo) {
     bookmarkInfo = await getBookmarkInfo(url);
+    source = SOURCE.ACTUAL;
     cacheUrlToInfo.add(url, bookmarkInfo);
   }
 
-  return bookmarkInfo;
+  return {
+    ...bookmarkInfo,
+    source,
+  };
 }
 
 async function updateTab00({ tabId, url, useCache=false }) {
@@ -77,6 +88,11 @@ async function updateTab00({ tabId, url, useCache=false }) {
     folderName: bookmarkInfo.folderName,
     double: bookmarkInfo.double,
   })
+    .then(() => ({
+      ...bookmarkInfo,
+      sendMessage: true,
+      url,
+    }));
 }
 
 export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
@@ -84,13 +100,14 @@ export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
     log(`${debugCaller} -> updateTab()`);
     promiseQueue.add({
       key: `${tabId}`,
-      fn: () => updateTab00({ tabId, url, useCache }),
+      fn: updateTab00,
+      options: { tabId, url, useCache },
     });
   }
 }
 
 export async function updateActiveTab({ useCache=false, debugCaller } = {}) {
-  log(' updateActiveTab() 00')
+  logEvent(' updateActiveTab() 00')
   const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   const [Tab] = tabs;
 
