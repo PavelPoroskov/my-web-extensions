@@ -79,7 +79,7 @@ export async function getBookmarkInfoUni({ url, useCache=false }) {
   };
 }
 
-async function updateTab00({ tabId, url, useCache=false }) {
+async function updateTabTask({ tabId, url, useCache=false }) {
   const bookmarkInfo = await getBookmarkInfoUni({ url, useCache });
   log('chrome.tabs.sendMessage(', tabId, bookmarkInfo.folderName);
 
@@ -88,11 +88,7 @@ async function updateTab00({ tabId, url, useCache=false }) {
     folderName: bookmarkInfo.folderName,
     double: bookmarkInfo.double,
   })
-    .then(() => ({
-      ...bookmarkInfo,
-      sendMessage: true,
-      url,
-    }));
+    .then(() => bookmarkInfo);
 }
 
 export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
@@ -100,7 +96,7 @@ export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
     log(`${debugCaller} -> updateTab()`);
     promiseQueue.add({
       key: `${tabId}`,
-      fn: updateTab00,
+      fn: updateTabTask,
       options: { tabId, url, useCache },
     });
   }

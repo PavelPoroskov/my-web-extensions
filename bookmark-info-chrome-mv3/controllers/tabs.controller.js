@@ -47,13 +47,13 @@ export const tabsController = {
     const Tab = await chrome.tabs.get(tabId);
     logEvent('tabs.onActivated 11', Tab.index, tabId, Tab.url);
     
-    await updateTab({
+    updateTab({
       tabId, 
       url: Tab.url, 
       useCache: true,
       debugCaller: 'tabs.onActivated(useCache: true)'
     });
-    await updateTab({
+    updateTab({
       tabId, 
       url: Tab.url, 
       useCache: false,
