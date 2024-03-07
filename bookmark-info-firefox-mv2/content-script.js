@@ -28,11 +28,12 @@ const log = SHOW_LOG ? console.log : () => {};
     'background-color: yellow',
     'color: black',
     'font-size: 14px',
-    'line-height: 20px',
-    'padding-left: 6px',
-    'border-radius: 10px 0 0 10px',
+    'padding-left: 0.7ch',
+    'border-top-left-radius: 0.5lh 50%',
+    'border-bottom-left-radius: 0.5lh 50%',
     'font-family: sans-serif',
     'font-weight: normal',
+    'line-height: normal',
   ].join(';');
 
   function showBookmarkInfo(message) {

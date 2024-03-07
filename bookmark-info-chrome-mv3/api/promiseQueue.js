@@ -1,5 +1,5 @@
 import {
-  logPromiseQueue as log,
+  logPromiseQueue,
 } from './debug.js'
 import {
   SOURCE,
@@ -19,15 +19,15 @@ class PromiseQueue {
       const isActual = prevResult?.taskName === task.taskName  
         && prevResult?.url === task.options.url
         && prevResult?.source === SOURCE.ACTUAL;
-      log('task', task);
-      log('prevResult', prevResult);
-      log('isActual', isActual);
+      logPromiseQueue('task', task);
+      logPromiseQueue('prevResult', prevResult);
+      logPromiseQueue('isActual', isActual);
 
       if (!isActual) {
-        log(' PromiseQueue: exec task', key, task.options);
+        logPromiseQueue(' PromiseQueue: exec task', key, task.options);
         return task.fn(task.options)
           .catch((er) => {
-            log(' IGNORING error: PromiseQueue', er);
+            logPromiseQueue(' IGNORING error: PromiseQueue', er);
             return this.continueQueue(key);
           })
           .then((result) => (
@@ -41,11 +41,11 @@ class PromiseQueue {
             )
           ));
       } else {
-        log(' PromiseQueue: exec task, skip : source actual', key, task.options);
+        logPromiseQueue(' PromiseQueue: exec task, skip : source actual', key, task.options);
         return this.continueQueue(key, prevResult);
       }
     } else {
-      log(' PromiseQueue: finish', key)
+      logPromiseQueue(' PromiseQueue: finish', key)
       delete this.tasks[key];
       delete this.promise[key];
 
@@ -57,11 +57,11 @@ class PromiseQueue {
     const taskName = fn.name;
 
     if (!this.tasks[key]) {
-      log(' PromiseQueue: start', key, options)
+      logPromiseQueue(' PromiseQueue: start', key, options)
       this.tasks[key] = [{ fn, options, taskName }]
       this.promise[key] = this.continueQueue(key);
     } else {
-      log(' PromiseQueue: add task', key, options)
+      logPromiseQueue(' PromiseQueue: add task', key, options)
       this.tasks[key].push({ fn, options, taskName })
     }
   }

@@ -1,6 +1,6 @@
 
 import {
-  logCache as log,
+  logCache,
 } from './debug.js'
 
 export class CacheWithLimit {
@@ -31,21 +31,21 @@ export class CacheWithLimit {
 
   add (key,value) {
     this.cache.set(key, value);
-    log(`   ${this.name}.add: ${key}`, value);
+    logCache(`   ${this.name}.add: ${key}`, value);
     
     this.removeStale();
   }
   
   get(key) {
     const value = this.cache.get(key);
-    log(`   ${this.name}.get: ${key}`, value);
+    logCache(`   ${this.name}.get: ${key}`, value);
   
     return value;
   }
 
   delete(key) {
     this.cache.delete(key);
-    log(`   ${this.name}.delete: ${key}`);
+    logCache(`   ${this.name}.delete: ${key}`);
   }
 }
 
