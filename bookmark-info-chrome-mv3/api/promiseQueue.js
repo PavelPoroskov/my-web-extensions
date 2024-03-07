@@ -1,5 +1,5 @@
 import {
-  log,
+  logPromiseQueue as log,
 } from './debug.js'
 import {
   SOURCE,

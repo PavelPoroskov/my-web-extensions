@@ -1,5 +1,6 @@
+
 import {
-  log,
+  logCache as log,
 } from './debug.js'
 
 export class CacheWithLimit {
