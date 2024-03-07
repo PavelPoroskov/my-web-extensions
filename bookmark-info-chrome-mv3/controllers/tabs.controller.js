@@ -27,7 +27,7 @@ export const tabsController = {
       case (changeInfo?.status == 'complete'): {
         logEvent('tabs.onUpdated 11 complete tabId activeTabId', tabId, activeTabId);
         
-        if (tabId === activeTabId) {
+        if (tabId === activeTabId || !activeTabId) {
           logEvent('tabs.onUpdated 22 COMPLETE', Tab.index, tabId, Tab.url);
           updateTab({
             tabId, 
