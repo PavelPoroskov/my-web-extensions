@@ -26,6 +26,15 @@ firefox
 
   for first tab open from side panel/bookmark
 
+  runtime.onStartup -> updateActiveTab() -> updateTab()
+    browser.tabs.sendMessage( 1 YouTube background.js:31:13
+    IGNORING error: PromiseQueue Error: Could not establish connection. Receiving end does not exist.
+    updateTabTask moz-extension://f086fcbd-4bf1-4e54-9913-be31e09de668/background.js:237
+  tabs.onUpdated(complete) -> updateTab()
+    browser.tabs.sendMessage( 1 YouTube background.js:31:13
+    IGNORING error: PromiseQueue Error: Could not establish connection. Receiving end does not exist.
+    updateTabTask moz-extension://f086fcbd-4bf1-4e54-9913-be31e09de668/background.js:237
+
 if change bookmark in bookmark manager (mv to other folder) and reload page with that url
   no changes in label for folder name
     I get value from cache

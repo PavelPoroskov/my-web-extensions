@@ -34,7 +34,16 @@ export const tabsController = {
             url: Tab.url, 
             useCache: true,
             debugCaller: 'tabs.onUpdated(complete)'
-          });  
+          });
+
+          if (!activeTabId) {
+            updateTab({
+              tabId, 
+              url: Tab.url, 
+              useCache: true,
+              debugCaller: 'tabs.onUpdated(complete)'
+            });  
+          }
         }
     
         break;

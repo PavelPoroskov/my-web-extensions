@@ -1,0 +1,6 @@
+
+node tools/mv-changes-to-firefox.mjs
+
+// install ext to firefox developer edition
+cd bookmark-info-firefox-mv2
+zip -r -FS ../my-extension.zip * --exclude '*.git*' --exclude 'web-ext-artifacts/*'

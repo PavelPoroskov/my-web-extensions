@@ -1,4 +1,5 @@
 import {
+  log,
   logPromiseQueue,
 } from './debug.js'
 import {
@@ -27,7 +28,7 @@ class PromiseQueue {
         logPromiseQueue(' PromiseQueue: exec task', key, task.options);
         return task.fn(task.options)
           .catch((er) => {
-            logPromiseQueue(' IGNORING error: PromiseQueue', er);
+            log(' IGNORING error: PromiseQueue', er);
             return this.continueQueue(key);
           })
           .then((result) => (

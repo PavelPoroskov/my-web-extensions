@@ -118,7 +118,7 @@ const cacheUrlToInfo = new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 })
         logPromiseQueue(' PromiseQueue: exec task', key, task.options);
         return task.fn(task.options)
           .catch((er) => {
-            logPromiseQueue(' IGNORING error: PromiseQueue', er);
+            log(' IGNORING error: PromiseQueue', er);
             return this.continueQueue(key);
           })
           .then((result) => (
@@ -351,7 +351,16 @@ const tabsController = {
             url: Tab.url, 
             useCache: true,
             debugCaller: 'tabs.onUpdated(complete)'
-          });  
+          });
+
+          if (!activeTabId) {
+            updateTab({
+              tabId, 
+              url: Tab.url, 
+              useCache: true,
+              debugCaller: 'tabs.onUpdated(complete)'
+            });  
+          }
         }
     
         break;
