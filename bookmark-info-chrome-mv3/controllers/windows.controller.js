@@ -1,9 +1,9 @@
 import {
-  updateActiveTab,
-} from '../api/main-api.js'
-import {
   logEvent,
 } from '../api/debug.js'
+import {
+  updateActiveTab,
+} from '../api/tabs-api.js'
 
 export const windowsController = {
   onFocusChanged(windowId) {

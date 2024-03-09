@@ -1,10 +1,12 @@
 import {
-  getBookmarkInfoUni,
-  updateTab,
-} from '../api/main-api.js'
-import {
   logEvent,
 } from '../api/debug.js'
+import {
+  getBookmarkInfoUni,
+} from '../api/bookmarks-api.js'
+import {
+  updateTab,
+} from '../api/tabs-api.js'
 
 let activeTabId;
 

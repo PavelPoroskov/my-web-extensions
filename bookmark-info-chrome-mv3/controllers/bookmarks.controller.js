@@ -1,10 +1,12 @@
 import {
-  getBookmarkInfoUni,
-  updateActiveTab,
-} from '../api/main-api.js'
-import {
   logEvent,
 } from '../api/debug.js'
+import {
+  getBookmarkInfoUni,
+} from '../api/bookmarks-api.js'
+import {
+  updateActiveTab,
+} from '../api/tabs-api.js'
 
 export const bookmarksController = {
   async onCreated(_, node) {
