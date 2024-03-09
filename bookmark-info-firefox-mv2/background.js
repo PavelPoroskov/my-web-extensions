@@ -2,6 +2,14 @@ const SOURCE = {
   CACHE: 'CACHE',
   ACTUAL: 'ACTUAL',
 };
+
+const BASE_ID = 'BKM_INF';
+
+const MENU = {
+  CLOSE_DUPLICATE: `${BASE_ID}_CLOSE_DUPLICATE`,
+  CLOSE_BOOKMARKED: `${BASE_ID}_CLOSE_BOOKMARKED`,
+  // BOOKMARK_AND_CLOSE: `${BASE_ID}_BOOKMARK_AND_CLOSE`,
+};
 const CONFIG = {
   SHOW_LOG: false,
   SHOW_LOG_EVENT: false,
@@ -170,6 +178,11 @@ function isSupportedProtocol(urlString) {
     return false;
   }
 }
+async function isHasBookmark(url) {
+  const bookmarks = await browser.bookmarks.search({ url });
+
+  return bookmarks.length > 0;
+}
 
 async function getBookmarkInfo(url) {
   let folderName = null;
@@ -224,8 +237,7 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
     source,
   };
 }
-
-async function updateTabTask({ tabId, url, useCache=false }) {
+async function updateTabTask({ tabId, url, useCache=false }) {
   const bookmarkInfo = await getBookmarkInfoUni({ url, useCache });
   log('browser.tabs.sendMessage(', tabId, bookmarkInfo.folderName);
 
@@ -261,6 +273,129 @@ async function updateActiveTab({ useCache=false, debugCaller } = {}) {
       debugCaller: `${debugCaller} -> updateActiveTab()`
     });
   }
+}
+
+async function getDuplicatesTabs(tabList) {
+  const duplicateTabIdList = [];
+  const uniqUrls = new Map();
+  let activeTabId;
+  let newActiveTabId;
+
+  // do not change pinned tabs
+  tabList
+    .filter((Tab) => Tab.pinned)
+    .forEach((Tab) => {
+      const url = Tab.pendingUrl || Tab.url || '';
+      uniqUrls.set(url, Tab.id);
+    });
+
+  // priority for active tab
+  tabList
+    .filter((Tab) => !Tab.pinned && Tab.active)
+    .forEach((Tab) => {
+      activeTabId = Tab.id;
+      const url = Tab.pendingUrl || Tab.url || '';
+
+      if (uniqUrls.has(url)) {
+        newActiveTabId = uniqUrls.get(url);
+        duplicateTabIdList.push(Tab.id);
+      } else {
+        uniqUrls.set(url, Tab.id);
+      }
+    });
+
+  // other tabs
+  tabList
+    .filter((Tab) => !Tab.pinned && !Tab.active)
+    .forEach((Tab) => {
+      const url = Tab.pendingUrl || Tab.url || '';
+
+      if (uniqUrls.has(url)) {
+        duplicateTabIdList.push(Tab.id);
+      } else {
+        uniqUrls.set(url, Tab.id);
+      }
+    });
+
+  return {
+    duplicateTabIdList,
+    newActiveTabId,
+    activeTabId,
+  }
+}
+
+async function closeDuplicateTabs() {
+  const tabs = await browser.tabs.query({ lastFocusedWindow: true });
+  const tabsWithId = tabs.filter(({ id }) => id);
+  const {
+    duplicateTabIdList,
+    newActiveTabId,
+  } = await getDuplicatesTabs(tabsWithId);
+
+  await Promise.all([
+    newActiveTabId && browser.tabs.update(newActiveTabId, { active: true }),
+    duplicateTabIdList.length > 0 && browser.tabs.remove(duplicateTabIdList),
+  ])
+}
+
+async function getTabsWithBookmark(tabList) {
+  const tabIdAndUrlList = [];
+
+  tabList
+    .filter((Tab) => !Tab.pinned)
+    .forEach((Tab) => {
+      const url = Tab.pendingUrl || Tab.url;
+
+      if (url) {
+        tabIdAndUrlList.push({ tabId: Tab.id, url });
+      }
+    });
+
+  const uniqUrlList = Array.from(new Set(
+    tabIdAndUrlList.map(({ url }) => url)
+  ));
+
+  // firefox rejects browser.bookmarks.search({ url: 'about:preferences' })
+  const urlHasBookmarkList = (
+    await Promise.allSettled(uniqUrlList.map(
+      (url) => isHasBookmark(url).then((isHasBkm) => isHasBkm && url)
+    ))
+  )
+    .map(({ value }) => value)
+    .filter(Boolean);
+
+  const urlWithBookmarkSet = new Set(urlHasBookmarkList);
+
+  return {
+    tabWithBookmarkIdList: tabIdAndUrlList
+      .filter(({ url }) => urlWithBookmarkSet.has(url))
+      .map(({ tabId }) => tabId),
+  }
+}
+
+async function closeBookmarkedTabs() {
+  const tabs = await browser.tabs.query({ lastFocusedWindow: true });
+  const tabsWithId = tabs.filter(({ id }) => id);
+  
+  const {
+    duplicateTabIdList,
+    newActiveTabId,
+  } = await getDuplicatesTabs(tabsWithId);
+
+  const duplicateIdSet = new Set(duplicateTabIdList);
+  const {
+    tabWithBookmarkIdList,
+  } = await getTabsWithBookmark(
+    tabsWithId
+      .filter((Tab) => !duplicateIdSet.has(Tab.id))
+  );
+
+  const closeTabIdList = duplicateTabIdList.concat(tabWithBookmarkIdList);
+
+  await Promise.all([
+    newActiveTabId && browser.tabs.update(newActiveTabId, { active: true }),
+    closeTabIdList.length > 0 && browser.tabs.remove(closeTabIdList),
+  ])
 }
 const bookmarksController = {
   async onCreated(_, node) {
@@ -307,9 +442,28 @@ async function updateActiveTab({ useCache=false, debugCaller } = {}) {
     getBookmarkInfoUni({ url: node?.url });
   },
 }
-const runtimeController = {
+function createContextMenu() {
+  browser.menus.create({
+    id: MENU.CLOSE_DUPLICATE,
+    // firefox can
+    // contexts: ['page', 'tab'],
+    contexts: ['page','tab'],
+    title: 'close duplicate tabs',
+  });
+  // TODO? bookmark and close all tabs (tabs without bookmarks and tabs with bookmarks)
+  //   copy bookmarked tabs
+  browser.menus.create({
+    id: MENU.CLOSE_BOOKMARKED,
+    contexts: ['page','tab'],
+    title: 'close bookmarked tabs',
+  });
+  // TODO? bookmark and close tabs (tabs without bookmarks)
+}
+
+const runtimeController = {
   onStartup() {
     logEvent('runtime.onStartup');
+    createContextMenu()
     updateActiveTab({
       useCache: true,
       debugCaller: 'runtime.onStartup'
@@ -317,6 +471,7 @@ async function updateActiveTab({ useCache=false, debugCaller } = {}) {
   },
   onInstalled () {
     logEvent('runtime.onInstalled');
+    createContextMenu()
     updateActiveTab({
       useCache: true,
       debugCaller: 'runtime.onInstalled'
@@ -370,21 +525,26 @@ const tabsController = {
   async onActivated({ tabId }) {
     activeTabId = tabId;
     logEvent('tabs.onActivated 00', tabId);
-    const Tab = await browser.tabs.get(tabId);
-    logEvent('tabs.onActivated 11', Tab.index, tabId, Tab.url);
-    
-    updateTab({
-      tabId, 
-      url: Tab.url, 
-      useCache: true,
-      debugCaller: 'tabs.onActivated(useCache: true)'
-    });
-    updateTab({
-      tabId, 
-      url: Tab.url, 
-      useCache: false,
-      debugCaller: 'tabs.onActivated(useCache: false)'
-    });
+
+    try {
+      const Tab = await browser.tabs.get(tabId);
+      logEvent('tabs.onActivated 11', Tab.index, tabId, Tab.url);
+      
+      updateTab({
+        tabId, 
+        url: Tab.url, 
+        useCache: true,
+        debugCaller: 'tabs.onActivated(useCache: true)'
+      });
+      updateTab({
+        tabId, 
+        url: Tab.url, 
+        useCache: false,
+        debugCaller: 'tabs.onActivated(useCache: false)'
+      });
+    } catch (er) {
+      log('tabs.onActivated. IGNORING. tab was deleted', er);
+    }
   },
 }
 const windowsController = {
@@ -398,6 +558,22 @@ const tabsController = {
     }
   },
 };
+const contextMenusController = {
+  async onClicked (OnClickData) {
+    logEvent('contextMenus.onClicked');
+
+    switch (OnClickData.menuItemId) {
+      case MENU.CLOSE_DUPLICATE: {
+        closeDuplicateTabs();
+        break;
+      }
+      case MENU.CLOSE_BOOKMARKED: {
+        closeBookmarkedTabs();
+        break;
+      }
+    }
+  }
+}
 logEvent('loading bkm-info-sw.js');
 
 browser.bookmarks.onCreated.addListener(bookmarksController.onCreated);
@@ -412,6 +588,8 @@ browser.tabs.onActivated.addListener(tabsController.onActivated);
 
 // listen for window switching
 browser.windows.onFocusChanged.addListener(windowsController.onFocusChanged);
+
+browser.menus.onClicked.addListener(contextMenusController.onClicked); 
 
 browser.runtime.onStartup.addListener(runtimeController.onStartup)
 browser.runtime.onInstalled.addListener(runtimeController.onInstalled);

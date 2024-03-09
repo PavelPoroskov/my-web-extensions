@@ -131,13 +131,16 @@ async function getTabsWithBookmark(tabList) {
     tabIdAndUrlList.map(({ url }) => url)
   ));
 
-  const urlHasBookmarkList = await Promise.all(uniqUrlList.map(
-    (url) => isHasBookmark(url).then((isHasBkm) => isHasBkm && url)
-  ));
+  // firefox rejects browser.bookmarks.search({ url: 'about:preferences' })
+  const urlHasBookmarkList = (
+    await Promise.allSettled(uniqUrlList.map(
+      (url) => isHasBookmark(url).then((isHasBkm) => isHasBkm && url)
+    ))
+  )
+    .map(({ value }) => value)
+    .filter(Boolean);
 
-  const urlWithBookmarkSet = new Set(
-    urlHasBookmarkList.filter(Boolean)
-  );
+  const urlWithBookmarkSet = new Set(urlHasBookmarkList);
 
   return {
     tabWithBookmarkIdList: tabIdAndUrlList

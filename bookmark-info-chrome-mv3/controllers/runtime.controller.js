@@ -11,6 +11,8 @@ import {
 function createContextMenu() {
   chrome.contextMenus.create({
     id: MENU.CLOSE_DUPLICATE,
+    // firefox can
+    // contexts: ['page', 'tab'],
     contexts: ['page'],
     title: 'close duplicate tabs',
   });

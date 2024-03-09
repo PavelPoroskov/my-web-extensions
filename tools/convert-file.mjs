@@ -16,6 +16,8 @@ export const convertFileContent = (inStr) => {
 
   result = result.replaceAll('export ', '');
   result = result.replaceAll('chrome.', 'browser.');
+  result = result.replaceAll('browser.contextMenus.', 'browser.menus.');
+  result = result.replaceAll(`contexts: ['page']`, `contexts: ['page','tab']`);
 
   let indexStart = 0;
   while ('\n\r'.includes(result[indexStart])) {

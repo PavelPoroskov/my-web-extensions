@@ -4,10 +4,10 @@ Browser extension
 ## What it does
 
 1) Show bookmark folder for current url in top right corner of a page.
-2) Context menu Bookmark Info / "close duplicated tabs"  
+2) Page context menu > Bookmark Info > "close duplicated tabs"  
   Close duplicated tabs.  
   It does not change pinned tabs.  
-3) Context menu Bookmark Info / "close bookmarked tabs"  
+3) Page context menu > Bookmark Info > "close bookmarked tabs"  
   Close duplicated tabs.  
   Close bookmarked tabs.  
   It does not change pinned tabs.  

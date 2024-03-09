@@ -1,5 +1,6 @@
 import {
   logEvent,
+  log,
 } from '../api/debug.js'
 import {
   getBookmarkInfoUni,
@@ -55,20 +56,25 @@ export const tabsController = {
   async onActivated({ tabId }) {
     activeTabId = tabId;
     logEvent('tabs.onActivated 00', tabId);
-    const Tab = await chrome.tabs.get(tabId);
-    logEvent('tabs.onActivated 11', Tab.index, tabId, Tab.url);
-    
-    updateTab({
-      tabId, 
-      url: Tab.url, 
-      useCache: true,
-      debugCaller: 'tabs.onActivated(useCache: true)'
-    });
-    updateTab({
-      tabId, 
-      url: Tab.url, 
-      useCache: false,
-      debugCaller: 'tabs.onActivated(useCache: false)'
-    });
+
+    try {
+      const Tab = await chrome.tabs.get(tabId);
+      logEvent('tabs.onActivated 11', Tab.index, tabId, Tab.url);
+      
+      updateTab({
+        tabId, 
+        url: Tab.url, 
+        useCache: true,
+        debugCaller: 'tabs.onActivated(useCache: true)'
+      });
+      updateTab({
+        tabId, 
+        url: Tab.url, 
+        useCache: false,
+        debugCaller: 'tabs.onActivated(useCache: false)'
+      });
+    } catch (er) {
+      log('tabs.onActivated. IGNORING. tab was deleted', er);
+    }
   },
 }
