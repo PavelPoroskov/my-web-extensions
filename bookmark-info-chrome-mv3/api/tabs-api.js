@@ -167,6 +167,10 @@ export async function closeBookmarkedTabs() {
   );
 
   const closeTabIdList = duplicateTabIdList.concat(tabWithBookmarkIdList);
+  if (closeTabIdList.length === tabs.length) {
+    // do not close all tabs. It will close window.
+    await chrome.tabs.create({ index: 0 });
+  }
 
   await Promise.all([
     newActiveTabId && chrome.tabs.update(newActiveTabId, { active: true }),

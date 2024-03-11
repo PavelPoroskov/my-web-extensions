@@ -8,14 +8,16 @@ import {
   MENU,
 } from '../constants.js'
 
-function createContextMenu() {
+async function createContextMenu() {
+  await chrome.contextMenus.removeAll();
+
   chrome.contextMenus.create({
     id: MENU.CLOSE_DUPLICATE,
     // firefox can
     // contexts: ['page', 'tab'],
     contexts: ['page'],
     title: 'close duplicate tabs',
-  });
+  });  
   // TODO? bookmark and close all tabs (tabs without bookmarks and tabs with bookmarks)
   //   copy bookmarked tabs
   chrome.contextMenus.create({
@@ -29,6 +31,7 @@ function createContextMenu() {
 export const runtimeController = {
   onStartup() {
     logEvent('runtime.onStartup');
+    // is only firefox use it?
     createContextMenu()
     updateActiveTab({
       useCache: true,

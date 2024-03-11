@@ -11,11 +11,12 @@ const MENU = {
   // BOOKMARK_AND_CLOSE: `${BASE_ID}_BOOKMARK_AND_CLOSE`,
 };
 const CONFIG = {
-  SHOW_LOG: false,
-  SHOW_LOG_EVENT: false,
   SHOW_LOG_CACHE: false,
-  SHOW_LOG_QUEUE: false,
+  SHOW_LOG_EVENT: false,
+  SHOW_LOG_IGNORE: false,
   SHOW_LOG_OPTIMIZATION: false,
+  SHOW_LOG_QUEUE: false,
+  SHOW_LOG: false,
 }
 const makeLogWithTime = () => {
   let startTime;
@@ -52,11 +53,12 @@ const makeLogWithPrefix = (prefix = '') => {
   }
 }
 
-const logEvent = CONFIG.SHOW_LOG_EVENT ? makeLogWithPrefix('EVENT') : () => { };
-const logOptimization = CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OPTIMIZATION') : () => { };
 const log = CONFIG.SHOW_LOG ? makeLogWithPrefix() : () => { };
-const logPromiseQueue = CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
 const logCache = CONFIG.SHOW_LOG_CACHE ? logWithTime : () => { };
+const logEvent = CONFIG.SHOW_LOG_EVENT ? makeLogWithPrefix('EVENT') : () => { };
+const logIgnore = CONFIG.SHOW_LOG_IGNORE ? makeLogWithPrefix('IGNORE') : () => { };
+const logOptimization = CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OPTIMIZATION') : () => { };
+const logPromiseQueue = CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
 class CacheWithLimit {
   constructor ({ name='cache', size = 100 }) {
     this.cache = new Map();
@@ -126,7 +128,7 @@ const cacheUrlToInfo = new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 })
         logPromiseQueue(' PromiseQueue: exec task', key, task.options);
         return task.fn(task.options)
           .catch((er) => {
-            log(' IGNORING error: PromiseQueue', er);
+            logIgnore(' IGNORING error: PromiseQueue', er);
             return this.continueQueue(key);
           })
           .then((result) => (
@@ -391,6 +393,10 @@ async function closeBookmarkedTabs() {
   );
 
   const closeTabIdList = duplicateTabIdList.concat(tabWithBookmarkIdList);
+  if (closeTabIdList.length === tabs.length) {
+    // do not close all tabs. It will close window.
+    await browser.tabs.create({ index: 0 });
+  }
 
   await Promise.all([
     newActiveTabId && browser.tabs.update(newActiveTabId, { active: true }),
@@ -442,14 +448,16 @@ async function closeBookmarkedTabs() {
     getBookmarkInfoUni({ url: node?.url });
   },
 }
-function createContextMenu() {
+async function createContextMenu() {
+  await browser.menus.removeAll();
+
   browser.menus.create({
     id: MENU.CLOSE_DUPLICATE,
     // firefox can
     // contexts: ['page', 'tab'],
     contexts: ['page','tab'],
     title: 'close duplicate tabs',
-  });
+  });  
   // TODO? bookmark and close all tabs (tabs without bookmarks and tabs with bookmarks)
   //   copy bookmarked tabs
   browser.menus.create({
@@ -463,6 +471,7 @@ async function closeBookmarkedTabs() {
 const runtimeController = {
   onStartup() {
     logEvent('runtime.onStartup');
+    // is only firefox use it?
     createContextMenu()
     updateActiveTab({
       useCache: true,
@@ -543,7 +552,7 @@ const tabsController = {
         debugCaller: 'tabs.onActivated(useCache: false)'
       });
     } catch (er) {
-      log('tabs.onActivated. IGNORING. tab was deleted', er);
+      logIgnore('tabs.onActivated. IGNORING. tab was deleted', er);
     }
   },
 }

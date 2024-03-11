@@ -2,5 +2,12 @@
 node tools/mv-changes-to-firefox.mjs
 
 // install ext to firefox developer edition
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "pavel.poroskov.se333@gmail.com"
+    }
+  }
+
 cd bookmark-info-firefox-mv2
 zip -r -FS ../my-extension.zip * --exclude '*.git*' --exclude 'web-ext-artifacts/*'

@@ -1,6 +1,6 @@
 import {
   logEvent,
-  log,
+  logIgnore,
 } from '../api/debug.js'
 import {
   getBookmarkInfoUni,
@@ -74,7 +74,7 @@ export const tabsController = {
         debugCaller: 'tabs.onActivated(useCache: false)'
       });
     } catch (er) {
-      log('tabs.onActivated. IGNORING. tab was deleted', er);
+      logIgnore('tabs.onActivated. IGNORING. tab was deleted', er);
     }
   },
 }
