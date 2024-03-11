@@ -33,7 +33,7 @@ const log = SHOW_LOG ? console.log : () => {};
     'border-bottom-left-radius: 0.5lh 50%',
     'font-family: sans-serif',
     'font-weight: normal',
-    'line-height: normal',
+    'line-height: 1.2',
   ].join(';');
 
   function showBookmarkInfo(message) {
