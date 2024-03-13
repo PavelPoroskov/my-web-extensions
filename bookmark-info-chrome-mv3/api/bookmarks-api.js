@@ -18,28 +18,20 @@ export async function isHasBookmark(url) {
 }
 
 async function getBookmarkInfo(url) {
-  let folderName = null;
-  let double;
-  let id;
-  const bookmarks = await chrome.bookmarks.search({ url });
-
-  if (bookmarks.length > 0) {
-    const bookmark = bookmarks[0];
-    const parentId = bookmark && bookmark.parentId;
-    double = bookmarks.length;
-    id = bookmark?.id;
-
-    if (parentId) {
-      const bookmarkFolder = await chrome.bookmarks.get(parentId)
-      folderName = bookmarkFolder[0].title;
-    }
+  const bookmarkList = await chrome.bookmarks.search({ url });
+  if (bookmarkList.length == 0) {
+    return [];
   }
 
-  return {
-    folderName,
-    double,
-    id
-  };
+  const parentIdList = bookmarkList
+    .map((bookmarkItem) => bookmarkItem.parentId)
+  const parentFolderList = await chrome.bookmarks.get(parentIdList)
+
+  return bookmarkList
+    .map((bookmarkItem, index) => ({
+      id: bookmarkItem.id,
+      folderName: parentFolderList[index].title,
+    }));
 }
 
 export async function getBookmarkInfoUni({ url, useCache=false }) {
@@ -47,26 +39,26 @@ export async function getBookmarkInfoUni({ url, useCache=false }) {
     return;
   }
 
-  let bookmarkInfo;
+  let bookmarkInfoList;
   let source;
 
   if (useCache) {
-    bookmarkInfo = cacheUrlToInfo.get(url);
+    bookmarkInfoList = cacheUrlToInfo.get(url);
     
-    if (bookmarkInfo) {
+    if (bookmarkInfoList) {
       source = SOURCE.CACHE;
       logOptimization(' getBookmarkInfoUni: from cache bookmarkInfo')
     }
   } 
   
-  if (!bookmarkInfo) {
-    bookmarkInfo = await getBookmarkInfo(url);
+  if (!bookmarkInfoList) {
+    bookmarkInfoList = await getBookmarkInfo(url);
     source = SOURCE.ACTUAL;
-    cacheUrlToInfo.add(url, bookmarkInfo);
+    cacheUrlToInfo.add(url, bookmarkInfoList);
   }
 
   return {
-    ...bookmarkInfo,
+    bookmarkInfoList,
     source,
   };
 }

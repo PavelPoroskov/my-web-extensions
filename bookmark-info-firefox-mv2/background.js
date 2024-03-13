@@ -187,28 +187,20 @@ function isSupportedProtocol(urlString) {
 }
 
 async function getBookmarkInfo(url) {
-  let folderName = null;
-  let double;
-  let id;
-  const bookmarks = await browser.bookmarks.search({ url });
-
-  if (bookmarks.length > 0) {
-    const bookmark = bookmarks[0];
-    const parentId = bookmark && bookmark.parentId;
-    double = bookmarks.length;
-    id = bookmark?.id;
-
-    if (parentId) {
-      const bookmarkFolder = await browser.bookmarks.get(parentId)
-      folderName = bookmarkFolder[0].title;
-    }
+  const bookmarkList = await browser.bookmarks.search({ url });
+  if (bookmarkList.length == 0) {
+    return [];
   }
 
-  return {
-    folderName,
-    double,
-    id
-  };
+  const parentIdList = bookmarkList
+    .map((bookmarkItem) => bookmarkItem.parentId)
+  const parentFolderList = await browser.bookmarks.get(parentIdList)
+
+  return bookmarkList
+    .map((bookmarkItem, index) => ({
+      id: bookmarkItem.id,
+      folderName: parentFolderList[index].title,
+    }));
 }
 
 async function getBookmarkInfoUni({ url, useCache=false }) {
@@ -216,26 +208,26 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
     return;
   }
 
-  let bookmarkInfo;
+  let bookmarkInfoList;
   let source;
 
   if (useCache) {
-    bookmarkInfo = cacheUrlToInfo.get(url);
+    bookmarkInfoList = cacheUrlToInfo.get(url);
     
-    if (bookmarkInfo) {
+    if (bookmarkInfoList) {
       source = SOURCE.CACHE;
       logOptimization(' getBookmarkInfoUni: from cache bookmarkInfo')
     }
   } 
   
-  if (!bookmarkInfo) {
-    bookmarkInfo = await getBookmarkInfo(url);
+  if (!bookmarkInfoList) {
+    bookmarkInfoList = await getBookmarkInfo(url);
     source = SOURCE.ACTUAL;
-    cacheUrlToInfo.add(url, bookmarkInfo);
+    cacheUrlToInfo.add(url, bookmarkInfoList);
   }
 
   return {
-    ...bookmarkInfo,
+    bookmarkInfoList,
     source,
   };
 }
@@ -245,8 +237,7 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
 
   return browser.tabs.sendMessage(tabId, {
     command: "bookmarkInfo",
-    folderName: bookmarkInfo.folderName,
-    double: bookmarkInfo.double,
+    bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
   })
     .then(() => bookmarkInfo);
 }
@@ -276,8 +267,7 @@ async function updateActiveTab({ useCache=false, debugCaller } = {}) {
     });
   }
 }
-
-async function getDuplicatesTabs(tabList) {
+async function getDuplicatesTabs(tabList) {
   const duplicateTabIdList = [];
   const uniqUrls = new Map();
   let activeTabId;

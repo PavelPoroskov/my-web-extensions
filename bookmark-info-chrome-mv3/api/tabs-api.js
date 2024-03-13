@@ -18,8 +18,7 @@ async function updateTabTask({ tabId, url, useCache=false }) {
 
   return chrome.tabs.sendMessage(tabId, {
     command: "bookmarkInfo",
-    folderName: bookmarkInfo.folderName,
-    double: bookmarkInfo.double,
+    bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
   })
     .then(() => bookmarkInfo);
 }
