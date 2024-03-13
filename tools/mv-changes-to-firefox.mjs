@@ -13,6 +13,7 @@ createFileForFirefox(
     'api/common-api.js',
     'api/bookmarks-api.js',
     'api/tabs-api.js',
+    'api/tabs-list-api.js',
     'controllers/bookmarks.controller.js',
     'controllers/runtime.controller.js',
     'controllers/tabs.controller.js',

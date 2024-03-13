@@ -8,7 +8,7 @@ import {
 import {
   closeDuplicateTabs,
   closeBookmarkedTabs,
-} from '../api/tabs-api.js'
+} from '../api/tabs-list-api.js'
 
 export const contextMenusController = {
   async onClicked (OnClickData) {
