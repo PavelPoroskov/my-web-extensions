@@ -186,6 +186,10 @@ function isSupportedProtocol(urlString) {
   return bookmarks.length > 0;
 }
 
+async function deleteBookmark(bkmId) {
+  await browser.bookmarks.remove(bkmId);
+}
+
 async function getBookmarkInfo(url) {
   const bookmarkList = await browser.bookmarks.search({ url });
   if (bookmarkList.length == 0) {
@@ -475,6 +479,13 @@ const runtimeController = {
       useCache: true,
       debugCaller: 'runtime.onInstalled'
     });
+  },
+  onMessage (message) {
+    if (message?.command === "deleteBookmark") {
+      logEvent('runtime.onMessage deleteBookmark');
+  
+      deleteBookmark(message.bkmId);
+    }
   }
 };
 let activeTabId;
@@ -592,3 +603,4 @@ browser.menus.onClicked.addListener(contextMenusController.onClicked);
 
 browser.runtime.onStartup.addListener(runtimeController.onStartup)
 browser.runtime.onInstalled.addListener(runtimeController.onInstalled);
+browser.runtime.onMessage.addListener(runtimeController.onMessage);

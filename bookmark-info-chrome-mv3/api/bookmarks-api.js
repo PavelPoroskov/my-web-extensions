@@ -17,6 +17,10 @@ export async function isHasBookmark(url) {
   return bookmarks.length > 0;
 }
 
+export async function deleteBookmark(bkmId) {
+  await chrome.bookmarks.remove(bkmId);
+}
+
 async function getBookmarkInfo(url) {
   const bookmarkList = await chrome.bookmarks.search({ url });
   if (bookmarkList.length == 0) {

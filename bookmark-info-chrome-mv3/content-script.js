@@ -15,24 +15,89 @@ const log = SHOW_LOG ? console.log : () => {};
 
   const bkmInfoRootId = 'bkmInfoRootId';
 
-  const rootInfoStyle = [
-    'position: fixed',
-    'right: 0',
-    'top: 0',
-    'z-index: 2147483647',
-    'background-color: transparent',
-  ].join(';');
+  const STYLE = {
+    root: [
+      'position: fixed',
+      'right: 0',
+      'top: 0',
+      'z-index: 2147483646',
+      'background-color: transparent',
+      // styles for label, delBtn
+      'font-size: 14px',
+      'font-family: sans-serif',
+      'font-weight: normal',
+      'user-select: none',
+    ].join(';'),
+    row: [
+      'display: flex',
+      'position: relative',
+    ].join(';'),
+    rowLeft: [
+      'flex: 1',
+    ].join(';'),
+    label: [
+      'line-height: 1.2',
+      'padding-left: 0.7ch',
+      'border-top-left-radius: 0.5lh 50%',
+      'border-bottom-left-radius: 0.5lh 50%',
+      'color: black',
+    ].join(';'),
+    delBtn: [
+      'color: white',
+      'line-height: 1.1',
+      'padding-left: 0.65ch',
+      'padding-right: 0.5ch',
+      'padding-bottom: 0.07ch',
+      'border-top-left-radius: 0.5lh 50%',
+      'border-bottom-left-radius: 0.5lh 50%',
+      'position: absolute',
+      'top: 0',
+      'right: 0',
+      'z-index: 2147483647',
+      'cursor: pointer',
+    ].join(';'),
+  }
+  const STYLE_ELEMENT = (
+`
+.bkmLabel:hover + .bkmDelBtn {
+  display: block;
+  background-color: pink;
+}
+.bkmDelBtn {
+  display: none;
+}
+.bkmDelBtn:hover {
+  display: block;
+  background-color: red;
+}
+.bkmDelBtn:active {
+  transform: translateY(0.1ch);
+}
+`
+  );
+  
+  async function deleteBookmark(event) {
+    log('deleteBookmark 00');
+    const bkmId = event?.target?.dataset?.bkmid;
 
-  const labelStyle = [
-    'color: black',
-    'font-size: 14px',
-    'padding-left: 0.7ch',
-    'border-top-left-radius: 0.5lh 50%',
-    'border-bottom-left-radius: 0.5lh 50%',
-    'font-family: sans-serif',
-    'font-weight: normal',
-    'line-height: 1.2',
-  ].join(';');
+    if (bkmId) {
+      await chrome.runtime.sendMessage({
+        command: "deleteBookmark",
+        bkmId,
+      });
+    }
+  }
+
+  async function hideBookmarks() {
+    log('hideBookmarks 00');
+    const rootDiv = document.getElementById(bkmInfoRootId);
+
+    if (rootDiv) {
+      while (rootDiv.lastChild) {
+        rootDiv.removeChild(rootDiv.lastChild);
+      }  
+    }
+  }
 
   function showBookmarkInfo(bkmInfoList) {
     log('showBookmarkInfo 00');
@@ -41,11 +106,16 @@ const log = SHOW_LOG ? console.log : () => {};
 
     if (!rootDiv) {
       log('showBookmarkInfo 22 2');
+      const rootStyle = document.createElement('style');
+      const textNodeStyle = document.createTextNode(STYLE_ELEMENT);
+      rootStyle.appendChild(textNodeStyle);
+
       rootDiv = document.createElement('div');
       rootDiv.setAttribute('id', bkmInfoRootId);
-      rootDiv.style = rootInfoStyle;
+      rootDiv.style = STYLE.root;
 
-      document.body.insertAdjacentElement('afterbegin', rootDiv);        
+      document.body.insertAdjacentElement('afterbegin', rootStyle);        
+      rootStyle.insertAdjacentElement('afterend', rootDiv);        
     }
   
     const colors = [
@@ -55,22 +125,33 @@ const log = SHOW_LOG ? console.log : () => {};
     const rawNodeList = rootDiv.childNodes;
     const beforeRawLength = rawNodeList.length;
 
-    bkmInfoList.forEach(({ folderName }, index) => {
+    bkmInfoList.forEach(({ id, folderName }, index) => {
       const divRow = document.createElement('div');
-      divRow.style = 'display: flex'; // 'background-color: transparent'
+      divRow.style = STYLE.row;
 
       const divL = document.createElement('div');
-      divL.style = "flex: 1;"
+      divL.style = STYLE.rowLeft;
 
-      const divR = document.createElement('div');
-      divR.style = `${labelStyle};background-color:${colors[index % 2]}`;
+      const divLabel = document.createElement('div');
+      divLabel.style = `${STYLE.label};background-color:${colors[index % 2]}`;
+      divLabel.classList.add('bkmLabel');
 
       // createTextNode is safe method for XSS-injection
       const textNode = document.createTextNode(`${folderName} :bkm`);
-      divR.appendChild(textNode);
+      divLabel.appendChild(textNode);
+      divLabel.addEventListener('click', hideBookmarks);
+
+      const divDelBtn = document.createElement('div');
+      divDelBtn.style = STYLE.delBtn;
+      divDelBtn.setAttribute('data-bkmid', id);
+      divDelBtn.classList.add('bkmDelBtn');
+      const textNodeDel = document.createTextNode('x');
+      divDelBtn.appendChild(textNodeDel);
+      divDelBtn.addEventListener('click', deleteBookmark);
 
       divRow.appendChild(divL);
-      divRow.appendChild(divR);
+      divRow.appendChild(divLabel);
+      divRow.appendChild(divDelBtn);
       
       if (index < beforeRawLength) {
         rootDiv.replaceChild(divRow, rawNodeList[index]);

@@ -18,6 +18,8 @@ export const convertFileContent = (inStr) => {
   result = result.replaceAll('chrome.', 'browser.');
   result = result.replaceAll('browser.contextMenus.', 'browser.menus.');
   result = result.replaceAll(`contexts: ['page']`, `contexts: ['page','tab']`);
+  result = result.replaceAll(`'padding-right: 0.5ch'`, `'padding-right: 0.7ch'`);
+  
 
   let indexStart = 0;
   while ('\n\r'.includes(result[indexStart])) {

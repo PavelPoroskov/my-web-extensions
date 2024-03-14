@@ -2,6 +2,9 @@ import {
   logEvent,
 } from '../api/debug.js'
 import {
+  deleteBookmark,
+} from '../api/bookmarks-api.js'
+import {
   updateActiveTab,
 } from '../api/tabs-api.js'
 import {
@@ -45,5 +48,12 @@ export const runtimeController = {
       useCache: true,
       debugCaller: 'runtime.onInstalled'
     });
+  },
+  onMessage (message) {
+    if (message?.command === "deleteBookmark") {
+      logEvent('runtime.onMessage deleteBookmark');
+  
+      deleteBookmark(message.bkmId);
+    }
   }
 };
