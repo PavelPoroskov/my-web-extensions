@@ -13,6 +13,21 @@ const log = SHOW_LOG ? console.log : () => {};
   }
   window.hasRun = true;
 
+  const BROWSER_OPTIONS = {
+    CHROME: 'CHROME',
+    FIREFOX: 'FIREFOX',
+  }
+  const BROWSER_SPECIFIC_OPTIONS = {
+    [BROWSER_OPTIONS.CHROME]: {
+      DEL_BTN_RIGHT_PADDING: '0.5ch',
+    },
+    [BROWSER_OPTIONS.FIREFOX]: {
+      DEL_BTN_RIGHT_PADDING: '0.8ch',
+    },
+  }
+  const BROWSER = BROWSER_OPTIONS.FIREFOX;
+  const BROWSER_SPECIFIC = BROWSER_SPECIFIC_OPTIONS[BROWSER];
+  
   const bkmInfoRootId = 'bkmInfoRootId';
 
   const STYLE = {
@@ -46,7 +61,7 @@ const log = SHOW_LOG ? console.log : () => {};
       'color: white',
       'line-height: 1.1',
       'padding-left: 0.65ch',
-      'padding-right: 0.7ch',
+      `padding-right: ${BROWSER_SPECIFIC.DEL_BTN_RIGHT_PADDING}`,
       'padding-bottom: 0.07ch',
       'border-top-left-radius: 0.5lh 50%',
       'border-bottom-left-radius: 0.5lh 50%',
@@ -167,11 +182,19 @@ const log = SHOW_LOG ? console.log : () => {};
     }
   }
 
+  let hasBookmark = undefined;
+
   browser.runtime.onMessage.addListener((message) => {
     if (message.command === "bookmarkInfo") {
       log('content-script: ', message.bookmarkInfoList);
 
-      showBookmarkInfo(message.bookmarkInfoList);
+      const newHasBookmark = message.bookmarkInfoList.length > 0;
+
+      if (newHasBookmark || hasBookmark) {
+        showBookmarkInfo(message.bookmarkInfoList);
+      }
+
+      hasBookmark = newHasBookmark;
     }
   });
 })();

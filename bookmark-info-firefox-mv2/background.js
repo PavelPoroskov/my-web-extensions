@@ -1,3 +1,19 @@
+const BROWSER_OPTIONS = {
+  CHROME: 'CHROME',
+  FIREFOX: 'FIREFOX',
+}
+const BROWSER_SPECIFIC_OPTIONS = {
+  [BROWSER_OPTIONS.CHROME]: {
+    MENU_CONTEXT: ['all'],
+  },
+  [BROWSER_OPTIONS.FIREFOX]: {
+    MENU_CONTEXT: ['all','tab'],
+  },
+}
+const BROWSER = BROWSER_OPTIONS.FIREFOX;
+const IS_BROWSER_FIREFOX = BROWSER === BROWSER_OPTIONS.FIREFOX;
+const BROWSER_SPECIFIC = BROWSER_SPECIFIC_OPTIONS[BROWSER];
+
 const SOURCE = {
   CACHE: 'CACHE',
   ACTUAL: 'ACTUAL',
@@ -447,16 +463,14 @@ async function closeBookmarkedTabs() {
 
   browser.menus.create({
     id: MENU.CLOSE_DUPLICATE,
-    // firefox can
-    // contexts: ['page', 'tab'],
-    contexts: ['page','tab'],
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'close duplicate tabs',
   });  
   // TODO? bookmark and close all tabs (tabs without bookmarks and tabs with bookmarks)
   //   copy bookmarked tabs
   browser.menus.create({
     id: MENU.CLOSE_BOOKMARKED,
-    contexts: ['page','tab'],
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'close bookmarked tabs',
   });
   // TODO? bookmark and close tabs (tabs without bookmarks)
@@ -518,13 +532,13 @@ const tabsController = {
             debugCaller: 'tabs.onUpdated(complete)'
           });
 
-          if (!activeTabId) {
-            updateTab({
-              tabId, 
-              url: Tab.url, 
-              useCache: true,
-              debugCaller: 'tabs.onUpdated(complete)'
-            });  
+          if (IS_BROWSER_FIREFOX && !activeTabId) {
+            const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+            const [Tab] = tabs;
+
+            if (Tab?.id) {
+              browser.tabs.update(Tab.id, { active: true })
+            }
           }
         }
     

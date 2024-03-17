@@ -8,6 +8,9 @@ import {
 import {
   updateTab,
 } from '../api/tabs-api.js'
+import {
+  IS_BROWSER_FIREFOX,
+} from '../constants.js'
 
 let activeTabId;
 
@@ -39,13 +42,13 @@ export const tabsController = {
             debugCaller: 'tabs.onUpdated(complete)'
           });
 
-          if (!activeTabId) {
-            updateTab({
-              tabId, 
-              url: Tab.url, 
-              useCache: true,
-              debugCaller: 'tabs.onUpdated(complete)'
-            });  
+          if (IS_BROWSER_FIREFOX && !activeTabId) {
+            const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+            const [Tab] = tabs;
+
+            if (Tab?.id) {
+              chrome.tabs.update(Tab.id, { active: true })
+            }
           }
         }
     
