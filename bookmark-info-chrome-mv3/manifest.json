@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Bookmark Info",
-  "version": "2.5.1",
+  "version": "2.5.2",
   "description": "Show bookmark folder for current url",
   "homepage_url": "https://github.com/PavelPoroskov/my-web-extensions/bookmark-info-chrome-mv3",
 

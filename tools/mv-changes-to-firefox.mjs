@@ -8,6 +8,7 @@ createFileForFirefox(
     'constants.js',
     'config.js',
     'api/debug.js',
+    'api/memo.js',
     'api/cache.js',
     'api/promiseQueue.js',
     'api/common-api.js',

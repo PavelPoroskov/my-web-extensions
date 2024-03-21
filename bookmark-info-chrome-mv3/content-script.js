@@ -1,13 +1,9 @@
 const SHOW_LOG = false
 const log = SHOW_LOG ? console.log : () => {};
 
-(function() {
+(async function() {
   log('IN content-script');
-  /**
-   * Check and set a global guard variable.
-   * If this content script is injected into the same page again,
-   * it will do nothing next time.
-   */
+
   if (window.hasRun) {
     return;
   }
@@ -42,6 +38,7 @@ const log = SHOW_LOG ? console.log : () => {};
       'font-family: sans-serif',
       'font-weight: normal',
       'user-select: none',
+      'line-height: 1.2',
     ].join(';'),
     row: [
       'display: flex',
@@ -51,7 +48,6 @@ const log = SHOW_LOG ? console.log : () => {};
       'flex: 1',
     ].join(';'),
     label: [
-      'line-height: 1.2',
       'padding-left: 0.7ch',
       'border-top-left-radius: 0.5lh 50%',
       'border-bottom-left-radius: 0.5lh 50%',
@@ -59,7 +55,6 @@ const log = SHOW_LOG ? console.log : () => {};
     ].join(';'),
     delBtn: [
       'color: white',
-      'line-height: 1.1',
       'padding-left: 0.65ch',
       `padding-right: ${BROWSER_SPECIFIC.DEL_BTN_RIGHT_PADDING}`,
       'padding-bottom: 0.07ch',
@@ -197,4 +192,15 @@ const log = SHOW_LOG ? console.log : () => {};
       hasBookmark = newHasBookmark;
     }
   });
+
+  log('before send contentScriptReady');
+  try {
+    await chrome.runtime.sendMessage({
+      command: "contentScriptReady",
+      url: document.location.href,
+    });
+    log('after send contentScriptReady');
+  } catch (er) {
+    log('IGNORE send contentScriptReady', er);
+  }
 })();

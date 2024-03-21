@@ -2,9 +2,13 @@ import {
   logEvent,
 } from '../api/debug.js'
 import {
+  memo,
+} from '../api/memo.js'
+import {
   deleteBookmark,
 } from '../api/bookmarks-api.js'
 import {
+  updateTab,
   updateActiveTab,
 } from '../api/tabs-api.js'
 import {
@@ -49,10 +53,29 @@ export const runtimeController = {
     });
   },
   onMessage (message) {
-    if (message?.command === "deleteBookmark") {
-      logEvent('runtime.onMessage deleteBookmark');
+    logEvent('runtime.onMessage', message);
+
+    switch (message?.command) {
+      case "deleteBookmark": {
+        logEvent('runtime.onMessage deleteBookmark');
   
-      deleteBookmark(message.bkmId);
+        deleteBookmark(message.bkmId);
+        break
+      }
+      case "contentScriptReady": {
+        logEvent('runtime.onMessage contentScriptReady');
+
+        if (message.url === memo.activeTabUrl) {
+          updateTab({
+            tabId: memo.activeTabId,
+            url: memo.activeTabUrl,
+            useCache: true,
+            debugCaller: 'runtime.onMessage contentScriptReady',
+          })
+        }
+
+        break
+      }
     }
   }
 };

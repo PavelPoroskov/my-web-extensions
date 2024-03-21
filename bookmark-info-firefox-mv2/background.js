@@ -75,6 +75,10 @@ const logEvent = CONFIG.SHOW_LOG_EVENT ? makeLogWithPrefix('EVENT') : () => { };
 const logIgnore = CONFIG.SHOW_LOG_IGNORE ? makeLogWithPrefix('IGNORE') : () => { };
 const logOptimization = CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OPTIMIZATION') : () => { };
 const logPromiseQueue = CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
+const memo = {
+  activeTabId: '',
+  activeTabUrl: '',
+};
 class CacheWithLimit {
   constructor ({ name='cache', size = 100 }) {
     this.cache = new Map();
@@ -495,35 +499,56 @@ const runtimeController = {
     });
   },
   onMessage (message) {
-    if (message?.command === "deleteBookmark") {
-      logEvent('runtime.onMessage deleteBookmark');
+    logEvent('runtime.onMessage', message);
+
+    switch (message?.command) {
+      case "deleteBookmark": {
+        logEvent('runtime.onMessage deleteBookmark');
   
-      deleteBookmark(message.bkmId);
+        deleteBookmark(message.bkmId);
+        break
+      }
+      case "contentScriptReady": {
+        logEvent('runtime.onMessage contentScriptReady');
+
+        if (message.url === memo.activeTabUrl) {
+          updateTab({
+            tabId: memo.activeTabId,
+            url: memo.activeTabUrl,
+            useCache: true,
+            debugCaller: 'runtime.onMessage contentScriptReady',
+          })
+        }
+
+        break
+      }
     }
   }
 };
-let activeTabId;
-
-const tabsController = {
+const tabsController = {
   onCreated({ pendingUrl: url, index, id }) {
     logEvent('tabs.onCreated', index, id, url);
     getBookmarkInfoUni({ url, useCache: true });
   },
   async onUpdated(tabId, changeInfo, Tab) {
     logEvent('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
-    switch (true) {
-      case (changeInfo?.status == 'loading'): {
+    switch (changeInfo?.status) {
+      case ('loading'): {
         if (changeInfo?.url) {
+          if (tabId === memo.activeTabId) {
+            memo.activeTabUrl = changeInfo.url;
+          }
+
           logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, changeInfo.url);
           getBookmarkInfoUni({ url: changeInfo.url, useCache: true });
         }
 
         break;
       }
-      case (changeInfo?.status == 'complete'): {
-        logEvent('tabs.onUpdated 11 complete tabId activeTabId', tabId, activeTabId);
+      case ('complete'): {
+        logEvent('tabs.onUpdated 11 complete tabId activeTabId', tabId, memo.activeTabId);
         
-        if (tabId === activeTabId || !activeTabId) {
+        if (tabId === memo.activeTabId || !memo.activeTabId) {
           logEvent('tabs.onUpdated 22 COMPLETE', Tab.index, tabId, Tab.url);
           updateTab({
             tabId, 
@@ -532,7 +557,7 @@ const tabsController = {
             debugCaller: 'tabs.onUpdated(complete)'
           });
 
-          if (IS_BROWSER_FIREFOX && !activeTabId) {
+          if (IS_BROWSER_FIREFOX && !memo.activeTabId) {
             const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
             const [Tab] = tabs;
 
@@ -547,12 +572,13 @@ const tabsController = {
     }
   },
   async onActivated({ tabId }) {
-    activeTabId = tabId;
+    memo.activeTabId = tabId;
     logEvent('tabs.onActivated 00', tabId);
 
     try {
       const Tab = await browser.tabs.get(tabId);
       logEvent('tabs.onActivated 11', Tab.index, tabId, Tab.url);
+      memo.activeTabUrl = Tab.url;
       
       updateTab({
         tabId, 
