@@ -2,7 +2,8 @@ import {
   isHasBookmark,
 } from './bookmarks-api.js'
 
-async function getDuplicatesTabs(tabList) {
+async function getDuplicatesTabs(inTabList) {
+  const tabList = inTabList.toReversed();
   const duplicateTabIdList = [];
   const uniqUrls = new Map();
   let activeTabId;
