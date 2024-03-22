@@ -54,10 +54,8 @@ const log = SHOW_LOG ? console.log : () => {};
       'color: black',
     ].join(';'),
     delBtn: [
-      'color: white',
       'padding-left: 0.65ch',
       `padding-right: ${BROWSER_SPECIFIC.DEL_BTN_RIGHT_PADDING}`,
-      'padding-bottom: 0.07ch',
       'border-top-left-radius: 0.5lh 50%',
       'border-bottom-left-radius: 0.5lh 50%',
       'position: absolute',
@@ -65,19 +63,27 @@ const log = SHOW_LOG ? console.log : () => {};
       'right: 0',
       'z-index: 2147483647',
       'cursor: pointer',
+      'height: 1lh',
+      'align-items: center',
+      'justify-items: center',
+     ].join(';'),
+    delBtnLetter: [
+      'color: white',
+      'font-size: 10px',
+      'line-height: 1',
     ].join(';'),
   }
   const STYLE_ELEMENT = (
 `
 .bkmLabel:hover + .bkmDelBtn {
-  display: block;
+  display: flex;
   background-color: pink;
 }
 .bkmDelBtn {
   display: none;
 }
 .bkmDelBtn:hover {
-  display: block;
+  display: flex;
   background-color: red;
 }
 .bkmDelBtn:active {
@@ -88,7 +94,7 @@ const log = SHOW_LOG ? console.log : () => {};
   
   async function deleteBookmark(event) {
     log('deleteBookmark 00');
-    const bkmId = event?.target?.dataset?.bkmid;
+    const bkmId = event?.target?.dataset?.bkmid || event?.target?.parentNode?.dataset?.bkmid;
 
     if (bkmId) {
       await browser.runtime.sendMessage({
@@ -155,8 +161,13 @@ const log = SHOW_LOG ? console.log : () => {};
       divDelBtn.style = STYLE.delBtn;
       divDelBtn.setAttribute('data-bkmid', id);
       divDelBtn.classList.add('bkmDelBtn');
-      const textNodeDel = document.createTextNode('x');
-      divDelBtn.appendChild(textNodeDel);
+
+      const divDelBtnLetter = document.createElement('div');
+      divDelBtnLetter.style = STYLE.delBtnLetter;
+      const textNodeDel = document.createTextNode('X');
+      divDelBtnLetter.appendChild(textNodeDel);
+      
+      divDelBtn.appendChild(divDelBtnLetter);
       divDelBtn.addEventListener('click', deleteBookmark);
 
       divRow.appendChild(divL);
