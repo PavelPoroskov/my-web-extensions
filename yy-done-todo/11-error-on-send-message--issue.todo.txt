@@ -1,0 +1,17 @@
+
+runtime.onStartup -> updateActiveTab() -> updateTab()
+  browser.tabs.sendMessage( 1 YouTube background.js:31:13
+  IGNORING error: PromiseQueue Error: Could not establish connection. Receiving end does not exist.
+  updateTabTask moz-extension://f086fcbd-4bf1-4e54-9913-be31e09de668/background.js:237
+tabs.onUpdated(complete) -> updateTab()
+  browser.tabs.sendMessage( 1 YouTube background.js:31:13
+  IGNORING error: PromiseQueue Error: Could not establish connection. Receiving end does not exist.
+  updateTabTask moz-extension://f086fcbd-4bf1-4e54-9913-be31e09de668/background.js:237
+
+DONE bkm-info-sw.js:1 Uncaught (in promise) Error: Could not establish connection. Receiving end does not exist.
+  may be too early chrome.tabs.sendMessage(tabId
+    tab is not ready
+      tabs.onUpdate(status='complete')
+  after comment. no errors
+     // // listen for tab switching
+     // chrome.tabs.onActivated.addListener(TabsController.onActivated);

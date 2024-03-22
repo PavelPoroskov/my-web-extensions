@@ -1,0 +1,32 @@
+When we open profile with opened tabs
+  I have tabs.onCreate/onUpdate for every tab 
+    do i need handle this events?
+    My intention was handle tabs.onUpdate for new tab or user interaction with tab
+
+  I have runtime.onStartup/windows.onFocus/tabs.onActivate calls updateActiveTab->updateTab for the same tab
+
+  I use promise queue to handle this.
+    first call of updateTab caches result
+    second call of updateTab uses result from first call
+DONE optimization
+  events tab.onCreate? tab.onUpdate(2), tab.onActivate, windows.onFocusChanged
+    results in I get bookmarkInfo three+ times
+
+    need caching for last tab
+
+  scenario
+    open link from bookmark
+    open link from page
+    new tab, type url
+    tab with content, enter new url
+
+
+// export async function updateBookmarkInfoForTab({ tabId, url, useCache=false }) {
+//   if (url && isSupportedProtocol(url)) {
+//     promiseQueue.add({
+//       key: `${tabId}`,
+//       fn: getBookmarkInfoUni,
+//       options: { tabId, url, useCache },
+//     });
+//   }
+// }

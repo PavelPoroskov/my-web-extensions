@@ -1,0 +1,8 @@
+// extensions options: what show
+//  DONE show folder only: Cat 
+TODO  show full path (reverse): Cat / Predators / Animals
+//  show full path (direct): Animals \ Predators \ Cat
+
+    firefox has tags for bookmark
+      we can show tags or folder <- need option
+

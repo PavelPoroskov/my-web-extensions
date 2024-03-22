@@ -1,0 +1,38 @@
+If page is protected with content-security-policy from injecting scripting
+  label with bookmark will not be shown
+
+// chromewebstore.google.com.csp
+Content-Security-Policy:
+require-trusted-types-for 'script';
+report-uri /_/ChromeWebStoreConsumerFeUi/cspreport
+
+Content-Security-Policy:
+script-src 'report-sample' 'nonce-S8Rjp0SlzhAfly3b8AHckA' 'unsafe-inline';
+object-src 'none';
+base-uri 'self';
+report-uri /_/ChromeWebStoreConsumerFeUi/cspreport;
+worker-src 'self'
+
+Content-Security-Policy:
+script-src 'unsafe-inline' 'self' https://apis.google.com https://ssl.gstatic.com https://www.google.com https://www.googletagmanager.com https://www.gstatic.com https://www.google-analytics.com https://www.googleapis.com/appsmarket/v2/installedApps/;
+report-uri /_/ChromeWebStoreConsumerFeUi/cspreport/allowlist
+
+
+// addons.mozilla.org.csp
+"name": "content-security-policy",
+"value": "
+default-src 'none';
+base-uri 'self';
+child-src 'none';
+connect-src https://www.google-analytics.com https://*.google-analytics.com https://addons.mozilla.org;
+font-src https://addons.mozilla.org/static-frontend/;
+form-action 'self';
+frame-src 'none';
+img-src 'self' data: https://addons.mozilla.org/user-media/ https://addons.mozilla.org/static-frontend/ https://addons.mozilla.org/static-server/ https://addons.cdn.mozilla.net/;
+manifest-src 'none';
+media-src 'none';
+object-src 'none';
+script-src https://addons.mozilla.org/static-frontend/ https://www.google-analytics.com/analytics.js https://www.googletagmanager.com/gtag/js;
+style-src https://addons.mozilla.org/static-frontend/;
+worker-src 'none';
+report-uri /__cspreport__"

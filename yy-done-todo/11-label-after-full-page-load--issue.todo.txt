@@ -1,0 +1,25 @@
+page loading too long, not show label
+  https://fedoramagazine.org/a-web-application-firewall-for-nginx/
+detect i can show label
+  content-script send request to ext.service-worker when ready
+    only for request from content-script
+    turn off tab.onUpdate({ status: complete })
+  questions
+    did content-script init on every PAGE RELOAD?
+    did content-script init on every PAGE URL CHANGE?
+      button Back, Forward
+    // DONE will this before tabs.onUpdated({ status: complete }) for long loading page?
+    // service-worker send response
+    //    chrome.tabs.sendMessage(tabId, {
+          //   command: "bookmarkInfo",
+          //   bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
+          // })
+    // need (url --> tabId)
+
+TODO other way to display bookmark info
+  I show bookmark info in page now.
+  I must wait when page loading complete.
+  Better way must be.
+
+  I do not know other way
+

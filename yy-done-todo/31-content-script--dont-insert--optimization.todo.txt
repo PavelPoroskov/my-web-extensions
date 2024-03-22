@@ -1,0 +1,36 @@
+
+  // SIMPLE
+  /*
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.command === "bookmarkInfo") {
+      log('content-script: ', message.bookmarkInfoList);
+
+      showBookmarkInfo(message.bookmarkInfoList);
+    }
+  });
+  */
+
+  // WITH OPTIMIZATION 1
+  let hasBookmark = undefined;
+
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.command === "bookmarkInfo") {
+      log('content-script: ', message.bookmarkInfoList);
+
+      const newHasBookmark = message.bookmarkInfoList.length > 0;
+
+      if (newHasBookmark || hasBookmark) {
+        showBookmarkInfo(message.bookmarkInfoList);
+      }
+
+      hasBookmark = newHasBookmark;
+    }
+  });
+
+  // WITH OPTIMIZATION 2:
+  // bookmarkInfoList
+  // if (!isEqual(bookmarkInfoList, message.bookmarkInfoList) {
+  //    bookmarkInfoList = message.bookmarkInfoList;
+  //    draw() 
+  //}
+

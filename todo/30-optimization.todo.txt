@@ -1,0 +1,9 @@
+DONE? cache (url to bookmark folder) is not required?
+  It complicated code.
+  Do not give optimization?
+
+DONE cache last 100 results
+
+DONE start search folder on opening link
+
+?get result for all opened tabs and cache

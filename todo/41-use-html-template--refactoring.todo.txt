@@ -1,0 +1,5 @@
+refactor 1
+  use Web Components(<template>) for bookmark label (label and del button)
+
+  too much
+  dom manipulation is good for this small app

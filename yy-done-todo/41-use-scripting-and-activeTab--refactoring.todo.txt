@@ -1,0 +1,18 @@
+on sending to Chrome Web Store
+  recommendation
+    replace host permissions ("matches": [ "http://*/*", "https://*/*" ])
+    to use permission activeTab 
+      ?using chrome.scripting to inject on active tab
+
+    question: Do activeTab can do without user action (press extension action)
+      NO 
+      an extension with the "activeTab" permission only obtains access to a tab 
+      in response to an explicit user gesture.
+      The following user gestures enable the "activeTab" permission:
+        Executing an action
+        Executing a context menu item
+        Executing a keyboard shortcut from the commands API
+        Accepting a suggestion from the omnibox API
+
+  I think my current solution has better performance and UX.
+    my solution does not required click from user

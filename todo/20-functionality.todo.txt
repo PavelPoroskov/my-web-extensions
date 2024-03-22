@@ -1,0 +1,49 @@
+color bookmarked link in page. 
+  add overtext with FolderName for link (and unique url number)
+
+  options 
+    turn on/turn off 
+      --> message to content-script
+        content-script-->service-worker: message with links
+        service-worker-->content-script: results
+        content-script insert in html to show bookmarked links
+
+  need increase cache:url->bkm
+
+  equality
+  [] exact
+    url == bkm.url
+  [] remove query params
+    url?param == bkm.url
+  [] remove query params, anchor
+  [] subpath
+    example.com/blog example.com/blog/docerizing-nodejs-app-4489.html
+  [] same site?
+  [] subdomain?
+     example.com api.example.com
+
+show relative label for url
+  ->url->
+    url, 
+    // relatives
+    url no params*, 
+    url no params no anchor*
+    subpath1* remove last one item in path
+    subpath2* remove last two item in path
+    subpath3* remove last three item in path
+
+  if have bkm with some relatives
+    show label, ( folder name: degree (subpath): bkm)
+      color white
+      label have relative link
+
+  only narrowing relatives
+    no anchors
+    no query params
+    path includes subpath
+
+  estimate for parent
+    positive: light green color
+    neutral: white
+    gray/suspicious: light gray
+    negative/useless/dangerous: light red

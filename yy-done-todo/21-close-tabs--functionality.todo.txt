@@ -1,0 +1,24 @@
+) close all tabs
+    tabs without bookmark: bookmark and close
+    tabs with bookmark: close
+    tabs with bookmark: bookmark and close 
+    tabs: bookmark and close
+  from context menu
+
+close and save tabs
+    tabs without bookmark: save and close
+    tabs with bookmark: close
+    tabs with bookmark: save and close 
+
+async function closeBookmarkedTabs11() {
+  const tabs = await chrome.tabs.query({ lastFocusedWindow: true });
+  const tabsWithId = tabs.filter(({ id }) => id);
+  
+  const {
+    tabWithBookmarkIdList,
+  } = await getTabsWithBookmark(tabsWithId);
+
+  if (tabWithBookmarkIdList.length > 0) {
+    await chrome.tabs.remove(tabWithBookmarkIdList);
+  }
+}

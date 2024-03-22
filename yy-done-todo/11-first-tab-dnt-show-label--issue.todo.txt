@@ -1,0 +1,19 @@
+firefox
+  open firefox open tab with bookmark
+  close firefox
+  open firefox, tab with bookmark DOES NOT SHOW LABEL
+  not after reload tab
+  only after click second tab, click tab back
+
+  only for current tab
+    second tab has label
+
+  how to debug
+    firefox do not open with ext added with about:debugging
+
+    use web-ext run --pre-install --keep-profile-changes --firefox-profile=Movies
+      but open profile without tabs
+
+  chrome does not have this issue
+
+  for first tab open from side panel/bookmark

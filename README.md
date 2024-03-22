@@ -3,15 +3,16 @@ Browser extension
 
 ## What it does
 
-1) Show bookmark folder for current url in top right corner of a page.
-2) Page context menu > Bookmark Info > "close duplicated tabs"  
+1) Extension shows bookmark folder for current url in top right corner of a page.
+2) User can delete bookmark by clicking Del button on the label.
+3) User can hide bookmark labels by clicking on label.
+4) Command "close duplicate tabs" in page context menu.
   Close duplicated tabs.  
   It does not change pinned tabs.  
-3) Page context menu > Bookmark Info > "close bookmarked tabs"  
+5) Command "close bookmarked tabs" in page context menu.
   Close duplicated tabs.  
   Close bookmarked tabs.  
   It does not change pinned tabs.  
-
 
 ## Install  
 For Chrome/Chromium  

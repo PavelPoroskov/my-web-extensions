@@ -1,0 +1,16 @@
+where 
+in description in Chrome Web Store
+in github/bookmark-info-chrome-mv3/readme.md
+in description in Mozilla Store
+in github/bookmark-info-firefox-mv2/readme.md
+in github/readme.md
+
+describe functionality
+1) Extension shows bookmark folder for current url in top right corner of a page.
+2) User can delete bookmark by clicking Del button on the label.
+3) User can hide bookmark labels by clicking on label.
+4) Command "close duplicate tabs" in page context menu.
+5) Command "close bookmarked tabs" in page context menu.
+
+??
+inform about issue with pages protected with content-security-policy from injecting scripts

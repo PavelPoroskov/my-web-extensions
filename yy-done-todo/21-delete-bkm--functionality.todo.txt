@@ -1,0 +1,5 @@
+DONE show number if bookmarks has one+ bookmarks for this url
+  show label for every bookmark
+
+// delete bookmark
+//  red cross at right top corner

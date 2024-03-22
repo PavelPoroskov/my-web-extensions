@@ -1,0 +1,6 @@
+// TODONO message position
+//    DONE top right corner
+//    top left corner
+//    top middle
+// bottom right corner
+// bottom left corner
