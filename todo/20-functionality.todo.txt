@@ -47,3 +47,17 @@ show relative label for url
     neutral: white
     gray/suspicious: light gray
     negative/useless/dangerous: light red
+
+user can add bookmark
+  ( +     ] -- top right corner
+    if havBkm
+      below bkm label
+      
+  on click show
+    most recent: 3*12
+    all (next tab):
+      change source for all on (if it is folder (!bkm.url))
+        bookmark.remove (parentId)
+        bookmark.create (bookmark)
+        bookmark.changed (title)
+        bookmark.moved (oldParentId, parentId)

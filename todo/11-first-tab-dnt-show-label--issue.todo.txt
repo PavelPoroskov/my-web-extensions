@@ -17,3 +17,7 @@ firefox
   chrome does not have this issue
 
   for first tab open from side panel/bookmark
+
+26.03.2024 again
+  first firefox start
+    first tab with bookmark does't show label

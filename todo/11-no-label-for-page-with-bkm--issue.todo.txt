@@ -1,0 +1,14 @@
+
+browser: chrome
+
+  from
+  1) updating extension version
+  2) errors in code
+    remove optimization in content script
+    debug
+      turn of logging
+      install locally
+
+  close tabs from left to right
+  page do not show bookmark label but page has star
+    after reload page has label
