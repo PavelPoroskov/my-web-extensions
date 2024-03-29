@@ -52,6 +52,7 @@ const log = SHOW_LOG ? console.log : () => {};
       'border-top-left-radius: 0.5lh 50%',
       'border-bottom-left-radius: 0.5lh 50%',
       'color: black',
+      'position: relative',
     ].join(';'),
     delBtn: [
       'padding-left: 0.65ch',
@@ -88,6 +89,20 @@ const log = SHOW_LOG ? console.log : () => {};
 }
 .bkmDelBtn:active {
   transform: translateY(0.1ch);
+}
+.bkmLabel::before {
+  content: attr(data-path);
+  text-wrap: nowrap;
+  position:absolute;
+  right:100%;  
+  background: lightgray;
+  color: black;
+  display:none;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+.bkmLabel:hover::before {
+  display:block;
 }
 `
   );
@@ -141,7 +156,7 @@ const log = SHOW_LOG ? console.log : () => {};
     const rawNodeList = rootDiv.childNodes;
     const beforeRawLength = rawNodeList.length;
 
-    bkmInfoList.forEach(({ id, folderName }, index) => {
+    bkmInfoList.forEach(({ id, folderName, fullPath }, index) => {
       const divRow = document.createElement('div');
       divRow.style = STYLE.row;
 
@@ -156,6 +171,15 @@ const log = SHOW_LOG ? console.log : () => {};
       const textNode = document.createTextNode(`${folderName} :bkm`);
       divLabel.appendChild(textNode);
       divLabel.addEventListener('click', hideBookmarks);
+      // TODO sanitize: remove ",<,>
+      // const sanitizedFullPath = fullPath
+      //   .replaceAll('"', '&quot;')
+      //   .replaceAll('>', '&gt;')
+      //   .replaceAll('<', '&lt;')
+      // divLabel.setAttribute('data-path', sanitizedFullPath);
+      //
+      // Symbols ( " > < ) don't break html and displayed as text.
+      divLabel.setAttribute('data-path', fullPath);
 
       const divDelBtn = document.createElement('div');
       divDelBtn.style = STYLE.delBtn;

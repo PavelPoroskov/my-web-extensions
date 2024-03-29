@@ -11,3 +11,5 @@ node tools/mv-changes-to-firefox.mjs
 
 cd bookmark-info-firefox-mv2
 zip -r -FS ../my-extension.zip * --exclude '*.git*' --exclude 'web-ext-artifacts/*'
+
+about:config, change xpinstall.signatures.required to false

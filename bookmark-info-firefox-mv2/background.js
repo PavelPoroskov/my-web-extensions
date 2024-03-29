@@ -210,20 +210,56 @@ async function deleteBookmark(bkmId) {
   await browser.bookmarks.remove(bkmId);
 }
 
+const getParentIdList = (bookmarkList) => {
+  const parentIdList = bookmarkList
+    .map((bookmarkItem) => bookmarkItem.parentId)
+    .filter(Boolean)
+
+  return Array.from(new Set(parentIdList))
+    // .filter((id) => id !== '0');
+}
+
+const getFullPath = (id, folderById) => {
+  const path = [];
+
+  let currentId = id;
+  while (currentId) {
+    path.push(folderById[currentId].title);
+    currentId = folderById[currentId].parentId;
+  }
+
+  return path.filter(Boolean).toReversed().join('/ ')
+}
+
 async function getBookmarkInfo(url) {
   const bookmarkList = await browser.bookmarks.search({ url });
   if (bookmarkList.length == 0) {
     return [];
   }
 
-  const parentIdList = bookmarkList
-    .map((bookmarkItem) => bookmarkItem.parentId)
-  const parentFolderList = await browser.bookmarks.get(parentIdList)
+  let parentIdList = getParentIdList(bookmarkList);
+
+  const folderById = {};
+  while (parentIdList.length > 0) {
+    const parentFolderList = await browser.bookmarks.get(parentIdList)
+    parentFolderList.forEach((folder) => {
+      folderById[folder.id] = {
+        id: folder.id,
+        title: folder.title,
+        parentId: folder.parentId,
+      }
+    })
+    
+    parentIdList = getParentIdList(parentFolderList)
+      .filter((id) => !(id in folderById))
+  }
 
   return bookmarkList
-    .map((bookmarkItem, index) => ({
+    .map((bookmarkItem) => ({
       id: bookmarkItem.id,
-      folderName: parentFolderList[index].title,
+      folderName: folderById[bookmarkItem.parentId].title,
+      fullPath: getFullPath(bookmarkItem.parentId, folderById),
+      title: bookmarkItem.title,
     }));
 }
 
@@ -257,11 +293,12 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
 }
 async function updateTabTask({ tabId, url, useCache=false }) {
   const bookmarkInfo = await getBookmarkInfoUni({ url, useCache });
-  log('browser.tabs.sendMessage(', tabId, bookmarkInfo.folderName);
+  log('browser.tabs.sendMessage(', tabId, bookmarkInfo.bookmarkInfoList);
 
   return browser.tabs.sendMessage(tabId, {
     command: "bookmarkInfo",
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
+    tabId,
   })
     .then(() => bookmarkInfo);
 }
@@ -291,7 +328,8 @@ async function updateActiveTab({ useCache=false, debugCaller } = {}) {
     });
   }
 }
-async function getDuplicatesTabs(tabList) {
+async function getDuplicatesTabs(inTabList) {
+  const tabList = inTabList.toReversed();
   const duplicateTabIdList = [];
   const uniqUrls = new Map();
   let activeTabId;
@@ -498,8 +536,8 @@ const runtimeController = {
       debugCaller: 'runtime.onInstalled'
     });
   },
-  onMessage (message) {
-    logEvent('runtime.onMessage', message);
+  onMessage (message, sender) {
+    logEvent('runtime.onMessage message', message);
 
     switch (message?.command) {
       case "deleteBookmark": {
@@ -509,12 +547,13 @@ const runtimeController = {
         break
       }
       case "contentScriptReady": {
-        logEvent('runtime.onMessage contentScriptReady');
+        const senderTabId = sender?.tab?.id;
+        logEvent('runtime.onMessage contentScriptReady', senderTabId);
 
-        if (message.url === memo.activeTabUrl) {
+        if (senderTabId) {
           updateTab({
-            tabId: memo.activeTabId,
-            url: memo.activeTabUrl,
+            tabId: senderTabId,
+            url: message.url,
             useCache: true,
             debugCaller: 'runtime.onMessage contentScriptReady',
           })
@@ -528,7 +567,10 @@ const runtimeController = {
 const tabsController = {
   onCreated({ pendingUrl: url, index, id }) {
     logEvent('tabs.onCreated', index, id, url);
-    getBookmarkInfoUni({ url, useCache: true });
+    getBookmarkInfoUni({
+      url,
+      useCache: true,
+    });
   },
   async onUpdated(tabId, changeInfo, Tab) {
     logEvent('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
@@ -540,7 +582,10 @@ const runtimeController = {
           }
 
           logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, changeInfo.url);
-          getBookmarkInfoUni({ url: changeInfo.url, useCache: true });
+          getBookmarkInfoUni({
+            url: changeInfo.url,
+            useCache: true,
+          });
         }
 
         break;

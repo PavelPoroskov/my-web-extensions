@@ -14,7 +14,7 @@ import {
 
 async function updateTabTask({ tabId, url, useCache=false }) {
   const bookmarkInfo = await getBookmarkInfoUni({ url, useCache });
-  log('chrome.tabs.sendMessage(', tabId, bookmarkInfo.folderName);
+  log('chrome.tabs.sendMessage(', tabId, bookmarkInfo.bookmarkInfoList);
 
   return chrome.tabs.sendMessage(tabId, {
     command: "bookmarkInfo",
