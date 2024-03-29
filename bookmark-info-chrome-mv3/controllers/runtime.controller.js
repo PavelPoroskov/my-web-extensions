@@ -52,8 +52,8 @@ export const runtimeController = {
       debugCaller: 'runtime.onInstalled'
     });
   },
-  onMessage (message) {
-    logEvent('runtime.onMessage', message);
+  onMessage (message, sender) {
+    logEvent('runtime.onMessage message', message);
 
     switch (message?.command) {
       case "deleteBookmark": {
@@ -63,12 +63,13 @@ export const runtimeController = {
         break
       }
       case "contentScriptReady": {
-        logEvent('runtime.onMessage contentScriptReady');
+        const senderTabId = sender?.tab?.id;
+        logEvent('runtime.onMessage contentScriptReady', senderTabId);
 
-        if (message.url === memo.activeTabUrl) {
+        if (senderTabId) {
           updateTab({
-            tabId: memo.activeTabId,
-            url: memo.activeTabUrl,
+            tabId: senderTabId,
+            url: message.url,
             useCache: true,
             debugCaller: 'runtime.onMessage contentScriptReady',
           })

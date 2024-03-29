@@ -19,7 +19,10 @@ import {
 export const tabsController = {
   onCreated({ pendingUrl: url, index, id }) {
     logEvent('tabs.onCreated', index, id, url);
-    getBookmarkInfoUni({ url, useCache: true });
+    getBookmarkInfoUni({
+      url,
+      useCache: true,
+    });
   },
   async onUpdated(tabId, changeInfo, Tab) {
     logEvent('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
@@ -31,7 +34,10 @@ export const tabsController = {
           }
 
           logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, changeInfo.url);
-          getBookmarkInfoUni({ url: changeInfo.url, useCache: true });
+          getBookmarkInfoUni({
+            url: changeInfo.url,
+            useCache: true,
+          });
         }
 
         break;
