@@ -21,3 +21,8 @@ firefox
 26.03.2024 again
   first firefox start
     first tab with bookmark does't show label
+
+failed to send message
+  repeat after 100ms
+
+get confirmation message from content-script

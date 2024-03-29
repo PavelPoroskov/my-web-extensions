@@ -61,3 +61,50 @@ user can add bookmark
         bookmark.create (bookmark)
         bookmark.changed (title)
         bookmark.moved (oldParentId, parentId)
+
+option
+  show MRU
+add bookmark from fixed 
+  MRU-list
+  
+  user fix bookmark. 
+    It tag is visible on every page
+      color light-gray
+      sign + before label
+    User click on this --> add bookmark to this folder
+
+  view top right corner
+    bookmark1
+    bookmark2
+    fixed tag1. 
+    fixed tag2
+    mru1 --> fixed/pinned tag
+    mru2
+    mru3
+
+    if fixed tag is bookmark for this url THEN dont show this fixed tag
+    if mru is bookmark for this url THEN dont show this mru
+    if fixed tag is mru THEN do not show this mru
+
+    mru can be market as fixed tag
+
+    pinned mru sorted by name
+    unpinned mru sorted by using
+
+option
+  [] show bookmark title?
+
+special/standard bookmark-
+  store in Other bookmarks/yy-Bookmark-Info
+    YET
+    BEST
+    TODO NEXT
+    TODO TODAY
+
+autotag YET on close page
+  autotag YET-DD-MM-YYYY on close page
+
+bookmark && close page
+  YET
+  BAD
+

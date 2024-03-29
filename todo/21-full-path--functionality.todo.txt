@@ -6,3 +6,10 @@ TODO  show full path (reverse): Cat / Predators / Animals
     firefox has tags for bookmark
       we can show tags or folder <- need option
 
+
+options
+  show foldername
+  show full path
+
+show full path if cursor hover over label
+  animation 
