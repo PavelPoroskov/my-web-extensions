@@ -104,6 +104,11 @@ const log = SHOW_LOG ? console.log : () => {};
 .bkmLabel:hover::before {
   display:block;
 }
+.bkmLabel:has(+ .bkmDelBtn:hover) {
+  &::before {
+    display:block;
+  }
+}
 `
   );
   
@@ -157,6 +162,12 @@ const log = SHOW_LOG ? console.log : () => {};
     const beforeRawLength = rawNodeList.length;
 
     bkmInfoList.forEach(({ id, folderName, fullPath }, index) => {
+      const arPath = fullPath.split('/ ')
+      if (arPath.length > 0) {
+        arPath[arPath.length - 1] = ''
+      }
+      const pathFromRoot = arPath.join('/ ');
+
       const divRow = document.createElement('div');
       divRow.style = STYLE.row;
 
@@ -179,7 +190,7 @@ const log = SHOW_LOG ? console.log : () => {};
       // divLabel.setAttribute('data-path', sanitizedFullPath);
       //
       // Symbols ( " > < ) don't break html and displayed as text.
-      divLabel.setAttribute('data-path', fullPath);
+      divLabel.setAttribute('data-path', pathFromRoot);
 
       const divDelBtn = document.createElement('div');
       divDelBtn.style = STYLE.delBtn;
