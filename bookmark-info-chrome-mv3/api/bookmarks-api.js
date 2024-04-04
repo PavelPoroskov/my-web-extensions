@@ -1,9 +1,10 @@
 import {
+  log,
   logOptimization,
 } from './debug.js'
 import {
-  cacheUrlToInfo,
-} from './cache.js'
+  memo,
+} from './memo.js'
 import {
   isSupportedProtocol,
 } from './common-api.js'
@@ -27,16 +28,16 @@ const getParentIdList = (bookmarkList) => {
     .filter(Boolean)
 
   return Array.from(new Set(parentIdList))
-    // .filter((id) => id !== '0');
 }
 
-const getFullPath = (id, folderById) => {
+const getFullPath = (id, bkmFolderById) => {
   const path = [];
 
   let currentId = id;
   while (currentId) {
-    path.push(folderById[currentId].title);
-    currentId = folderById[currentId].parentId;
+    const folder = bkmFolderById.get(currentId);
+    path.push(folder.title);
+    currentId = folder.parentId;
   }
 
   return path.filter(Boolean).toReversed().join('/ ')
@@ -48,28 +49,45 @@ async function getBookmarkInfo(url) {
     return [];
   }
 
-  let parentIdList = getParentIdList(bookmarkList);
+  let folderList = bookmarkList;
 
-  const folderById = {};
-  while (parentIdList.length > 0) {
-    const parentFolderList = await chrome.bookmarks.get(parentIdList)
-    parentFolderList.forEach((folder) => {
-      folderById[folder.id] = {
-        id: folder.id,
-        title: folder.title,
-        parentId: folder.parentId,
+  while (folderList.length > 0) {
+    const parentIdList = getParentIdList(folderList)
+
+    const unknownIdList = [];
+    const knownIdList = [];
+    parentIdList.forEach((id) => {
+      if (memo.bkmFolderById.has(id)) {
+        knownIdList.push(id)
+      } else {
+        unknownIdList.push(id)
       }
     })
-    
-    parentIdList = getParentIdList(parentFolderList)
-      .filter((id) => !(id in folderById))
+
+    const knownFolderList = knownIdList.map((id) => memo.bkmFolderById.get(id))
+    let unknownFolderList = []
+
+    if (unknownIdList.length > 0) {
+      unknownFolderList = await chrome.bookmarks.get(unknownIdList)
+      unknownFolderList.forEach((folder) => {
+        memo.bkmFolderById.add(
+          folder.id,
+          {
+            title: folder.title,
+            parentId: folder.parentId,
+          }
+        )
+      })
+    }
+
+    folderList = knownFolderList.concat(unknownFolderList)
   }
 
   return bookmarkList
     .map((bookmarkItem) => ({
       id: bookmarkItem.id,
-      folderName: folderById[bookmarkItem.parentId].title,
-      fullPath: getFullPath(bookmarkItem.parentId, folderById),
+      folderName: memo.bkmFolderById.get(bookmarkItem.parentId).title,
+      fullPath: getFullPath(bookmarkItem.parentId, memo.bkmFolderById),
       title: bookmarkItem.title,
     }));
 }
@@ -83,7 +101,7 @@ export async function getBookmarkInfoUni({ url, useCache=false }) {
   let source;
 
   if (useCache) {
-    bookmarkInfoList = cacheUrlToInfo.get(url);
+    bookmarkInfoList = memo.cacheUrlToInfo.get(url);
     
     if (bookmarkInfoList) {
       source = SOURCE.CACHE;
@@ -94,7 +112,7 @@ export async function getBookmarkInfoUni({ url, useCache=false }) {
   if (!bookmarkInfoList) {
     bookmarkInfoList = await getBookmarkInfo(url);
     source = SOURCE.ACTUAL;
-    cacheUrlToInfo.add(url, bookmarkInfoList);
+    memo.cacheUrlToInfo.add(url, bookmarkInfoList);
   }
 
   return {

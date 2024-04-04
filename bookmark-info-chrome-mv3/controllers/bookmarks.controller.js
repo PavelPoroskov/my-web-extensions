@@ -2,6 +2,9 @@ import {
   logEvent,
 } from '../api/debug.js'
 import {
+  memo,
+} from '../api/memo.js'
+import {
   getBookmarkInfoUni,
 } from '../api/bookmarks-api.js'
 import {
@@ -22,6 +25,7 @@ export const bookmarksController = {
   },
   async onChanged(bookmarkId, changeInfo) {
     logEvent('bookmark.onChanged 00', changeInfo);
+    memo.bkmFolderById.delete(bookmarkId);
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onChanged'
@@ -33,6 +37,7 @@ export const bookmarksController = {
   },
   async onMoved(bookmarkId) {
     logEvent('bookmark.onMoved');
+    memo.bkmFolderById.delete(bookmarkId);
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onMoved'
@@ -42,8 +47,9 @@ export const bookmarksController = {
     const [bookmark] = await chrome.bookmarks.get(bookmarkId)
     getBookmarkInfoUni({ url: bookmark.url });
   },
-  async onRemoved(_, { node }) {
+  async onRemoved(bookmarkId, { node }) {
     logEvent('bookmark.onRemoved');
+    memo.bkmFolderById.delete(bookmarkId);
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onRemoved'

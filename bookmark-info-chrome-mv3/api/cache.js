@@ -47,6 +47,13 @@ export class CacheWithLimit {
     this.cache.delete(key);
     logCache(`   ${this.name}.delete: ${key}`);
   }
+  
+  has(key) {
+    return this.cache.has(key);
+  }
+
+  print() {
+    logCache(this.cache);
+  }
 }
 
-export const cacheUrlToInfo = new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 });

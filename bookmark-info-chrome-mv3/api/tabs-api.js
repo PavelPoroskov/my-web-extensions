@@ -13,6 +13,7 @@ import {
 } from './bookmarks-api.js'
 
 async function updateTabTask({ tabId, url, useCache=false }) {
+  log('updateTabTask(', tabId, useCache, url);
   const bookmarkInfo = await getBookmarkInfoUni({ url, useCache });
   log('chrome.tabs.sendMessage(', tabId, bookmarkInfo.bookmarkInfoList);
 
@@ -26,7 +27,7 @@ async function updateTabTask({ tabId, url, useCache=false }) {
 
 export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
   if (url && isSupportedProtocol(url)) {
-    log(`${debugCaller} -> updateTab()`);
+    log(`${debugCaller} -> updateTab() useCache`, useCache);
     promiseQueue.add({
       key: `${tabId}`,
       fn: updateTabTask,
