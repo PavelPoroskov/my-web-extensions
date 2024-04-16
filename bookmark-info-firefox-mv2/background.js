@@ -75,10 +75,6 @@ const logEvent = CONFIG.SHOW_LOG_EVENT ? makeLogWithPrefix('EVENT') : () => { };
 const logIgnore = CONFIG.SHOW_LOG_IGNORE ? makeLogWithPrefix('IGNORE') : () => { };
 const logOptimization = CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OPTIMIZATION') : () => { };
 const logPromiseQueue = CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
-const memo = {
-  activeTabId: '',
-  activeTabUrl: '',
-};
 class CacheWithLimit {
   constructor ({ name='cache', size = 100 }) {
     this.cache = new Map();
@@ -123,9 +119,21 @@ const logPromiseQueue = CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
     this.cache.delete(key);
     logCache(`   ${this.name}.delete: ${key}`);
   }
-}
+  
+  has(key) {
+    return this.cache.has(key);
+  }
 
-const cacheUrlToInfo = new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 });
+  print() {
+    logCache(this.cache);
+  }
+}
+const memo = {
+  activeTabId: '',
+  activeTabUrl: '',
+  cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
+  bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
+};
 class PromiseQueue {
   constructor () {
     this.promise = {};
@@ -216,16 +224,16 @@ const getParentIdList = (bookmarkList) => {
     .filter(Boolean)
 
   return Array.from(new Set(parentIdList))
-    // .filter((id) => id !== '0');
 }
 
-const getFullPath = (id, folderById) => {
+const getFullPath = (id, bkmFolderById) => {
   const path = [];
 
   let currentId = id;
   while (currentId) {
-    path.push(folderById[currentId].title);
-    currentId = folderById[currentId].parentId;
+    const folder = bkmFolderById.get(currentId);
+    path.push(folder.title);
+    currentId = folder.parentId;
   }
 
   return path.filter(Boolean).toReversed().join('/ ')
@@ -237,28 +245,45 @@ async function getBookmarkInfo(url) {
     return [];
   }
 
-  let parentIdList = getParentIdList(bookmarkList);
+  let folderList = bookmarkList;
 
-  const folderById = {};
-  while (parentIdList.length > 0) {
-    const parentFolderList = await browser.bookmarks.get(parentIdList)
-    parentFolderList.forEach((folder) => {
-      folderById[folder.id] = {
-        id: folder.id,
-        title: folder.title,
-        parentId: folder.parentId,
+  while (folderList.length > 0) {
+    const parentIdList = getParentIdList(folderList)
+
+    const unknownIdList = [];
+    const knownIdList = [];
+    parentIdList.forEach((id) => {
+      if (memo.bkmFolderById.has(id)) {
+        knownIdList.push(id)
+      } else {
+        unknownIdList.push(id)
       }
     })
-    
-    parentIdList = getParentIdList(parentFolderList)
-      .filter((id) => !(id in folderById))
+
+    const knownFolderList = knownIdList.map((id) => memo.bkmFolderById.get(id))
+    let unknownFolderList = []
+
+    if (unknownIdList.length > 0) {
+      unknownFolderList = await browser.bookmarks.get(unknownIdList)
+      unknownFolderList.forEach((folder) => {
+        memo.bkmFolderById.add(
+          folder.id,
+          {
+            title: folder.title,
+            parentId: folder.parentId,
+          }
+        )
+      })
+    }
+
+    folderList = knownFolderList.concat(unknownFolderList)
   }
 
   return bookmarkList
     .map((bookmarkItem) => ({
       id: bookmarkItem.id,
-      folderName: folderById[bookmarkItem.parentId].title,
-      fullPath: getFullPath(bookmarkItem.parentId, folderById),
+      folderName: memo.bkmFolderById.get(bookmarkItem.parentId).title,
+      fullPath: getFullPath(bookmarkItem.parentId, memo.bkmFolderById),
       title: bookmarkItem.title,
     }));
 }
@@ -272,7 +297,7 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
   let source;
 
   if (useCache) {
-    bookmarkInfoList = cacheUrlToInfo.get(url);
+    bookmarkInfoList = memo.cacheUrlToInfo.get(url);
     
     if (bookmarkInfoList) {
       source = SOURCE.CACHE;
@@ -283,7 +308,7 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
   if (!bookmarkInfoList) {
     bookmarkInfoList = await getBookmarkInfo(url);
     source = SOURCE.ACTUAL;
-    cacheUrlToInfo.add(url, bookmarkInfoList);
+    memo.cacheUrlToInfo.add(url, bookmarkInfoList);
   }
 
   return {
@@ -292,6 +317,7 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
   };
 }
 async function updateTabTask({ tabId, url, useCache=false }) {
+  log('updateTabTask(', tabId, useCache, url);
   const bookmarkInfo = await getBookmarkInfoUni({ url, useCache });
   log('browser.tabs.sendMessage(', tabId, bookmarkInfo.bookmarkInfoList);
 
@@ -305,7 +331,7 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
 
 async function updateTab({ tabId, url, useCache=false, debugCaller }) {
   if (url && isSupportedProtocol(url)) {
-    log(`${debugCaller} -> updateTab()`);
+    log(`${debugCaller} -> updateTab() useCache`, useCache);
     promiseQueue.add({
       key: `${tabId}`,
       fn: updateTabTask,
@@ -469,6 +495,7 @@ async function closeBookmarkedTabs() {
   },
   async onChanged(bookmarkId, changeInfo) {
     logEvent('bookmark.onChanged 00', changeInfo);
+    memo.bkmFolderById.delete(bookmarkId);
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onChanged'
@@ -480,6 +507,7 @@ async function closeBookmarkedTabs() {
   },
   async onMoved(bookmarkId) {
     logEvent('bookmark.onMoved');
+    memo.bkmFolderById.delete(bookmarkId);
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onMoved'
@@ -489,8 +517,9 @@ async function closeBookmarkedTabs() {
     const [bookmark] = await browser.bookmarks.get(bookmarkId)
     getBookmarkInfoUni({ url: bookmark.url });
   },
-  async onRemoved(_, { node }) {
+  async onRemoved(bookmarkId, { node }) {
     logEvent('bookmark.onRemoved');
+    memo.bkmFolderById.delete(bookmarkId);
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onRemoved'
