@@ -7,12 +7,7 @@ Browser extension
 2) User can delete bookmark by clicking Del button on the label.
 3) User can hide bookmark labels by clicking on label.
 4) Command "close duplicate tabs" in page context menu.
-  Close duplicated tabs.  
-  It does not change pinned tabs.  
 5) Command "close bookmarked tabs" in page context menu.
-  Close duplicated tabs.  
-  Close bookmarked tabs.  
-  It does not change pinned tabs.  
 
 ## Install  
 For Chrome/Chromium  
@@ -20,6 +15,11 @@ https://chromewebstore.google.com/detail/bookmark-info/eeedbdcmiolpefelelbahcbdm
 
 For Firefox  
 https://addons.mozilla.org/en-US/firefox/addon/bookmark-info/
+
+## Buy Me A Coffee
+I am a Web Developer. I create web extensions.
+If my app has made your life better, please thank me
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/pavelporoskov)
 
 ## How to install extension to every browser profile using policies.  
 ### Instruction for Linux. 
