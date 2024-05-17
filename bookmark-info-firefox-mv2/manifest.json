@@ -1,13 +1,14 @@
 {
   "manifest_version": 2,
   "name": "Bookmark Info",
-  "version": "2.5.8",
+  "version": "2.6.0",
   "description": "Show bookmark folder for current url",
   "homepage_url": "https://github.com/PavelPoroskov/my-web-extensions/bookmark-info-firefox-mv2",
 
   "permissions": [
     "bookmarks",
     "menus",
+    "storage",
     "tabs"
   ],
   "background": {
@@ -20,6 +21,13 @@
     ],
     "js": ["content-script.js"]
   }],
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": false
+  },
+  "browser_action": {
+    "default_popup": "popup/popup.html"
+  },
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",

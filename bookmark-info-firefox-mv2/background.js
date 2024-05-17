@@ -26,6 +26,16 @@ const MENU = {
   CLOSE_BOOKMARKED: `${BASE_ID}_CLOSE_BOOKMARKED`,
   // BOOKMARK_AND_CLOSE: `${BASE_ID}_BOOKMARK_AND_CLOSE`,
 };
+
+const USER_SETTINGS_OPTIONS = {
+  CLEAR_URL_FROM_QUERY_PARAMS: 'CLEAR_URL_FROM_QUERY_PARAMS',
+  // MARK_VISITED_URL: 'MARK_VISITED_URL',
+}
+
+const o = USER_SETTINGS_OPTIONS
+const USER_SETTINGS_DEFAULT_VALUE = {
+  [o.CLEAR_URL_FROM_QUERY_PARAMS]: true,
+}
 const CONFIG = {
   SHOW_LOG_CACHE: false,
   SHOW_LOG_EVENT: false,
@@ -128,11 +138,28 @@ const logPromiseQueue = CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
     logCache(this.cache);
   }
 }
+const readSettings = async () => {
+  const savedSettings = await browser.storage.local.get(
+    Object.values(USER_SETTINGS_OPTIONS)
+  );
+
+  return {
+    ...USER_SETTINGS_DEFAULT_VALUE,
+    ...savedSettings,
+  }
+}
 const memo = {
   activeTabId: '',
   activeTabUrl: '',
   cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
   bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
+  settings: USER_SETTINGS_DEFAULT_VALUE,
+
+  async readActualSettings () {
+    this.settings = await readSettings();
+    log('readActualSettings')
+    log(`actual settings: ${Object.entries(this.settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)
+  },
 };
 class PromiseQueue {
   constructor () {
@@ -316,9 +343,27 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
     source,
   };
 }
+const cleanLink = (link) => {
+  try {
+    const oLink = new URL(link);
+    oLink.search = ''
+  
+    return oLink.toString();  
+  } catch (e) {
+    return link
+  }
+}
+
+// const testStr = "https://www.linkedin.com/jobs/view/3920634940/?alternateChannel=search&refId=dvaqme%2FfxHehSAa5o4nVnA%3D%3D&trackingId=8%2FZKaGcTAInuTTH4NyKDoA%3D%3D"
+// console.log('test cleanLink', cleanLink(testStr))
 async function updateTabTask({ tabId, url, useCache=false }) {
   log('updateTabTask(', tabId, useCache, url);
-  const bookmarkInfo = await getBookmarkInfoUni({ url, useCache });
+
+  const actualUrl = memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]
+    ? cleanLink(url)
+    : url;
+
+  const bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
   log('browser.tabs.sendMessage(', tabId, bookmarkInfo.bookmarkInfoList);
 
   return browser.tabs.sendMessage(tabId, {
@@ -335,7 +380,11 @@ async function updateTab({ tabId, url, useCache=false, debugCaller }) {
     promiseQueue.add({
       key: `${tabId}`,
       fn: updateTabTask,
-      options: { tabId, url, useCache },
+      options: {
+        tabId,
+        url,
+        useCache
+      },
     });
   }
 }
@@ -482,8 +531,19 @@ async function closeBookmarkedTabs() {
   ])
 }
 const bookmarksController = {
-  async onCreated(_, node) {
+  async onCreated(id, node) {
     logEvent('bookmark.onCreated');
+
+    if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS] && node.url) {
+      const cleanedUrl = cleanLink(node.url);
+      
+      if (node.url !== cleanedUrl) {
+        await browser.bookmarks.update(
+          id,
+          { url: cleanedUrl }
+        )
+      }
+    }
 
     // changes in active tab
     await updateActiveTab({
@@ -550,6 +610,7 @@ async function closeBookmarkedTabs() {
 const runtimeController = {
   onStartup() {
     logEvent('runtime.onStartup');
+    memo.readActualSettings()
     // is only firefox use it?
     createContextMenu()
     updateActiveTab({
@@ -559,6 +620,7 @@ const runtimeController = {
   },
   onInstalled () {
     logEvent('runtime.onInstalled');
+    memo.readActualSettings()
     createContextMenu()
     updateActiveTab({
       useCache: true,
@@ -587,6 +649,12 @@ const runtimeController = {
             debugCaller: 'runtime.onMessage contentScriptReady',
           })
         }
+
+        break
+      }
+      case "optionsChanged": {
+        logEvent('runtime.onMessage optionsChanged');
+        memo.readActualSettings()
 
         break
       }
