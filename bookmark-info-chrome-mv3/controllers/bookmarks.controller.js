@@ -18,17 +18,25 @@ import {
 } from '../constants.js'
 
 export const bookmarksController = {
-  async onCreated(id, node) {
+  async onCreated(bookmarkId, node) {
+    if (!node.url) {
+      return
+    }
+  
     logEvent('bookmark.onCreated');
 
-    if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS] && node.url) {
-      const cleanedUrl = cleanLink(node.url);
+    if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+      const cleanUrl = cleanLink(node.url);
       
-      if (node.url !== cleanedUrl) {
+      if (node.url !== cleanUrl) {
         await chrome.bookmarks.update(
-          id,
-          { url: cleanedUrl }
+          bookmarkId,
+          { url: cleanUrl }
         )
+        await chrome.tabs.sendMessage(memo.activeTabId, {
+          command: "changeLocationToCleanUrl",
+          cleanUrl,
+        })
       }
     }
 
@@ -38,7 +46,7 @@ export const bookmarksController = {
     });
 
     // changes in bookmark manager
-    getBookmarkInfoUni({ url: node?.url });
+    getBookmarkInfoUni({ url: node.url });
   },
   async onChanged(bookmarkId, changeInfo) {
     logEvent('bookmark.onChanged 00', changeInfo);

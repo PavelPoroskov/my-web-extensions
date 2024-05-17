@@ -1,1 +1,11 @@
 DONE position: fixed
+
+after remove query params from url
+  duplication of bookmarks for url with query params
+
+  user can not change bookmark folder
+    from bookmark for full url with query params does not exist
+
+  solution
+    change url in tab to cleaned url
+    It helped
