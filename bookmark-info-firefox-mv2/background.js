@@ -356,6 +356,8 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
 
 // const testStr = "https://www.linkedin.com/jobs/view/3920634940/?alternateChannel=search&refId=dvaqme%2FfxHehSAa5o4nVnA%3D%3D&trackingId=8%2FZKaGcTAInuTTH4NyKDoA%3D%3D"
 // console.log('test cleanLink', cleanLink(testStr))
+//
+// https://career.proxify.io/apply?uuid=566c933b-432e-64e0-b317-dd4390d6a74e&step=AdditionalInformation
 async function updateTabTask({ tabId, url, useCache=false }) {
   log('updateTabTask(', tabId, useCache, url);
 
@@ -531,17 +533,25 @@ async function closeBookmarkedTabs() {
   ])
 }
 const bookmarksController = {
-  async onCreated(id, node) {
+  async onCreated(bookmarkId, node) {
+    if (!node.url) {
+      return
+    }
+  
     logEvent('bookmark.onCreated');
 
-    if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS] && node.url) {
-      const cleanedUrl = cleanLink(node.url);
+    if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+      const cleanUrl = cleanLink(node.url);
       
-      if (node.url !== cleanedUrl) {
+      if (node.url !== cleanUrl) {
         await browser.bookmarks.update(
-          id,
-          { url: cleanedUrl }
+          bookmarkId,
+          { url: cleanUrl }
         )
+        await browser.tabs.sendMessage(memo.activeTabId, {
+          command: "changeLocationToCleanUrl",
+          cleanUrl,
+        })
       }
     }
 
@@ -551,7 +561,7 @@ async function closeBookmarkedTabs() {
     });
 
     // changes in bookmark manager
-    getBookmarkInfoUni({ url: node?.url });
+    getBookmarkInfoUni({ url: node.url });
   },
   async onChanged(bookmarkId, changeInfo) {
     logEvent('bookmark.onChanged 00', changeInfo);

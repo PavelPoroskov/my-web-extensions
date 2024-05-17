@@ -1,4 +1,5 @@
 const SHOW_LOG = false
+//const SHOW_LOG = true
 const log = SHOW_LOG ? console.log : () => {};
 
 (async function() {
@@ -226,17 +227,31 @@ const log = SHOW_LOG ? console.log : () => {};
   let hasBookmark = undefined;
 
   browser.runtime.onMessage.addListener((message) => {
-    if (message.command === "bookmarkInfo") {
-      log('content-script: ', message.bookmarkInfoList);
+    switch (message.command) {
+      case "bookmarkInfo": {
+        log('content-script: ', message.bookmarkInfoList);
 
-      const newHasBookmark = message.bookmarkInfoList.length > 0;
-
-      if (newHasBookmark || hasBookmark) {
-        showBookmarkInfo(message.bookmarkInfoList);
+        const newHasBookmark = message.bookmarkInfoList.length > 0;
+  
+        if (newHasBookmark || hasBookmark) {
+          showBookmarkInfo(message.bookmarkInfoList);
+        }
+  
+        hasBookmark = newHasBookmark;
+        break
       }
-
-      hasBookmark = newHasBookmark;
+      case "changeLocationToCleanUrl": {
+        log('content-script: changeLocationToCleanUrl', message);
+        if (document.location.href.startsWith(message.cleanUrl)) {
+          //document.location.href = message.cleanUrl
+          //window.history.pushState(message.cleanUrl)
+          window.history.replaceState(null, "", message.cleanUrl);
+        }
+        
+        break
+      }
     }
+
   });
 
   log('before send contentScriptReady');
