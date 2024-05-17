@@ -11,10 +11,24 @@ import {
 import {
   getBookmarkInfoUni,
 } from './bookmarks-api.js'
+import {
+  cleanLink,
+} from './link-api.js'
+import {
+  memo,
+} from './memo.js'
+import {
+  USER_SETTINGS_OPTIONS,
+} from '../constants.js'
 
 async function updateTabTask({ tabId, url, useCache=false }) {
   log('updateTabTask(', tabId, useCache, url);
-  const bookmarkInfo = await getBookmarkInfoUni({ url, useCache });
+
+  const actualUrl = memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]
+    ? cleanLink(url)
+    : url;
+
+  const bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
   log('chrome.tabs.sendMessage(', tabId, bookmarkInfo.bookmarkInfoList);
 
   return chrome.tabs.sendMessage(tabId, {
@@ -31,7 +45,11 @@ export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
     promiseQueue.add({
       key: `${tabId}`,
       fn: updateTabTask,
-      options: { tabId, url, useCache },
+      options: {
+        tabId,
+        url,
+        useCache
+      },
     });
   }
 }

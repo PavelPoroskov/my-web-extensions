@@ -10,10 +10,27 @@ import {
 import {
   updateActiveTab,
 } from '../api/tabs-api.js'
+import {
+  cleanLink,
+} from '../api/link-api.js'
+import {
+  USER_SETTINGS_OPTIONS,
+} from '../constants.js'
 
 export const bookmarksController = {
-  async onCreated(_, node) {
+  async onCreated(id, node) {
     logEvent('bookmark.onCreated');
+
+    if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS] && node.url) {
+      const cleanedUrl = cleanLink(node.url);
+      
+      if (node.url !== cleanedUrl) {
+        await chrome.bookmarks.update(
+          id,
+          { url: cleanedUrl }
+        )
+      }
+    }
 
     // changes in active tab
     await updateActiveTab({

@@ -37,6 +37,7 @@ async function createContextMenu() {
 export const runtimeController = {
   onStartup() {
     logEvent('runtime.onStartup');
+    memo.readActualSettings()
     // is only firefox use it?
     createContextMenu()
     updateActiveTab({
@@ -46,6 +47,7 @@ export const runtimeController = {
   },
   onInstalled () {
     logEvent('runtime.onInstalled');
+    memo.readActualSettings()
     createContextMenu()
     updateActiveTab({
       useCache: true,
@@ -74,6 +76,12 @@ export const runtimeController = {
             debugCaller: 'runtime.onMessage contentScriptReady',
           })
         }
+
+        break
+      }
+      case "optionsChanged": {
+        logEvent('runtime.onMessage optionsChanged');
+        memo.readActualSettings()
 
         break
       }
