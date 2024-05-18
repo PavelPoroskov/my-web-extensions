@@ -29,12 +29,14 @@ const MENU = {
 
 const USER_SETTINGS_OPTIONS = {
   CLEAR_URL_FROM_QUERY_PARAMS: 'CLEAR_URL_FROM_QUERY_PARAMS',
+  SHOW_PATH_LAYERS: 'SHOW_PATH_LAYERS',
   // MARK_VISITED_URL: 'MARK_VISITED_URL',
 }
 
 const o = USER_SETTINGS_OPTIONS
 const USER_SETTINGS_DEFAULT_VALUE = {
   [o.CLEAR_URL_FROM_QUERY_PARAMS]: true,
+  [o.SHOW_PATH_LAYERS]: 1,
 }
 const CONFIG = {
   SHOW_LOG_CACHE: false,
@@ -262,7 +264,7 @@ const getFullPath = (id, bkmFolderById) => {
     currentId = folder.parentId;
   }
 
-  return path.filter(Boolean).toReversed().join('/ ')
+  return path.filter(Boolean).toReversed()
 }
 
 async function getBookmarkInfo(url) {
@@ -305,13 +307,21 @@ async function getBookmarkInfo(url) {
     folderList = knownFolderList.concat(unknownFolderList)
   }
 
+  const showLayer = memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS];
+
   return bookmarkList
-    .map((bookmarkItem) => ({
-      id: bookmarkItem.id,
-      folderName: memo.bkmFolderById.get(bookmarkItem.parentId).title,
-      fullPath: getFullPath(bookmarkItem.parentId, memo.bkmFolderById),
-      title: bookmarkItem.title,
-    }));
+    .map((bookmarkItem) => {
+      const fullPathList = getFullPath(bookmarkItem.parentId, memo.bkmFolderById)
+      const shortPathList = fullPathList.slice(-showLayer)
+      const restPathList = fullPathList.slice(0, -showLayer)
+
+      return {
+        id: bookmarkItem.id,
+        shortPath: shortPathList.join('/ '),
+        restPath: restPathList.concat('').join('/ '),
+        title: bookmarkItem.title,
+      }
+    });
 }
 
 async function getBookmarkInfoUni({ url, useCache=false }) {

@@ -92,7 +92,7 @@ const log = SHOW_LOG ? console.log : () => {};
   transform: translateY(0.1ch);
 }
 .bkmLabel::before {
-  content: attr(data-path);
+  content: attr(data-restpath);
   text-wrap: nowrap;
   position:absolute;
   right:100%;  
@@ -162,13 +162,7 @@ const log = SHOW_LOG ? console.log : () => {};
     const rawNodeList = rootDiv.childNodes;
     const beforeRawLength = rawNodeList.length;
 
-    bkmInfoList.forEach(({ id, folderName, fullPath }, index) => {
-      const arPath = fullPath.split('/ ')
-      if (arPath.length > 0) {
-        arPath[arPath.length - 1] = ''
-      }
-      const pathFromRoot = arPath.join('/ ');
-
+    bkmInfoList.forEach(({ id, shortPath, restPath }, index) => {
       const divRow = document.createElement('div');
       divRow.style = STYLE.row;
 
@@ -180,7 +174,7 @@ const log = SHOW_LOG ? console.log : () => {};
       divLabel.classList.add('bkmLabel');
 
       // createTextNode is safe method for XSS-injection
-      const textNode = document.createTextNode(`${folderName} :bkm`);
+      const textNode = document.createTextNode(`${shortPath} :bkm`);
       divLabel.appendChild(textNode);
       divLabel.addEventListener('click', hideBookmarks);
       // TODO sanitize: remove ",<,>
@@ -188,10 +182,10 @@ const log = SHOW_LOG ? console.log : () => {};
       //   .replaceAll('"', '&quot;')
       //   .replaceAll('>', '&gt;')
       //   .replaceAll('<', '&lt;')
-      // divLabel.setAttribute('data-path', sanitizedFullPath);
+      // divLabel.setAttribute('data-restpath', sanitizedFullPath);
       //
       // Symbols ( " > < ) don't break html and displayed as text.
-      divLabel.setAttribute('data-path', pathFromRoot);
+      divLabel.setAttribute('data-restpath', restPath);
 
       const divDelBtn = document.createElement('div');
       divDelBtn.style = STYLE.delBtn;

@@ -2,6 +2,16 @@
 <html>
   <head>
     <title>Bookmark Info Options</title>
+    <style>
+      #show-layers-values {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        padding-left: 2px;
+        padding-right: 2px;
+        box-sizing: border-box;
+      }
+    </style>
   </head>
   <body>
     <label>
@@ -9,7 +19,24 @@
       Clear bookmark`s url before save. Remove all query params. 
     </label>
     <div style="padding-left: 30px;">For specified sites only: LinkedIn.</div>
+    <br>
     
+    <label for="show-layers">
+      Show folders in bookmark`s path. 
+    </label><br>
+    <div style="display: flex">
+      <div>
+        <input type="range" id="SHOW_PATH_LAYERS" name="show-layers" list="show-layers-values" min="1" max="3" step="1"/>
+        <datalist id="show-layers-values">
+          <option value="1" label="1">1</option>
+          <option value="2" label="2">2</option>
+          <option value="3" label="3">3</option>
+        </datalist>  
+      </div>
+      <div style="flex: 1">
+
+      </div>  
+    </div>
     <script src="options.js"></script>
   </body>
 </html>
