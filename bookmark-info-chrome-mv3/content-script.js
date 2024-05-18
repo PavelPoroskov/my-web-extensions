@@ -110,6 +110,11 @@ const log = SHOW_LOG ? console.log : () => {};
     display:block;
   }
 }
+.bkmLabel span:nth-child(even) {
+  background-color: lightgray;
+  display: inline-block;
+  width: 0.8ch;
+}
 `
   );
   
@@ -136,7 +141,7 @@ const log = SHOW_LOG ? console.log : () => {};
     }
   }
 
-  function showBookmarkInfo(bkmInfoList) {
+  function showBookmarkInfo({ bookmarkInfoList, showLayer }) {
     log('showBookmarkInfo 00');
 
     let rootDiv = document.getElementById(bkmInfoRootId);
@@ -162,7 +167,11 @@ const log = SHOW_LOG ? console.log : () => {};
     const rawNodeList = rootDiv.childNodes;
     const beforeRawLength = rawNodeList.length;
 
-    bkmInfoList.forEach(({ id, shortPath, restPath }, index) => {
+    bookmarkInfoList.forEach(({ id, fullPathList }, index) => {
+      const shortPathList = fullPathList.slice(-showLayer)
+      const restPathList = fullPathList.slice(0, -showLayer)
+      const restPath = restPathList.concat('').join('/ ')
+
       const divRow = document.createElement('div');
       divRow.style = STYLE.row;
 
@@ -173,9 +182,21 @@ const log = SHOW_LOG ? console.log : () => {};
       divLabel.style = `${STYLE.label};background-color:${colors[index % 2]}`;
       divLabel.classList.add('bkmLabel');
 
-      // createTextNode is safe method for XSS-injection
-      const textNode = document.createTextNode(`${shortPath} :bkm`);
-      divLabel.appendChild(textNode);
+      shortPathList[shortPathList.length - 1] = `${shortPathList[shortPathList.length - 1]} :bkm`
+      const shortPathListWithSeparator = shortPathList
+        .slice(0, -1).flatMap((str, index) => [str, '/ '])
+        .concat(shortPathList[shortPathList.length - 1])
+      
+      shortPathListWithSeparator.forEach((str) => {
+        const span = document.createElement('span');
+        // createTextNode is safe method for XSS-injection
+        // const shortPathList = shortPath.split(/(\/ )/)
+        const textNode = document.createTextNode(str);
+        span.appendChild(textNode);
+        divLabel.appendChild(span);
+      })
+
+
       divLabel.addEventListener('click', hideBookmarks);
       // TODO sanitize: remove ",<,>
       // const sanitizedFullPath = fullPath
@@ -212,7 +233,7 @@ const log = SHOW_LOG ? console.log : () => {};
     })
 
     let rawListLength = beforeRawLength;
-    while (bkmInfoList.length < rawListLength) {
+    while (bookmarkInfoList.length < rawListLength) {
       rootDiv.removeChild(rootDiv.lastChild);
       rawListLength -= 1;
     }
@@ -221,6 +242,7 @@ const log = SHOW_LOG ? console.log : () => {};
   let hasBookmark = undefined;
 
   chrome.runtime.onMessage.addListener((message) => {
+    log('chrome.runtime.onMessage: ', message);
     switch (message.command) {
       case "bookmarkInfo": {
         log('content-script: ', message.bookmarkInfoList);
@@ -228,7 +250,7 @@ const log = SHOW_LOG ? console.log : () => {};
         const newHasBookmark = message.bookmarkInfoList.length > 0;
   
         if (newHasBookmark || hasBookmark) {
-          showBookmarkInfo(message.bookmarkInfoList);
+          showBookmarkInfo(message);
         }
   
         hasBookmark = newHasBookmark;
@@ -245,7 +267,6 @@ const log = SHOW_LOG ? console.log : () => {};
         break
       }
     }
-
   });
 
   log('before send contentScriptReady');

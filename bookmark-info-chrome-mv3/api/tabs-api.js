@@ -29,13 +29,15 @@ async function updateTabTask({ tabId, url, useCache=false }) {
     : url;
 
   const bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
-  log('chrome.tabs.sendMessage(', tabId, bookmarkInfo.bookmarkInfoList);
-
-  return chrome.tabs.sendMessage(tabId, {
+  const message = {
     command: "bookmarkInfo",
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     tabId,
-  })
+    showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
+  }
+  log('chrome.tabs.sendMessage(', tabId, message);
+
+  return chrome.tabs.sendMessage(tabId, message)
     .then(() => bookmarkInfo);
 }
 

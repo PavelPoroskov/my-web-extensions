@@ -1,5 +1,4 @@
 import {
-  log,
   logOptimization,
 } from './debug.js'
 import {
@@ -10,7 +9,6 @@ import {
 } from './common-api.js'
 import {
   SOURCE,
-  USER_SETTINGS_OPTIONS,
 } from '../constants.js'
 
 export async function isHasBookmark(url) {
@@ -84,18 +82,13 @@ async function getBookmarkInfo(url) {
     folderList = knownFolderList.concat(unknownFolderList)
   }
 
-  const showLayer = memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS];
-
   return bookmarkList
     .map((bookmarkItem) => {
       const fullPathList = getFullPath(bookmarkItem.parentId, memo.bkmFolderById)
-      const shortPathList = fullPathList.slice(-showLayer)
-      const restPathList = fullPathList.slice(0, -showLayer)
 
       return {
         id: bookmarkItem.id,
-        shortPath: shortPathList.join('/ '),
-        restPath: restPathList.concat('').join('/ '),
+        fullPathList,
         title: bookmarkItem.title,
       }
     });
