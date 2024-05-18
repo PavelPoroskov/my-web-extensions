@@ -150,7 +150,6 @@ const logPromiseQueue = CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
 }
 const memo = {
   activeTabId: '',
-  activeTabUrl: '',
   cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
   bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
   settings: USER_SETTINGS_DEFAULT_VALUE,
@@ -343,25 +342,29 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
     source,
   };
 }
-const exceptionList = [
-  'youtube.com',
-  'www.youtube.com',
-  'youtu.be',
-  'career.proxify.io',
-  'proxify.io',
+// const exceptionList = [
+//   'youtube.com',
+//   'www.youtube.com',
+//   'youtu.be',
+//   'career.proxify.io',
+//   'proxify.io',
+// ]
+// const exceptionSet = new Set(exceptionList)
+
+const targetList = [
+  'www.linkedin.com',
+  'linkedin.com',
 ]
-const exceptionSet = new Set(exceptionList)
+const targetSet = new Set(targetList)
 
 const cleanLink = (link) => {
   try {
     const oLink = new URL(link);
     const { hostname } = oLink;
 
-    if (exceptionSet.has(hostname)) {
-      return link
+    if (targetSet.has(hostname)) {
+      oLink.search = ''
     }
-
-    oLink.search = ''
   
     return oLink.toString();  
   } catch (e) {
@@ -572,10 +575,17 @@ async function closeBookmarkedTabs() {
           bookmarkId,
           { url: cleanUrl }
         )
-        await browser.tabs.sendMessage(memo.activeTabId, {
-          command: "changeLocationToCleanUrl",
-          cleanUrl,
-        })
+
+        const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+        const [activeTab] = tabs;
+
+        if (activeTab?.id) {
+          log('browser.tabs.sendMessage activeTab.id', activeTab.id)
+          await browser.tabs.sendMessage(activeTab.id, {
+            command: "changeLocationToCleanUrl",
+            cleanUrl,
+          })
+        }
       }
     }
 
@@ -708,10 +718,6 @@ const runtimeController = {
     switch (changeInfo?.status) {
       case ('loading'): {
         if (changeInfo?.url) {
-          if (tabId === memo.activeTabId) {
-            memo.activeTabUrl = changeInfo.url;
-          }
-
           logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, changeInfo.url);
           getBookmarkInfoUni({
             url: changeInfo.url,
@@ -754,7 +760,6 @@ const runtimeController = {
     try {
       const Tab = await browser.tabs.get(tabId);
       logEvent('tabs.onActivated 11', Tab.index, tabId, Tab.url);
-      memo.activeTabUrl = Tab.url;
       
       updateTab({
         tabId, 
