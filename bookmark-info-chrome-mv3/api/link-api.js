@@ -1,23 +1,27 @@
 
-const exceptionList = [
-  'youtube.com',
-  'www.youtube.com',
-  'youtu.be',
-  'career.proxify.io',
-  'proxify.io',
+// const exceptionList = [
+//   'youtube.com',
+//   'www.youtube.com',
+//   'youtu.be',
+//   'career.proxify.io',
+//   'proxify.io',
+// ]
+// const exceptionSet = new Set(exceptionList)
+
+const targetList = [
+  'www.linkedin.com',
+  'linkedin.com',
 ]
-const exceptionSet = new Set(exceptionList)
+const targetSet = new Set(targetList)
 
 export const cleanLink = (link) => {
   try {
     const oLink = new URL(link);
     const { hostname } = oLink;
 
-    if (exceptionSet.has(hostname)) {
-      return link
+    if (targetSet.has(hostname)) {
+      oLink.search = ''
     }
-
-    oLink.search = ''
   
     return oLink.toString();  
   } catch (e) {

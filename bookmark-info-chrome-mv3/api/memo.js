@@ -7,7 +7,6 @@ import {
 
 export const memo = {
   activeTabId: '',
-  activeTabUrl: '',
   cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
   bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
   settings: USER_SETTINGS_DEFAULT_VALUE,

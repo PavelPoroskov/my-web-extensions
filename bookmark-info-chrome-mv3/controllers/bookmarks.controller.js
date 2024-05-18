@@ -1,4 +1,5 @@
 import {
+  log,
   logEvent,
 } from '../api/debug.js'
 import {
@@ -33,10 +34,17 @@ export const bookmarksController = {
           bookmarkId,
           { url: cleanUrl }
         )
-        await chrome.tabs.sendMessage(memo.activeTabId, {
-          command: "changeLocationToCleanUrl",
-          cleanUrl,
-        })
+
+        const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+        const [activeTab] = tabs;
+
+        if (activeTab?.id) {
+          log('chrome.tabs.sendMessage activeTab.id', activeTab.id)
+          await chrome.tabs.sendMessage(activeTab.id, {
+            command: "changeLocationToCleanUrl",
+            cleanUrl,
+          })
+        }
       }
     }
 

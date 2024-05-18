@@ -29,10 +29,6 @@ export const tabsController = {
     switch (changeInfo?.status) {
       case ('loading'): {
         if (changeInfo?.url) {
-          if (tabId === memo.activeTabId) {
-            memo.activeTabUrl = changeInfo.url;
-          }
-
           logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, changeInfo.url);
           getBookmarkInfoUni({
             url: changeInfo.url,
@@ -75,7 +71,6 @@ export const tabsController = {
     try {
       const Tab = await chrome.tabs.get(tabId);
       logEvent('tabs.onActivated 11', Tab.index, tabId, Tab.url);
-      memo.activeTabUrl = Tab.url;
       
       updateTab({
         tabId, 
