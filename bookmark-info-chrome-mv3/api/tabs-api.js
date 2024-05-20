@@ -12,7 +12,7 @@ import {
   getBookmarkInfoUni,
 } from './bookmarks-api.js'
 import {
-  cleanLink,
+  removeQueryParamsIfTarget,
 } from './link-api.js'
 import {
   memo,
@@ -25,7 +25,7 @@ async function updateTabTask({ tabId, url, useCache=false }) {
   log('updateTabTask(', tabId, useCache, url);
 
   const actualUrl = memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]
-    ? cleanLink(url)
+    ? removeQueryParamsIfTarget(url)
     : url;
 
   const bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });

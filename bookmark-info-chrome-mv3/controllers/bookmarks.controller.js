@@ -1,5 +1,4 @@
 import {
-  log,
   logEvent,
 } from '../api/debug.js'
 import {
@@ -12,7 +11,7 @@ import {
   updateActiveTab,
 } from '../api/tabs-api.js'
 import {
-  cleanLink,
+  removeQueryParamsIfTarget,
 } from '../api/link-api.js'
 import {
   USER_SETTINGS_OPTIONS,
@@ -24,22 +23,32 @@ export const bookmarksController = {
       return
     }
   
-    logEvent('bookmark.onCreated');
+    logEvent('bookmark.onCreated <-');
 
     if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
-      const cleanUrl = cleanLink(node.url);
+      const cleanUrl = removeQueryParamsIfTarget(node.url);
       
       if (node.url !== cleanUrl) {
-        await chrome.bookmarks.update(
-          bookmarkId,
-          { url: cleanUrl }
-        )
+        const bookmarkList = await chrome.bookmarks.search({ url: cleanUrl });
+        if (bookmarkList.length === 0) {
+          // if first time then we fix url in new bookmark
+          await chrome.bookmarks.update(
+            bookmarkId,
+            { url: cleanUrl }
+          )
+        } else {
+          // if second time then we delete new bookmark
+          //
+          // TODO sometimes we want create two+ bookmark for the same url in different folders
+          //  when we create bookmark from fixed tags: we will use addBookmark(cleanurl, path)
+          await chrome.bookmarks.remove(bookmarkId)  
+        }
 
         const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
         const [activeTab] = tabs;
 
         if (activeTab?.id) {
-          log('chrome.tabs.sendMessage activeTab.id', activeTab.id)
+          logEvent('tabs.sendMessage activeTab.id ->', activeTab.id)
           await chrome.tabs.sendMessage(activeTab.id, {
             command: "changeLocationToCleanUrl",
             cleanUrl,
@@ -57,7 +66,8 @@ export const bookmarksController = {
     getBookmarkInfoUni({ url: node.url });
   },
   async onChanged(bookmarkId, changeInfo) {
-    logEvent('bookmark.onChanged 00', changeInfo);
+    logEvent('bookmark.onChanged 00 <-', changeInfo);
+
     memo.bkmFolderById.delete(bookmarkId);
     // changes in active tab
     await updateActiveTab({
@@ -66,10 +76,10 @@ export const bookmarksController = {
 
     // changes in bookmark manager
     const [bookmark] = await chrome.bookmarks.get(bookmarkId)
-    getBookmarkInfoUni({ url: bookmark.url });
+    getBookmarkInfoUni({ url: bookmark.url });        
   },
   async onMoved(bookmarkId) {
-    logEvent('bookmark.onMoved');
+    logEvent('bookmark.onMoved <-');
     memo.bkmFolderById.delete(bookmarkId);
     // changes in active tab
     await updateActiveTab({
@@ -81,7 +91,7 @@ export const bookmarksController = {
     getBookmarkInfoUni({ url: bookmark.url });
   },
   async onRemoved(bookmarkId, { node }) {
-    logEvent('bookmark.onRemoved');
+    logEvent('bookmark.onRemoved <-');
     memo.bkmFolderById.delete(bookmarkId);
     // changes in active tab
     await updateActiveTab({

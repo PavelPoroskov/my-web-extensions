@@ -1,25 +1,27 @@
 
-// const exceptionList = [
-//   'youtube.com',
-//   'www.youtube.com',
-//   'youtu.be',
-//   'career.proxify.io',
-//   'proxify.io',
-// ]
-// const exceptionSet = new Set(exceptionList)
-
 const targetList = [
-  'www.linkedin.com',
-  'linkedin.com',
+  {
+    hostname: [
+      'www.linkedin.com',
+      'linkedin.com',  
+    ],
+    path: [
+      '/jobs/view/'
+    ] 
+  },
 ]
-const targetSet = new Set(targetList)
 
-export const cleanLink = (link) => {
+const targetMap = new Map(
+  targetList.flatMap(({ hostname, path }) => hostname.map((host) => [host, path]))
+)
+
+export const removeQueryParamsIfTarget = (link) => {
   try {
     const oLink = new URL(link);
-    const { hostname } = oLink;
+    const { hostname, pathname } = oLink;
+    const targetPathList = targetMap.get(hostname)
 
-    if (targetSet.has(hostname)) {
+    if (targetPathList && targetPathList.some((targetPath) => pathname.startsWith(targetPath))) {
       oLink.search = ''
     }
   
@@ -41,15 +43,15 @@ export const removeQueryParams = (link) => {
 }
 
 // let testStr = "https://www.linkedin.com/jobs/view/3920634940/?alternateChannel=search&refId=dvaqme%2FfxHehSAa5o4nVnA%3D%3D&trackingId=8%2FZKaGcTAInuTTH4NyKDoA%3D%3D"
-// console.log('test cleanLink', cleanLink(testStr))
+// console.log('test ', removeQueryParamsIfTarget(testStr))
 
 // testStr = "https://www.youtube.com/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test cleanLink', cleanLink(testStr))
+// console.log('test ', removeQueryParamsIfTarget(testStr))
 
 // testStr = "https://youtube.com/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test cleanLink', cleanLink(testStr))
+// console.log('test ', removeQueryParamsIfTarget(testStr))
 
 // testStr = "https://youtu.be/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test cleanLink', cleanLink(testStr))
+// console.log('test ', removeQueryParamsIfTarget(testStr))
 //
 // https://career.proxify.io/apply?uuid=566c933b-432e-64e0-b317-dd4390d6a74e&step=AdditionalInformation
