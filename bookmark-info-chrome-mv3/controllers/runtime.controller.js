@@ -32,6 +32,11 @@ async function createContextMenu() {
     title: 'close bookmarked tabs',
   });
   // TODO? bookmark and close tabs (tabs without bookmarks)
+  chrome.contextMenus.create({
+    id: MENU.CLEAR_URL,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'clear url',
+  });
 }
 
 export const runtimeController = {
