@@ -6,7 +6,16 @@ const targetList = [
       'linkedin.com',  
     ],
     path: [
-      '/jobs/view/'
+      '/jobs/view/',
+      '/posts/'
+    ] 
+  },
+  {
+    hostname: [
+      'djinni.co',
+    ],
+    path: [
+      '/my/profile/',
     ] 
   },
 ]
@@ -23,9 +32,11 @@ export const removeQueryParamsIfTarget = (link) => {
 
     if (targetPathList && targetPathList.some((targetPath) => pathname.startsWith(targetPath))) {
       oLink.search = ''
+
+      return oLink.toString();  
     }
   
-    return oLink.toString();  
+    return link
   } catch (e) {
     return link
   }
