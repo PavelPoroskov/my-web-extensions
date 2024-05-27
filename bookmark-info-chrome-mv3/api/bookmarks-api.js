@@ -42,45 +42,54 @@ const getFullPath = (id, bkmFolderById) => {
   return path.filter(Boolean).toReversed()
 }
 
+async function addBookmarkParentInfo(bookmarkList, bookmarkByIdMap) {
+  // parentIdList.length <= bookmarkList.length
+  // for root folders parentIdList=[]
+  const parentIdList = getParentIdList(bookmarkList)
+
+  if (parentIdList.length === 0) {
+    return
+  } 
+
+  const knownParentIdList = [];
+  const unknownParentIdList = [];
+
+  parentIdList.forEach((id) => {
+    if (bookmarkByIdMap.has(id)) {
+      knownParentIdList.push(id)
+    } else {
+      unknownParentIdList.push(id)
+    }
+  })
+
+  const knownFolderList = knownParentIdList.map((id) => bookmarkByIdMap.get(id))
+
+  if (unknownParentIdList.length > 0) {
+    const unknownFolderList = await chrome.bookmarks.get(unknownParentIdList)
+
+    unknownFolderList.forEach((folder) => {
+      bookmarkByIdMap.add(
+        folder.id,
+        {
+          title: folder.title,
+          parentId: folder.parentId,
+        }
+      )
+      knownFolderList.push(folder)
+    })
+  }
+
+  return await addBookmarkParentInfo(knownFolderList, bookmarkByIdMap)
+}
+
 async function getBookmarkInfo(url) {
   const bookmarkList = await chrome.bookmarks.search({ url });
+
   if (bookmarkList.length == 0) {
     return [];
   }
 
-  let folderList = bookmarkList;
-
-  while (folderList.length > 0) {
-    const parentIdList = getParentIdList(folderList)
-
-    const unknownIdList = [];
-    const knownIdList = [];
-    parentIdList.forEach((id) => {
-      if (memo.bkmFolderById.has(id)) {
-        knownIdList.push(id)
-      } else {
-        unknownIdList.push(id)
-      }
-    })
-
-    const knownFolderList = knownIdList.map((id) => memo.bkmFolderById.get(id))
-    let unknownFolderList = []
-
-    if (unknownIdList.length > 0) {
-      unknownFolderList = await chrome.bookmarks.get(unknownIdList)
-      unknownFolderList.forEach((folder) => {
-        memo.bkmFolderById.add(
-          folder.id,
-          {
-            title: folder.title,
-            parentId: folder.parentId,
-          }
-        )
-      })
-    }
-
-    folderList = knownFolderList.concat(unknownFolderList)
-  }
+  await addBookmarkParentInfo(bookmarkList, memo.bkmFolderById)
 
   return bookmarkList
     .map((bookmarkItem) => {
