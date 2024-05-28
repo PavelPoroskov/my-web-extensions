@@ -11,32 +11,52 @@
         padding-right: 2px;
         box-sizing: border-box;
       }
+      article {
+        padding-top: 20px;
+
+        &:first-of-type {
+          padding-top: 10px;
+        }
+      }
     </style>
   </head>
   <body>
-    <label>
-      <input type="checkbox" id="CLEAR_URL_FROM_QUERY_PARAMS" style="vertical-align: middle;"/>
-      Clear bookmark`s url before save. Remove all query params. 
-    </label>
-    <div style="padding-left: 30px;">For specified sites only: LinkedIn.</div>
-    <br>
+    <article>
+      <label>
+        <input type="checkbox" id="CLEAR_URL_FROM_QUERY_PARAMS" style="vertical-align: middle;"/>
+        Clear bookmark`s url before save. Remove all query params. 
+      </label>
+      <div style="padding-left: 30px;">For specified sites and paths only: linkedin.com/jobs/view/.</div>
+    </article>
     
-    <label for="show-layers">
-      Show folders in bookmark`s path. 
-    </label><br>
-    <div style="display: flex">
-      <div>
-        <input type="range" id="SHOW_PATH_LAYERS" name="show-layers" list="show-layers-values" min="1" max="3" step="1"/>
-        <datalist id="show-layers-values">
-          <option value="1" label="1">1</option>
-          <option value="2" label="2">2</option>
-          <option value="3" label="3">3</option>
-        </datalist>  
-      </div>
-      <div style="flex: 1">
+    <article>
+      <label for="show-layers">
+        Show folders in bookmark`s path. 
+      </label>
+      <div style="display: flex">
+        <div>
+          <input type="range" id="SHOW_PATH_LAYERS" name="show-layers" list="show-layers-values" min="1" max="3" step="1"/>
+          <datalist id="show-layers-values">
+            <option value="1" label="1">1</option>
+            <option value="2" label="2">2</option>
+            <option value="3" label="3">3</option>
+          </datalist>  
+        </div>
+        <div style="flex: 1">
 
-      </div>  
-    </div>
+        </div>  
+      </div>
+    </article>
+
+    <article>
+      <label for="SHOW_PREVIOUS_VISIT_SELECT">Show previous visit:</label>
+      <select name="SHOW_PREVIOUS_VISIT_SELECT" id="SHOW_PREVIOUS_VISIT">
+        <option value="0">Never</option>
+        <option value="1">For url without bookmark</option>
+        <option value="2">Always</option>
+      </select>
+    </article>
+
     <script src="options.js"></script>
   </body>
 </html>

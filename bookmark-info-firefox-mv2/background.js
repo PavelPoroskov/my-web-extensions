@@ -24,27 +24,37 @@ const BASE_ID = 'BKM_INF';
 const MENU = {
   CLOSE_DUPLICATE: `${BASE_ID}_CLOSE_DUPLICATE`,
   CLOSE_BOOKMARKED: `${BASE_ID}_CLOSE_BOOKMARKED`,
+  CLEAR_URL: `${BASE_ID}_CLEAR_URL`,
   // BOOKMARK_AND_CLOSE: `${BASE_ID}_BOOKMARK_AND_CLOSE`,
 };
 
 const USER_SETTINGS_OPTIONS = {
   CLEAR_URL_FROM_QUERY_PARAMS: 'CLEAR_URL_FROM_QUERY_PARAMS',
   SHOW_PATH_LAYERS: 'SHOW_PATH_LAYERS',
+  SHOW_PREVIOUS_VISIT: 'SHOW_PREVIOUS_VISIT',
   // MARK_VISITED_URL: 'MARK_VISITED_URL',
 }
 
+const SHOW_PREVIOUS_VISIT_OPTION = {
+  NEVER: 0,
+  ONLY_NO_BKM: 1,
+  ALWAYS: 2,
+}
 const o = USER_SETTINGS_OPTIONS
 const USER_SETTINGS_DEFAULT_VALUE = {
   [o.CLEAR_URL_FROM_QUERY_PARAMS]: true,
-  [o.SHOW_PATH_LAYERS]: 1,
+  [o.SHOW_PATH_LAYERS]: 1, // [1, 2, 3]
+  [o.SHOW_PREVIOUS_VISIT]: SHOW_PREVIOUS_VISIT_OPTION.ALWAYS,
 }
 const CONFIG = {
   SHOW_LOG_CACHE: false,
+  SHOW_LOG_SEND_EVENT: false,
   SHOW_LOG_EVENT: false,
   SHOW_LOG_IGNORE: false,
   SHOW_LOG_OPTIMIZATION: false,
   SHOW_LOG_QUEUE: false,
   SHOW_LOG: false,
+  SHOW_DEBUG: false,
 }
 const makeLogWithTime = () => {
   let startTime;
@@ -83,10 +93,12 @@ const makeLogWithPrefix = (prefix = '') => {
 
 const log = CONFIG.SHOW_LOG ? makeLogWithPrefix() : () => { };
 const logCache = CONFIG.SHOW_LOG_CACHE ? logWithTime : () => { };
-const logEvent = CONFIG.SHOW_LOG_EVENT ? makeLogWithPrefix('EVENT') : () => { };
+const logSendEvent = CONFIG.SHOW_LOG_SEND_EVENT ? makeLogWithPrefix('SEND =>') : () => { };
+const logEvent = CONFIG.SHOW_LOG_EVENT ? makeLogWithPrefix('EVENT <=') : () => { };
 const logIgnore = CONFIG.SHOW_LOG_IGNORE ? makeLogWithPrefix('IGNORE') : () => { };
 const logOptimization = CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OPTIMIZATION') : () => { };
 const logPromiseQueue = CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
+const logDebug = CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
 class CacheWithLimit {
   constructor ({ name='cache', size = 100 }) {
     this.cache = new Map();
@@ -267,58 +279,62 @@ const getFullPath = (id, bkmFolderById) => {
   return path.filter(Boolean).toReversed()
 }
 
+async function addBookmarkParentInfo(bookmarkList, bookmarkByIdMap) {
+  // parentIdList.length <= bookmarkList.length
+  // for root folders parentIdList=[]
+  const parentIdList = getParentIdList(bookmarkList)
+
+  if (parentIdList.length === 0) {
+    return
+  } 
+
+  const knownParentIdList = [];
+  const unknownParentIdList = [];
+
+  parentIdList.forEach((id) => {
+    if (bookmarkByIdMap.has(id)) {
+      knownParentIdList.push(id)
+    } else {
+      unknownParentIdList.push(id)
+    }
+  })
+
+  const knownFolderList = knownParentIdList.map((id) => bookmarkByIdMap.get(id))
+
+  if (unknownParentIdList.length > 0) {
+    const unknownFolderList = await browser.bookmarks.get(unknownParentIdList)
+
+    unknownFolderList.forEach((folder) => {
+      bookmarkByIdMap.add(
+        folder.id,
+        {
+          title: folder.title,
+          parentId: folder.parentId,
+        }
+      )
+      knownFolderList.push(folder)
+    })
+  }
+
+  return await addBookmarkParentInfo(knownFolderList, bookmarkByIdMap)
+}
+
 async function getBookmarkInfo(url) {
   const bookmarkList = await browser.bookmarks.search({ url });
+
   if (bookmarkList.length == 0) {
     return [];
   }
 
-  let folderList = bookmarkList;
-
-  while (folderList.length > 0) {
-    const parentIdList = getParentIdList(folderList)
-
-    const unknownIdList = [];
-    const knownIdList = [];
-    parentIdList.forEach((id) => {
-      if (memo.bkmFolderById.has(id)) {
-        knownIdList.push(id)
-      } else {
-        unknownIdList.push(id)
-      }
-    })
-
-    const knownFolderList = knownIdList.map((id) => memo.bkmFolderById.get(id))
-    let unknownFolderList = []
-
-    if (unknownIdList.length > 0) {
-      unknownFolderList = await browser.bookmarks.get(unknownIdList)
-      unknownFolderList.forEach((folder) => {
-        memo.bkmFolderById.add(
-          folder.id,
-          {
-            title: folder.title,
-            parentId: folder.parentId,
-          }
-        )
-      })
-    }
-
-    folderList = knownFolderList.concat(unknownFolderList)
-  }
-
-  const showLayer = memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS];
+  await addBookmarkParentInfo(bookmarkList, memo.bkmFolderById)
 
   return bookmarkList
     .map((bookmarkItem) => {
       const fullPathList = getFullPath(bookmarkItem.parentId, memo.bkmFolderById)
-      const shortPathList = fullPathList.slice(-showLayer)
-      const restPathList = fullPathList.slice(0, -showLayer)
 
       return {
         id: bookmarkItem.id,
-        shortPath: shortPathList.join('/ '),
-        restPath: restPathList.concat('').join('/ '),
+        fullPathList,
         title: bookmarkItem.title,
       }
     });
@@ -352,29 +368,53 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
     source,
   };
 }
-// const exceptionList = [
-//   'youtube.com',
-//   'www.youtube.com',
-//   'youtu.be',
-//   'career.proxify.io',
-//   'proxify.io',
-// ]
-// const exceptionSet = new Set(exceptionList)
-
-const targetList = [
-  'www.linkedin.com',
-  'linkedin.com',
+const targetList = [
+  {
+    hostname: [
+      'www.linkedin.com',
+      'linkedin.com',  
+    ],
+    path: [
+      '/jobs/view/',
+      '/posts/'
+    ] 
+  },
+  {
+    hostname: [
+      'djinni.co',
+    ],
+    path: [
+      '/my/profile/',
+    ] 
+  },
 ]
-const targetSet = new Set(targetList)
 
-const cleanLink = (link) => {
+const targetMap = new Map(
+  targetList.flatMap(({ hostname, path }) => hostname.map((host) => [host, path]))
+)
+
+const removeQueryParamsIfTarget = (link) => {
   try {
     const oLink = new URL(link);
-    const { hostname } = oLink;
+    const { hostname, pathname } = oLink;
+    const targetPathList = targetMap.get(hostname)
 
-    if (targetSet.has(hostname)) {
+    if (targetPathList && targetPathList.some((targetPath) => pathname.startsWith(targetPath))) {
       oLink.search = ''
+
+      return oLink.toString();  
     }
+  
+    return link
+  } catch (e) {
+    return link
+  }
+}
+
+const removeQueryParams = (link) => {
+  try {
+    const oLink = new URL(link);
+    oLink.search = ''
   
     return oLink.toString();  
   } catch (e) {
@@ -383,33 +423,68 @@ const cleanLink = (link) => {
 }
 
 // let testStr = "https://www.linkedin.com/jobs/view/3920634940/?alternateChannel=search&refId=dvaqme%2FfxHehSAa5o4nVnA%3D%3D&trackingId=8%2FZKaGcTAInuTTH4NyKDoA%3D%3D"
-// console.log('test cleanLink', cleanLink(testStr))
+// console.log('test ', removeQueryParamsIfTarget(testStr))
 
 // testStr = "https://www.youtube.com/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test cleanLink', cleanLink(testStr))
+// console.log('test ', removeQueryParamsIfTarget(testStr))
 
 // testStr = "https://youtube.com/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test cleanLink', cleanLink(testStr))
+// console.log('test ', removeQueryParamsIfTarget(testStr))
 
 // testStr = "https://youtu.be/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test cleanLink', cleanLink(testStr))
+// console.log('test ', removeQueryParamsIfTarget(testStr))
 //
 // https://career.proxify.io/apply?uuid=566c933b-432e-64e0-b317-dd4390d6a74e&step=AdditionalInformation
 async function updateTabTask({ tabId, url, useCache=false }) {
   log('updateTabTask(', tabId, useCache, url);
 
   const actualUrl = memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]
-    ? cleanLink(url)
+    ? removeQueryParamsIfTarget(url)
     : url;
 
-  const bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
-  log('browser.tabs.sendMessage(', tabId, bookmarkInfo.bookmarkInfoList);
+  let bookmarkInfo
+  let visitList = []
 
-  return browser.tabs.sendMessage(tabId, {
+  switch (memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT]) {
+    case SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM:
+    case SHOW_PREVIOUS_VISIT_OPTION.ALWAYS: {
+      ([
+        bookmarkInfo,
+        visitList,
+      ] = await Promise.all([
+        getBookmarkInfoUni({ url: actualUrl, useCache }),
+        browser.history.getVisits({ url: actualUrl })
+      ]))
+      break
+    }
+    default: {
+      bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
+    }
+  }
+  const orderedList = IS_BROWSER_FIREFOX ? visitList : visitList.toReversed();
+  const filteredList = [].concat(
+    orderedList.slice(0,1),
+    orderedList.slice(1).filter(({ transition }) => transition !== 'reload')
+  )
+  const [currentVisit, previousVisit] = filteredList;
+
+  // logDebug('orderedList', orderedList.map(({ visitTime, transition }) => `${transition} => ${new Date(visitTime).toISOString()}` )) 
+  // logDebug('filteredList', filteredList.map(({ visitTime, transition }) => `${transition} => ${new Date(visitTime).toISOString()}` )) 
+  // logDebug('updateTabTask url', actualUrl);
+  // logDebug('updateTabTask currentVisit', currentVisit?.visitTime, currentVisit?.visitTime && new Date(currentVisit?.visitTime));
+  // logDebug('updateTabTask previousVisit', previousVisit?.visitTime, previousVisit?.visitTime && new Date(previousVisit?.visitTime));
+
+  const message = {
     command: "bookmarkInfo",
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     tabId,
-  })
+    showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
+    showPreviousVisit: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT],
+    previousVisitTime: previousVisit?.visitTime,
+  }
+  logSendEvent('updateTabTask()', tabId, message);
+
+  return browser.tabs.sendMessage(tabId, message)
     .then(() => bookmarkInfo);
 }
 
@@ -575,26 +650,37 @@ async function closeBookmarkedTabs() {
       return
     }
   
-    logEvent('bookmark.onCreated');
+    logEvent('bookmark.onCreated <-');
 
     if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
-      const cleanUrl = cleanLink(node.url);
+      const cleanUrl = removeQueryParamsIfTarget(node.url);
       
       if (node.url !== cleanUrl) {
-        await browser.bookmarks.update(
-          bookmarkId,
-          { url: cleanUrl }
-        )
+        const bookmarkList = await browser.bookmarks.search({ url: cleanUrl });
+        if (bookmarkList.length === 0) {
+          // if first time then we fix url in new bookmark
+          await browser.bookmarks.update(
+            bookmarkId,
+            { url: cleanUrl }
+          )
+        } else {
+          // if second time then we delete new bookmark
+          //
+          // TODO sometimes we want create two+ bookmark for the same url in different folders
+          //  when we create bookmark from fixed tags: we will use addBookmark(cleanurl, path)
+          await browser.bookmarks.remove(bookmarkId)  
+        }
 
         const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
         const [activeTab] = tabs;
 
         if (activeTab?.id) {
-          log('browser.tabs.sendMessage activeTab.id', activeTab.id)
-          await browser.tabs.sendMessage(activeTab.id, {
+          const msg = {
             command: "changeLocationToCleanUrl",
             cleanUrl,
-          })
+          }
+          logSendEvent('bookmarksController.onCreated()', activeTab.id, msg)
+          await browser.tabs.sendMessage(activeTab.id, msg)
         }
       }
     }
@@ -608,7 +694,8 @@ async function closeBookmarkedTabs() {
     getBookmarkInfoUni({ url: node.url });
   },
   async onChanged(bookmarkId, changeInfo) {
-    logEvent('bookmark.onChanged 00', changeInfo);
+    logEvent('bookmark.onChanged 00 <-', changeInfo);
+
     memo.bkmFolderById.delete(bookmarkId);
     // changes in active tab
     await updateActiveTab({
@@ -617,10 +704,10 @@ async function closeBookmarkedTabs() {
 
     // changes in bookmark manager
     const [bookmark] = await browser.bookmarks.get(bookmarkId)
-    getBookmarkInfoUni({ url: bookmark.url });
+    getBookmarkInfoUni({ url: bookmark.url });        
   },
   async onMoved(bookmarkId) {
-    logEvent('bookmark.onMoved');
+    logEvent('bookmark.onMoved <-');
     memo.bkmFolderById.delete(bookmarkId);
     // changes in active tab
     await updateActiveTab({
@@ -632,7 +719,7 @@ async function closeBookmarkedTabs() {
     getBookmarkInfoUni({ url: bookmark.url });
   },
   async onRemoved(bookmarkId, { node }) {
-    logEvent('bookmark.onRemoved');
+    logEvent('bookmark.onRemoved <-');
     memo.bkmFolderById.delete(bookmarkId);
     // changes in active tab
     await updateActiveTab({
@@ -659,6 +746,11 @@ async function closeBookmarkedTabs() {
     title: 'close bookmarked tabs',
   });
   // TODO? bookmark and close tabs (tabs without bookmarks)
+  browser.menus.create({
+    id: MENU.CLEAR_URL,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'clear url',
+  });
 }
 
 const runtimeController = {
@@ -801,7 +893,7 @@ const runtimeController = {
 };
 const contextMenusController = {
   async onClicked (OnClickData) {
-    logEvent('contextMenus.onClicked');
+    logEvent('contextMenus.onClicked <-');
 
     switch (OnClickData.menuItemId) {
       case MENU.CLOSE_DUPLICATE: {
@@ -810,6 +902,25 @@ const runtimeController = {
       }
       case MENU.CLOSE_BOOKMARKED: {
         closeBookmarkedTabs();
+        break;
+      }
+      case MENU.CLEAR_URL: {
+        const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+        const [activeTab] = tabs;
+
+        if (activeTab?.id && activeTab?.url) {
+          const cleanUrl = removeQueryParams(activeTab.url);
+
+          if (activeTab.url !== cleanUrl) {
+            const msg = {
+              command: "changeLocationToCleanUrl",
+              cleanUrl,
+            }
+            logSendEvent('contextMenusController.onClicked(CLEAR_URL)', activeTab.id, msg)
+            await browser.tabs.sendMessage(activeTab.id, msg)
+          }
+        }
+
         break;
       }
     }

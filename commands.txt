@@ -1,5 +1,8 @@
+npm install --global web-ext
 
 node tools/mv-changes-to-firefox.mjs
+cd bookmark-info-firefox-mv2
+web-ext build
 
 // install ext to firefox developer edition
   },

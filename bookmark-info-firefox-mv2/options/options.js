@@ -1,12 +1,20 @@
 const USER_SETTINGS_OPTIONS = {
   CLEAR_URL_FROM_QUERY_PARAMS: 'CLEAR_URL_FROM_QUERY_PARAMS',
   SHOW_PATH_LAYERS: 'SHOW_PATH_LAYERS',
+  SHOW_PREVIOUS_VISIT: 'SHOW_PREVIOUS_VISIT',
+}
+
+const SHOW_PREVIOUS_VISIT_OPTION = {
+  NEVER: 0,
+  ONLY_NO_BKM: 1,
+  ALWAYS: 2,
 }
 
 const o = USER_SETTINGS_OPTIONS
 const USER_SETTINGS_DEFAULT_VALUE = {
   [o.CLEAR_URL_FROM_QUERY_PARAMS]: true,
   [o.SHOW_PATH_LAYERS]: 1,
+  [o.SHOW_PREVIOUS_VISIT]: SHOW_PREVIOUS_VISIT_OPTION.ALWAYS,
 }
 
 function makeSaveCheckboxHandler(optionId) {
@@ -27,7 +35,25 @@ function makeSaveCheckboxHandler(optionId) {
 }
 
 function makeSaveInputHandler(optionId) {
-  return async function saveCheckboxHandler(event) {
+  return async function saveInputHandler(event) {
+    event.preventDefault();
+
+    const element = document.querySelector(`#${optionId}`)
+  
+    if (element) {
+      await browser.storage.local.set({
+        // [optionId]: +event.target.value
+        [optionId]: +element.value
+      })  
+      await browser.runtime.sendMessage({
+        command: "optionsChanged",
+      });  
+    }
+  }
+}
+
+function makeSaveSelectHandler(optionId) {
+  return async function saveSelectHandler(event) {
     event.preventDefault();
 
     const element = document.querySelector(`#${optionId}`)
@@ -68,6 +94,12 @@ async function restoreOptions() {
   element = document.querySelector(domId)
   element.value = actualSettings[optionId];
   element.addEventListener('input', makeSaveInputHandler(optionId) );
+
+  optionId = USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.value = actualSettings[optionId];
+  element.addEventListener('change', makeSaveSelectHandler(optionId) );
 }
 
 document.addEventListener('DOMContentLoaded', restoreOptions);
