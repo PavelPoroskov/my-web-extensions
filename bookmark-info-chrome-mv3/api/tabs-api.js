@@ -72,7 +72,7 @@ async function updateTabTask({ tabId, url, useCache=false }) {
     showPreviousVisit: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT],
     previousVisitTime: previousVisit?.visitTime,
   }
-  logSendEvent('chrome.tabs.sendMessage(', tabId, message);
+  logSendEvent('updateTabTask()', tabId, message);
 
   return chrome.tabs.sendMessage(tabId, message)
     .then(() => bookmarkInfo);

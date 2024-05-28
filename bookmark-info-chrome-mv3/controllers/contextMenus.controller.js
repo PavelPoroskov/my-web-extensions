@@ -1,6 +1,7 @@
 
 import {
   logEvent,
+  logSendEvent,
 } from '../api/debug.js'
 import {
   MENU,
@@ -35,11 +36,12 @@ export const contextMenusController = {
           const cleanUrl = removeQueryParams(activeTab.url);
 
           if (activeTab.url !== cleanUrl) {
-            logEvent('tabs.sendMessage changeLocationToCleanUrl activeTab.id ->', activeTab.id)
-            await chrome.tabs.sendMessage(activeTab.id, {
+            const msg = {
               command: "changeLocationToCleanUrl",
               cleanUrl,
-            })
+            }
+            logSendEvent('contextMenusController.onClicked(CLEAR_URL)', activeTab.id, msg)
+            await chrome.tabs.sendMessage(activeTab.id, msg)
           }
         }
 
