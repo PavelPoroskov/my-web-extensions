@@ -7,6 +7,7 @@
 
   "permissions": [
     "bookmarks",
+    "history",
     "menus",
     "storage",
     "tabs"

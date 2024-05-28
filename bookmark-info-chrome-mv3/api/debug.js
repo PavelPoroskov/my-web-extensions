@@ -37,8 +37,10 @@ const makeLogWithPrefix = (prefix = '') => {
 
 export const log = CONFIG.SHOW_LOG ? makeLogWithPrefix() : () => { };
 export const logCache = CONFIG.SHOW_LOG_CACHE ? logWithTime : () => { };
-export const logEvent = CONFIG.SHOW_LOG_EVENT ? makeLogWithPrefix('EVENT') : () => { };
+export const logSendEvent = CONFIG.SHOW_LOG_SEND_EVENT ? makeLogWithPrefix('SEND =>') : () => { };
+export const logEvent = CONFIG.SHOW_LOG_EVENT ? makeLogWithPrefix('EVENT <=') : () => { };
 export const logIgnore = CONFIG.SHOW_LOG_IGNORE ? makeLogWithPrefix('IGNORE') : () => { };
 export const logOptimization = CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OPTIMIZATION') : () => { };
 export const logPromiseQueue = CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
+export const logDebug = CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
 

@@ -1,6 +1,8 @@
 import {
   log,
   logEvent,
+  logSendEvent,
+  logDebug,
 } from './debug.js'
 import {
   promiseQueue,
@@ -19,6 +21,8 @@ import {
 } from './memo.js'
 import {
   USER_SETTINGS_OPTIONS,
+  SHOW_PREVIOUS_VISIT_OPTION,
+  IS_BROWSER_FIREFOX,
 } from '../constants.js'
 
 async function updateTabTask({ tabId, url, useCache=false }) {
@@ -28,14 +32,47 @@ async function updateTabTask({ tabId, url, useCache=false }) {
     ? removeQueryParamsIfTarget(url)
     : url;
 
-  const bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
+  let bookmarkInfo
+  let visitList = []
+
+  switch (memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT]) {
+    case SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM:
+    case SHOW_PREVIOUS_VISIT_OPTION.ALWAYS: {
+      ([
+        bookmarkInfo,
+        visitList,
+      ] = await Promise.all([
+        getBookmarkInfoUni({ url: actualUrl, useCache }),
+        chrome.history.getVisits({ url: actualUrl })
+      ]))
+      break
+    }
+    default: {
+      bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
+    }
+  }
+  const orderedList = IS_BROWSER_FIREFOX ? visitList : visitList.toReversed();
+  const filteredList = [].concat(
+    orderedList.slice(0,1),
+    orderedList.slice(1).filter(({ transition }) => transition !== 'reload')
+  )
+  const [currentVisit, previousVisit] = filteredList;
+
+  // logDebug('orderedList', orderedList.map(({ visitTime, transition }) => `${transition} => ${new Date(visitTime).toISOString()}` )) 
+  // logDebug('filteredList', filteredList.map(({ visitTime, transition }) => `${transition} => ${new Date(visitTime).toISOString()}` )) 
+  // logDebug('updateTabTask url', actualUrl);
+  // logDebug('updateTabTask currentVisit', currentVisit?.visitTime, currentVisit?.visitTime && new Date(currentVisit?.visitTime));
+  // logDebug('updateTabTask previousVisit', previousVisit?.visitTime, previousVisit?.visitTime && new Date(previousVisit?.visitTime));
+
   const message = {
     command: "bookmarkInfo",
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     tabId,
     showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
+    showPreviousVisit: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT],
+    previousVisitTime: previousVisit?.visitTime,
   }
-  log('chrome.tabs.sendMessage(', tabId, message);
+  logSendEvent('chrome.tabs.sendMessage(', tabId, message);
 
   return chrome.tabs.sendMessage(tabId, message)
     .then(() => bookmarkInfo);

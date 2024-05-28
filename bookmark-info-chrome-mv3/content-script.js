@@ -1,5 +1,5 @@
-const SHOW_LOG = false
-//const SHOW_LOG = true
+let SHOW_LOG = false
+// SHOW_LOG = true
 const log = SHOW_LOG ? console.log : () => {};
 
 (async function() {
@@ -24,7 +24,12 @@ const log = SHOW_LOG ? console.log : () => {};
   }
   const BROWSER = BROWSER_OPTIONS.CHROME;
   const BROWSER_SPECIFIC = BROWSER_SPECIFIC_OPTIONS[BROWSER];
-  
+  const SHOW_PREVIOUS_VISIT_OPTION = {
+    NEVER: 0,
+    ONLY_NO_BKM: 1,
+    ALWAYS: 2,
+  }
+    
   const bkmInfoRootId = 'bkmInfoRootId';
 
   const STYLE = {
@@ -73,6 +78,14 @@ const log = SHOW_LOG ? console.log : () => {};
       'color: white',
       'font-size: 10px',
       'line-height: 1',
+    ].join(';'),
+    history: [
+      'padding-left: 0.7ch',
+      'border-top-left-radius: 0.5lh 50%',
+      'border-bottom-left-radius: 0.5lh 50%',
+      'color: white',
+      'background-color: fuchsia',
+      'position: relative',
     ].join(';'),
   }
   const STYLE_ELEMENT = (
@@ -141,7 +154,39 @@ const log = SHOW_LOG ? console.log : () => {};
     }
   }
 
-  function showBookmarkInfo({ bookmarkInfoList, showLayer }) {
+  const dayMS = 86400000;
+  const hourMS = 3600000;
+  const minMS = 60000;
+
+  function formatPrevVisit (inMS) {
+    
+    const dif = Date.now() - inMS;
+
+    let result = ''
+    const days = Math.floor(dif / dayMS)
+
+    if (days > 0) {
+      result = `D ${days}`
+    } else {
+      const hours = Math.floor(dif / hourMS)
+
+      if (hours > 0) {
+        result = `D 0  h ${hours}`
+      } else {
+        const mins = Math.floor(dif / minMS)
+
+        if (mins > 0) {
+          result = `D 0  h 0  m ${mins}`
+        } else {
+          result = 'D 0  h 0  m 0'
+        }
+      }
+    }
+
+    return result
+  }
+
+  function showBookmarkInfo({ bookmarkInfoList, showLayer, showPreviousVisit, previousVisitTime }) {
     log('showBookmarkInfo 00');
 
     let rootDiv = document.getElementById(bkmInfoRootId);
@@ -167,63 +212,88 @@ const log = SHOW_LOG ? console.log : () => {};
     const rawNodeList = rootDiv.childNodes;
     const beforeRawLength = rawNodeList.length;
 
-    bookmarkInfoList.forEach(({ id, fullPathList }, index) => {
-      const shortPathList = fullPathList.slice(-showLayer)
-      const restPathList = fullPathList.slice(0, -showLayer)
-      const restPath = restPathList.concat('').join('/ ')
+    const drawList = bookmarkInfoList.map((value) => ({ type: 'bookmark', value }))
 
+    switch (true) {
+      case (showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM && bookmarkInfoList.length === 0): 
+      case (showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS): 
+        if (previousVisitTime) {
+          const prevVisit = formatPrevVisit(previousVisitTime)
+          // if (prevVisit) {
+            drawList.push({ type: 'history', value: prevVisit })
+          // }
+        }
+        break
+    }
+
+    drawList.forEach(({ type, value }, index) => {
       const divRow = document.createElement('div');
       divRow.style = STYLE.row;
-
       const divL = document.createElement('div');
       divL.style = STYLE.rowLeft;
-
-      const divLabel = document.createElement('div');
-      divLabel.style = `${STYLE.label};background-color:${colors[index % 2]}`;
-      divLabel.classList.add('bkmLabel');
-
-      shortPathList[shortPathList.length - 1] = `${shortPathList[shortPathList.length - 1]} :bkm`
-      const shortPathListWithSeparator = shortPathList
-        .slice(0, -1).flatMap((str, index) => [str, '/ '])
-        .concat(shortPathList[shortPathList.length - 1])
-      
-      shortPathListWithSeparator.forEach((str) => {
-        const span = document.createElement('span');
-        // createTextNode is safe method for XSS-injection
-        // const shortPathList = shortPath.split(/(\/ )/)
-        const textNode = document.createTextNode(str);
-        span.appendChild(textNode);
-        divLabel.appendChild(span);
-      })
-
-
-      divLabel.addEventListener('click', hideBookmarks);
-      // TODO sanitize: remove ",<,>
-      // const sanitizedFullPath = fullPath
-      //   .replaceAll('"', '&quot;')
-      //   .replaceAll('>', '&gt;')
-      //   .replaceAll('<', '&lt;')
-      // divLabel.setAttribute('data-restpath', sanitizedFullPath);
-      //
-      // Symbols ( " > < ) don't break html and displayed as text.
-      divLabel.setAttribute('data-restpath', restPath);
-
-      const divDelBtn = document.createElement('div');
-      divDelBtn.style = STYLE.delBtn;
-      divDelBtn.setAttribute('data-bkmid', id);
-      divDelBtn.classList.add('bkmDelBtn');
-
-      const divDelBtnLetter = document.createElement('div');
-      divDelBtnLetter.style = STYLE.delBtnLetter;
-      const textNodeDel = document.createTextNode('X');
-      divDelBtnLetter.appendChild(textNodeDel);
-      
-      divDelBtn.appendChild(divDelBtnLetter);
-      divDelBtn.addEventListener('click', deleteBookmark);
-
       divRow.appendChild(divL);
-      divRow.appendChild(divLabel);
-      divRow.appendChild(divDelBtn);
+
+      if (type === 'bookmark') {
+        const { id, fullPathList } = value
+        const shortPathList = fullPathList.slice(-showLayer)
+        const restPathList = fullPathList.slice(0, -showLayer)
+        const restPath = restPathList.concat('').join('/ ')
+  
+        const divLabel = document.createElement('div');
+        divLabel.style = `${STYLE.label};background-color:${colors[index % 2]}`;
+        divLabel.classList.add('bkmLabel');
+  
+        shortPathList[shortPathList.length - 1] = `${shortPathList[shortPathList.length - 1]} :bkm`
+        const shortPathListWithSeparator = shortPathList
+          .slice(0, -1).flatMap((str, index) => [str, '/ '])
+          .concat(shortPathList[shortPathList.length - 1])
+        
+        shortPathListWithSeparator.forEach((str) => {
+          const span = document.createElement('span');
+          // createTextNode is safe method for XSS-injection
+          // const shortPathList = shortPath.split(/(\/ )/)
+          const textNode = document.createTextNode(str);
+          span.appendChild(textNode);
+          divLabel.appendChild(span);
+        })
+  
+  
+        divLabel.addEventListener('click', hideBookmarks);
+        // TODO sanitize: remove ",<,>
+        // const sanitizedFullPath = fullPath
+        //   .replaceAll('"', '&quot;')
+        //   .replaceAll('>', '&gt;')
+        //   .replaceAll('<', '&lt;')
+        // divLabel.setAttribute('data-restpath', sanitizedFullPath);
+        //
+        // Symbols ( " > < ) don't break html and displayed as text.
+        divLabel.setAttribute('data-restpath', restPath);
+  
+        const divDelBtn = document.createElement('div');
+        divDelBtn.style = STYLE.delBtn;
+        divDelBtn.setAttribute('data-bkmid', id);
+        divDelBtn.classList.add('bkmDelBtn');
+  
+        const divDelBtnLetter = document.createElement('div');
+        divDelBtnLetter.style = STYLE.delBtnLetter;
+        const textNodeDel = document.createTextNode('X');
+        divDelBtnLetter.appendChild(textNodeDel);
+        
+        divDelBtn.appendChild(divDelBtnLetter);
+        divDelBtn.addEventListener('click', deleteBookmark);
+  
+        divRow.appendChild(divLabel);
+        divRow.appendChild(divDelBtn);
+  
+      } else if (type === 'history') {
+        const divLabel = document.createElement('div');
+        divLabel.style = STYLE.history;
+        divLabel.addEventListener('click', hideBookmarks);
+        const textNode = document.createTextNode(`${value} :prev. visit`);
+        divLabel.appendChild(textNode);
+
+        divRow.appendChild(divLabel);
+      }
       
       if (index < beforeRawLength) {
         rootDiv.replaceChild(divRow, rawNodeList[index]);
@@ -233,7 +303,7 @@ const log = SHOW_LOG ? console.log : () => {};
     })
 
     let rawListLength = beforeRawLength;
-    while (bookmarkInfoList.length < rawListLength) {
+    while (drawList.length < rawListLength) {
       rootDiv.removeChild(rootDiv.lastChild);
       rawListLength -= 1;
     }
@@ -249,7 +319,10 @@ const log = SHOW_LOG ? console.log : () => {};
 
         const newHasBookmark = message.bookmarkInfoList.length > 0;
   
-        if (newHasBookmark || hasBookmark) {
+        if (newHasBookmark || hasBookmark 
+          || message.showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS
+          || message.showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM
+        ) {
           showBookmarkInfo(message);
         }
   
