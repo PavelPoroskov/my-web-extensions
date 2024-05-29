@@ -56,7 +56,7 @@ async function updateTabTask({ tabId, url, useCache=false }) {
     orderedList.slice(0,1),
     orderedList.slice(1).filter(({ transition }) => transition !== 'reload')
   )
-  const [currentVisit, previousVisit] = filteredList;
+  const [currentVisit, previousVisit1, previousVisit2, previousVisit3] = filteredList;
 
   // logDebug('orderedList', orderedList.map(({ visitTime, transition }) => `${transition} => ${new Date(visitTime).toISOString()}` )) 
   // logDebug('filteredList', filteredList.map(({ visitTime, transition }) => `${transition} => ${new Date(visitTime).toISOString()}` )) 
@@ -70,7 +70,7 @@ async function updateTabTask({ tabId, url, useCache=false }) {
     tabId,
     showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
     showPreviousVisit: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT],
-    previousVisitTime: previousVisit?.visitTime,
+    previousVisitTime: [previousVisit3, previousVisit2, previousVisit1].map((i) => i?.visitTime).filter(Boolean),
   }
   logSendEvent('updateTabTask()', tabId, message);
 

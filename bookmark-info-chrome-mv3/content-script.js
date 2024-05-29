@@ -171,14 +171,14 @@ const log = SHOW_LOG ? console.log : () => {};
       const hours = Math.floor(dif / hourMS)
 
       if (hours > 0) {
-        result = `D 0  h ${hours}`
+        result = `h ${hours}`
       } else {
         const mins = Math.floor(dif / minMS)
 
         if (mins > 0) {
-          result = `D 0  h 0  m ${mins}`
+          result = `m ${mins}`
         } else {
-          result = 'D 0  h 0  m 0'
+          result = 'm 0'
         }
       }
     }
@@ -217,8 +217,8 @@ const log = SHOW_LOG ? console.log : () => {};
     switch (true) {
       case (showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM && bookmarkInfoList.length === 0): 
       case (showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS): 
-        if (previousVisitTime) {
-          const prevVisit = formatPrevVisit(previousVisitTime)
+        if (previousVisitTime.length > 0) {
+          const prevVisit = previousVisitTime.map((i) => formatPrevVisit(i)).join(", ") 
           // if (prevVisit) {
             drawList.push({ type: 'history', value: prevVisit })
           // }
