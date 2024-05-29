@@ -319,7 +319,7 @@ async function addBookmarkParentInfo(bookmarkList, bookmarkByIdMap) {
   return await addBookmarkParentInfo(knownFolderList, bookmarkByIdMap)
 }
 
-async function getBookmarkInfo(url) {
+async function getBookmarkInfoList(url) {
   const bookmarkList = await browser.bookmarks.search({ url });
 
   if (bookmarkList.length == 0) {
@@ -339,32 +339,63 @@ async function getBookmarkInfo(url) {
       }
     });
 }
+async function getPreviousVisitList(url) {
+  const visitList = await browser.history.getVisits({ url });
+  
+  const orderedList = IS_BROWSER_FIREFOX ? visitList : visitList.toReversed();
+  const filteredList = [].concat(
+    orderedList.slice(0,1),
+    orderedList.slice(1).filter(({ transition }) => transition !== 'reload')
+  )
+  const [_currentVisit, previousVisit1, previousVisit2, previousVisit3] = filteredList;
 
-async function getBookmarkInfoUni({ url, useCache=false }) {
-  if (!url || !isSupportedProtocol(url)) {
+  return [previousVisit3, previousVisit2, previousVisit1].map((i) => i?.visitTime).filter(Boolean)
+}
+
+async function getPreviousVisitListWhen(url) {
+  const showPreviousVisit = memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT]
+
+  if (showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS || showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM) {
+    return getPreviousVisitList(url)
+  }
+
+  return []
+}
+async function getUrlInfo({ url, useCache=false }) {
+    if (!url || !isSupportedProtocol(url)) {
     return;
   }
 
-  let bookmarkInfoList;
+  let bookmarkInfo;
   let source;
 
   if (useCache) {
-    bookmarkInfoList = memo.cacheUrlToInfo.get(url);
+    bookmarkInfo = memo.cacheUrlToInfo.get(url);
     
-    if (bookmarkInfoList) {
+    if (bookmarkInfo) {
       source = SOURCE.CACHE;
-      logOptimization(' getBookmarkInfoUni: from cache bookmarkInfo')
+      logOptimization(' getUrlInfo: from cache bookmarkInfo')
     }
   } 
   
-  if (!bookmarkInfoList) {
-    bookmarkInfoList = await getBookmarkInfo(url);
+  if (!bookmarkInfo) {
+    const [
+      bookmarkInfoList,
+      previousVisitList,
+    ] = await Promise.all([
+      getBookmarkInfoList(url),
+      getPreviousVisitListWhen(url),
+    ])
     source = SOURCE.ACTUAL;
-    memo.cacheUrlToInfo.add(url, bookmarkInfoList);
+    bookmarkInfo = {
+      bookmarkInfoList,
+      previousVisitList,
+    }
+    memo.cacheUrlToInfo.add(url, bookmarkInfo);
   }
 
   return {
-    bookmarkInfoList,
+    ...bookmarkInfo,
     source,
   };
 }
@@ -442,50 +473,21 @@ const removeQueryParams = (link) => {
     ? removeQueryParamsIfTarget(url)
     : url;
 
-  let bookmarkInfo
-  let visitList = []
-
-  switch (memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT]) {
-    case SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM:
-    case SHOW_PREVIOUS_VISIT_OPTION.ALWAYS: {
-      ([
-        bookmarkInfo,
-        visitList,
-      ] = await Promise.all([
-        getBookmarkInfoUni({ url: actualUrl, useCache }),
-        browser.history.getVisits({ url: actualUrl })
-      ]))
-      break
-    }
-    default: {
-      bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
-    }
-  }
-  const orderedList = IS_BROWSER_FIREFOX ? visitList : visitList.toReversed();
-  const filteredList = [].concat(
-    orderedList.slice(0,1),
-    orderedList.slice(1).filter(({ transition }) => transition !== 'reload')
-  )
-  const [currentVisit, previousVisit1, previousVisit2, previousVisit3] = filteredList;
-
-  // logDebug('orderedList', orderedList.map(({ visitTime, transition }) => `${transition} => ${new Date(visitTime).toISOString()}` )) 
-  // logDebug('filteredList', filteredList.map(({ visitTime, transition }) => `${transition} => ${new Date(visitTime).toISOString()}` )) 
-  // logDebug('updateTabTask url', actualUrl);
-  // logDebug('updateTabTask currentVisit', currentVisit?.visitTime, currentVisit?.visitTime && new Date(currentVisit?.visitTime));
-  // logDebug('updateTabTask previousVisit', previousVisit?.visitTime, previousVisit?.visitTime && new Date(previousVisit?.visitTime));
+  const urlInfo = await getUrlInfo({ url: actualUrl, useCache })
+  const showPreviousVisit = memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT]
 
   const message = {
     command: "bookmarkInfo",
-    bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
+    bookmarkInfoList: urlInfo.bookmarkInfoList,
     tabId,
     showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
-    showPreviousVisit: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT],
-    previousVisitTime: [previousVisit3, previousVisit2, previousVisit1].map((i) => i?.visitTime).filter(Boolean),
+    isShowPreviousVisit: showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS || showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM && bookmarkInfo.bookmarkInfoList === 0,
+    previousVisitList: urlInfo.previousVisitList,
   }
   logSendEvent('updateTabTask()', tabId, message);
 
   return browser.tabs.sendMessage(tabId, message)
-    .then(() => bookmarkInfo);
+    .then(() => urlInfo);
 }
 
 async function updateTab({ tabId, url, useCache=false, debugCaller }) {
@@ -691,7 +693,7 @@ async function closeBookmarkedTabs() {
     });
 
     // changes in bookmark manager
-    getBookmarkInfoUni({ url: node.url });
+    getUrlInfo({ url: node.url });
   },
   async onChanged(bookmarkId, changeInfo) {
     logEvent('bookmark.onChanged 00 <-', changeInfo);
@@ -704,7 +706,7 @@ async function closeBookmarkedTabs() {
 
     // changes in bookmark manager
     const [bookmark] = await browser.bookmarks.get(bookmarkId)
-    getBookmarkInfoUni({ url: bookmark.url });        
+    getUrlInfo({ url: bookmark.url });        
   },
   async onMoved(bookmarkId) {
     logEvent('bookmark.onMoved <-');
@@ -716,7 +718,7 @@ async function closeBookmarkedTabs() {
 
     // changes in bookmark manager
     const [bookmark] = await browser.bookmarks.get(bookmarkId)
-    getBookmarkInfoUni({ url: bookmark.url });
+    getUrlInfo({ url: bookmark.url });
   },
   async onRemoved(bookmarkId, { node }) {
     logEvent('bookmark.onRemoved <-');
@@ -727,7 +729,7 @@ async function closeBookmarkedTabs() {
     });
 
     // changes in bookmark manager
-    getBookmarkInfoUni({ url: node?.url });
+    getUrlInfo({ url: node?.url });
   },
 }
 async function createContextMenu() {
@@ -810,7 +812,7 @@ const runtimeController = {
 const tabsController = {
   onCreated({ pendingUrl: url, index, id }) {
     logEvent('tabs.onCreated', index, id, url);
-    getBookmarkInfoUni({
+    getUrlInfo({
       url,
       useCache: true,
     });
@@ -821,7 +823,7 @@ const runtimeController = {
       case ('loading'): {
         if (changeInfo?.url) {
           logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, changeInfo.url);
-          getBookmarkInfoUni({
+          getUrlInfo({
             url: changeInfo.url,
             useCache: true,
           });
