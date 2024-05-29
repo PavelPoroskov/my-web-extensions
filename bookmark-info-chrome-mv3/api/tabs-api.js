@@ -11,8 +11,8 @@ import {
   isSupportedProtocol,
 } from './common-api.js'
 import {
-  getBookmarkInfoUni,
-} from './bookmarks-api.js'
+  getUrlInfo,
+} from './url-info-api.js'
 import {
   removeQueryParamsIfTarget,
 } from './link-api.js'
@@ -22,7 +22,6 @@ import {
 import {
   USER_SETTINGS_OPTIONS,
   SHOW_PREVIOUS_VISIT_OPTION,
-  IS_BROWSER_FIREFOX,
 } from '../constants.js'
 
 async function updateTabTask({ tabId, url, useCache=false }) {
@@ -32,50 +31,21 @@ async function updateTabTask({ tabId, url, useCache=false }) {
     ? removeQueryParamsIfTarget(url)
     : url;
 
-  let bookmarkInfo
-  let visitList = []
-
-  switch (memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT]) {
-    case SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM:
-    case SHOW_PREVIOUS_VISIT_OPTION.ALWAYS: {
-      ([
-        bookmarkInfo,
-        visitList,
-      ] = await Promise.all([
-        getBookmarkInfoUni({ url: actualUrl, useCache }),
-        chrome.history.getVisits({ url: actualUrl })
-      ]))
-      break
-    }
-    default: {
-      bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
-    }
-  }
-  const orderedList = IS_BROWSER_FIREFOX ? visitList : visitList.toReversed();
-  const filteredList = [].concat(
-    orderedList.slice(0,1),
-    orderedList.slice(1).filter(({ transition }) => transition !== 'reload')
-  )
-  const [currentVisit, previousVisit1, previousVisit2, previousVisit3] = filteredList;
-
-  // logDebug('orderedList', orderedList.map(({ visitTime, transition }) => `${transition} => ${new Date(visitTime).toISOString()}` )) 
-  // logDebug('filteredList', filteredList.map(({ visitTime, transition }) => `${transition} => ${new Date(visitTime).toISOString()}` )) 
-  // logDebug('updateTabTask url', actualUrl);
-  // logDebug('updateTabTask currentVisit', currentVisit?.visitTime, currentVisit?.visitTime && new Date(currentVisit?.visitTime));
-  // logDebug('updateTabTask previousVisit', previousVisit?.visitTime, previousVisit?.visitTime && new Date(previousVisit?.visitTime));
+  const urlInfo = await getUrlInfo({ url: actualUrl, useCache })
+  const showPreviousVisit = memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT]
 
   const message = {
     command: "bookmarkInfo",
-    bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
+    bookmarkInfoList: urlInfo.bookmarkInfoList,
     tabId,
     showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
-    showPreviousVisit: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT],
-    previousVisitTime: [previousVisit3, previousVisit2, previousVisit1].map((i) => i?.visitTime).filter(Boolean),
+    isShowPreviousVisit: showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS || showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM && bookmarkInfo.bookmarkInfoList === 0,
+    previousVisitList: urlInfo.previousVisitList,
   }
   logSendEvent('updateTabTask()', tabId, message);
 
   return chrome.tabs.sendMessage(tabId, message)
-    .then(() => bookmarkInfo);
+    .then(() => urlInfo);
 }
 
 export async function updateTab({ tabId, url, useCache=false, debugCaller }) {

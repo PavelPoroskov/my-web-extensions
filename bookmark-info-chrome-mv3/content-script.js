@@ -24,11 +24,6 @@ const log = SHOW_LOG ? console.log : () => {};
   }
   const BROWSER = BROWSER_OPTIONS.CHROME;
   const BROWSER_SPECIFIC = BROWSER_SPECIFIC_OPTIONS[BROWSER];
-  const SHOW_PREVIOUS_VISIT_OPTION = {
-    NEVER: 0,
-    ONLY_NO_BKM: 1,
-    ALWAYS: 2,
-  }
     
   const bkmInfoRootId = 'bkmInfoRootId';
 
@@ -186,7 +181,7 @@ const log = SHOW_LOG ? console.log : () => {};
     return result
   }
 
-  function showBookmarkInfo({ bookmarkInfoList, showLayer, showPreviousVisit, previousVisitTime }) {
+  function showBookmarkInfo({ bookmarkInfoList, showLayer, isShowPreviousVisit, previousVisitList }) {
     log('showBookmarkInfo 00');
 
     let rootDiv = document.getElementById(bkmInfoRootId);
@@ -214,16 +209,12 @@ const log = SHOW_LOG ? console.log : () => {};
 
     const drawList = bookmarkInfoList.map((value) => ({ type: 'bookmark', value }))
 
-    switch (true) {
-      case (showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM && bookmarkInfoList.length === 0): 
-      case (showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS): 
-        if (previousVisitTime.length > 0) {
-          const prevVisit = previousVisitTime.map((i) => formatPrevVisit(i)).join(", ") 
-          // if (prevVisit) {
-            drawList.push({ type: 'history', value: prevVisit })
-          // }
-        }
-        break
+    if (isShowPreviousVisit && previousVisitList.length > 0) {
+      const prevVisit = previousVisitList
+        .map((i) => formatPrevVisit(i))
+        .flatMap((value, index, array) => index === 0 || value !== array[index - 1] ? [value]: [])
+        .join(", ") 
+      drawList.push({ type: 'history', value: prevVisit })
     }
 
     drawList.forEach(({ type, value }, index) => {
@@ -319,10 +310,7 @@ const log = SHOW_LOG ? console.log : () => {};
 
         const newHasBookmark = message.bookmarkInfoList.length > 0;
   
-        if (newHasBookmark || hasBookmark 
-          || message.showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS
-          || message.showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM
-        ) {
+        if (newHasBookmark || hasBookmark || message.isShowPreviousVisit) {
           showBookmarkInfo(message);
         }
   

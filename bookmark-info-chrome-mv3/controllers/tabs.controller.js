@@ -6,8 +6,8 @@ import {
   memo,
 } from '../api/memo.js'
 import {
-  getBookmarkInfoUni,
-} from '../api/bookmarks-api.js'
+  getUrlInfo,
+} from '../api/url-info-api.js'
 import {
   updateTab,
 } from '../api/tabs-api.js'
@@ -19,7 +19,7 @@ import {
 export const tabsController = {
   onCreated({ pendingUrl: url, index, id }) {
     logEvent('tabs.onCreated', index, id, url);
-    getBookmarkInfoUni({
+    getUrlInfo({
       url,
       useCache: true,
     });
@@ -30,7 +30,7 @@ export const tabsController = {
       case ('loading'): {
         if (changeInfo?.url) {
           logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, changeInfo.url);
-          getBookmarkInfoUni({
+          getUrlInfo({
             url: changeInfo.url,
             useCache: true,
           });
