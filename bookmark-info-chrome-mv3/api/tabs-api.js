@@ -2,7 +2,6 @@ import {
   log,
   logEvent,
   logSendEvent,
-  logDebug,
 } from './debug.js'
 import {
   promiseQueue,
@@ -11,8 +10,11 @@ import {
   isSupportedProtocol,
 } from './common-api.js'
 import {
-  getUrlInfo,
-} from './url-info-api.js'
+  getBookmarkInfoUni,
+} from './bookmarks-api.js'
+import {
+  getHistoryInfo,
+} from './history-api.js'
 import {
   removeQueryParamsIfTarget,
 } from './link-api.js'
@@ -31,16 +33,23 @@ async function updateTabTask({ tabId, url, useCache=false }) {
     ? removeQueryParamsIfTarget(url)
     : url;
 
-  const urlInfo = await getUrlInfo({ url: actualUrl, useCache })
+  const [
+    bookmarkInfo,
+    previousVisitList,
+  ] = await Promise.all([
+    getBookmarkInfoUni({ url: actualUrl, useCache }),
+    getHistoryInfo({ url: actualUrl, useCache })
+  ])
   const showPreviousVisit = memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT]
 
   const message = {
     command: "bookmarkInfo",
-    bookmarkInfoList: urlInfo.bookmarkInfoList,
+    bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     tabId,
     showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
-    isShowPreviousVisit: showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS || showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM && bookmarkInfo.bookmarkInfoList === 0,
-    previousVisitList: urlInfo.previousVisitList,
+    isShowPreviousVisit: showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS
+      || showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM && bookmarkInfo.bookmarkInfoList === 0,
+    previousVisitList: previousVisitList,
   }
   logSendEvent('updateTabTask()', tabId, message);
 

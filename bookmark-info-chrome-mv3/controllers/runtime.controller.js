@@ -14,6 +14,7 @@ import {
 import {
   MENU,
   BROWSER_SPECIFIC,
+  USER_SETTINGS_OPTIONS,
 } from '../constants.js'
 
 async function createContextMenu() {
@@ -87,6 +88,10 @@ export const runtimeController = {
       case "optionsChanged": {
         logEvent('runtime.onMessage optionsChanged');
         memo.readActualSettings()
+
+        if (message?.optionId === USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT) {
+          memo.cacheUrlToVisitList.clear()
+        }
 
         break
       }

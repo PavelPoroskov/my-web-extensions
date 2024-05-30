@@ -6,8 +6,11 @@ import {
   memo,
 } from '../api/memo.js'
 import {
-  getUrlInfo,
-} from '../api/url-info-api.js'
+  getBookmarkInfoUni,
+} from '../api/bookmarks-api.js'
+import {
+  getHistoryInfo,
+} from '../api/history-api.js'
 import {
   updateTab,
 } from '../api/tabs-api.js'
@@ -19,7 +22,8 @@ import {
 export const tabsController = {
   onCreated({ pendingUrl: url, index, id }) {
     logEvent('tabs.onCreated', index, id, url);
-    getUrlInfo({
+    // We do not have current visit in history on tabs.onCreated(). Only after tabs.onUpdated(status = loading)
+    getBookmarkInfoUni({
       url,
       useCache: true,
     });
@@ -30,10 +34,11 @@ export const tabsController = {
       case ('loading'): {
         if (changeInfo?.url) {
           logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, changeInfo.url);
-          getUrlInfo({
+          getBookmarkInfoUni({
             url: changeInfo.url,
             useCache: true,
           });
+          getHistoryInfo({ url: changeInfo.url, useCache: false })
         }
 
         break;

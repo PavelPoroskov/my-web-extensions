@@ -6,8 +6,8 @@ import {
   memo,
 } from '../api/memo.js'
 import {
-  getUrlInfo,
-} from '../api/url-info-api.js'
+  getBookmarkInfoUni,
+} from '../api/bookmarks-api.js'
 import {
   updateActiveTab,
 } from '../api/tabs-api.js'
@@ -65,7 +65,7 @@ export const bookmarksController = {
     });
 
     // changes in bookmark manager
-    getUrlInfo({ url: node.url });
+    getBookmarkInfoUni({ url: node.url });
   },
   async onChanged(bookmarkId, changeInfo) {
     logEvent('bookmark.onChanged 00 <-', changeInfo);
@@ -78,7 +78,7 @@ export const bookmarksController = {
 
     // changes in bookmark manager
     const [bookmark] = await chrome.bookmarks.get(bookmarkId)
-    getUrlInfo({ url: bookmark.url });        
+    getBookmarkInfoUni({ url: bookmark.url });        
   },
   async onMoved(bookmarkId) {
     logEvent('bookmark.onMoved <-');
@@ -90,7 +90,7 @@ export const bookmarksController = {
 
     // changes in bookmark manager
     const [bookmark] = await chrome.bookmarks.get(bookmarkId)
-    getUrlInfo({ url: bookmark.url });
+    getBookmarkInfoUni({ url: bookmark.url });
   },
   async onRemoved(bookmarkId, { node }) {
     logEvent('bookmark.onRemoved <-');
@@ -101,6 +101,6 @@ export const bookmarksController = {
     });
 
     // changes in bookmark manager
-    getUrlInfo({ url: node?.url });
+    getBookmarkInfoUni({ url: node?.url });
   },
 }

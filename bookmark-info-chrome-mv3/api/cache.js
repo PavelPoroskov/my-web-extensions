@@ -48,6 +48,11 @@ export class CacheWithLimit {
     logCache(`   ${this.name}.delete: ${key}`);
   }
   
+  clear() {
+    this.cache.clear();
+    logCache(`   ${this.name}.clear()`);
+  }
+
   has(key) {
     return this.cache.has(key);
   }

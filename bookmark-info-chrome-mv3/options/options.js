@@ -65,6 +65,7 @@ function makeSaveSelectHandler(optionId) {
       })  
       await chrome.runtime.sendMessage({
         command: "optionsChanged",
+        optionId,
       });  
     }
   }

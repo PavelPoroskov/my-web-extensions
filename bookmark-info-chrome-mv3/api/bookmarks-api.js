@@ -1,6 +1,15 @@
 import {
+  logOptimization,
+} from './debug.js'
+import {
   memo,
 } from './memo.js'
+import {
+  isSupportedProtocol,
+} from './common-api.js'
+import {
+  SOURCE,
+} from '../constants.js'
 
 export async function isHasBookmark(url) {
   const bookmarks = await chrome.bookmarks.search({ url });
@@ -73,7 +82,7 @@ async function addBookmarkParentInfo(bookmarkList, bookmarkByIdMap) {
   return await addBookmarkParentInfo(knownFolderList, bookmarkByIdMap)
 }
 
-export async function getBookmarkInfoList(url) {
+async function getBookmarkInfo(url) {
   const bookmarkList = await chrome.bookmarks.search({ url });
 
   if (bookmarkList.length == 0) {
@@ -94,3 +103,31 @@ export async function getBookmarkInfoList(url) {
     });
 }
 
+export async function getBookmarkInfoUni({ url, useCache=false }) {
+  if (!url || !isSupportedProtocol(url)) {
+    return;
+  }
+
+  let bookmarkInfoList;
+  let source;
+
+  if (useCache) {
+    bookmarkInfoList = memo.cacheUrlToInfo.get(url);
+    
+    if (bookmarkInfoList) {
+      source = SOURCE.CACHE;
+      logOptimization(' getBookmarkInfoUni: from cache bookmarkInfo')
+    }
+  } 
+  
+  if (!bookmarkInfoList) {
+    bookmarkInfoList = await getBookmarkInfo(url);
+    source = SOURCE.ACTUAL;
+    memo.cacheUrlToInfo.add(url, bookmarkInfoList);
+  }
+
+  return {
+    bookmarkInfoList,
+    source,
+  };
+}
