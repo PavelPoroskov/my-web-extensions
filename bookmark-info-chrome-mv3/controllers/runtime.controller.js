@@ -43,6 +43,7 @@ async function createContextMenu() {
 export const runtimeController = {
   onStartup() {
     logEvent('runtime.onStartup');
+    memo.setProfileStartTime()
     memo.readActualSettings()
     // is only firefox use it?
     createContextMenu()
@@ -53,6 +54,7 @@ export const runtimeController = {
   },
   onInstalled () {
     logEvent('runtime.onInstalled');
+    memo.setProfileStartTime()
     memo.readActualSettings()
     createContextMenu()
     updateActiveTab({

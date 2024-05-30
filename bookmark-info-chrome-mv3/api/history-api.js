@@ -44,21 +44,37 @@ function formatPrevVisit (inMS) {
 }
 
 export async function getPreviousVisitList(url) {
-  const visitList = await chrome.history.getVisits({ url });
+  const visitList = (await chrome.history.getVisits({ url }))
+    .filter((i) => i.visitTime)
   
-  const orderedList = IS_BROWSER_FIREFOX ? visitList : visitList.toReversed();
+  // const orderedList = IS_BROWSER_FIREFOX ? visitList : visitList.toReversed();
   // const filteredList = [].concat(
   //   orderedList.slice(0,1),
   //   orderedList.slice(1).filter(({ transition }) => transition !== 'reload')
   // )
   // const [currentVisit, previousVisit1, previousVisit2, previousVisit3] = filteredList;
-  //const result = [previousVisit3, previousVisit2, previousVisit1].map((i) => i?.visitTime).filter(Boolean)
-  
-  const filteredList = orderedList.slice(1)
-    .filter(({ transition }) => transition !== 'reload')
+  // const result = [previousVisit3, previousVisit2, previousVisit1].map((i) => i?.visitTime).filter(Boolean)
+ 
+  let newToOldList
+  let previousList
+
+  if (IS_BROWSER_FIREFOX) {
+    newToOldList = visitList
+    
+    const mostNewVisitMS = newToOldList[0]?.visitTime
+
+    if (mostNewVisitMS && mostNewVisitMS > memo.profileStartMS) {
+      previousList = newToOldList.slice(1)
+    } else {
+      previousList = newToOldList
+    }
+  } else {
+    newToOldList = visitList.toReversed()
+    previousList = newToOldList.slice(1)
+  }
+  const filteredList = previousList.filter(({ transition }) => transition !== 'reload')
   const filteredTimeList = filteredList
-    .map((i) => i?.visitTime)
-    .filter(Boolean)
+    .map((i) => i.visitTime)
 
   const representationSet = new Set()
   const resultNewToOld = []
@@ -91,7 +107,7 @@ export async function getPreviousVisitList(url) {
   // const result = [previousVisit3, previousVisit2, previousVisit1 || currentVisit].map((i) => i?.visitTime).filter(Boolean)
 
   logDebug('getPreviousVisitList', url)
-  logDebug('orderedList', orderedList)
+  logDebug('newToOldList', newToOldList)
   logDebug('filteredList', filteredList)
   logDebug('resultNewToOld', resultNewToOld)
 
