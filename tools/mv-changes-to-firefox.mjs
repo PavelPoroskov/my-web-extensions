@@ -15,7 +15,6 @@ createFileForFirefox(
     'api/common-api.js',
     'api/bookmarks-api.js',
     'api/history-api.js',
-    'api/url-info-api.js',
     'api/link-api.js',
     'api/tabs-api.js',
     'api/tabs-list-api.js',

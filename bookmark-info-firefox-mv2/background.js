@@ -46,17 +46,19 @@ const USER_SETTINGS_DEFAULT_VALUE = {
   [o.SHOW_PATH_LAYERS]: 1, // [1, 2, 3]
   [o.SHOW_PREVIOUS_VISIT]: SHOW_PREVIOUS_VISIT_OPTION.ALWAYS,
 }
-const CONFIG = {
+
+const CONFIG = {
   SHOW_LOG_CACHE: false,
   SHOW_LOG_SEND_EVENT: false,
-  SHOW_LOG_EVENT: false,
+  SHOW_LOG_EVENT: true,
   SHOW_LOG_IGNORE: false,
   SHOW_LOG_OPTIMIZATION: false,
   SHOW_LOG_QUEUE: false,
   SHOW_LOG: false,
-  SHOW_DEBUG: false,
+  SHOW_DEBUG: true,
 }
-const makeLogWithTime = () => {
+
+const makeLogWithTime = () => {
   let startTime;
   let prevLogTime;
 
@@ -99,7 +101,8 @@ const logIgnore = CONFIG.SHOW_LOG_IGNORE ? makeLogWithPrefix('IGNORE') : () => {
 const logOptimization = CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OPTIMIZATION') : () => { };
 const logPromiseQueue = CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
 const logDebug = CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
-class CacheWithLimit {
+
+class CacheWithLimit {
   constructor ({ name='cache', size = 100 }) {
     this.cache = new Map();
     this.LIMIT = size;
@@ -144,6 +147,11 @@ const logDebug = CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
     logCache(`   ${this.name}.delete: ${key}`);
   }
   
+  clear() {
+    this.cache.clear();
+    logCache(`   ${this.name}.clear()`);
+  }
+
   has(key) {
     return this.cache.has(key);
   }
@@ -152,7 +160,8 @@ const logDebug = CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
     logCache(this.cache);
   }
 }
-const readSettings = async () => {
+
+const readSettings = async () => {
   const savedSettings = await browser.storage.local.get(
     Object.values(USER_SETTINGS_OPTIONS)
   );
@@ -162,9 +171,11 @@ const logDebug = CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
     ...savedSettings,
   }
 }
-const memo = {
+
+const memo = {
   activeTabId: '',
   cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
+  cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
   bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
   settings: USER_SETTINGS_DEFAULT_VALUE,
 
@@ -174,7 +185,8 @@ const logDebug = CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
     log(`actual settings: ${Object.entries(this.settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)
   },
 };
-class PromiseQueue {
+
+class PromiseQueue {
   constructor () {
     this.promise = {};
     this.tasks = {};
@@ -237,7 +249,8 @@ const logDebug = CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
 }
 
 const promiseQueue = new PromiseQueue();
-const supportedProtocols = ["https:", "http:"];
+
+const supportedProtocols = ["https:", "http:"];
 
 function isSupportedProtocol(urlString) {
   try {
@@ -248,7 +261,8 @@ function isSupportedProtocol(urlString) {
     return false;
   }
 }
-async function isHasBookmark(url) {
+
+async function isHasBookmark(url) {
   const bookmarks = await browser.bookmarks.search({ url });
 
   return bookmarks.length > 0;
@@ -319,7 +333,7 @@ async function addBookmarkParentInfo(bookmarkList, bookmarkByIdMap) {
   return await addBookmarkParentInfo(knownFolderList, bookmarkByIdMap)
 }
 
-async function getBookmarkInfoList(url) {
+async function getBookmarkInfo(url) {
   const bookmarkList = await browser.bookmarks.search({ url });
 
   if (bookmarkList.length == 0) {
@@ -339,7 +353,37 @@ async function getBookmarkInfoList(url) {
       }
     });
 }
-async function getPreviousVisitList(url) {
+
+async function getBookmarkInfoUni({ url, useCache=false }) {
+  if (!url || !isSupportedProtocol(url)) {
+    return;
+  }
+
+  let bookmarkInfoList;
+  let source;
+
+  if (useCache) {
+    bookmarkInfoList = memo.cacheUrlToInfo.get(url);
+    
+    if (bookmarkInfoList) {
+      source = SOURCE.CACHE;
+      logOptimization(' getBookmarkInfoUni: from cache bookmarkInfo')
+    }
+  } 
+  
+  if (!bookmarkInfoList) {
+    bookmarkInfoList = await getBookmarkInfo(url);
+    source = SOURCE.ACTUAL;
+    memo.cacheUrlToInfo.add(url, bookmarkInfoList);
+  }
+
+  return {
+    bookmarkInfoList,
+    source,
+  };
+}
+
+async function getPreviousVisitList(url) {
   const visitList = await browser.history.getVisits({ url });
   
   const orderedList = IS_BROWSER_FIREFOX ? visitList : visitList.toReversed();
@@ -347,9 +391,19 @@ async function getBookmarkInfoList(url) {
     orderedList.slice(0,1),
     orderedList.slice(1).filter(({ transition }) => transition !== 'reload')
   )
-  const [_currentVisit, previousVisit1, previousVisit2, previousVisit3] = filteredList;
+  const [currentVisit, previousVisit1, previousVisit2, previousVisit3] = filteredList;
+  const result = [previousVisit3, previousVisit2, previousVisit1].map((i) => i?.visitTime).filter(Boolean)
 
-  return [previousVisit3, previousVisit2, previousVisit1].map((i) => i?.visitTime).filter(Boolean)
+  // const filteredList = orderedList.filter(({ transition }) => transition !== 'reload')
+  // const [currentVisit, previousVisit1, previousVisit2, previousVisit3] = filteredList;
+  // const result = [previousVisit3, previousVisit2, previousVisit1 || currentVisit].map((i) => i?.visitTime).filter(Boolean)
+
+  logDebug('getPreviousVisitList', url)
+  logDebug('orderedList', orderedList)
+  logDebug('filteredList', filteredList)
+  logDebug('result', result)
+
+  return result
 }
 
 async function getPreviousVisitListWhen(url) {
@@ -361,45 +415,33 @@ async function getPreviousVisitListWhen(url) {
 
   return []
 }
-async function getUrlInfo({ url, useCache=false }) {
-    if (!url || !isSupportedProtocol(url)) {
-    return;
+
+async function getHistoryInfo({ url, useCache=false }) {
+  const showPreviousVisit = memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT]
+  
+  if (!(showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS || showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM)) {
+    return []
   }
 
-  let bookmarkInfo;
-  let source;
+  let previousVisitList;
 
   if (useCache) {
-    bookmarkInfo = memo.cacheUrlToInfo.get(url);
+    previousVisitList = memo.cacheUrlToVisitList.get(url);
     
-    if (bookmarkInfo) {
-      source = SOURCE.CACHE;
-      logOptimization(' getUrlInfo: from cache bookmarkInfo')
+    if (previousVisitList) {
+      logOptimization(' getHistoryInfoUni: from cache bookmarkInfo')
     }
   } 
   
-  if (!bookmarkInfo) {
-    const [
-      bookmarkInfoList,
-      previousVisitList,
-    ] = await Promise.all([
-      getBookmarkInfoList(url),
-      getPreviousVisitListWhen(url),
-    ])
-    source = SOURCE.ACTUAL;
-    bookmarkInfo = {
-      bookmarkInfoList,
-      previousVisitList,
-    }
-    memo.cacheUrlToInfo.add(url, bookmarkInfo);
+  if (!previousVisitList) {
+    previousVisitList = await getPreviousVisitListWhen(url);
+    memo.cacheUrlToVisitList.add(url, previousVisitList);
   }
 
-  return {
-    ...bookmarkInfo,
-    source,
-  };
+  return previousVisitList;
 }
-const targetList = [
+
+const targetList = [
   {
     hostname: [
       'www.linkedin.com',
@@ -466,23 +508,31 @@ const removeQueryParams = (link) => {
 // console.log('test ', removeQueryParamsIfTarget(testStr))
 //
 // https://career.proxify.io/apply?uuid=566c933b-432e-64e0-b317-dd4390d6a74e&step=AdditionalInformation
-async function updateTabTask({ tabId, url, useCache=false }) {
+
+async function updateTabTask({ tabId, url, useCache=false }) {
   log('updateTabTask(', tabId, useCache, url);
 
   const actualUrl = memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]
     ? removeQueryParamsIfTarget(url)
     : url;
 
-  const urlInfo = await getUrlInfo({ url: actualUrl, useCache })
+  const [
+    bookmarkInfo,
+    previousVisitList,
+  ] = await Promise.all([
+    getBookmarkInfoUni({ url: actualUrl, useCache }),
+    getHistoryInfo({ url: actualUrl, useCache })
+  ])
   const showPreviousVisit = memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT]
 
   const message = {
     command: "bookmarkInfo",
-    bookmarkInfoList: urlInfo.bookmarkInfoList,
+    bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     tabId,
     showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
-    isShowPreviousVisit: showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS || showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM && bookmarkInfo.bookmarkInfoList === 0,
-    previousVisitList: urlInfo.previousVisitList,
+    isShowPreviousVisit: showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS
+      || showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM && bookmarkInfo.bookmarkInfoList === 0,
+    previousVisitList: previousVisitList,
   }
   logSendEvent('updateTabTask()', tabId, message);
 
@@ -519,7 +569,8 @@ async function updateActiveTab({ useCache=false, debugCaller } = {}) {
     });
   }
 }
-async function getDuplicatesTabs(inTabList) {
+
+async function getDuplicatesTabs(inTabList) {
   const tabList = inTabList.toReversed();
   const duplicateTabIdList = [];
   const uniqUrls = new Map();
@@ -646,7 +697,8 @@ async function closeBookmarkedTabs() {
     closeTabIdList.length > 0 && browser.tabs.remove(closeTabIdList),
   ])
 }
-const bookmarksController = {
+
+const bookmarksController = {
   async onCreated(bookmarkId, node) {
     if (!node.url) {
       return
@@ -693,7 +745,7 @@ async function closeBookmarkedTabs() {
     });
 
     // changes in bookmark manager
-    getUrlInfo({ url: node.url });
+    getBookmarkInfoUni({ url: node.url });
   },
   async onChanged(bookmarkId, changeInfo) {
     logEvent('bookmark.onChanged 00 <-', changeInfo);
@@ -706,7 +758,7 @@ async function closeBookmarkedTabs() {
 
     // changes in bookmark manager
     const [bookmark] = await browser.bookmarks.get(bookmarkId)
-    getUrlInfo({ url: bookmark.url });        
+    getBookmarkInfoUni({ url: bookmark.url });        
   },
   async onMoved(bookmarkId) {
     logEvent('bookmark.onMoved <-');
@@ -718,7 +770,7 @@ async function closeBookmarkedTabs() {
 
     // changes in bookmark manager
     const [bookmark] = await browser.bookmarks.get(bookmarkId)
-    getUrlInfo({ url: bookmark.url });
+    getBookmarkInfoUni({ url: bookmark.url });
   },
   async onRemoved(bookmarkId, { node }) {
     logEvent('bookmark.onRemoved <-');
@@ -729,10 +781,11 @@ async function closeBookmarkedTabs() {
     });
 
     // changes in bookmark manager
-    getUrlInfo({ url: node?.url });
+    getBookmarkInfoUni({ url: node?.url });
   },
 }
-async function createContextMenu() {
+
+async function createContextMenu() {
   await browser.menus.removeAll();
 
   browser.menus.create({
@@ -804,15 +857,21 @@ const runtimeController = {
         logEvent('runtime.onMessage optionsChanged');
         memo.readActualSettings()
 
+        if (message?.optionId === USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT) {
+          memo.cacheUrlToVisitList.clear()
+        }
+
         break
       }
     }
   }
 };
-const tabsController = {
+
+const tabsController = {
   onCreated({ pendingUrl: url, index, id }) {
     logEvent('tabs.onCreated', index, id, url);
-    getUrlInfo({
+    // We do not have current visit in history on tabs.onCreated(). Only after tabs.onUpdated(status = loading)
+    getBookmarkInfoUni({
       url,
       useCache: true,
     });
@@ -823,10 +882,11 @@ const runtimeController = {
       case ('loading'): {
         if (changeInfo?.url) {
           logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, changeInfo.url);
-          getUrlInfo({
+          getBookmarkInfoUni({
             url: changeInfo.url,
             useCache: true,
           });
+          getHistoryInfo({ url: changeInfo.url, useCache: false })
         }
 
         break;
@@ -882,7 +942,8 @@ const runtimeController = {
     }
   },
 }
-const windowsController = {
+
+const windowsController = {
   onFocusChanged(windowId) {
     if (0 < windowId) {
       logEvent('windows.onFocusChanged', windowId);
@@ -893,7 +954,8 @@ const runtimeController = {
     }
   },
 };
-const contextMenusController = {
+
+const contextMenusController = {
   async onClicked (OnClickData) {
     logEvent('contextMenus.onClicked <-');
 
@@ -928,7 +990,8 @@ const runtimeController = {
     }
   }
 }
-logEvent('loading bkm-info-sw.js');
+
+logEvent('loading bkm-info-sw.js');
 
 browser.bookmarks.onCreated.addListener(bookmarksController.onCreated);
 browser.bookmarks.onMoved.addListener(bookmarksController.onMoved);
