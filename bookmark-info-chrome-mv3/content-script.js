@@ -211,6 +211,7 @@ const log = SHOW_LOG ? console.log : () => {};
 
     if (isShowPreviousVisit && previousVisitList.length > 0) {
       const prevVisit = previousVisitList
+        .toReversed()
         .map((i) => formatPrevVisit(i))
         .flatMap((value, index, array) => index === 0 || value !== array[index - 1] ? [value]: [])
         .join(", ") 
