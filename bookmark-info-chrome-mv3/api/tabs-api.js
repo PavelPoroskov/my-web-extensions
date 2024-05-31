@@ -54,7 +54,7 @@ async function updateTabTask({ tabId, url, useCache=false }) {
   logSendEvent('updateTabTask()', tabId, message);
 
   return chrome.tabs.sendMessage(tabId, message)
-    .then(() => urlInfo);
+    .then(() => bookmarkInfo);
 }
 
 export async function updateTab({ tabId, url, useCache=false, debugCaller }) {

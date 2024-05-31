@@ -1,0 +1,17 @@
+{
+  "name": "my-web-extensions",
+  "version": "1.0.0",
+  "description": "Browser extension",
+  "main": "bookmark-info-chrome-mv3/bkm-info-sw.js",
+  "scripts": {
+    "eslint": "eslint"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@eslint/js": "^9.3.0",
+    "eslint": "^9.3.0",
+    "globals": "^15.3.0"
+  }
+}

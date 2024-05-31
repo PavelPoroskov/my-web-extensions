@@ -237,7 +237,7 @@ const log = SHOW_LOG ? console.log : () => {};
   
         shortPathList[shortPathList.length - 1] = `${shortPathList[shortPathList.length - 1]} :bkm`
         const shortPathListWithSeparator = shortPathList
-          .slice(0, -1).flatMap((str, index) => [str, '/ '])
+          .slice(0, -1).flatMap((str) => [str, '/ '])
           .concat(shortPathList[shortPathList.length - 1])
         
         shortPathListWithSeparator.forEach((str) => {

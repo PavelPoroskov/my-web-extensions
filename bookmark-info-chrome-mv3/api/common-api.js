@@ -5,7 +5,8 @@ export function isSupportedProtocol(urlString) {
     const url = new URL(urlString);
     
     return supportedProtocols.includes(url.protocol);
-  } catch (_) {
+  // eslint-disable-next-line no-unused-vars
+  } catch (_er) {
     return false;
   }
 }

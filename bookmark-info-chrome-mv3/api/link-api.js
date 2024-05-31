@@ -37,6 +37,7 @@ export const removeQueryParamsIfTarget = (link) => {
     }
   
     return link
+  // eslint-disable-next-line no-unused-vars
   } catch (e) {
     return link
   }
@@ -48,6 +49,7 @@ export const removeQueryParams = (link) => {
     oLink.search = ''
   
     return oLink.toString();  
+  // eslint-disable-next-line no-unused-vars
   } catch (e) {
     return link
   }

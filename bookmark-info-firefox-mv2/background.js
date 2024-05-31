@@ -46,8 +46,7 @@ const USER_SETTINGS_DEFAULT_VALUE = {
   [o.SHOW_PATH_LAYERS]: 1, // [1, 2, 3]
   [o.SHOW_PREVIOUS_VISIT]: SHOW_PREVIOUS_VISIT_OPTION.ALWAYS,
 }
-
-const CONFIG = {
+const CONFIG = {
   SHOW_LOG_CACHE: false,
   SHOW_LOG_SEND_EVENT: false,
   SHOW_LOG_EVENT: false,
@@ -57,8 +56,7 @@ const CONFIG = {
   SHOW_LOG: false,
   SHOW_DEBUG: false,
 }
-
-const makeLogWithTime = () => {
+const makeLogWithTime = () => {
   let startTime;
   let prevLogTime;
 
@@ -101,8 +99,7 @@ const logIgnore = CONFIG.SHOW_LOG_IGNORE ? makeLogWithPrefix('IGNORE') : () => {
 const logOptimization = CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OPTIMIZATION') : () => { };
 const logPromiseQueue = CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
 const logDebug = CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
-
-class CacheWithLimit {
+class CacheWithLimit {
   constructor ({ name='cache', size = 100 }) {
     this.cache = new Map();
     this.LIMIT = size;
@@ -160,8 +157,7 @@ class CacheWithLimit {
     logCache(this.cache);
   }
 }
-
-const readSettings = async () => {
+const readSettings = async () => {
   const savedSettings = await browser.storage.local.get(
     Object.values(USER_SETTINGS_OPTIONS)
   );
@@ -171,8 +167,7 @@ const readSettings = async () => {
     ...savedSettings,
   }
 }
-
-const memo = {
+const memo = {
   activeTabId: '',
   cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
   cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
@@ -193,8 +188,7 @@ const memo = {
     }
   }
 };
-
-class PromiseQueue {
+class PromiseQueue {
   constructor () {
     this.promise = {};
     this.tasks = {};
@@ -257,20 +251,19 @@ class PromiseQueue {
 }
 
 const promiseQueue = new PromiseQueue();
-
-const supportedProtocols = ["https:", "http:"];
+const supportedProtocols = ["https:", "http:"];
 
 function isSupportedProtocol(urlString) {
   try {
     const url = new URL(urlString);
     
     return supportedProtocols.includes(url.protocol);
-  } catch (_) {
+  // eslint-disable-next-line no-unused-vars
+  } catch (_er) {
     return false;
   }
 }
-
-async function isHasBookmark(url) {
+async function isHasBookmark(url) {
   const bookmarks = await browser.bookmarks.search({ url });
 
   return bookmarks.length > 0;
@@ -390,8 +383,7 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
     source,
   };
 }
-
-const dayMS = 86400000;
+const dayMS = 86400000;
 const hourMS = 3600000;
 const minMS = 60000;
 
@@ -426,18 +418,17 @@ function formatPrevVisit (inMS) {
 async function getPreviousVisitList(url) {
   const visitList = (await browser.history.getVisits({ url }))
     .filter((i) => i.visitTime)
-  
-  // const orderedList = IS_BROWSER_FIREFOX ? visitList : visitList.toReversed();
-  // const filteredList = [].concat(
-  //   orderedList.slice(0,1),
-  //   orderedList.slice(1).filter(({ transition }) => transition !== 'reload')
-  // )
-  // const [currentVisit, previousVisit1, previousVisit2, previousVisit3] = filteredList;
-  // const result = [previousVisit3, previousVisit2, previousVisit1].map((i) => i?.visitTime).filter(Boolean)
- 
+   
   let newToOldList
   let previousList
 
+  // browser has opened tab with url1, close browser, open browser
+  //  chrome create visit with transition 'reopen'
+  //  firefox does't create visit
+  //    how differ in firefox?
+  //      just manually opened tab with url2
+  //      tab from previous session with url1
+  //    visit.visitTime > browserProfileStartTime
   if (IS_BROWSER_FIREFOX) {
     newToOldList = visitList
     
@@ -452,6 +443,7 @@ async function getPreviousVisitList(url) {
     newToOldList = visitList.toReversed()
     previousList = newToOldList.slice(1)
   }
+  
   const filteredList = previousList.filter(({ transition }) => transition !== 'reload')
   const filteredTimeList = filteredList
     .map((i) => i.visitTime)
@@ -472,36 +464,12 @@ async function getPreviousVisitList(url) {
     }
   }
 
-  // browser has opened tab with url1, close browser, open browser
-  //  chrome create visit with transition 'reopen'
-  //  firefox does't create visit
-  //    how differ in firefox?
-  //      just manually opened tab with url2
-  //      tab from previous session with url1
-  //    TRY
-  //      see fields for visits for both this situation
-  //        ? by field visitId, id(historyId)
-  //        keep maxVisitId in storage?
-  // const filteredList = orderedList.filter(({ transition }) => transition !== 'reload')
-  // const [currentVisit, previousVisit1, previousVisit2, previousVisit3] = filteredList;
-  // const result = [previousVisit3, previousVisit2, previousVisit1 || currentVisit].map((i) => i?.visitTime).filter(Boolean)
-
   logDebug('getPreviousVisitList', url)
   logDebug('newToOldList', newToOldList)
   logDebug('filteredList', filteredList)
   logDebug('resultNewToOld', resultNewToOld)
 
   return resultNewToOld
-}
-
-async function getPreviousVisitListWhen(url) {
-  const showPreviousVisit = memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT]
-
-  if (showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS || showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM) {
-    return getPreviousVisitList(url)
-  }
-
-  return []
 }
 
 async function getHistoryInfo({ url, useCache=false }) {
@@ -522,14 +490,13 @@ async function getHistoryInfo({ url, useCache=false }) {
   } 
   
   if (!previousVisitList) {
-    previousVisitList = await getPreviousVisitListWhen(url);
+    previousVisitList = await getPreviousVisitList(url);
     memo.cacheUrlToVisitList.add(url, previousVisitList);
   }
 
   return previousVisitList;
 }
-
-const targetList = [
+const targetList = [
   {
     hostname: [
       'www.linkedin.com',
@@ -567,6 +534,7 @@ const removeQueryParamsIfTarget = (link) => {
     }
   
     return link
+  // eslint-disable-next-line no-unused-vars
   } catch (e) {
     return link
   }
@@ -578,6 +546,7 @@ const removeQueryParams = (link) => {
     oLink.search = ''
   
     return oLink.toString();  
+  // eslint-disable-next-line no-unused-vars
   } catch (e) {
     return link
   }
@@ -596,8 +565,7 @@ const removeQueryParams = (link) => {
 // console.log('test ', removeQueryParamsIfTarget(testStr))
 //
 // https://career.proxify.io/apply?uuid=566c933b-432e-64e0-b317-dd4390d6a74e&step=AdditionalInformation
-
-async function updateTabTask({ tabId, url, useCache=false }) {
+async function updateTabTask({ tabId, url, useCache=false }) {
   log('updateTabTask(', tabId, useCache, url);
 
   const actualUrl = memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]
@@ -625,7 +593,7 @@ async function updateTabTask({ tabId, url, useCache=false }) {
   logSendEvent('updateTabTask()', tabId, message);
 
   return browser.tabs.sendMessage(tabId, message)
-    .then(() => urlInfo);
+    .then(() => bookmarkInfo);
 }
 
 async function updateTab({ tabId, url, useCache=false, debugCaller }) {
@@ -657,8 +625,7 @@ async function updateActiveTab({ useCache=false, debugCaller } = {}) {
     });
   }
 }
-
-async function getDuplicatesTabs(inTabList) {
+async function getDuplicatesTabs(inTabList) {
   const tabList = inTabList.toReversed();
   const duplicateTabIdList = [];
   const uniqUrls = new Map();
@@ -785,8 +752,7 @@ async function closeBookmarkedTabs() {
     closeTabIdList.length > 0 && browser.tabs.remove(closeTabIdList),
   ])
 }
-
-const bookmarksController = {
+const bookmarksController = {
   async onCreated(bookmarkId, node) {
     if (!node.url) {
       return
@@ -872,8 +838,7 @@ const bookmarksController = {
     getBookmarkInfoUni({ url: node?.url });
   },
 }
-
-async function createContextMenu() {
+async function createContextMenu() {
   await browser.menus.removeAll();
 
   browser.menus.create({
@@ -956,8 +921,7 @@ const runtimeController = {
     }
   }
 };
-
-const tabsController = {
+const tabsController = {
   onCreated({ pendingUrl: url, index, id }) {
     logEvent('tabs.onCreated', index, id, url);
     // We do not have current visit in history on tabs.onCreated(). Only after tabs.onUpdated(status = loading)
@@ -1032,8 +996,7 @@ const tabsController = {
     }
   },
 }
-
-const windowsController = {
+const windowsController = {
   onFocusChanged(windowId) {
     if (0 < windowId) {
       logEvent('windows.onFocusChanged', windowId);
@@ -1044,8 +1007,7 @@ const windowsController = {
     }
   },
 };
-
-const contextMenusController = {
+const contextMenusController = {
   async onClicked (OnClickData) {
     logEvent('contextMenus.onClicked <-');
 
@@ -1080,8 +1042,7 @@ const contextMenusController = {
     }
   }
 }
-
-logEvent('loading bkm-info-sw.js');
+logEvent('loading bkm-info-sw.js');
 
 browser.bookmarks.onCreated.addListener(bookmarksController.onCreated);
 browser.bookmarks.onMoved.addListener(bookmarksController.onMoved);
