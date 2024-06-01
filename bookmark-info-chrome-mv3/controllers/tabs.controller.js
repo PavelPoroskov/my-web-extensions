@@ -7,6 +7,7 @@ import {
 } from '../api/memo.js'
 import {
   getBookmarkInfoUni,
+  deleteBookmarkByUrlList,
 } from '../api/bookmarks-api.js'
 import {
   getHistoryInfo,
@@ -92,5 +93,9 @@ export const tabsController = {
     } catch (er) {
       logIgnore('tabs.onActivated. IGNORING. tab was deleted', er);
     }
+
+    const notCleanUrlList = Array.from(memo.notCleanUrlBookmarkSet)
+    await deleteBookmarkByUrlList(notCleanUrlList)
+    notCleanUrlList.forEach(url => memo.notCleanUrlBookmarkSet.delete(url))
   },
 }

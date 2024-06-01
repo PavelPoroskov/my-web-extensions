@@ -21,6 +21,20 @@ export async function deleteBookmark(bkmId) {
   await chrome.bookmarks.remove(bkmId);
 }
 
+async function deleteBookmarkByUrl(url) {
+  const bookmarkList = await chrome.bookmarks.search({ url });
+
+  await Promise.all(bookmarkList.map(
+    bItem => chrome.bookmarks.remove(bItem.id)
+  ))
+}
+
+export async function deleteBookmarkByUrlList(urlList) {
+  await Promise.all(urlList.map(
+    url => deleteBookmarkByUrl(url)
+  ))
+}
+
 const getParentIdList = (bookmarkList) => {
   const parentIdList = bookmarkList
     .map((bookmarkItem) => bookmarkItem.parentId)
