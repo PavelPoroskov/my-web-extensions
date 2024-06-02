@@ -1,5 +1,5 @@
 import {
-  logDebug,
+  // logDebug,
   logOptimization,
 } from './debug.js'
 import {
@@ -92,10 +92,10 @@ export async function getPreviousVisitList(url) {
     }
   }
 
-  logDebug('getPreviousVisitList', url)
-  logDebug('newToOldList', newToOldList)
-  logDebug('filteredList', filteredList)
-  logDebug('resultNewToOld', resultNewToOld)
+  // logDebug('getPreviousVisitList', url)
+  // logDebug('newToOldList', newToOldList)
+  // logDebug('filteredList', filteredList)
+  // logDebug('resultNewToOld', resultNewToOld)
 
   return resultNewToOld
 }

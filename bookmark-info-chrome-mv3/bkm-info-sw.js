@@ -16,6 +16,7 @@ chrome.tabs.onCreated.addListener(tabsController.onCreated);
 chrome.tabs.onUpdated.addListener(tabsController.onUpdated);
 // listen for tab switching
 chrome.tabs.onActivated.addListener(tabsController.onActivated);
+chrome.tabs.onRemoved.addListener(tabsController.onRemoved);
 
 // listen for window switching
 chrome.windows.onFocusChanged.addListener(windowsController.onFocusChanged);

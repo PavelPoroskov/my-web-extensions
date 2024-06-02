@@ -1,5 +1,6 @@
 import {
   logOptimization,
+  logDebug,
 } from './debug.js'
 import {
   memo,
@@ -21,18 +22,20 @@ export async function deleteBookmark(bkmId) {
   await chrome.bookmarks.remove(bkmId);
 }
 
-async function deleteBookmarkByUrl(url) {
-  const bookmarkList = await chrome.bookmarks.search({ url });
+export async function deleteUncleanUrlBookmarkForTab(tabId) {
+  logDebug('deleteUncleanUrlBookmarkForTab 00 tabId', tabId)
+  if (!tabId) {
+    return
+  }
 
-  await Promise.all(bookmarkList.map(
-    bItem => chrome.bookmarks.remove(bItem.id)
-  ))
-}
+  const tabData = memo.tabMap.get(tabId)
+  logDebug('deleteUncleanUrlBookmarkForTab 11 tabData', tabData)
 
-export async function deleteBookmarkByUrlList(urlList) {
-  await Promise.all(urlList.map(
-    url => deleteBookmarkByUrl(url)
-  ))
+  if (tabData?.bookmarkId) {
+    logDebug('deleteUncleanUrlBookmarkForTab 22')
+    await chrome.bookmarks.remove(tabData.bookmarkId)
+    memo.tabMap.delete(tabId)
+  }
 }
 
 const getParentIdList = (bookmarkList) => {

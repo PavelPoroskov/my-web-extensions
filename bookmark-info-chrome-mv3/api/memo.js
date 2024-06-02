@@ -3,15 +3,19 @@ import { USER_SETTINGS_DEFAULT_VALUE } from '../constants.js'
 import { readSettings } from './settings-api.js'
 import {
   log,
-  logDebug
+  // logDebug
 } from './debug.js'
 
 export const memo = {
   activeTabId: '',
+  previousTabId: '',
+  // previousActiveTabId: '',
   cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
   cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
   bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
-  notCleanUrlBookmarkSet: new Set(),
+  // tabId -> bookmarkId
+  tabMap: new Map(),
+  // isRemovingOnlyUncleanUrlBookmarkSet: new Set(),
   settings: USER_SETTINGS_DEFAULT_VALUE,
   profileStartMS: undefined,
 
@@ -24,7 +28,7 @@ export const memo = {
   setProfileStartTime () {
     if (!this.profileStartTime) {
       this.profileStartMS = Date.now() 
-      logDebug('memo.setProfileStartTime', this.profileStartMS)
+      // logDebug('memo.setProfileStartTime', this.profileStartMS)
     }
   }
 };

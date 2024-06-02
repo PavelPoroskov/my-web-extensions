@@ -16,9 +16,6 @@ import {
   getHistoryInfo,
 } from './history-api.js'
 import {
-  removeQueryParamsIfTarget,
-} from './link-api.js'
-import {
   memo,
 } from './memo.js'
 import {
@@ -29,16 +26,18 @@ import {
 async function updateTabTask({ tabId, url, useCache=false }) {
   log('updateTabTask(', tabId, useCache, url);
 
-  const actualUrl = memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]
-    ? removeQueryParamsIfTarget(url)
-    : url;
+  // const actualUrl = memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]
+  //   ? removeQueryParamsIfTarget(url)
+  //   : url;
 
   const [
     bookmarkInfo,
     previousVisitList,
   ] = await Promise.all([
-    getBookmarkInfoUni({ url: actualUrl, useCache }),
-    getHistoryInfo({ url: actualUrl, useCache })
+    // getBookmarkInfoUni({ url: actualUrl, useCache }),
+    // getHistoryInfo({ url: actualUrl, useCache })
+    getBookmarkInfoUni({ url, useCache }),
+    getHistoryInfo({ url, useCache })
   ])
   const showPreviousVisit = memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT]
 
