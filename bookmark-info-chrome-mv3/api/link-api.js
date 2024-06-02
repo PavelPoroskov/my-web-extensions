@@ -18,6 +18,15 @@ const targetList = [
       '/my/profile/',
     ] 
   },
+  {
+    hostname: [
+      'www.imdb.com',
+      'imdb.com',  
+    ],
+    path: [
+      '/title/',
+    ] 
+  },
 ]
 
 const targetMap = new Map(
