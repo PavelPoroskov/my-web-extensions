@@ -167,12 +167,21 @@ const logDebug = CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
     ...savedSettings,
   }
 }
-const memo = {
+import {
+  log,
+  // logDebug
+} from './debug.js'
+
+const memo = {
   activeTabId: '',
+  previousTabId: '',
+  // previousActiveTabId: '',
   cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
   cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
   bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
-  notCleanUrlBookmarkSet: new Set(),
+  // tabId -> bookmarkId
+  tabMap: new Map(),
+  // isRemovingOnlyUncleanUrlBookmarkSet: new Set(),
   settings: USER_SETTINGS_DEFAULT_VALUE,
   profileStartMS: undefined,
 
@@ -185,7 +194,7 @@ const logDebug = CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
   setProfileStartTime () {
     if (!this.profileStartTime) {
       this.profileStartMS = Date.now() 
-      logDebug('memo.setProfileStartTime', this.profileStartMS)
+      // logDebug('memo.setProfileStartTime', this.profileStartMS)
     }
   }
 };
@@ -274,18 +283,20 @@ async function deleteBookmark(bkmId) {
   await browser.bookmarks.remove(bkmId);
 }
 
-async function deleteBookmarkByUrl(url) {
-  const bookmarkList = await browser.bookmarks.search({ url });
+async function deleteUncleanUrlBookmarkForTab(tabId) {
+  logDebug('deleteUncleanUrlBookmarkForTab 00 tabId', tabId)
+  if (!tabId) {
+    return
+  }
 
-  await Promise.all(bookmarkList.map(
-    bItem => browser.bookmarks.remove(bItem.id)
-  ))
-}
+  const tabData = memo.tabMap.get(tabId)
+  logDebug('deleteUncleanUrlBookmarkForTab 11 tabData', tabData)
 
-async function deleteBookmarkByUrlList(urlList) {
-  await Promise.all(urlList.map(
-    url => deleteBookmarkByUrl(url)
-  ))
+  if (tabData?.bookmarkId) {
+    logDebug('deleteUncleanUrlBookmarkForTab 22')
+    await browser.bookmarks.remove(tabData.bookmarkId)
+    memo.tabMap.delete(tabId)
+  }
 }
 
 const getParentIdList = (bookmarkList) => {
@@ -398,7 +409,11 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
     source,
   };
 }
-const dayMS = 86400000;
+import {
+  // logDebug,
+  logOptimization,
+} from './debug.js'
+const dayMS = 86400000;
 const hourMS = 3600000;
 const minMS = 60000;
 
@@ -479,10 +494,10 @@ async function getPreviousVisitList(url) {
     }
   }
 
-  logDebug('getPreviousVisitList', url)
-  logDebug('newToOldList', newToOldList)
-  logDebug('filteredList', filteredList)
-  logDebug('resultNewToOld', resultNewToOld)
+  // logDebug('getPreviousVisitList', url)
+  // logDebug('newToOldList', newToOldList)
+  // logDebug('filteredList', filteredList)
+  // logDebug('resultNewToOld', resultNewToOld)
 
   return resultNewToOld
 }
@@ -528,6 +543,15 @@ async function getHistoryInfo({ url, useCache=false }) {
     ],
     path: [
       '/my/profile/',
+    ] 
+  },
+  {
+    hostname: [
+      'www.imdb.com',
+      'imdb.com',  
+    ],
+    path: [
+      '/title/',
     ] 
   },
 ]
@@ -583,16 +607,18 @@ const removeQueryParams = (link) => {
 async function updateTabTask({ tabId, url, useCache=false }) {
   log('updateTabTask(', tabId, useCache, url);
 
-  const actualUrl = memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]
-    ? removeQueryParamsIfTarget(url)
-    : url;
+  // const actualUrl = memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]
+  //   ? removeQueryParamsIfTarget(url)
+  //   : url;
 
   const [
     bookmarkInfo,
     previousVisitList,
   ] = await Promise.all([
-    getBookmarkInfoUni({ url: actualUrl, useCache }),
-    getHistoryInfo({ url: actualUrl, useCache })
+    // getBookmarkInfoUni({ url: actualUrl, useCache }),
+    // getHistoryInfo({ url: actualUrl, useCache })
+    getBookmarkInfoUni({ url, useCache }),
+    getHistoryInfo({ url, useCache })
   ])
   const showPreviousVisit = memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT]
 
@@ -767,12 +793,33 @@ async function closeBookmarkedTabs() {
     closeTabIdList.length > 0 && browser.tabs.remove(closeTabIdList),
   ])
 }
-const bookmarksController = {
+const replaceUrlToCleanUrl = async ({ node, cleanUrl, activeTab, bookmarkId }) => {
+  const bookmarkList = await browser.bookmarks.search({ url: cleanUrl });
+  const isExist = bookmarkList.some(({ parentId }) => parentId === node.parentId)
+
+  if (!isExist) {
+    await browser.bookmarks.create({
+      parentId: node.parentId,
+      title: node.title,
+      url: cleanUrl
+    })
+  }
+
+  const msg = {
+    command: "changeLocationToCleanUrl",
+    cleanUrl,
+  }
+  logSendEvent('bookmarksController.onCreated()', activeTab.id, msg)
+  await browser.tabs.sendMessage(activeTab.id, msg)
+
+  memo.tabMap.set(activeTab.id, {
+    bookmarkId,
+    originalUrl: node.url
+  })
+}
+
+const bookmarksController = {
   async onCreated(bookmarkId, node) {
-    if (!node.url) {
-      return
-    }
-  
     logEvent('bookmark.onCreated <-');
 
     // changes in active tab
@@ -780,34 +827,17 @@ async function closeBookmarkedTabs() {
       debugCaller: 'bookmark.onCreated'
     });
 
-    if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+    if (node.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
       const cleanUrl = removeQueryParamsIfTarget(node.url);
-      
+
       if (node.url !== cleanUrl) {
-        const bookmarkList = await browser.bookmarks.search({ url: cleanUrl });
-        const isExist = bookmarkList.some(({ parentId }) => parentId === node.parentId)
-
-        if (!isExist) {
-          await browser.bookmarks.create({
-            parentId: node.parentId,
-            title: node.title,
-            url: cleanUrl
-          })
-          memo.notCleanUrlBookmarkSet.add(node.url)
-        }
-
         const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
         const [activeTab] = tabs;
-
-        if (activeTab?.id) {
-          const msg = {
-            command: "changeLocationToCleanUrl",
-            cleanUrl,
-          }
-          logSendEvent('bookmarksController.onCreated()', activeTab.id, msg)
-          await browser.tabs.sendMessage(activeTab.id, msg)
+  
+        if (node.url === activeTab?.url) {
+          replaceUrlToCleanUrl({ node, cleanUrl, activeTab, bookmarkId })
         }
-      }
+      }      
     }
   
     // changes in bookmark manager
@@ -824,23 +854,29 @@ async function closeBookmarkedTabs() {
       debugCaller: 'bookmark.onChanged'
     });
 
-    const [bookmark] = await browser.bookmarks.get(bookmarkId)
+    const [node] = await browser.bookmarks.get(bookmarkId)
 
-    if (changeInfo.title && bookmark.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
-      const cleanUrl = removeQueryParamsIfTarget(bookmark.url);
+    if (changeInfo.title && node.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+      const cleanUrl = removeQueryParamsIfTarget(node.url);
       
-      if (bookmark.url !== cleanUrl) {
-        const bookmarkList = await browser.bookmarks.search({ url: cleanUrl });
+      if (node.url !== cleanUrl) {
+        const [activeTab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
 
-        await Promise.all(bookmarkList.map(
-          bItem => browser.bookmarks.update(bItem.id, { title: changeInfo.title })
-        ))
-        memo.notCleanUrlBookmarkSet.add(bookmark.url)
+        if (node.url === activeTab?.url) {
+          replaceUrlToCleanUrl({ node, cleanUrl, activeTab, bookmarkId })
+        } else if (activeTab && activeTab.id && node.url === memo.tabMap.get(activeTab.id)?.originalUrl) {
+          const bookmarkList = await browser.bookmarks.search({ url: cleanUrl });
+
+          await Promise.all(bookmarkList.map(
+            bItem => browser.bookmarks.update(bItem.id, { title: changeInfo.title })
+          ))
+        }
+
       }
     }
 
     // changes in bookmark manager
-    getBookmarkInfoUni({ url: bookmark.url });        
+    getBookmarkInfoUni({ url: node.url });        
   },
   async onMoved(bookmarkId, { oldParentId, parentId }) {
     logEvent('bookmark.onMoved <-');
@@ -850,24 +886,29 @@ async function closeBookmarkedTabs() {
       debugCaller: 'bookmark.onMoved'
     });
 
-    const [bookmark] = await browser.bookmarks.get(bookmarkId)
+    const [node] = await browser.bookmarks.get(bookmarkId)
 
-    if ((oldParentId || parentId) && bookmark.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
-      const cleanUrl = removeQueryParamsIfTarget(bookmark.url);
+    if ((oldParentId || parentId) && node.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+      const cleanUrl = removeQueryParamsIfTarget(node.url);
       
-      if (bookmark.url !== cleanUrl) {
-        const bookmarkList = await browser.bookmarks.search({ url: cleanUrl });
-        const cleanBkmWithOldParentId = bookmarkList.filter(({ parentId }) => parentId === oldParentId)
+      if (node.url !== cleanUrl) {
+        const [activeTab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+        
+        if (node.url === activeTab?.url) {
+          replaceUrlToCleanUrl({ node, cleanUrl, activeTab, bookmarkId })
+        } else if (activeTab && activeTab.id && node.url === memo.tabMap.get(activeTab.id)?.originalUrl) {
+          const bookmarkList = await browser.bookmarks.search({ url: cleanUrl });
+          const cleanBkmWithOldParentId = bookmarkList.filter(({ parentId }) => parentId === oldParentId)
 
-        await Promise.all(cleanBkmWithOldParentId.map(
-          bItem => browser.bookmarks.move(bItem.id, { parentId })
-        ))
-        memo.notCleanUrlBookmarkSet.add(bookmark.url)
+          await Promise.all(cleanBkmWithOldParentId.map(
+            bItem => browser.bookmarks.move(bItem.id, { parentId })
+          ))
+        }
       }
     }
 
     // changes in bookmark manager
-    getBookmarkInfoUni({ url: bookmark.url });
+    getBookmarkInfoUni({ url: node.url });
   },
   async onRemoved(bookmarkId, { node }) {
     logEvent('bookmark.onRemoved <-');
@@ -876,6 +917,24 @@ async function closeBookmarkedTabs() {
     await updateActiveTab({
       debugCaller: 'bookmark.onRemoved'
     });
+
+    if (node.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+      const cleanUrl = removeQueryParamsIfTarget(node.url);
+      
+      if (node.url !== cleanUrl) {
+        const [activeTab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+
+        if (activeTab && activeTab.id && node.url === memo.tabMap.get(activeTab.id)?.originalUrl) {
+          const bookmarkList = await browser.bookmarks.search({ url: cleanUrl });
+
+          await Promise.all(bookmarkList.map(
+            bItem => browser.bookmarks.remove(bItem.id)
+          ))  
+
+          memo.tabMap.delete(activeTab.id)
+        }
+      }
+    }
 
     // changes in bookmark manager
     getBookmarkInfoUni({ url: node?.url });
@@ -1015,7 +1074,11 @@ const runtimeController = {
     }
   },
   async onActivated({ tabId }) {
-    memo.activeTabId = tabId;
+    
+    if (memo.activeTabId !== tabId) {
+      memo.previousTabId = memo.activeTabId;
+      memo.activeTabId = tabId;
+    }
     logEvent('tabs.onActivated 00', tabId);
 
     try {
@@ -1038,10 +1101,11 @@ const runtimeController = {
       logIgnore('tabs.onActivated. IGNORING. tab was deleted', er);
     }
 
-    const notCleanUrlList = Array.from(memo.notCleanUrlBookmarkSet)
-    await deleteBookmarkByUrlList(notCleanUrlList)
-    notCleanUrlList.forEach(url => memo.notCleanUrlBookmarkSet.delete(url))
+    deleteUncleanUrlBookmarkForTab(memo.previousTabId)
   },
+  async onRemoved(tabId) {
+    deleteUncleanUrlBookmarkForTab(tabId)
+  }
 }
 const windowsController = {
   onFocusChanged(windowId) {
@@ -1100,6 +1164,7 @@ browser.tabs.onCreated.addListener(tabsController.onCreated);
 browser.tabs.onUpdated.addListener(tabsController.onUpdated);
 // listen for tab switching
 browser.tabs.onActivated.addListener(tabsController.onActivated);
+browser.tabs.onRemoved.addListener(tabsController.onRemoved);
 
 // listen for window switching
 browser.windows.onFocusChanged.addListener(windowsController.onFocusChanged);

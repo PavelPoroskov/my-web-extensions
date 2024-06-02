@@ -21,14 +21,16 @@
     </style>
   </head>
   <body>
+
     <article>
-      <label>
-        <input type="checkbox" id="CLEAR_URL_FROM_QUERY_PARAMS" style="vertical-align: middle;"/>
-        Clear bookmark`s url before save. Remove all query params. 
-      </label>
-      <div style="padding-left: 30px;">For specified sites and paths only: linkedin.com/jobs/view/.</div>
+      <label for="SHOW_PREVIOUS_VISIT_SELECT">Show previous visit:</label>
+      <select name="SHOW_PREVIOUS_VISIT_SELECT" id="SHOW_PREVIOUS_VISIT">
+        <option value="0">Never</option>
+        <option value="1">For url without bookmark</option>
+        <option value="2">Always</option>
+      </select>
     </article>
-    
+
     <article>
       <label for="show-layers">
         Show folders in bookmark`s path. 
@@ -49,14 +51,13 @@
     </article>
 
     <article>
-      <label for="SHOW_PREVIOUS_VISIT_SELECT">Show previous visit:</label>
-      <select name="SHOW_PREVIOUS_VISIT_SELECT" id="SHOW_PREVIOUS_VISIT">
-        <option value="0">Never</option>
-        <option value="1">For url without bookmark</option>
-        <option value="2">Always</option>
-      </select>
+      <label>
+        <input type="checkbox" id="CLEAR_URL_FROM_QUERY_PARAMS" style="vertical-align: middle;"/>
+        Clear bookmark`s url before save. Remove all query params. 
+      </label>
+      <div style="padding-left: 30px;">For specified sites and paths only: linkedin.com/jobs/view/, imdb.com/title/.</div>
     </article>
-
+    
     <script src="options.js"></script>
   </body>
 </html>
