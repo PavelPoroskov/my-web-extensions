@@ -167,12 +167,7 @@ const logDebug = CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
     ...savedSettings,
   }
 }
-import {
-  log,
-  // logDebug
-} from './debug.js'
-
-const memo = {
+const memo = {
   activeTabId: '',
   previousTabId: '',
   // previousActiveTabId: '',
@@ -409,11 +404,7 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
     source,
   };
 }
-import {
-  // logDebug,
-  logOptimization,
-} from './debug.js'
-const dayMS = 86400000;
+const dayMS = 86400000;
 const hourMS = 3600000;
 const minMS = 60000;
 
@@ -552,6 +543,7 @@ async function getHistoryInfo({ url, useCache=false }) {
     ],
     path: [
       '/title/',
+      '/list/',
     ] 
   },
 ]

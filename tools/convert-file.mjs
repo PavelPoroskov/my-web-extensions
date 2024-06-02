@@ -1,3 +1,9 @@
+/* TODO support import with comment
+import {
+  // logDebug,
+  logOptimization,
+} from './debug.js'
+*/
 export const convertFileContent = (inStr) => {
   let result = inStr;
 
