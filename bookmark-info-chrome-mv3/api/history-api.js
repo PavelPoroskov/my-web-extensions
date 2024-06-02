@@ -1,5 +1,4 @@
 import {
-  // logDebug,
   logOptimization,
 } from './debug.js'
 import {

@@ -3,7 +3,6 @@ import { USER_SETTINGS_DEFAULT_VALUE } from '../constants.js'
 import { readSettings } from './settings-api.js'
 import {
   log,
-  // logDebug
 } from './debug.js'
 
 export const memo = {

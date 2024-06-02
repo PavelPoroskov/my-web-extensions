@@ -25,6 +25,7 @@ const targetList = [
     ],
     path: [
       '/title/',
+      '/list/',
     ] 
   },
 ]
