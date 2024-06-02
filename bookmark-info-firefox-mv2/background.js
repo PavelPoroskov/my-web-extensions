@@ -172,6 +172,7 @@ const logDebug = CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
   cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
   cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
   bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
+  notCleanUrlBookmarkSet: new Set(),
   settings: USER_SETTINGS_DEFAULT_VALUE,
   profileStartMS: undefined,
 
@@ -271,6 +272,20 @@ function isSupportedProtocol(urlString) {
 
 async function deleteBookmark(bkmId) {
   await browser.bookmarks.remove(bkmId);
+}
+
+async function deleteBookmarkByUrl(url) {
+  const bookmarkList = await browser.bookmarks.search({ url });
+
+  await Promise.all(bookmarkList.map(
+    bItem => browser.bookmarks.remove(bItem.id)
+  ))
+}
+
+async function deleteBookmarkByUrlList(urlList) {
+  await Promise.all(urlList.map(
+    url => deleteBookmarkByUrl(url)
+  ))
 }
 
 const getParentIdList = (bookmarkList) => {
@@ -760,23 +775,25 @@ async function closeBookmarkedTabs() {
   
     logEvent('bookmark.onCreated <-');
 
+    // changes in active tab
+    await updateActiveTab({
+      debugCaller: 'bookmark.onCreated'
+    });
+
     if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
       const cleanUrl = removeQueryParamsIfTarget(node.url);
       
       if (node.url !== cleanUrl) {
         const bookmarkList = await browser.bookmarks.search({ url: cleanUrl });
-        if (bookmarkList.length === 0) {
-          // if first time then we fix url in new bookmark
-          await browser.bookmarks.update(
-            bookmarkId,
-            { url: cleanUrl }
-          )
-        } else {
-          // if second time then we delete new bookmark
-          //
-          // TODO sometimes we want create two+ bookmark for the same url in different folders
-          //  when we create bookmark from fixed tags: we will use addBookmark(cleanurl, path)
-          await browser.bookmarks.remove(bookmarkId)  
+        const isExist = bookmarkList.some(({ parentId }) => parentId === node.parentId)
+
+        if (!isExist) {
+          await browser.bookmarks.create({
+            parentId: node.parentId,
+            title: node.title,
+            url: cleanUrl
+          })
+          memo.notCleanUrlBookmarkSet.add(node.url)
         }
 
         const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
@@ -792,12 +809,7 @@ async function closeBookmarkedTabs() {
         }
       }
     }
-
-    // changes in active tab
-    await updateActiveTab({
-      debugCaller: 'bookmark.onCreated'
-    });
-
+  
     // changes in bookmark manager
     getBookmarkInfoUni({ url: node.url });
   },
@@ -805,16 +817,32 @@ async function closeBookmarkedTabs() {
     logEvent('bookmark.onChanged 00 <-', changeInfo);
 
     memo.bkmFolderById.delete(bookmarkId);
+
+
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onChanged'
     });
 
-    // changes in bookmark manager
     const [bookmark] = await browser.bookmarks.get(bookmarkId)
+
+    if (changeInfo.title && bookmark.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+      const cleanUrl = removeQueryParamsIfTarget(bookmark.url);
+      
+      if (bookmark.url !== cleanUrl) {
+        const bookmarkList = await browser.bookmarks.search({ url: cleanUrl });
+
+        await Promise.all(bookmarkList.map(
+          bItem => browser.bookmarks.update(bItem.id, { title: changeInfo.title })
+        ))
+        memo.notCleanUrlBookmarkSet.add(bookmark.url)
+      }
+    }
+
+    // changes in bookmark manager
     getBookmarkInfoUni({ url: bookmark.url });        
   },
-  async onMoved(bookmarkId) {
+  async onMoved(bookmarkId, { oldParentId, parentId }) {
     logEvent('bookmark.onMoved <-');
     memo.bkmFolderById.delete(bookmarkId);
     // changes in active tab
@@ -822,8 +850,23 @@ async function closeBookmarkedTabs() {
       debugCaller: 'bookmark.onMoved'
     });
 
-    // changes in bookmark manager
     const [bookmark] = await browser.bookmarks.get(bookmarkId)
+
+    if ((oldParentId || parentId) && bookmark.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+      const cleanUrl = removeQueryParamsIfTarget(bookmark.url);
+      
+      if (bookmark.url !== cleanUrl) {
+        const bookmarkList = await browser.bookmarks.search({ url: cleanUrl });
+        const cleanBkmWithOldParentId = bookmarkList.filter(({ parentId }) => parentId === oldParentId)
+
+        await Promise.all(cleanBkmWithOldParentId.map(
+          bItem => browser.bookmarks.move(bItem.id, { parentId })
+        ))
+        memo.notCleanUrlBookmarkSet.add(bookmark.url)
+      }
+    }
+
+    // changes in bookmark manager
     getBookmarkInfoUni({ url: bookmark.url });
   },
   async onRemoved(bookmarkId, { node }) {
@@ -994,6 +1037,10 @@ const runtimeController = {
     } catch (er) {
       logIgnore('tabs.onActivated. IGNORING. tab was deleted', er);
     }
+
+    const notCleanUrlList = Array.from(memo.notCleanUrlBookmarkSet)
+    await deleteBookmarkByUrlList(notCleanUrlList)
+    notCleanUrlList.forEach(url => memo.notCleanUrlBookmarkSet.delete(url))
   },
 }
 const windowsController = {
