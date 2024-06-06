@@ -1,38 +1,13 @@
 
-const targetList = [
-  {
-    hostname: [
-      'www.linkedin.com',
-      'linkedin.com',  
-    ],
-    path: [
-      '/jobs/view/',
-      '/posts/'
-    ] 
-  },
-  {
-    hostname: [
-      'djinni.co',
-    ],
-    path: [
-      '/my/profile/',
-    ] 
-  },
-  {
-    hostname: [
-      'www.imdb.com',
-      'imdb.com',  
-    ],
-    path: [
-      '/title/',
-      '/list/',
-    ] 
-  },
-]
+import { clearUrlTargetList } from '../constants.js'
+
 
 const targetMap = new Map(
-  targetList.flatMap(({ hostname, path }) => hostname.map((host) => [host, path]))
+  clearUrlTargetList.map(({ hostname, paths }) => [hostname, paths])
 )
+
+const getHostBase = (str) => str.split('.').slice(-2).join('.')
+
 
 export const removeQueryParamsIfTarget = (url) => {
   let cleanUrl = url
@@ -41,7 +16,7 @@ export const removeQueryParamsIfTarget = (url) => {
   try {
     const oLink = new URL(url);
     const { hostname, pathname } = oLink;
-    const targetPathList = targetMap.get(hostname)
+    const targetPathList = targetMap.get(getHostBase(hostname))
 
     if (targetPathList && targetPathList.some((targetPath) => pathname.startsWith(targetPath))) {
       isPattern = true

@@ -18,7 +18,7 @@ import {
   USER_SETTINGS_OPTIONS,
 } from '../constants.js'
 
-const replaceUrlToCleanUrl = async ({ node, cleanUrl, activeTab, bookmarkId }) => {
+async function replaceUrlToCleanUrl({ node, cleanUrl, activeTab, bookmarkId }) {
   const bookmarkList = await chrome.bookmarks.search({ url: cleanUrl });
   const isExist = bookmarkList.some(({ parentId }) => parentId === node.parentId)
 

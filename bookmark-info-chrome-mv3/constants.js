@@ -46,3 +46,28 @@ export const USER_SETTINGS_DEFAULT_VALUE = {
   [o.SHOW_PATH_LAYERS]: 1, // [1, 2, 3]
   [o.SHOW_PREVIOUS_VISIT]: SHOW_PREVIOUS_VISIT_OPTION.ALWAYS,
 }
+
+export const clearUrlTargetList = [
+  {
+    hostname: 'linkedin.com',  
+    paths: [
+      '/jobs/view/',
+      '/posts/'
+    ] 
+  },
+  {
+    hostname: 'djinni.co',
+    paths: [
+      '/my/profile/',
+      '/jobs/',
+    ] 
+  },
+  {
+    hostname: 'imdb.com',  
+    paths: [
+      '/title/',
+      '/list/',
+    ] 
+  },
+]
+

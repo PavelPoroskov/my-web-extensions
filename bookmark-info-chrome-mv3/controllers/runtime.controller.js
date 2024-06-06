@@ -1,19 +1,20 @@
 import {
+  deleteBookmark,
+} from '../api/bookmarks-api.js'
+import {
   logEvent,
 } from '../api/debug.js'
 import {
   memo,
 } from '../api/memo.js'
 import {
-  deleteBookmark,
-} from '../api/bookmarks-api.js'
-import {
-  updateTab,
+  cleanUrlIfTarget,
   updateActiveTab,
+  updateTab,
 } from '../api/tabs-api.js'
 import {
-  MENU,
   BROWSER_SPECIFIC,
+  MENU,
   USER_SETTINGS_OPTIONS,
 } from '../constants.js'
 
@@ -62,7 +63,7 @@ export const runtimeController = {
       debugCaller: 'runtime.onInstalled'
     });
   },
-  onMessage (message, sender) {
+  async onMessage (message, sender) {
     logEvent('runtime.onMessage message', message);
 
     switch (message?.command) {
@@ -77,9 +78,10 @@ export const runtimeController = {
         logEvent('runtime.onMessage contentScriptReady', senderTabId);
 
         if (senderTabId) {
+          const cleanUrl = await cleanUrlIfTarget({ url: message.url, tabId: senderTabId })
           updateTab({
             tabId: senderTabId,
-            url: message.url,
+            url: cleanUrl || message.url,
             useCache: true,
             debugCaller: 'runtime.onMessage contentScriptReady',
           })

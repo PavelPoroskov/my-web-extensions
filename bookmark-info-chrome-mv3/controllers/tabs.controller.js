@@ -13,6 +13,7 @@ import {
   memo,
 } from '../api/memo.js'
 import {
+  cleanUrlIfTarget,
   updateTab,
 } from '../api/tabs-api.js'
 import {
@@ -35,11 +36,13 @@ export const tabsController = {
       case ('loading'): {
         if (changeInfo?.url) {
           logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, changeInfo.url);
+          const cleanUrl = await cleanUrlIfTarget({ url: changeInfo.url, tabId })
+          const actualUrl = cleanUrl || changeInfo.url
           getBookmarkInfoUni({
-            url: changeInfo.url,
+            url: actualUrl,
             useCache: true,
           });
-          getHistoryInfo({ url: changeInfo.url, useCache: false })
+          getHistoryInfo({ url: actualUrl, useCache: false })
         }
 
         break;

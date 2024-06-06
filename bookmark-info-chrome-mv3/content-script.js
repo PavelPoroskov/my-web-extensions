@@ -186,7 +186,12 @@ const log = SHOW_LOG ? console.log : () => {};
     return result
   }
 
-  function showBookmarkInfo({ bookmarkInfoList, showLayer, showPreviousVisit, visitList }) {
+  function showBookmarkInfo(input) {
+    const bookmarkInfoList = input.bookmarkInfoList || []
+    const showLayer = input.showLayer || 1
+    const visitList = input.visitList || []
+    const showPreviousVisit = input.showPreviousVisit || SHOW_PREVIOUS_VISIT_OPTION.NEVER
+
     log('showBookmarkInfo 00');
 
     let rootDiv = document.getElementById(bkmInfoRootId);

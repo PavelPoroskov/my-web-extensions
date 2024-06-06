@@ -1,3 +1,33 @@
+const clearUrlTargetList = [
+  {
+    hostname: 'linkedin.com',  
+    paths: [
+      '/jobs/view/',
+      '/posts/'
+    ] 
+  },
+  {
+    hostname: 'djinni.co',
+    paths: [
+      '/my/profile/',
+      '/jobs/',
+    ] 
+  },
+  {
+    hostname: 'imdb.com',  
+    paths: [
+      '/title/',
+      '/list/',
+    ] 
+  },
+]
+
+function formatTargetList () { 
+  return clearUrlTargetList.toSorted().map(
+  ({ hostname, paths }) => `${hostname}{${paths.toSorted().join(',')}}`
+  )
+}
+
 const USER_SETTINGS_OPTIONS = {
   CLEAR_URL_FROM_QUERY_PARAMS: 'CLEAR_URL_FROM_QUERY_PARAMS',
   SHOW_PATH_LAYERS: 'SHOW_PATH_LAYERS',
@@ -89,6 +119,11 @@ async function restoreOptions() {
   let element = document.querySelector(domId)
   element.checked = actualSettings[optionId];
   element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
+
+  optionId = 'CLEAR_URL_LIST';
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.value = formatTargetList().join('\n');
 
   optionId = USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS;
   domId = `#${optionId}`
