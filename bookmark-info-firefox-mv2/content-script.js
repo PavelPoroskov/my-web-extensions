@@ -10,6 +10,11 @@ const log = SHOW_LOG ? console.log : () => {};
   }
   window.hasRun = true;
 
+  const SHOW_PREVIOUS_VISIT_OPTION = {
+    NEVER: 0,
+    ONLY_NO_BKM: 1,
+    ALWAYS: 2,
+  }
   const BROWSER_OPTIONS = {
     CHROME: 'CHROME',
     FIREFOX: 'FIREFOX',
@@ -181,7 +186,12 @@ const log = SHOW_LOG ? console.log : () => {};
     return result
   }
 
-  function showBookmarkInfo({ bookmarkInfoList, showLayer, isShowPreviousVisit, previousVisitList }) {
+  function showBookmarkInfo(input) {
+    const bookmarkInfoList = input.bookmarkInfoList || []
+    const showLayer = input.showLayer || 1
+    const visitList = input.visitList || []
+    const showPreviousVisit = input.showPreviousVisit || SHOW_PREVIOUS_VISIT_OPTION.NEVER
+
     log('showBookmarkInfo 00');
 
     let rootDiv = document.getElementById(bkmInfoRootId);
@@ -209,8 +219,11 @@ const log = SHOW_LOG ? console.log : () => {};
 
     const drawList = bookmarkInfoList.map((value) => ({ type: 'bookmark', value }))
 
-    if (isShowPreviousVisit && previousVisitList.length > 0) {
-      const prevVisit = previousVisitList
+    const isShowPreviousVisit = showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS 
+      || (showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM && bookmarkInfoList.length === 0)
+
+    if (isShowPreviousVisit && visitList.length > 0) {
+      const prevVisit = visitList
         .toReversed()
         .map((i) => formatPrevVisit(i))
         .flatMap((value, index, array) => index === 0 || value !== array[index - 1] ? [value]: [])
@@ -301,7 +314,7 @@ const log = SHOW_LOG ? console.log : () => {};
     }
   }
 
-  let hasBookmark = undefined;
+  let prevMessage = {};
 
   browser.runtime.onMessage.addListener((message) => {
     log('browser.runtime.onMessage: ', message);
@@ -309,13 +322,25 @@ const log = SHOW_LOG ? console.log : () => {};
       case "bookmarkInfo": {
         log('content-script: ', message.bookmarkInfoList);
 
-        const newHasBookmark = message.bookmarkInfoList.length > 0;
+        // const newHasBookmark = message.bookmarkInfoList.length > 0;
+        //
+        // if (newHasBookmark || hasBookmark || message.isShowPreviousVisit) {
+        //   showBookmarkInfo(message);
+        // }
   
-        if (newHasBookmark || hasBookmark || message.isShowPreviousVisit) {
-          showBookmarkInfo(message);
-        }
-  
-        hasBookmark = newHasBookmark;
+        // hasBookmark = newHasBookmark;
+
+        const fullMessage = { ...prevMessage, ...message }
+        showBookmarkInfo(fullMessage);
+        prevMessage = fullMessage
+        break
+      }
+      case "visitInfo": {
+        log('content-script: ', message.visitList);
+
+        const fullMessage = { ...prevMessage, ...message }
+        showBookmarkInfo(fullMessage);
+        prevMessage = fullMessage
         break
       }
       case "changeLocationToCleanUrl": {

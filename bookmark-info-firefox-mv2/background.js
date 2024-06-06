@@ -46,6 +46,30 @@ const USER_SETTINGS_DEFAULT_VALUE = {
   [o.SHOW_PATH_LAYERS]: 1, // [1, 2, 3]
   [o.SHOW_PREVIOUS_VISIT]: SHOW_PREVIOUS_VISIT_OPTION.ALWAYS,
 }
+
+const clearUrlTargetList = [
+  {
+    hostname: 'linkedin.com',  
+    paths: [
+      '/jobs/view/',
+      '/posts/'
+    ] 
+  },
+  {
+    hostname: 'djinni.co',
+    paths: [
+      '/my/profile/',
+      '/jobs/',
+    ] 
+  },
+  {
+    hostname: 'imdb.com',  
+    paths: [
+      '/title/',
+      '/list/',
+    ] 
+  },
+]
 const CONFIG = {
   SHOW_LOG_CACHE: false,
   SHOW_LOG_SEND_EVENT: false,
@@ -404,6 +428,67 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
     source,
   };
 }
+const targetMap = new Map(
+  clearUrlTargetList.map(({ hostname, paths }) => [hostname, paths])
+)
+
+const getHostBase = (str) => str.split('.').slice(-2).join('.')
+
+
+const removeQueryParamsIfTarget = (url) => {
+  let cleanUrl = url
+  let isPattern = false
+
+  try {
+    const oLink = new URL(url);
+    const { hostname, pathname } = oLink;
+    const targetPathList = targetMap.get(getHostBase(hostname))
+
+    if (targetPathList && targetPathList.some((targetPath) => pathname.startsWith(targetPath))) {
+      isPattern = true
+      oLink.search = ''
+
+      cleanUrl = oLink.toString();  
+    }
+  
+  /* eslint-disable no-unused-vars */
+  // eslint-disable-next-line no-empty
+  } catch (_e) {
+    
+  }
+  /* eslint-enable no-unused-vars */
+
+  return {
+    cleanUrl,
+    isPattern,
+  }
+}
+
+const removeQueryParams = (link) => {
+  try {
+    const oLink = new URL(link);
+    oLink.search = ''
+  
+    return oLink.toString();  
+  // eslint-disable-next-line no-unused-vars
+  } catch (e) {
+    return link
+  }
+}
+
+// let testStr = "https://www.linkedin.com/jobs/view/3920634940/?alternateChannel=search&refId=dvaqme%2FfxHehSAa5o4nVnA%3D%3D&trackingId=8%2FZKaGcTAInuTTH4NyKDoA%3D%3D"
+// console.log('test ', removeQueryParamsIfTarget(testStr))
+
+// testStr = "https://www.youtube.com/watch?v=YuJ6SasIS_E&t=356s"
+// console.log('test ', removeQueryParamsIfTarget(testStr))
+
+// testStr = "https://youtube.com/watch?v=YuJ6SasIS_E&t=356s"
+// console.log('test ', removeQueryParamsIfTarget(testStr))
+
+// testStr = "https://youtu.be/watch?v=YuJ6SasIS_E&t=356s"
+// console.log('test ', removeQueryParamsIfTarget(testStr))
+//
+// https://career.proxify.io/apply?uuid=566c933b-432e-64e0-b317-dd4390d6a74e&step=AdditionalInformation
 const dayMS = 86400000;
 const hourMS = 3600000;
 const minMS = 60000;
@@ -436,7 +521,27 @@ function formatPrevVisit (inMS) {
   return result
 }
 
-async function getPreviousVisitList(url) {
+function filterTimeList(timeList) {
+  const representationSet = new Set()
+  const resultNewToOld = []
+
+  for (const visitTime of timeList) {
+    const visitRepresentation = formatPrevVisit(visitTime)
+
+    if (!(representationSet.has(visitRepresentation))) {
+      representationSet.add(visitRepresentation)
+      resultNewToOld.push(visitTime)
+
+      if (representationSet.size >= 3) {
+        break
+      }
+    }
+  }
+
+  return resultNewToOld
+}
+
+async function getVisitListForUrl(url) {
   const visitList = (await browser.history.getVisits({ url }))
     .filter((i) => i.visitTime)
    
@@ -469,172 +574,155 @@ async function getPreviousVisitList(url) {
   const filteredTimeList = filteredList
     .map((i) => i.visitTime)
 
-  const representationSet = new Set()
-  const resultNewToOld = []
+  return filteredTimeList
+}
 
-  for (const visitTime of filteredTimeList) {
-    const visitRepresentation = formatPrevVisit(visitTime)
+async function getVisitListForUrlList(urlList) {
+  const allVisitList = await Promise.all(urlList.map(
+    url => getVisitListForUrl(url)
+  ))
 
-    if (!(representationSet.has(visitRepresentation))) {
-      representationSet.add(visitRepresentation)
-      resultNewToOld.push(visitTime)
+  return allVisitList
+    .flat()
+    .sort((a,b) => -(a - b))
+}
 
-      if (representationSet.size >= 3) {
-        break
-      }
+async function getPreviousVisitList(url) {
+  let rootUrl
+
+  if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+    const { cleanUrl, isPattern } = removeQueryParamsIfTarget(url)
+
+    if (isPattern) {
+      rootUrl = cleanUrl
     }
+  } 
+
+  if (rootUrl) {
+    const historyItemList = (await browser.history.search({
+      text: rootUrl,
+      maxResults: 10,
+    }))
+      .filter((i) => i.url && i.url.startsWith(rootUrl))
+
+    return getVisitListForUrlList(historyItemList.map(i => i.url))
+  } else {
+    return getVisitListForUrl(url)
   }
-
-  // logDebug('getPreviousVisitList', url)
-  // logDebug('newToOldList', newToOldList)
-  // logDebug('filteredList', filteredList)
-  // logDebug('resultNewToOld', resultNewToOld)
-
-  return resultNewToOld
 }
 
 async function getHistoryInfo({ url, useCache=false }) {
   const showPreviousVisit = memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT]
   
   if (!(showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS || showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM)) {
-    return []
+    return {
+      visitList: [],
+      source: SOURCE.ACTUAL,
+    }
   }
 
-  let previousVisitList;
+  let visitList;
+  let source;
 
   if (useCache) {
-    previousVisitList = memo.cacheUrlToVisitList.get(url);
+    visitList = memo.cacheUrlToVisitList.get(url);
     
-    if (previousVisitList) {
+    if (visitList) {
+      source = SOURCE.CACHE;
       logOptimization(' getHistoryInfoUni: from cache bookmarkInfo')
     }
   } 
   
-  if (!previousVisitList) {
-    previousVisitList = await getPreviousVisitList(url);
-    memo.cacheUrlToVisitList.add(url, previousVisitList);
+  if (!visitList) {
+    const allVisitList = await getPreviousVisitList(url);
+    visitList = filterTimeList(allVisitList)
+    source = SOURCE.ACTUAL;
+    memo.cacheUrlToVisitList.add(url, visitList);
   }
 
-  return previousVisitList;
+  return {
+    visitList,
+    source,
+  };
 }
-const targetList = [
-  {
-    hostname: [
-      'www.linkedin.com',
-      'linkedin.com',  
-    ],
-    path: [
-      '/jobs/view/',
-      '/posts/'
-    ] 
-  },
-  {
-    hostname: [
-      'djinni.co',
-    ],
-    path: [
-      '/my/profile/',
-    ] 
-  },
-  {
-    hostname: [
-      'www.imdb.com',
-      'imdb.com',  
-    ],
-    path: [
-      '/title/',
-      '/list/',
-    ] 
-  },
-]
+let cleanUrl
 
-const targetMap = new Map(
-  targetList.flatMap(({ hostname, path }) => hostname.map((host) => [host, path]))
-)
+async function cleanUrlIfTarget({ url, tabId }) {
+  if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+    ({ cleanUrl } = removeQueryParamsIfTarget(url));
+    
+    if (url !== cleanUrl) {
+      const msg = {
+        command: "changeLocationToCleanUrl",
+        cleanUrl,
+      }
+      logSendEvent('runtimeController.onMessage(contentScriptReady)', tabId, msg)
+      await browser.tabs.sendMessage(tabId, msg)
+        .catch((err) => {
+          logIgnore('runtimeController.onMessage(contentScriptReady) sendMessage(changeLocationToCleanUrl)', err)
+        })
 
-const removeQueryParamsIfTarget = (link) => {
-  try {
-    const oLink = new URL(link);
-    const { hostname, pathname } = oLink;
-    const targetPathList = targetMap.get(hostname)
-
-    if (targetPathList && targetPathList.some((targetPath) => pathname.startsWith(targetPath))) {
-      oLink.search = ''
-
-      return oLink.toString();  
+      return cleanUrl
     }
-  
-    return link
-  // eslint-disable-next-line no-unused-vars
-  } catch (e) {
-    return link
   }
 }
 
-const removeQueryParams = (link) => {
-  try {
-    const oLink = new URL(link);
-    oLink.search = ''
-  
-    return oLink.toString();  
-  // eslint-disable-next-line no-unused-vars
-  } catch (e) {
-    return link
-  }
-}
+async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
+  log('updateBookmarksForTabTask(', tabId, useCache, url);
 
-// let testStr = "https://www.linkedin.com/jobs/view/3920634940/?alternateChannel=search&refId=dvaqme%2FfxHehSAa5o4nVnA%3D%3D&trackingId=8%2FZKaGcTAInuTTH4NyKDoA%3D%3D"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
+  let actualUrl = url
 
-// testStr = "https://www.youtube.com/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
+  if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+    const { cleanUrl } = removeQueryParamsIfTarget(url)
 
-// testStr = "https://youtube.com/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
+    if (url !== cleanUrl) {
+      actualUrl = cleanUrl
+    }
+  } 
 
-// testStr = "https://youtu.be/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
-//
-// https://career.proxify.io/apply?uuid=566c933b-432e-64e0-b317-dd4390d6a74e&step=AdditionalInformation
-async function updateTabTask({ tabId, url, useCache=false }) {
-  log('updateTabTask(', tabId, useCache, url);
-
-  // const actualUrl = memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]
-  //   ? removeQueryParamsIfTarget(url)
-  //   : url;
-
-  const [
-    bookmarkInfo,
-    previousVisitList,
-  ] = await Promise.all([
-    // getBookmarkInfoUni({ url: actualUrl, useCache }),
-    // getHistoryInfo({ url: actualUrl, useCache })
-    getBookmarkInfoUni({ url, useCache }),
-    getHistoryInfo({ url, useCache })
-  ])
-  const showPreviousVisit = memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT]
-
+  const bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
   const message = {
     command: "bookmarkInfo",
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
-    tabId,
     showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
-    isShowPreviousVisit: showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS
-      || showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM && bookmarkInfo.bookmarkInfoList === 0,
-    previousVisitList: previousVisitList,
   }
-  logSendEvent('updateTabTask()', tabId, message);
+
+  logSendEvent('updateBookmarksForTabTask()', tabId, message);
 
   return browser.tabs.sendMessage(tabId, message)
     .then(() => bookmarkInfo);
+}
+async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
+  log('updateVisitsForTabTask(', tabId, useCache, url);
+
+  const visitInfo = await getHistoryInfo({ url, useCache })
+
+  const message = {
+    command: "visitInfo",
+    showPreviousVisit: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT],
+    visitList: visitInfo.visitList,
+  }
+  logSendEvent('updateVisitsForTabTask()', tabId, message);
+  
+  return browser.tabs.sendMessage(tabId, message)
+    .then(() => visitInfo);
 }
 
 async function updateTab({ tabId, url, useCache=false, debugCaller }) {
   if (url && isSupportedProtocol(url)) {
     log(`${debugCaller} -> updateTab() useCache`, useCache);
     promiseQueue.add({
-      key: `${tabId}`,
-      fn: updateTabTask,
+      key: `${tabId}-bkm`,
+      fn: updateBookmarksForTabTask,
+      options: {
+        tabId,
+        url,
+        useCache
+      },
+    });
+    promiseQueue.add({
+      key: `${tabId}-visits`,
+      fn: updateVisitsForTabTask,
       options: {
         tabId,
         url,
@@ -785,7 +873,7 @@ async function closeBookmarkedTabs() {
     closeTabIdList.length > 0 && browser.tabs.remove(closeTabIdList),
   ])
 }
-const replaceUrlToCleanUrl = async ({ node, cleanUrl, activeTab, bookmarkId }) => {
+async function replaceUrlToCleanUrl({ node, cleanUrl, activeTab, bookmarkId }) {
   const bookmarkList = await browser.bookmarks.search({ url: cleanUrl });
   const isExist = bookmarkList.some(({ parentId }) => parentId === node.parentId)
 
@@ -820,7 +908,7 @@ const bookmarksController = {
     });
 
     if (node.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
-      const cleanUrl = removeQueryParamsIfTarget(node.url);
+      const { cleanUrl } = removeQueryParamsIfTarget(node.url);
 
       if (node.url !== cleanUrl) {
         const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
@@ -849,7 +937,7 @@ const bookmarksController = {
     const [node] = await browser.bookmarks.get(bookmarkId)
 
     if (changeInfo.title && node.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
-      const cleanUrl = removeQueryParamsIfTarget(node.url);
+      const { cleanUrl } = removeQueryParamsIfTarget(node.url);
       
       if (node.url !== cleanUrl) {
         const [activeTab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
@@ -881,7 +969,7 @@ const bookmarksController = {
     const [node] = await browser.bookmarks.get(bookmarkId)
 
     if ((oldParentId || parentId) && node.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
-      const cleanUrl = removeQueryParamsIfTarget(node.url);
+      const { cleanUrl } = removeQueryParamsIfTarget(node.url);
       
       if (node.url !== cleanUrl) {
         const [activeTab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
@@ -911,7 +999,7 @@ const bookmarksController = {
     });
 
     if (node.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
-      const cleanUrl = removeQueryParamsIfTarget(node.url);
+      const { cleanUrl } = removeQueryParamsIfTarget(node.url);
       
       if (node.url !== cleanUrl) {
         const [activeTab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
@@ -977,7 +1065,7 @@ const runtimeController = {
       debugCaller: 'runtime.onInstalled'
     });
   },
-  onMessage (message, sender) {
+  async onMessage (message, sender) {
     logEvent('runtime.onMessage message', message);
 
     switch (message?.command) {
@@ -992,9 +1080,10 @@ const runtimeController = {
         logEvent('runtime.onMessage contentScriptReady', senderTabId);
 
         if (senderTabId) {
+          const cleanUrl = await cleanUrlIfTarget({ url: message.url, tabId: senderTabId })
           updateTab({
             tabId: senderTabId,
-            url: message.url,
+            url: cleanUrl || message.url,
             useCache: true,
             debugCaller: 'runtime.onMessage contentScriptReady',
           })
@@ -1030,11 +1119,13 @@ const runtimeController = {
       case ('loading'): {
         if (changeInfo?.url) {
           logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, changeInfo.url);
+          const cleanUrl = await cleanUrlIfTarget({ url: changeInfo.url, tabId })
+          const actualUrl = cleanUrl || changeInfo.url
           getBookmarkInfoUni({
-            url: changeInfo.url,
+            url: actualUrl,
             useCache: true,
           });
-          getHistoryInfo({ url: changeInfo.url, useCache: false })
+          getHistoryInfo({ url: actualUrl, useCache: false })
         }
 
         break;
