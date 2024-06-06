@@ -1,17 +1,17 @@
 import {
+  deleteUncleanUrlBookmarkForTab,
+  getBookmarkInfoUni,
+} from '../api/bookmarks-api.js'
+import {
   logEvent,
   logIgnore,
 } from '../api/debug.js'
 import {
-  memo,
-} from '../api/memo.js'
-import {
-  getBookmarkInfoUni,
-  deleteUncleanUrlBookmarkForTab,
-} from '../api/bookmarks-api.js'
-import {
   getHistoryInfo,
 } from '../api/history-api.js'
+import {
+  memo,
+} from '../api/memo.js'
 import {
   updateTab,
 } from '../api/tabs-api.js'

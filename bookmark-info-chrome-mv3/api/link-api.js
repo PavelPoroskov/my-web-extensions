@@ -34,22 +34,32 @@ const targetMap = new Map(
   targetList.flatMap(({ hostname, path }) => hostname.map((host) => [host, path]))
 )
 
-export const removeQueryParamsIfTarget = (link) => {
+export const removeQueryParamsIfTarget = (url) => {
+  let cleanUrl = url
+  let isPattern = false
+
   try {
-    const oLink = new URL(link);
+    const oLink = new URL(url);
     const { hostname, pathname } = oLink;
     const targetPathList = targetMap.get(hostname)
 
     if (targetPathList && targetPathList.some((targetPath) => pathname.startsWith(targetPath))) {
+      isPattern = true
       oLink.search = ''
 
-      return oLink.toString();  
+      cleanUrl = oLink.toString();  
     }
   
-    return link
-  // eslint-disable-next-line no-unused-vars
-  } catch (e) {
-    return link
+  /* eslint-disable no-unused-vars */
+  // eslint-disable-next-line no-empty
+  } catch (_e) {
+    
+  }
+  /* eslint-enable no-unused-vars */
+
+  return {
+    cleanUrl,
+    isPattern,
   }
 }
 

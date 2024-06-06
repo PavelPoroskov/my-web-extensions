@@ -53,7 +53,7 @@ export const bookmarksController = {
     });
 
     if (node.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
-      const cleanUrl = removeQueryParamsIfTarget(node.url);
+      const { cleanUrl } = removeQueryParamsIfTarget(node.url);
 
       if (node.url !== cleanUrl) {
         const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
@@ -82,7 +82,7 @@ export const bookmarksController = {
     const [node] = await chrome.bookmarks.get(bookmarkId)
 
     if (changeInfo.title && node.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
-      const cleanUrl = removeQueryParamsIfTarget(node.url);
+      const { cleanUrl } = removeQueryParamsIfTarget(node.url);
       
       if (node.url !== cleanUrl) {
         const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
@@ -114,7 +114,7 @@ export const bookmarksController = {
     const [node] = await chrome.bookmarks.get(bookmarkId)
 
     if ((oldParentId || parentId) && node.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
-      const cleanUrl = removeQueryParamsIfTarget(node.url);
+      const { cleanUrl } = removeQueryParamsIfTarget(node.url);
       
       if (node.url !== cleanUrl) {
         const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
@@ -144,7 +144,7 @@ export const bookmarksController = {
     });
 
     if (node.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
-      const cleanUrl = removeQueryParamsIfTarget(node.url);
+      const { cleanUrl } = removeQueryParamsIfTarget(node.url);
       
       if (node.url !== cleanUrl) {
         const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });

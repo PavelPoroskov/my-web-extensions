@@ -1,14 +1,18 @@
 import {
-  logOptimization,
-} from './debug.js'
-import {
-  USER_SETTINGS_OPTIONS,
-  SHOW_PREVIOUS_VISIT_OPTION,
   IS_BROWSER_FIREFOX,
-} from '../constants.js'
+  SHOW_PREVIOUS_VISIT_OPTION,
+  SOURCE,
+  USER_SETTINGS_OPTIONS,
+} from '../constants.js';
+import {
+  logOptimization,
+} from './debug.js';
+import {
+  removeQueryParamsIfTarget,
+} from './link-api.js';
 import {
   memo,
-} from './memo.js'
+} from './memo.js';
 
 const dayMS = 86400000;
 const hourMS = 3600000;
@@ -42,7 +46,27 @@ function formatPrevVisit (inMS) {
   return result
 }
 
-export async function getPreviousVisitList(url) {
+function filterTimeList(timeList) {
+  const representationSet = new Set()
+  const resultNewToOld = []
+
+  for (const visitTime of timeList) {
+    const visitRepresentation = formatPrevVisit(visitTime)
+
+    if (!(representationSet.has(visitRepresentation))) {
+      representationSet.add(visitRepresentation)
+      resultNewToOld.push(visitTime)
+
+      if (representationSet.size >= 3) {
+        break
+      }
+    }
+  }
+
+  return resultNewToOld
+}
+
+async function getVisitListForUrl(url) {
   const visitList = (await chrome.history.getVisits({ url }))
     .filter((i) => i.visitTime)
    
@@ -75,51 +99,74 @@ export async function getPreviousVisitList(url) {
   const filteredTimeList = filteredList
     .map((i) => i.visitTime)
 
-  const representationSet = new Set()
-  const resultNewToOld = []
+  return filteredTimeList
+}
 
-  for (const visitTime of filteredTimeList) {
-    const visitRepresentation = formatPrevVisit(visitTime)
+async function getVisitListForUrlList(urlList) {
+  const allVisitList = await Promise.all(urlList.map(
+    url => getVisitListForUrl(url)
+  ))
 
-    if (!(representationSet.has(visitRepresentation))) {
-      representationSet.add(visitRepresentation)
-      resultNewToOld.push(visitTime)
+  return allVisitList
+    .flat()
+    .sort((a,b) => -(a - b))
+}
 
-      if (representationSet.size >= 3) {
-        break
-      }
+async function getPreviousVisitList(url) {
+  let rootUrl
+
+  if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+    const { cleanUrl, isPattern } = removeQueryParamsIfTarget(url)
+
+    if (isPattern) {
+      rootUrl = cleanUrl
     }
+  } 
+
+  if (rootUrl) {
+    const historyItemList = (await chrome.history.search({
+      text: rootUrl,
+      maxResults: 10,
+    }))
+      .filter((i) => i.url && i.url.startsWith(rootUrl))
+
+    return getVisitListForUrlList(historyItemList.map(i => i.url))
+  } else {
+    return getVisitListForUrl(url)
   }
-
-  // logDebug('getPreviousVisitList', url)
-  // logDebug('newToOldList', newToOldList)
-  // logDebug('filteredList', filteredList)
-  // logDebug('resultNewToOld', resultNewToOld)
-
-  return resultNewToOld
 }
 
 export async function getHistoryInfo({ url, useCache=false }) {
   const showPreviousVisit = memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT]
   
   if (!(showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS || showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM)) {
-    return []
+    return {
+      visitList: [],
+      source: SOURCE.ACTUAL,
+    }
   }
 
-  let previousVisitList;
+  let visitList;
+  let source;
 
   if (useCache) {
-    previousVisitList = memo.cacheUrlToVisitList.get(url);
+    visitList = memo.cacheUrlToVisitList.get(url);
     
-    if (previousVisitList) {
+    if (visitList) {
+      source = SOURCE.CACHE;
       logOptimization(' getHistoryInfoUni: from cache bookmarkInfo')
     }
   } 
   
-  if (!previousVisitList) {
-    previousVisitList = await getPreviousVisitList(url);
-    memo.cacheUrlToVisitList.add(url, previousVisitList);
+  if (!visitList) {
+    const allVisitList = await getPreviousVisitList(url);
+    visitList = filterTimeList(allVisitList)
+    source = SOURCE.ACTUAL;
+    memo.cacheUrlToVisitList.add(url, visitList);
   }
 
-  return previousVisitList;
+  return {
+    visitList,
+    source,
+  };
 }
