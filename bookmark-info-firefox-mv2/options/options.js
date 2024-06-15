@@ -32,6 +32,7 @@ const USER_SETTINGS_OPTIONS = {
   CLEAR_URL_FROM_QUERY_PARAMS: 'CLEAR_URL_FROM_QUERY_PARAMS',
   SHOW_PATH_LAYERS: 'SHOW_PATH_LAYERS',
   SHOW_PREVIOUS_VISIT: 'SHOW_PREVIOUS_VISIT',
+  SHOW_BOOKMARK_TITLE: 'SHOW_BOOKMARK_TITLE',
 }
 
 const SHOW_PREVIOUS_VISIT_OPTION = {
@@ -45,6 +46,7 @@ const USER_SETTINGS_DEFAULT_VALUE = {
   [o.CLEAR_URL_FROM_QUERY_PARAMS]: true,
   [o.SHOW_PATH_LAYERS]: 1,
   [o.SHOW_PREVIOUS_VISIT]: SHOW_PREVIOUS_VISIT_OPTION.ALWAYS,
+  [o.SHOW_BOOKMARK_TITLE]: false,
 }
 
 function makeSaveCheckboxHandler(optionId) {
@@ -136,6 +138,12 @@ async function restoreOptions() {
   element = document.querySelector(domId)
   element.value = actualSettings[optionId];
   element.addEventListener('change', makeSaveSelectHandler(optionId) );
+
+  optionId = USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.checked = actualSettings[optionId];
+  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 }
 
 document.addEventListener('DOMContentLoaded', restoreOptions);

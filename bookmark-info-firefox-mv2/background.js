@@ -32,6 +32,7 @@ const USER_SETTINGS_OPTIONS = {
   CLEAR_URL_FROM_QUERY_PARAMS: 'CLEAR_URL_FROM_QUERY_PARAMS',
   SHOW_PATH_LAYERS: 'SHOW_PATH_LAYERS',
   SHOW_PREVIOUS_VISIT: 'SHOW_PREVIOUS_VISIT',
+  SHOW_BOOKMARK_TITLE: 'SHOW_BOOKMARK_TITLE',
   // MARK_VISITED_URL: 'MARK_VISITED_URL',
 }
 
@@ -45,6 +46,7 @@ const USER_SETTINGS_DEFAULT_VALUE = {
   [o.CLEAR_URL_FROM_QUERY_PARAMS]: true,
   [o.SHOW_PATH_LAYERS]: 1, // [1, 2, 3]
   [o.SHOW_PREVIOUS_VISIT]: SHOW_PREVIOUS_VISIT_OPTION.ALWAYS,
+  [o.SHOW_BOOKMARK_TITLE]: false,
 }
 
 const clearUrlTargetList = [
@@ -685,6 +687,7 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
     command: "bookmarkInfo",
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
+    isShowTitle: memo.settings[USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE],
   }
 
   logSendEvent('updateBookmarksForTabTask()', tabId, message);
