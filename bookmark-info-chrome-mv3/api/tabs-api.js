@@ -66,6 +66,7 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
     command: "bookmarkInfo",
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
+    isShowTitle: memo.settings[USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE],
   }
 
   logSendEvent('updateBookmarksForTabTask()', tabId, message);

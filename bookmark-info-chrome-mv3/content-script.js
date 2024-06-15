@@ -87,6 +87,11 @@ const log = SHOW_LOG ? console.log : () => {};
       'background-color: fuchsia',
       'position: relative',
     ].join(';'),
+    title: [
+      'padding-left: 0.5ch',
+      'color: black',
+      'background: lavender',
+    ].join(';'),
   }
   const STYLE_ELEMENT = (
 `
@@ -191,6 +196,7 @@ const log = SHOW_LOG ? console.log : () => {};
     const showLayer = input.showLayer || 1
     const visitList = input.visitList || []
     const showPreviousVisit = input.showPreviousVisit || SHOW_PREVIOUS_VISIT_OPTION.NEVER
+    const isShowTitle = input.isShowTitle || false
 
     log('showBookmarkInfo 00');
 
@@ -217,7 +223,20 @@ const log = SHOW_LOG ? console.log : () => {};
     const rawNodeList = rootDiv.childNodes;
     const beforeRawLength = rawNodeList.length;
 
-    const drawList = bookmarkInfoList.map((value) => ({ type: 'bookmark', value }))
+    const drawList = []
+    let prevTitle
+    bookmarkInfoList.forEach((value) => {
+      const { title } = value
+
+      if (isShowTitle && title) {
+        if (title !== prevTitle) {
+          drawList.push({ type: 'title', value: title })        
+          prevTitle = title
+        }  
+      }
+      
+      drawList.push({ type: 'bookmark', value })
+    })
 
     const isShowPreviousVisit = showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS 
       || (showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM && bookmarkInfoList.length === 0)
@@ -262,7 +281,6 @@ const log = SHOW_LOG ? console.log : () => {};
           divLabel.appendChild(span);
         })
   
-  
         divLabel.addEventListener('click', hideBookmarks);
         // TODO sanitize: remove ",<,>
         // const sanitizedFullPath = fullPath
@@ -290,6 +308,14 @@ const log = SHOW_LOG ? console.log : () => {};
         divRow.appendChild(divLabel);
         divRow.appendChild(divDelBtn);
   
+      } else if (type === 'title') {
+        const divLabel = document.createElement('div');
+        divLabel.style = STYLE.title;
+        divLabel.addEventListener('click', hideBookmarks);
+        const textNode = document.createTextNode(`${value} :title`);
+        divLabel.appendChild(textNode);
+
+        divRow.appendChild(divLabel);
       } else if (type === 'history') {
         const divLabel = document.createElement('div');
         divLabel.style = STYLE.history;
