@@ -7,4 +7,5 @@ export const CONFIG = {
   SHOW_LOG_QUEUE: false,
   SHOW_LOG: false,
   SHOW_DEBUG: false,
+  SHOW_SETTINGS: false,
 }

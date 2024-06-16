@@ -127,6 +127,12 @@ async function restoreOptions() {
   element = document.querySelector(domId)
   element.value = formatTargetList().join('\n');
 
+  optionId = USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.checked = actualSettings[optionId];
+  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
+
   optionId = USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS;
   domId = `#${optionId}`
   element = document.querySelector(domId)
@@ -138,12 +144,6 @@ async function restoreOptions() {
   element = document.querySelector(domId)
   element.value = actualSettings[optionId];
   element.addEventListener('change', makeSaveSelectHandler(optionId) );
-
-  optionId = USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE;
-  domId = `#${optionId}`
-  element = document.querySelector(domId)
-  element.checked = actualSettings[optionId];
-  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 }
 
 document.addEventListener('DOMContentLoaded', restoreOptions);

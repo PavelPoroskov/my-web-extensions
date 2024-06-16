@@ -1,8 +1,8 @@
+// console.log('IMPORTING', 'memo.js')
 import { CacheWithLimit } from './cache.js'
-import { USER_SETTINGS_DEFAULT_VALUE } from '../constants.js'
 import { readSettings } from './settings-api.js'
 import {
-  log,
+  logSettings,
 } from './debug.js'
 
 export const memo = {
@@ -15,20 +15,41 @@ export const memo = {
   // tabId -> bookmarkId
   tabMap: new Map(),
   // isRemovingOnlyUncleanUrlBookmarkSet: new Set(),
-  settings: USER_SETTINGS_DEFAULT_VALUE,
-  profileStartMS: undefined,
 
+  _settings: {},
   async readActualSettings () {
-    this.settings = await readSettings();
-    log('readActualSettings')
-    log(`actual settings: ${Object.entries(this.settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)
+    this._settings = await readSettings();
+    logSettings('readActualSettings')
+    logSettings(`actual settings: ${Object.entries(this.settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)
+  },
+  get settings() {
+    return { ...this._settings }
   },
 
-  setProfileStartTime () {
-    if (!this.profileStartTime) {
-      this.profileStartMS = Date.now() 
-      // logDebug('memo.setProfileStartTime', this.profileStartMS)
+  profileStartMS: undefined,
+
+  _isMemoInitDone: false,
+  async initMemo() {
+    if (!this._isMemoInitDone) {
+      this._isMemoInitDone = true
+
+      const SESSION_OPTION_START_TIME = 'SESSION_OPTION_START_TIME'
+      const storedSession = await chrome.storage.session.get(SESSION_OPTION_START_TIME)
+      logSettings('storedProfileStartTime', storedSession)
+
+      if (storedSession[SESSION_OPTION_START_TIME]) {
+        this.profileStartMS = storedSession[SESSION_OPTION_START_TIME]
+      } else {
+        this.profileStartMS = performance.timeOrigin
+        await chrome.storage.session.set({
+          [SESSION_OPTION_START_TIME]: this.profileStartMS
+        })
+      }
+      logSettings('profileStartMS', new Date(this.profileStartMS).toISOString())
+
+      await this.readActualSettings()
     }
   }
 };
 
+logSettings('IMPORT END', 'memo.js', new Date().toISOString())

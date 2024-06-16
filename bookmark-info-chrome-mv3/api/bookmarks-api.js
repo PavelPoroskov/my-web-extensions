@@ -1,6 +1,6 @@
 import {
   logOptimization,
-  logDebug,
+  log
 } from './debug.js'
 import {
   memo,
@@ -23,16 +23,16 @@ export async function deleteBookmark(bkmId) {
 }
 
 export async function deleteUncleanUrlBookmarkForTab(tabId) {
-  logDebug('deleteUncleanUrlBookmarkForTab 00 tabId', tabId)
+  log('deleteUncleanUrlBookmarkForTab 00 tabId', tabId)
   if (!tabId) {
     return
   }
 
   const tabData = memo.tabMap.get(tabId)
-  logDebug('deleteUncleanUrlBookmarkForTab 11 tabData', tabData)
+  log('deleteUncleanUrlBookmarkForTab 11 tabData', tabData)
 
   if (tabData?.bookmarkId) {
-    logDebug('deleteUncleanUrlBookmarkForTab 22')
+    log('deleteUncleanUrlBookmarkForTab 22')
     await chrome.bookmarks.remove(tabData.bookmarkId)
     memo.tabMap.delete(tabId)
   }

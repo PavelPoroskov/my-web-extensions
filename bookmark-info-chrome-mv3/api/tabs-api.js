@@ -3,6 +3,7 @@ import {
   logEvent,
   logSendEvent,
   logIgnore,
+  // logDebug
 } from './debug.js'
 import {
   promiseQueue,
@@ -50,6 +51,7 @@ export async function cleanUrlIfTarget({ url, tabId }) {
 
 async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
   log('updateBookmarksForTabTask(', tabId, useCache, url);
+  // logDebug('updateBookmarksForTabTask(', tabId, useCache, url)
 
   let actualUrl = url
 
@@ -70,6 +72,7 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
   }
 
   logSendEvent('updateBookmarksForTabTask()', tabId, message);
+  // logDebug('updateBookmarksForTabTask() sendMessage', tabId, message)
 
   return chrome.tabs.sendMessage(tabId, message)
     .then(() => bookmarkInfo);
@@ -92,6 +95,8 @@ async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
 
 export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
   if (url && isSupportedProtocol(url)) {
+    await memo.initMemo()
+
     log(`${debugCaller} -> updateTab() useCache`, useCache);
     promiseQueue.add({
       key: `${tabId}-bkm`,
@@ -116,6 +121,7 @@ export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
 
 export async function updateActiveTab({ useCache=false, debugCaller } = {}) {
   logEvent(' updateActiveTab() 00')
+  // logDebug(' updateActiveTab() 00')
   const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   const [Tab] = tabs;
 

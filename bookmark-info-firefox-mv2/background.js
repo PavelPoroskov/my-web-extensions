@@ -81,6 +81,7 @@ const clearUrlTargetList = [
   SHOW_LOG_QUEUE: false,
   SHOW_LOG: false,
   SHOW_DEBUG: false,
+  SHOW_SETTINGS: false,
 }
 const makeLogWithTime = () => {
   let startTime;
@@ -125,6 +126,7 @@ const logIgnore = CONFIG.SHOW_LOG_IGNORE ? makeLogWithPrefix('IGNORE') : () => {
 const logOptimization = CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OPTIMIZATION') : () => { };
 const logPromiseQueue = CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
 const logDebug = CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
+const logSettings = CONFIG.SHOW_SETTINGS ? makeLogWithPrefix('SETTINGS') : () => { };
 class CacheWithLimit {
   constructor ({ name='cache', size = 100 }) {
     this.cache = new Map();
@@ -193,7 +195,8 @@ const logDebug = CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
     ...savedSettings,
   }
 }
-const memo = {
+// console.log('IMPORTING', 'memo.js')
+const memo = {
   activeTabId: '',
   previousTabId: '',
   // previousActiveTabId: '',
@@ -203,22 +206,44 @@ const logDebug = CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
   // tabId -> bookmarkId
   tabMap: new Map(),
   // isRemovingOnlyUncleanUrlBookmarkSet: new Set(),
-  settings: USER_SETTINGS_DEFAULT_VALUE,
-  profileStartMS: undefined,
 
+  _settings: {},
   async readActualSettings () {
-    this.settings = await readSettings();
-    log('readActualSettings')
-    log(`actual settings: ${Object.entries(this.settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)
+    this._settings = await readSettings();
+    logSettings('readActualSettings')
+    logSettings(`actual settings: ${Object.entries(this.settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)
+  },
+  get settings() {
+    return { ...this._settings }
   },
 
-  setProfileStartTime () {
-    if (!this.profileStartTime) {
-      this.profileStartMS = Date.now() 
-      // logDebug('memo.setProfileStartTime', this.profileStartMS)
+  profileStartMS: undefined,
+
+  _isMemoInitDone: false,
+  async initMemo() {
+    if (!this._isMemoInitDone) {
+      this._isMemoInitDone = true
+
+      const SESSION_OPTION_START_TIME = 'SESSION_OPTION_START_TIME'
+      const storedSession = await browser.storage.session.get(SESSION_OPTION_START_TIME)
+      logSettings('storedProfileStartTime', storedSession)
+
+      if (storedSession[SESSION_OPTION_START_TIME]) {
+        this.profileStartMS = storedSession[SESSION_OPTION_START_TIME]
+      } else {
+        this.profileStartMS = performance.timeOrigin
+        await browser.storage.session.set({
+          [SESSION_OPTION_START_TIME]: this.profileStartMS
+        })
+      }
+      logSettings('profileStartMS', new Date(this.profileStartMS).toISOString())
+
+      await this.readActualSettings()
     }
   }
 };
+
+logSettings('IMPORT END', 'memo.js', new Date().toISOString())
 class PromiseQueue {
   constructor () {
     this.promise = {};
@@ -305,16 +330,16 @@ async function deleteBookmark(bkmId) {
 }
 
 async function deleteUncleanUrlBookmarkForTab(tabId) {
-  logDebug('deleteUncleanUrlBookmarkForTab 00 tabId', tabId)
+  log('deleteUncleanUrlBookmarkForTab 00 tabId', tabId)
   if (!tabId) {
     return
   }
 
   const tabData = memo.tabMap.get(tabId)
-  logDebug('deleteUncleanUrlBookmarkForTab 11 tabData', tabData)
+  log('deleteUncleanUrlBookmarkForTab 11 tabData', tabData)
 
   if (tabData?.bookmarkId) {
-    logDebug('deleteUncleanUrlBookmarkForTab 22')
+    log('deleteUncleanUrlBookmarkForTab 22')
     await browser.bookmarks.remove(tabData.bookmarkId)
     memo.tabMap.delete(tabId)
   }
@@ -671,6 +696,7 @@ async function cleanUrlIfTarget({ url, tabId }) {
 
 async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
   log('updateBookmarksForTabTask(', tabId, useCache, url);
+  // logDebug('updateBookmarksForTabTask(', tabId, useCache, url)
 
   let actualUrl = url
 
@@ -691,6 +717,7 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
   }
 
   logSendEvent('updateBookmarksForTabTask()', tabId, message);
+  // logDebug('updateBookmarksForTabTask() sendMessage', tabId, message)
 
   return browser.tabs.sendMessage(tabId, message)
     .then(() => bookmarkInfo);
@@ -713,6 +740,8 @@ async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
 
 async function updateTab({ tabId, url, useCache=false, debugCaller }) {
   if (url && isSupportedProtocol(url)) {
+    await memo.initMemo()
+
     log(`${debugCaller} -> updateTab() useCache`, useCache);
     promiseQueue.add({
       key: `${tabId}-bkm`,
@@ -737,6 +766,7 @@ async function updateTab({ tabId, url, useCache=false, debugCaller }) {
 
 async function updateActiveTab({ useCache=false, debugCaller } = {}) {
   logEvent(' updateActiveTab() 00')
+  // logDebug(' updateActiveTab() 00')
   const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
   const [Tab] = tabs;
 
@@ -1047,10 +1077,9 @@ const bookmarksController = {
 }
 
 const runtimeController = {
-  onStartup() {
+  async onStartup() {
     logEvent('runtime.onStartup');
-    memo.setProfileStartTime()
-    memo.readActualSettings()
+    await memo.initMemo()
     // is only firefox use it?
     createContextMenu()
     updateActiveTab({
@@ -1058,10 +1087,9 @@ const runtimeController = {
       debugCaller: 'runtime.onStartup'
     });
   },
-  onInstalled () {
+  async onInstalled () {
     logEvent('runtime.onInstalled');
-    memo.setProfileStartTime()
-    memo.readActualSettings()
+    await memo.initMemo()
     createContextMenu()
     updateActiveTab({
       useCache: true,
@@ -1194,9 +1222,10 @@ const runtimeController = {
   }
 }
 const windowsController = {
-  onFocusChanged(windowId) {
+  async onFocusChanged(windowId) {
     if (0 < windowId) {
       logEvent('windows.onFocusChanged', windowId);
+      await memo.initMemo()
       updateActiveTab({
         useCache: true,
         debugCaller: 'windows.onFocusChanged'
@@ -1239,8 +1268,7 @@ const runtimeController = {
     }
   }
 }
-logEvent('loading bkm-info-sw.js');
-
+// console.log('IMPORTING', 'bkm-info-sw.js')
 browser.bookmarks.onCreated.addListener(bookmarksController.onCreated);
 browser.bookmarks.onMoved.addListener(bookmarksController.onMoved);
 browser.bookmarks.onChanged.addListener(bookmarksController.onChanged);
@@ -1260,3 +1288,5 @@ browser.menus.onClicked.addListener(contextMenusController.onClicked);
 browser.runtime.onStartup.addListener(runtimeController.onStartup)
 browser.runtime.onInstalled.addListener(runtimeController.onInstalled);
 browser.runtime.onMessage.addListener(runtimeController.onMessage);
+
+// console.log('IMPORT END', 'bkm-info-sw.js')

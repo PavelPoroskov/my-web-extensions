@@ -2,7 +2,7 @@ import {
   deleteBookmark,
 } from '../api/bookmarks-api.js'
 import {
-  logEvent,
+  logEvent
 } from '../api/debug.js'
 import {
   memo,
@@ -42,10 +42,9 @@ async function createContextMenu() {
 }
 
 export const runtimeController = {
-  onStartup() {
+  async onStartup() {
     logEvent('runtime.onStartup');
-    memo.setProfileStartTime()
-    memo.readActualSettings()
+    await memo.initMemo()
     // is only firefox use it?
     createContextMenu()
     updateActiveTab({
@@ -53,10 +52,9 @@ export const runtimeController = {
       debugCaller: 'runtime.onStartup'
     });
   },
-  onInstalled () {
+  async onInstalled () {
     logEvent('runtime.onInstalled');
-    memo.setProfileStartTime()
-    memo.readActualSettings()
+    await memo.initMemo()
     createContextMenu()
     updateActiveTab({
       useCache: true,
