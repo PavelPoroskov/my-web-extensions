@@ -3,9 +3,9 @@ Browser extension
 
 ## What it does
 
-The “Bookmark Information” extension allows you to distinguish a new page from an already visited one. 
+The “Bookmark Information” extension allows a user to distinguish a new page from an already visited one. 
 This increases your productivity when you need to view many pages.
-The Bookmarks Info extension shows for the current URL previous visit and folder of current bookmark. 
+The Bookmarks Info extension shows previous visit and folder of a bookmark for the current URL. 
 
 1) The extension clears query params from url on opening for defined sites.
 2) The extension shows the previous visit to the current URL if it is not the first visit.

@@ -225,7 +225,7 @@ const log = SHOW_LOG ? console.log : () => {};
 
     const drawList = []
     let prevTitle
-    bookmarkInfoList.forEach((value) => {
+    bookmarkInfoList.forEach((value, index) => {
       const { title } = value
 
       if (isShowTitle && title) {
@@ -235,7 +235,7 @@ const log = SHOW_LOG ? console.log : () => {};
         }  
       }
       
-      drawList.push({ type: 'bookmark', value })
+      drawList.push({ type: 'bookmark', value, color: colors[index % 2] })
     })
 
     const isShowPreviousVisit = showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS 
@@ -250,7 +250,7 @@ const log = SHOW_LOG ? console.log : () => {};
       drawList.push({ type: 'history', value: prevVisit })
     }
 
-    drawList.forEach(({ type, value }, index) => {
+    drawList.forEach(({ type, value, color }, index) => {
       const divRow = document.createElement('div');
       divRow.style = STYLE.row;
       const divL = document.createElement('div');
@@ -264,7 +264,7 @@ const log = SHOW_LOG ? console.log : () => {};
         const restPath = restPathList.concat('').join('/ ')
   
         const divLabel = document.createElement('div');
-        divLabel.style = `${STYLE.label};background-color:${colors[index % 2]}`;
+        divLabel.style = `${STYLE.label};background-color:${color}`;
         divLabel.classList.add('bkmLabel');
   
         shortPathList[shortPathList.length - 1] = `${shortPathList[shortPathList.length - 1]} :bkm`
