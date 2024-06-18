@@ -44,7 +44,6 @@ async function createContextMenu() {
 export const runtimeController = {
   async onStartup() {
     logEvent('runtime.onStartup');
-    await memo.initMemo()
     // is only firefox use it?
     createContextMenu()
     updateActiveTab({
@@ -54,7 +53,6 @@ export const runtimeController = {
   },
   async onInstalled () {
     logEvent('runtime.onInstalled');
-    await memo.initMemo()
     createContextMenu()
     updateActiveTab({
       useCache: true,
@@ -89,7 +87,7 @@ export const runtimeController = {
       }
       case "optionsChanged": {
         logEvent('runtime.onMessage optionsChanged');
-        memo.readActualSettings()
+        memo.invalidateSettings()
 
         if (message?.optionId === USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT) {
           memo.cacheUrlToVisitList.clear()

@@ -1,6 +1,6 @@
 // console.log('IMPORTING', 'memo.js')
 import { CacheWithLimit } from './cache.js'
-import { readSettings } from './settings-api.js'
+import { readSettingsFromStorage } from './settings-api.js'
 import {
   logSettings,
 } from './debug.js'
@@ -16,38 +16,56 @@ export const memo = {
   tabMap: new Map(),
   // isRemovingOnlyUncleanUrlBookmarkSet: new Set(),
 
+  _isSettingsActual: false,
+  get isSettingsActual() {
+    return this._isSettingsActual
+  },
+  invalidateSettings () {
+    this._isSettingsActual = false
+  },
   _settings: {},
-  async readActualSettings () {
-    this._settings = await readSettings();
-    logSettings('readActualSettings')
-    logSettings(`actual settings: ${Object.entries(this.settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)
+  async readSettings() {
+    if (!this._isSettingsActual) {
+      this._isSettingsActual = true
+
+      this._settings = await readSettingsFromStorage();
+      logSettings('readSavedSettings')
+      logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
+    }
   },
   get settings() {
     return { ...this._settings }
   },
 
-  profileStartMS: undefined,
-
-  _isMemoInitDone: false,
-  async initMemo() {
-    if (!this._isMemoInitDone) {
-      this._isMemoInitDone = true
+  _profileStartTimeMS: undefined,
+  get profileStartTimeMS() {
+    return this._profileStartTimeMS
+  },
+  _isProfileStartTimeMSActual: false,
+  get isProfileStartTimeMSActual() {
+    return this._isProfileStartTimeMSActual
+  },
+  async readProfileStartTimeMS() {
+    if (!this._isProfileStartTimeMSActual) {
+      this._isProfileStartTimeMSActual = true
 
       const SESSION_OPTION_START_TIME = 'SESSION_OPTION_START_TIME'
       const storedSession = await chrome.storage.session.get(SESSION_OPTION_START_TIME)
-      logSettings('storedProfileStartTime', storedSession)
+      logSettings('storedSession', storedSession)
 
       if (storedSession[SESSION_OPTION_START_TIME]) {
-        this.profileStartMS = storedSession[SESSION_OPTION_START_TIME]
+        this._profileStartTimeMS = storedSession[SESSION_OPTION_START_TIME]
       } else {
-        this.profileStartMS = performance.timeOrigin
+        // I get start for service-worker now.
+        //    It is correct if this web-extension was installed in the previous browser session
+        // It is better get for window // min(window.startTime(performance.timeOrigin)) OR min(tab(performance.timeOrigin))
+        //  tab with minimal tabId
+        this._profileStartTimeMS = performance.timeOrigin
         await chrome.storage.session.set({
-          [SESSION_OPTION_START_TIME]: this.profileStartMS
+          [SESSION_OPTION_START_TIME]: this._profileStartTimeMS
         })
       }
-      logSettings('profileStartMS', new Date(this.profileStartMS).toISOString())
-
-      await this.readActualSettings()
+      logSettings('profileStartTimeMS', new Date(this._profileStartTimeMS).toISOString())
     }
   }
 };

@@ -85,7 +85,7 @@ async function getVisitListForUrl(url) {
     
     const mostNewVisitMS = newToOldList[0]?.visitTime
 
-    if (mostNewVisitMS && mostNewVisitMS > memo.profileStartMS) {
+    if (mostNewVisitMS && mostNewVisitMS > memo.profileStartTimeMS) {
       previousList = newToOldList.slice(1)
     } else {
       previousList = newToOldList

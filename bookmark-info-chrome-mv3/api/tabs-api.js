@@ -95,7 +95,13 @@ async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
 
 export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
   if (url && isSupportedProtocol(url)) {
-    await memo.initMemo()
+
+    if (!memo.isSettingsActual) {
+      await memo.readSettings()
+    }
+    if (!memo.isProfileStartTimeMSActual) {
+      await memo.readProfileStartTimeMS()
+    }
 
     log(`${debugCaller} -> updateTab() useCache`, useCache);
     promiseQueue.add({
