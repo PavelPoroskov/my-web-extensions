@@ -1,9 +1,16 @@
 // console.log('IMPORTING', 'memo.js')
 import { CacheWithLimit } from './cache.js'
-import { readSettingsFromStorage } from './settings-api.js'
 import {
   logSettings,
 } from './debug.js'
+import {
+  filterFixedTagList,
+  getRecentTagList
+} from './bookmarks-api.js'
+import { USER_SETTINGS_DEFAULT_VALUE, USER_SETTINGS_OPTIONS, RECENT_TAG_INTERNAL_LIMIT } from '../constants.js';
+
+const STORAGE_LOCAL__FIXED_TAG_LIST = 'FIXED_TAG_LIST'
+const STORAGE_SESSION__RECENT_TAG_LIST = 'RECENT_TAG_LIST'
 
 export const memo = {
   activeTabId: '',
@@ -28,7 +35,14 @@ export const memo = {
     if (!this._isSettingsActual) {
       this._isSettingsActual = true
 
-      this._settings = await readSettingsFromStorage();
+      const savedSettings = await chrome.storage.local.get(
+        Object.values(USER_SETTINGS_OPTIONS)
+      );
+    
+      this._settings = {
+        ...USER_SETTINGS_DEFAULT_VALUE,
+        ...savedSettings,
+      };
       logSettings('readSavedSettings')
       logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
     }
@@ -49,12 +63,12 @@ export const memo = {
     if (!this._isProfileStartTimeMSActual) {
       this._isProfileStartTimeMSActual = true
 
-      const SESSION_OPTION_START_TIME = 'SESSION_OPTION_START_TIME'
-      const storedSession = await chrome.storage.session.get(SESSION_OPTION_START_TIME)
+      const STORAGE_SESSION__START_TIME = 'START_TIME'
+      const storedSession = await chrome.storage.session.get(STORAGE_SESSION__START_TIME)
       logSettings('storedSession', storedSession)
 
-      if (storedSession[SESSION_OPTION_START_TIME]) {
-        this._profileStartTimeMS = storedSession[SESSION_OPTION_START_TIME]
+      if (storedSession[STORAGE_SESSION__START_TIME]) {
+        this._profileStartTimeMS = storedSession[STORAGE_SESSION__START_TIME]
       } else {
         // I get start for service-worker now.
         //    It is correct if this web-extension was installed in the previous browser session
@@ -62,11 +76,166 @@ export const memo = {
         //  tab with minimal tabId
         this._profileStartTimeMS = performance.timeOrigin
         await chrome.storage.session.set({
-          [SESSION_OPTION_START_TIME]: this._profileStartTimeMS
+          [STORAGE_SESSION__START_TIME]: this._profileStartTimeMS
         })
       }
       logSettings('profileStartTimeMS', new Date(this._profileStartTimeMS).toISOString())
     }
+  },
+
+  _isTagListActual: false,
+  _fixedTagList: [],
+  _recentTagList: [],
+  get isTagListActual() {
+    return this._isTagListActual
+  },
+  get fixedTagList() {
+    return this._fixedTagList
+  },
+  get recentTagList() {
+    return this._recentTagList
+  },
+  // async addFixedTag() {
+  //   const STORAGE_LOCAL__FIXED_TAG_LIST = 'FIXED_TAG_LIST'
+  //   const savedList = await chrome.storage.local.get(
+  //     STORAGE_LOCAL__FIXED_TAG_LIST
+  //   );
+  
+  // },
+  async readTagList() {
+    if (!this._isTagListActual) {
+      this._isTagListActual = true
+
+      if (this._settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+        const [savedLocal, savedSession] = await Promise.all([
+          chrome.storage.local.get(STORAGE_LOCAL__FIXED_TAG_LIST),
+          chrome.storage.session.get(STORAGE_SESSION__RECENT_TAG_LIST),
+        ]);
+      
+  
+        if (!savedSession[STORAGE_SESSION__RECENT_TAG_LIST]) {
+          this._fixedTagList = await filterFixedTagList(savedLocal[STORAGE_LOCAL__FIXED_TAG_LIST])
+          this._recentTagList = await getRecentTagList(RECENT_TAG_INTERNAL_LIMIT)
+        } else {
+          this._fixedTagList = savedLocal[STORAGE_LOCAL__FIXED_TAG_LIST] || []
+          this._recentTagList = savedSession[STORAGE_SESSION__RECENT_TAG_LIST]
+        }  
+      } else {
+
+        this._fixedTagList = []
+        this._recentTagList = []
+      }
+    }
+  },
+  async addRecentTag({ parentId, dateAdded }) {
+    const actualDateAdded = dateAdded || Date.now()
+
+    const folderByIdMap = Object.fromEntries(
+      this._recentTagList.map(({ parentId, title, dateAdded }) => [
+        parentId,
+        {
+          title,
+          dateAdded,
+          isSourceFolder: true,
+        }
+      ])
+    )
+
+    const newFolder = await chrome.bookmarks.get(parentId)
+    folderByIdMap[parentId] = {
+      ...folderByIdMap[parentId],
+      dateAdded: actualDateAdded,
+      title: newFolder.title
+    }
+
+    this._recentTagList = Object.entries(folderByIdMap)
+      .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+      .sort((a,b) => -(a.dateAdded - b.dateAdded))
+      .slice(0, RECENT_TAG_INTERNAL_LIMIT)
+
+    await chrome.storage.session.set({
+      [STORAGE_SESSION__RECENT_TAG_LIST]: this._recentTagList
+    })
+  },
+  async removeTag(id) {
+    const isInFixedList = this._fixedTagList.some(({ parentId }) => parentId === id)
+
+    if (isInFixedList) {
+      this._fixedTagList = this._fixedTagList.filter(({ parentId }) => parentId !== id)
+    }
+
+    const isInRecentList = this._recentTagList.some(({ parentId }) => parentId === id)
+
+    if (isInRecentList) {
+      this._recentTagList = this._recentTagList.filter(({ parentId }) => parentId !== id)
+    }
+
+    if (isInFixedList || isInRecentList) {
+      await Promise.all([
+        isInFixedList && chrome.storage.local.set({
+          [STORAGE_LOCAL__FIXED_TAG_LIST]: this._fixedTagList
+        }),
+        isInRecentList && chrome.storage.session.set({
+          [STORAGE_SESSION__RECENT_TAG_LIST]: this._recentTagList
+        })
+      ])
+    }
+  },
+  async updateTag(id, title) {
+    const isInFixedList = this._fixedTagList.some(({ parentId }) => parentId === id)
+
+    if (isInFixedList) {
+      this._fixedTagList = this._fixedTagList.map(
+        (item) => (item.parentId === id
+          ? {
+            ...item,
+            title,
+          }
+          : item
+        )
+      )
+    }
+
+    const isInRecentList = this._recentTagList.some(({ parentId }) => parentId === id)
+
+    if (isInRecentList) {
+      this._recentTagList = this._recentTagList.map(
+        (item) => (item.parentId === id
+          ? {
+            ...item,
+            title,
+          }
+          : item
+        )
+      )
+    }
+
+    if (isInFixedList || isInRecentList) {
+      await Promise.all([
+        isInFixedList && chrome.storage.local.set({
+          [STORAGE_LOCAL__FIXED_TAG_LIST]: this._fixedTagList
+        }),
+        isInRecentList && chrome.storage.session.set({
+          [STORAGE_SESSION__RECENT_TAG_LIST]: this._recentTagList
+        })
+      ])
+    }
+  },
+  async addFixedTag({ parentId, title }) {
+    const item = this._fixedTagList.find((item) => item.parentId === parentId)
+
+    if (!item) {
+      this._fixedTagList.push({ parentId, title })
+      await chrome.storage.local.set({
+        [STORAGE_LOCAL__FIXED_TAG_LIST]: this._fixedTagList
+      })
+    }
+  },
+  async removeFixedTag(id) {
+    this._fixedTagList = this._fixedTagList.filter(({ parentId }) => parentId !== id)
+    await chrome.storage.local.set({
+      [STORAGE_LOCAL__FIXED_TAG_LIST]: this._fixedTagList
+    })
   }
 };
 

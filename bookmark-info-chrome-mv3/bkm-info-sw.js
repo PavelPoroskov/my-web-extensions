@@ -4,6 +4,7 @@ import { tabsController } from './controllers/tabs.controller.js';
 import { windowsController } from './controllers/windows.controller.js';
 import { runtimeController } from './controllers/runtime.controller.js';
 import { contextMenusController } from './controllers/contextMenus.controller.js';
+import { storageController } from './controllers/storage.controller.js';
 
 chrome.bookmarks.onCreated.addListener(bookmarksController.onCreated);
 chrome.bookmarks.onMoved.addListener(bookmarksController.onMoved);
@@ -24,5 +25,7 @@ chrome.contextMenus.onClicked.addListener(contextMenusController.onClicked);
 chrome.runtime.onStartup.addListener(runtimeController.onStartup)
 chrome.runtime.onInstalled.addListener(runtimeController.onInstalled);
 chrome.runtime.onMessage.addListener(runtimeController.onMessage);
+
+chrome.storage.onChanged.addListener(storageController.onChanged);
 
 // console.log('IMPORT END', 'bkm-info-sw.js')

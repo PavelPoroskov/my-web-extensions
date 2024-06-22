@@ -25,6 +25,7 @@ import {
 } from './memo.js'
 import {
   USER_SETTINGS_OPTIONS,
+  RECENT_TAG_VISIBLE_LIMIT,
 } from '../constants.js'
 
 let cleanUrl
@@ -64,11 +65,22 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
   } 
 
   const bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
+  const usedParentIdSet = new Set(bookmarkInfo.map(({ parentId }) => parentId))
+  const fixedParentIdSet = new Set(memo.fixedTagList.map(({ parentId }) => parentId))
+  const usedOrFixedParentIdSet = usedParentIdSet.union(fixedParentIdSet)
+
   const message = {
     command: "bookmarkInfo",
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
     isShowTitle: memo.settings[USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE],
+    fixedTagList: memo.fixedTagList
+      .filter(({ parentId }) => !usedParentIdSet.has(parentId))
+      .sort(({ title: a }, { title: b}) => a.localeCompare(b)),
+    recentTagList: memo.recentTagList
+      .filter(({ parentId }) => !usedOrFixedParentIdSet.has(parentId))
+      .sort(({ title: a }, { title: b}) => a.localeCompare(b))
+      .slice(0, RECENT_TAG_VISIBLE_LIMIT),
   }
 
   logSendEvent('updateBookmarksForTabTask()', tabId, message);
@@ -96,11 +108,13 @@ async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
 export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
   if (url && isSupportedProtocol(url)) {
 
-    if (!memo.isSettingsActual) {
-      await memo.readSettings()
-    }
-    if (!memo.isProfileStartTimeMSActual) {
-      await memo.readProfileStartTimeMS()
+    await Promise.all([
+      !memo.isProfileStartTimeMSActual && memo.readProfileStartTimeMS(),
+      !memo.isSettingsActual && memo.readSettings(),
+    ])
+
+    if (!memo.isTagListActual) {
+      await memo.readTagList()
     }
 
     log(`${debugCaller} -> updateTab() useCache`, useCache);

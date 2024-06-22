@@ -5,17 +5,16 @@ import {
   logEvent
 } from '../api/debug.js'
 import {
-  memo,
-} from '../api/memo.js'
-import {
   cleanUrlIfTarget,
   updateActiveTab,
   updateTab,
 } from '../api/tabs-api.js'
 import {
+  memo,
+} from '../api/memo.js'
+import {
   BROWSER_SPECIFIC,
   MENU,
-  USER_SETTINGS_OPTIONS,
 } from '../constants.js'
 
 async function createContextMenu() {
@@ -69,6 +68,35 @@ export const runtimeController = {
         deleteBookmark(message.bkmId);
         break
       }
+      case "addTag": {
+        logEvent('runtime.onMessage addTag');
+  
+        await chrome.bookmarks.create({
+          index: 0,
+          parentId: message.parentId,
+          title: message.title,
+          url: message.url
+        })
+
+        break
+      }
+      case "fixTag": {
+        logEvent('runtime.onMessage fixTag');
+  
+        await memo.addFixedTag({
+          parentId: message.parentId,
+          title: message.title,
+        })
+
+        break
+      }
+      case "unfixTag": {
+        logEvent('runtime.onMessage unfixTag');
+  
+        await memo.removeFixedTag(message.parentId)
+
+        break
+      }
       case "contentScriptReady": {
         const senderTabId = sender?.tab?.id;
         logEvent('runtime.onMessage contentScriptReady', senderTabId);
@@ -81,16 +109,6 @@ export const runtimeController = {
             useCache: true,
             debugCaller: 'runtime.onMessage contentScriptReady',
           })
-        }
-
-        break
-      }
-      case "optionsChanged": {
-        logEvent('runtime.onMessage optionsChanged');
-        memo.invalidateSettings()
-
-        if (message?.optionId === USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT) {
-          memo.cacheUrlToVisitList.clear()
         }
 
         break

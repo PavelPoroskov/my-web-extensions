@@ -92,6 +92,23 @@ const log = SHOW_LOG ? console.log : () => {};
       'color: black',
       'background: lavender',
     ].join(';'),
+    separator: [
+      'background-color: transparent',
+    ].join(';'),
+    fixedTag: [
+      'padding-left: 0.7ch',
+      'border-top-left-radius: 0.5lh 50%',
+      'border-bottom-left-radius: 0.5lh 50%',
+      'color: black',
+      'background-color: #0ACAD0',
+    ].join(';'),
+    recentTag: [
+      'padding-left: 0.7ch',
+      'border-top-left-radius: 0.5lh 50%',
+      'border-bottom-left-radius: 0.5lh 50%',
+      'color: black',
+      'background-color: #13D44D',
+    ].join(';'),
   }
   const STYLE_ELEMENT = (
 `
@@ -133,6 +150,18 @@ const log = SHOW_LOG ? console.log : () => {};
   display: inline-block;
   width: 0.8ch;
 }
+.fixedTag:hover {
+  background-color: #A7FAF8;
+}
+.fixedTag:active {
+  transform: translateY(0.1ch);
+}
+.recentTag:hover {
+  background-color: #B5FDC9;
+}
+.recentTag:active {
+  transform: translateY(0.1ch);
+}
 `
   );
   
@@ -144,6 +173,20 @@ const log = SHOW_LOG ? console.log : () => {};
       await chrome.runtime.sendMessage({
         command: "deleteBookmark",
         bkmId,
+      });
+    }
+  }
+
+  async function addTag(event) {
+    log('addTag 00');
+    const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
+
+    if (parentId) {
+      await chrome.runtime.sendMessage({
+        command: "addTag",
+        parentId,
+        url: document.location.href,
+        title: document.title,
       });
     }
   }
@@ -197,6 +240,8 @@ const log = SHOW_LOG ? console.log : () => {};
     const visitList = input.visitList || []
     const showPreviousVisit = input.showPreviousVisit || SHOW_PREVIOUS_VISIT_OPTION.NEVER
     const isShowTitle = input.isShowTitle || false
+    const fixedTagList = input.fixedTagList || []
+    const recentTagList = input.recentTagList || []
 
     log('showBookmarkInfo 00');
 
@@ -250,6 +295,17 @@ const log = SHOW_LOG ? console.log : () => {};
       drawList.push({ type: 'history', value: prevVisit })
     }
 
+    if (fixedTagList.length > 0 || recentTagList.length > 0) {
+      drawList.push({ type: 'separator' })
+
+      fixedTagList.forEach((value) => {
+        drawList.push({ type: 'fixedTag', value })
+      })
+      recentTagList.forEach((value) => {
+        drawList.push({ type: 'recentTag', value })
+      })
+    }
+
     drawList.forEach(({ type, value, color }, index) => {
       const divRow = document.createElement('div');
       divRow.style = STYLE.row;
@@ -257,73 +313,125 @@ const log = SHOW_LOG ? console.log : () => {};
       divL.style = STYLE.rowLeft;
       divRow.appendChild(divL);
 
-      if (type === 'bookmark') {
-        const { id, fullPathList } = value
-        const shortPathList = fullPathList.slice(-showLayer)
-        const restPathList = fullPathList.slice(0, -showLayer)
-        const restPath = restPathList.concat('').join('/ ')
+      switch (type) {
+        case 'bookmark': {
+          const { id, fullPathList } = value
+          const shortPathList = fullPathList.slice(-showLayer)
+          const restPathList = fullPathList.slice(0, -showLayer)
+          const restPath = restPathList.concat('').join('/ ')
+    
+          const divLabel = document.createElement('div');
+          divLabel.style = `${STYLE.label};background-color:${color}`;
+          divLabel.classList.add('bkmLabel');
+    
+          shortPathList[shortPathList.length - 1] = `${shortPathList[shortPathList.length - 1]} :bkm`
+          const shortPathListWithSeparator = shortPathList
+            .slice(0, -1).flatMap((str) => [str, '/ '])
+            .concat(shortPathList[shortPathList.length - 1])
+          
+          shortPathListWithSeparator.forEach((str) => {
+            const span = document.createElement('span');
+            // createTextNode is safe method for XSS-injection
+            // const shortPathList = shortPath.split(/(\/ )/)
+            const textNode = document.createTextNode(str);
+            span.appendChild(textNode);
+            divLabel.appendChild(span);
+          })
+    
+          divLabel.addEventListener('click', hideBookmarks);
+          // TODO sanitize: remove ",<,>
+          // const sanitizedFullPath = fullPath
+          //   .replaceAll('"', '&quot;')
+          //   .replaceAll('>', '&gt;')
+          //   .replaceAll('<', '&lt;')
+          // divLabel.setAttribute('data-restpath', sanitizedFullPath);
+          //
+          // Symbols ( " > < ) don't break html and displayed as text.
+          divLabel.setAttribute('data-restpath', restPath);
+    
+          const divDelBtn = document.createElement('div');
+          divDelBtn.style = STYLE.delBtn;
+          divDelBtn.setAttribute('data-bkmid', id);
+          divDelBtn.classList.add('bkmDelBtn');
+    
+          const divDelBtnLetter = document.createElement('div');
+          divDelBtnLetter.style = STYLE.delBtnLetter;
+          const textNodeDel = document.createTextNode('X');
+          divDelBtnLetter.appendChild(textNodeDel);
+          
+          divDelBtn.appendChild(divDelBtnLetter);
+          divDelBtn.addEventListener('click', deleteBookmark);
+    
+          divRow.appendChild(divLabel);
+          divRow.appendChild(divDelBtn);
   
-        const divLabel = document.createElement('div');
-        divLabel.style = `${STYLE.label};background-color:${color}`;
-        divLabel.classList.add('bkmLabel');
+          break
+        }
+        case 'history': {
+          const divLabel = document.createElement('div');
+          divLabel.style = STYLE.history;
+          divLabel.addEventListener('click', hideBookmarks);
+          const textNode = document.createTextNode(`${value} :prev. visit`);
+          divLabel.appendChild(textNode);
   
-        shortPathList[shortPathList.length - 1] = `${shortPathList[shortPathList.length - 1]} :bkm`
-        const shortPathListWithSeparator = shortPathList
-          .slice(0, -1).flatMap((str) => [str, '/ '])
-          .concat(shortPathList[shortPathList.length - 1])
-        
-        shortPathListWithSeparator.forEach((str) => {
-          const span = document.createElement('span');
-          // createTextNode is safe method for XSS-injection
-          // const shortPathList = shortPath.split(/(\/ )/)
-          const textNode = document.createTextNode(str);
-          span.appendChild(textNode);
-          divLabel.appendChild(span);
-        })
+          divRow.appendChild(divLabel);
   
-        divLabel.addEventListener('click', hideBookmarks);
-        // TODO sanitize: remove ",<,>
-        // const sanitizedFullPath = fullPath
-        //   .replaceAll('"', '&quot;')
-        //   .replaceAll('>', '&gt;')
-        //   .replaceAll('<', '&lt;')
-        // divLabel.setAttribute('data-restpath', sanitizedFullPath);
-        //
-        // Symbols ( " > < ) don't break html and displayed as text.
-        divLabel.setAttribute('data-restpath', restPath);
-  
-        const divDelBtn = document.createElement('div');
-        divDelBtn.style = STYLE.delBtn;
-        divDelBtn.setAttribute('data-bkmid', id);
-        divDelBtn.classList.add('bkmDelBtn');
-  
-        const divDelBtnLetter = document.createElement('div');
-        divDelBtnLetter.style = STYLE.delBtnLetter;
-        const textNodeDel = document.createTextNode('X');
-        divDelBtnLetter.appendChild(textNodeDel);
-        
-        divDelBtn.appendChild(divDelBtnLetter);
-        divDelBtn.addEventListener('click', deleteBookmark);
-  
-        divRow.appendChild(divLabel);
-        divRow.appendChild(divDelBtn);
-  
-      } else if (type === 'title') {
-        const divLabel = document.createElement('div');
-        divLabel.style = STYLE.title;
-        divLabel.addEventListener('click', hideBookmarks);
-        const textNode = document.createTextNode(`${value} :title`);
-        divLabel.appendChild(textNode);
+          break
+        }
+        case 'separator': {
+          const divLabel = document.createElement('div');
+          divLabel.style = STYLE.separator;
+          const textNode = document.createTextNode(' ');
+          divLabel.appendChild(textNode);
+          divRow.appendChild(divLabel);
 
-        divRow.appendChild(divLabel);
-      } else if (type === 'history') {
-        const divLabel = document.createElement('div');
-        divLabel.style = STYLE.history;
-        divLabel.addEventListener('click', hideBookmarks);
-        const textNode = document.createTextNode(`${value} :prev. visit`);
-        divLabel.appendChild(textNode);
+          break
+        }
+        case 'recentTag': {
+          const { title, parentId } = value
+          const divContainer = document.createElement('div');
+          divContainer.setAttribute('data-parentid', parentId);
 
-        divRow.appendChild(divLabel);
+          const btnFix = document.createElement('div');
+          divLabel.addEventListener('click', fixTag);
+          const textNodeFix = document.createTextNode('fix');
+          btnFix.appendChild(textNodeFix)
+
+          const divLabel = document.createElement('div');
+          divLabel.style = STYLE.recentTag;
+          divLabel.addEventListener('click', addTag);
+          const textNodeLabel = document.createTextNode(`${title} :tag`);
+          divLabel.appendChild(textNodeLabel);
+  
+          divContainer.appendChild(btnFix)
+          divContainer.appendChild(divLabel)
+          divRow.appendChild(divContainer);
+
+          break
+        }
+        case 'fixedTag': {
+          const { label, id } = value
+          const divLabel = document.createElement('div');
+          divLabel.style = STYLE.fixedTag;
+          divLabel.setAttribute('data-parentid', id);
+          divLabel.addEventListener('click', addTag);
+          const textNode = document.createTextNode(`${label} :tag`);
+          divLabel.appendChild(textNode);
+  
+          divRow.appendChild(divLabel);
+          break
+        }
+        case 'title': {
+          const divLabel = document.createElement('div');
+          divLabel.style = STYLE.title;
+          divLabel.addEventListener('click', hideBookmarks);
+          const textNode = document.createTextNode(`${value} :title`);
+          divLabel.appendChild(textNode);
+  
+          divRow.appendChild(divLabel);
+  
+          break
+        }
       }
       
       if (index < beforeRawLength) {
@@ -342,31 +450,46 @@ const log = SHOW_LOG ? console.log : () => {};
 
   let prevMessage = {};
 
+  async function fixTag(event) {
+    log('fixTag 00');
+    const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
+
+    if (parentId) {
+      const recentTag = prevMessage.recentTagList.find((item) => item.parentId === parentId)
+      await chrome.runtime.sendMessage({
+        command: "fixTag",
+        parentId,
+        title: recentTag.title,
+      });
+    }
+  }
+  async function unfixTag(event) {
+    log('unfixTag 00');
+    const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
+
+    if (parentId) {
+      await chrome.runtime.sendMessage({
+        command: "unfixTag",
+        parentId,
+      });
+    }
+  }
+
   chrome.runtime.onMessage.addListener((message) => {
     log('chrome.runtime.onMessage: ', message);
     switch (message.command) {
       case "bookmarkInfo": {
         log('content-script: ', message.bookmarkInfoList);
 
-        // const newHasBookmark = message.bookmarkInfoList.length > 0;
-        //
-        // if (newHasBookmark || hasBookmark || message.isShowPreviousVisit) {
-        //   showBookmarkInfo(message);
-        // }
-  
-        // hasBookmark = newHasBookmark;
-
-        const fullMessage = { ...prevMessage, ...message }
-        showBookmarkInfo(fullMessage);
-        prevMessage = fullMessage
+        prevMessage = { ...prevMessage, ...message }
+        showBookmarkInfo(prevMessage);
         break
       }
       case "visitInfo": {
         log('content-script: ', message.visitList);
 
-        const fullMessage = { ...prevMessage, ...message }
-        showBookmarkInfo(fullMessage);
-        prevMessage = fullMessage
+        prevMessage = { ...prevMessage, ...message }
+        showBookmarkInfo(prevMessage);
         break
       }
       case "changeLocationToCleanUrl": {

@@ -47,6 +47,9 @@ export const bookmarksController = {
   async onCreated(bookmarkId, node) {
     logEvent('bookmark.onCreated <-');
 
+    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+      await memo.addRecentTag(node)
+    }
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onCreated'
@@ -74,6 +77,9 @@ export const bookmarksController = {
     memo.bkmFolderById.delete(bookmarkId);
 
 
+    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK] && !changeInfo.title) {
+      await memo.updateTag(bookmarkId, changeInfo.title)
+    }
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onChanged'
@@ -106,6 +112,10 @@ export const bookmarksController = {
   async onMoved(bookmarkId, { oldParentId, parentId }) {
     logEvent('bookmark.onMoved <-');
     memo.bkmFolderById.delete(bookmarkId);
+
+    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+      await memo.addRecentTag({ parentId })
+    }
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onMoved'
@@ -138,6 +148,11 @@ export const bookmarksController = {
   async onRemoved(bookmarkId, { node }) {
     logEvent('bookmark.onRemoved <-');
     memo.bkmFolderById.delete(bookmarkId);
+
+    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK] && !node.url) {
+      await memo.removeTag(bookmarkId)
+    }
+
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onRemoved'
