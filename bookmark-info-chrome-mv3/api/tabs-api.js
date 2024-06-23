@@ -80,7 +80,7 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
   try {
     // const message = {
     message = {
-        command: "bookmarkInfo",
+      command: "bookmarkInfo",
       bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
       showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
       isShowTitle: memo.settings[USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE],
@@ -92,13 +92,14 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
         // .filter(({ parentId }) => !usedOrFixedParentIdSet.has(parentId))
         .filter(({ parentId }) => !fixedParentIdSet.has(parentId))
         .filter(({ title }) => title)
-        .sort(({ title: a }, { title: b }) => a.localeCompare(b))
-        .slice(0, RECENT_TAG_VISIBLE_LIMIT),
+        .slice(0, RECENT_TAG_VISIBLE_LIMIT)
+        .sort(({ title: a }, { title: b }) => a.localeCompare(b)),
     }
   
   }catch (e) {
     logDebug('updateBookmarksForTabTask got errr', e);
     logDebug('memo.recentTagList', memo.recentTagList);
+    throw e
   }
 
   logDebug('updateBookmarksForTabTask 33 ');
