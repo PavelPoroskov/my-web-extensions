@@ -25,10 +25,6 @@ export const storageController = {
         if (changesSet.has(USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT)) {
           memo.cacheUrlToVisitList.clear()
         }
-
-        if (changesSet.has(USER_SETTINGS_OPTIONS.ADD_BOOKMARK)) {
-          memo.invalidateTagList()
-        }
       }
     }
   },

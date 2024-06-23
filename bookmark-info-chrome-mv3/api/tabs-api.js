@@ -136,13 +136,6 @@ export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
     ])
     logDebug('updateTab memo.readSettings() AFTER');
 
-    logDebug('updateTab memo.isTagListActual', memo.isTagListActual);
-    if (!memo.isTagListActual) {
-      logDebug('updateTab memo.readTagList() BEFORE');
-      await memo.readTagList()
-      logDebug('updateTab memo.readTagList() AFTER');
-    }
-
     log(`${debugCaller} -> updateTab() useCache`, useCache);
     promiseQueue.add({
       key: `${tabId}-bkm`,
