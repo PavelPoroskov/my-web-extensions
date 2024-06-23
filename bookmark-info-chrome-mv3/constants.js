@@ -78,4 +78,4 @@ export const clearUrlTargetList = [
 ]
 
 export const RECENT_TAG_INTERNAL_LIMIT = 30;
-export const RECENT_TAG_VISIBLE_LIMIT = 15;
+export const RECENT_TAG_VISIBLE_LIMIT = 20;

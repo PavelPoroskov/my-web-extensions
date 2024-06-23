@@ -30,86 +30,78 @@ const log = SHOW_LOG ? console.log : () => {};
   const BROWSER = BROWSER_OPTIONS.FIREFOX;
   const BROWSER_SPECIFIC = BROWSER_SPECIFIC_OPTIONS[BROWSER];
     
-  const bkmInfoRootId = 'bkmInfoRootId';
+  const bkmInfoRootId = 'bkm-info--root';
 
-  const STYLE = {
-    root: [
-      'position: fixed',
-      'right: 0',
-      'top: 0',
-      'z-index: 2147483646',
-      'background-color: transparent',
-      // styles for label, delBtn
-      'font-size: 14px',
-      'font-family: sans-serif',
-      'font-weight: normal',
-      'user-select: none',
-      'line-height: 1.2',
-    ].join(';'),
-    row: [
-      'display: flex',
-      'position: relative',
-    ].join(';'),
-    rowLeft: [
-      'flex: 1',
-    ].join(';'),
-    label: [
-      'padding-left: 0.7ch',
-      'border-top-left-radius: 0.5lh 50%',
-      'border-bottom-left-radius: 0.5lh 50%',
-      'color: black',
-      'position: relative',
-    ].join(';'),
-    delBtn: [
-      'padding-left: 0.65ch',
-      `padding-right: ${BROWSER_SPECIFIC.DEL_BTN_RIGHT_PADDING}`,
-      'border-top-left-radius: 0.5lh 50%',
-      'border-bottom-left-radius: 0.5lh 50%',
-      'position: absolute',
-      'top: 0',
-      'right: 0',
-      'z-index: 2147483647',
-      'cursor: pointer',
-      'height: 1lh',
-      'align-items: center',
-      'justify-items: center',
-     ].join(';'),
-    delBtnLetter: [
-      'color: white',
-      'font-size: 10px',
-      'line-height: 1',
-    ].join(';'),
-    history: [
-      'padding-left: 0.7ch',
-      'border-top-left-radius: 0.5lh 50%',
-      'border-bottom-left-radius: 0.5lh 50%',
-      'color: white',
-      'background-color: fuchsia',
-      'position: relative',
-    ].join(';'),
-    title: [
-      'padding-left: 0.5ch',
-      'color: black',
-      'background: lavender',
-    ].join(';'),
-  }
   const STYLE_ELEMENT = (
 `
-.bkmLabel:hover + .bkmDelBtn {
-  display: flex;
-  background-color: pink;
+#${bkmInfoRootId} {
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 2147483646;
+  background-color: transparent;
+  font-size: 14px;
+  font-family: sans-serif;
+  font-weight: normal;
+  user-select: none;
+  line-height: 1.2;
 }
-.bkmDelBtn {
+.bkm-info--row {
+  display: flex;
+  position: relative;
+}
+.bkm-info--row-left {
+  flex: 1;
+}
+.bkm-info--label {
+  padding-left: 0.7ch;
+  border-top-left-radius: 0.5lh 50%;
+  border-bottom-left-radius: 0.5lh 50%;
+  position: relative;
+  color: black;
+}
+.bkm-info--btn {
+  padding-left: 0.65ch;
+  padding-right: ${BROWSER_SPECIFIC.DEL_BTN_RIGHT_PADDING};
+  border-top-left-radius: 0.5lh 50%;
+  border-bottom-left-radius: 0.5lh 50%;
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2147483647;
+  cursor: pointer;
+  height: 1lh;
+  align-items: center;
+  justify-items: center;
   display: none;
 }
-.bkmDelBtn:hover {
-  display: flex;
-  background-color: red;
+.bkm-info--btn-letter {
+  color: white;
+  font-size: 10px;
+  line-height: 1;
 }
-.bkmDelBtn:active {
+.bkm-info--btn:active {
   transform: translateY(0.1ch);
 }
-.bkmLabel::before {
+.bkm-info--label:hover + .bkm-info--btn {
+  display: flex;
+}
+.bkm-info--btn:hover {
+  display: flex;
+}
+.bkm-info--bkm-1 {
+  background-color: yellow;
+}
+.bkm-info--bkm-2 {
+  background-color: orange;
+}
+.bkm-info--bkm:hover + .bkm-info--btn-del {
+  background-color: pink;
+}
+.bkm-info--btn-del:hover {
+  background-color: red;
+}
+.bkm-info--bkm::before {
   content: attr(data-restpath);
   text-wrap: nowrap;
   position:absolute;
@@ -120,45 +112,73 @@ const log = SHOW_LOG ? console.log : () => {};
   padding-left: 2px;
   padding-right: 2px;
 }
-.bkmLabel:hover::before {
+.bkm-info--bkm:hover::before {
   display:block;
 }
-.bkmLabel:has(+ .bkmDelBtn:hover) {
+.bkm-info--bkm:has(+ .bkm-info--btn-del:hover) {
   &::before {
     display:block;
   }
 }
-.bkmLabel span:nth-child(even) {
+.bkm-info--bkm span:nth-child(even) {
   background-color: lightgray;
   display: inline-block;
   width: 0.8ch;
 }
+.bkm-info--history {
+  color: white;
+  background-color: fuchsia;
+}
+.bkm-info--separator {
+  background-color: transparent;
+  color: transparent;
+}
+.bkm-info--title {
+  padding-left: 0.5ch;
+  color: black;
+  background: lavender;
+}
+
+.bkm-info--fixed {
+  background-color: #40E0D0;
+}
+.bkm-info--fixed:hover {
+  background-color: #00FFFF;
+}
+.bkm-info--fixed:has(+ .bkm-info--btn-unfix:hover) {
+  background-color: #00FFFF;
+}
+.bkm-info--fixed:active {
+  transform: translateY(0.1ch);
+}
+.bkm-info--fixed:hover + .bkm-info--btn-unfix {
+  background-color: #32CD32;
+}
+.bkm-info--btn-unfix:hover {
+  background-color: #00FF00;
+}
+
+.bkm-info--recent {
+  background-color: #32CD32;
+}
+.bkm-info--recent:hover {
+  background-color: #00FF00;
+}
+.bkm-info--recent:has(+ .bkm-info--btn-fix:hover) {
+  background-color: #00FF00;
+}
+.bkm-info--recent:active {
+  transform: translateY(0.1ch);
+}
+.bkm-info--recent:hover + .bkm-info--btn-fix {
+  background-color: #40E0D0;
+}
+.bkm-info--btn-fix:hover {
+  background-color: #00FFFF;
+}
 `
   );
   
-  async function deleteBookmark(event) {
-    log('deleteBookmark 00');
-    const bkmId = event?.target?.dataset?.bkmid || event?.target?.parentNode?.dataset?.bkmid;
-
-    if (bkmId) {
-      await browser.runtime.sendMessage({
-        command: "deleteBookmark",
-        bkmId,
-      });
-    }
-  }
-
-  async function hideBookmarks() {
-    log('hideBookmarks 00');
-    const rootDiv = document.getElementById(bkmInfoRootId);
-
-    if (rootDiv) {
-      while (rootDiv.lastChild) {
-        rootDiv.removeChild(rootDiv.lastChild);
-      }  
-    }
-  }
-
   const dayMS = 86400000;
   const hourMS = 3600000;
   const minMS = 60000;
@@ -191,12 +211,82 @@ const log = SHOW_LOG ? console.log : () => {};
     return result
   }
 
+  let fullMessage = {};
+
+  async function deleteBookmark(event) {
+    log('deleteBookmark 00');
+    const bkmId = event?.target?.dataset?.bkmid || event?.target?.parentNode?.dataset?.bkmid;
+
+    if (bkmId) {
+      await browser.runtime.sendMessage({
+        command: "deleteBookmark",
+        bkmId,
+      });
+    }
+  }
+
+  async function addBookmark(event) {
+    log('addBookmark 00');
+    const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
+
+    if (parentId) {
+      const isExist = fullMessage.bookmarkInfoList.some((item) => item.parentId === parentId)
+
+      if (!isExist) {
+        await browser.runtime.sendMessage({
+          command: "addBookmark",
+          parentId,
+          url: document.location.href,
+          title: document.title,
+        });  
+      }
+    }
+  }
+
+  async function fixTag(event) {
+    log('fixTag 00');
+    const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
+
+    if (parentId) {
+      const recentTag = fullMessage.recentTagList.find((item) => item.parentId === parentId)
+      await browser.runtime.sendMessage({
+        command: "fixTag",
+        parentId,
+        title: recentTag.title,
+      });
+    }
+  }
+  async function unfixTag(event) {
+    log('unfixTag 00');
+    const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
+
+    if (parentId) {
+      await browser.runtime.sendMessage({
+        command: "unfixTag",
+        parentId,
+      });
+    }
+  }
+
+  async function hideBookmarks() {
+    log('hideBookmarks 00');
+    const rootDiv = document.getElementById(bkmInfoRootId);
+
+    if (rootDiv) {
+      while (rootDiv.lastChild) {
+        rootDiv.removeChild(rootDiv.lastChild);
+      }  
+    }
+  }
+
   function showBookmarkInfo(input) {
     const bookmarkInfoList = input.bookmarkInfoList || []
     const showLayer = input.showLayer || 1
     const visitList = input.visitList || []
     const showPreviousVisit = input.showPreviousVisit || SHOW_PREVIOUS_VISIT_OPTION.NEVER
     const isShowTitle = input.isShowTitle || false
+    const fixedTagList = input.fixedTagList || []
+    const recentTagList = input.recentTagList || []
 
     log('showBookmarkInfo 00');
 
@@ -210,22 +300,17 @@ const log = SHOW_LOG ? console.log : () => {};
 
       rootDiv = document.createElement('div');
       rootDiv.setAttribute('id', bkmInfoRootId);
-      rootDiv.style = STYLE.root;
 
       document.body.insertAdjacentElement('afterbegin', rootStyle);        
       rootStyle.insertAdjacentElement('afterend', rootDiv);        
     }
   
-    const colors = [
-      'yellow',
-      'orange'
-    ]
     const rawNodeList = rootDiv.childNodes;
     const beforeRawLength = rawNodeList.length;
 
     const drawList = []
     let prevTitle
-    bookmarkInfoList.forEach((value) => {
+    bookmarkInfoList.forEach((value, index) => {
       const { title } = value
 
       if (isShowTitle && title) {
@@ -235,7 +320,7 @@ const log = SHOW_LOG ? console.log : () => {};
         }  
       }
       
-      drawList.push({ type: 'bookmark', value })
+      drawList.push({ type: 'bookmark', value, bkmIndex: index })
     })
 
     const isShowPreviousVisit = showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS 
@@ -250,80 +335,159 @@ const log = SHOW_LOG ? console.log : () => {};
       drawList.push({ type: 'history', value: prevVisit })
     }
 
-    drawList.forEach(({ type, value }, index) => {
+    if (fixedTagList.length > 0 || recentTagList.length > 0) {
+      drawList.push({ type: 'separator' })
+
+      fixedTagList.forEach((value) => {
+        drawList.push({ type: 'fixedTag', value })
+      })
+      recentTagList.forEach((value) => {
+        drawList.push({ type: 'recentTag', value })
+      })
+    }
+
+    drawList.forEach(({ type, value, bkmIndex }, index) => {
       const divRow = document.createElement('div');
-      divRow.style = STYLE.row;
+      divRow.classList.add('bkm-info--row');
       const divL = document.createElement('div');
-      divL.style = STYLE.rowLeft;
+      divL.classList.add('bkm-info--row-left');
       divRow.appendChild(divL);
 
-      if (type === 'bookmark') {
-        const { id, fullPathList } = value
-        const shortPathList = fullPathList.slice(-showLayer)
-        const restPathList = fullPathList.slice(0, -showLayer)
-        const restPath = restPathList.concat('').join('/ ')
+      switch (type) {
+        case 'bookmark': {
+          const { id, fullPathList } = value
+          const shortPathList = fullPathList.slice(-showLayer)
+          const restPathList = fullPathList.slice(0, -showLayer)
+          const restPath = restPathList.concat('').join('/ ')
+    
+          const divLabel = document.createElement('div');
+          divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
+    
+          shortPathList[shortPathList.length - 1] = `${shortPathList[shortPathList.length - 1]} :bkm`
+          const shortPathListWithSeparator = shortPathList
+            .slice(0, -1).flatMap((str) => [str, '/ '])
+            .concat(shortPathList[shortPathList.length - 1])
+          
+          shortPathListWithSeparator.forEach((str) => {
+            const span = document.createElement('span');
+            // createTextNode is safe method for XSS-injection
+            // const shortPathList = shortPath.split(/(\/ )/)
+            const textNode = document.createTextNode(str);
+            span.appendChild(textNode);
+            divLabel.appendChild(span);
+          })
+    
+          divLabel.addEventListener('click', hideBookmarks);
+          // TODO sanitize: remove ",<,>
+          // const sanitizedFullPath = fullPath
+          //   .replaceAll('"', '&quot;')
+          //   .replaceAll('>', '&gt;')
+          //   .replaceAll('<', '&lt;')
+          // divLabel.setAttribute('data-restpath', sanitizedFullPath);
+          //
+          // Symbols ( " > < ) don't break html and displayed as text.
+          divLabel.setAttribute('data-restpath', restPath);
+    
+          const divDelBtn = document.createElement('div');
+          divDelBtn.setAttribute('data-bkmid', id);
+          divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-del');
+    
+          const divDelBtnLetter = document.createElement('div');
+          divDelBtnLetter.classList.add('bkm-info--btn-letter');
+          const textNodeDel = document.createTextNode('X');
+          divDelBtnLetter.appendChild(textNodeDel);
+          
+          divDelBtn.appendChild(divDelBtnLetter);
+          divDelBtn.addEventListener('click', deleteBookmark);
+    
+          divRow.appendChild(divLabel);
+          divRow.appendChild(divDelBtn);
   
-        const divLabel = document.createElement('div');
-        divLabel.style = `${STYLE.label};background-color:${colors[index % 2]}`;
-        divLabel.classList.add('bkmLabel');
+          break
+        }
+        case 'history': {
+          const divLabel = document.createElement('div');
+          divLabel.classList.add('bkm-info--label', 'bkm-info--history');
+          divLabel.addEventListener('click', hideBookmarks);
+          const textNode = document.createTextNode(`${value} :prev. visit`);
+          divLabel.appendChild(textNode);
   
-        shortPathList[shortPathList.length - 1] = `${shortPathList[shortPathList.length - 1]} :bkm`
-        const shortPathListWithSeparator = shortPathList
-          .slice(0, -1).flatMap((str) => [str, '/ '])
-          .concat(shortPathList[shortPathList.length - 1])
-        
-        shortPathListWithSeparator.forEach((str) => {
-          const span = document.createElement('span');
-          // createTextNode is safe method for XSS-injection
-          // const shortPathList = shortPath.split(/(\/ )/)
-          const textNode = document.createTextNode(str);
-          span.appendChild(textNode);
-          divLabel.appendChild(span);
-        })
+          divRow.appendChild(divLabel);
   
-        divLabel.addEventListener('click', hideBookmarks);
-        // TODO sanitize: remove ",<,>
-        // const sanitizedFullPath = fullPath
-        //   .replaceAll('"', '&quot;')
-        //   .replaceAll('>', '&gt;')
-        //   .replaceAll('<', '&lt;')
-        // divLabel.setAttribute('data-restpath', sanitizedFullPath);
-        //
-        // Symbols ( " > < ) don't break html and displayed as text.
-        divLabel.setAttribute('data-restpath', restPath);
-  
-        const divDelBtn = document.createElement('div');
-        divDelBtn.style = STYLE.delBtn;
-        divDelBtn.setAttribute('data-bkmid', id);
-        divDelBtn.classList.add('bkmDelBtn');
-  
-        const divDelBtnLetter = document.createElement('div');
-        divDelBtnLetter.style = STYLE.delBtnLetter;
-        const textNodeDel = document.createTextNode('X');
-        divDelBtnLetter.appendChild(textNodeDel);
-        
-        divDelBtn.appendChild(divDelBtnLetter);
-        divDelBtn.addEventListener('click', deleteBookmark);
-  
-        divRow.appendChild(divLabel);
-        divRow.appendChild(divDelBtn);
-  
-      } else if (type === 'title') {
-        const divLabel = document.createElement('div');
-        divLabel.style = STYLE.title;
-        divLabel.addEventListener('click', hideBookmarks);
-        const textNode = document.createTextNode(`${value} :title`);
-        divLabel.appendChild(textNode);
+          break
+        }
+        case 'separator': {
+          const divLabel = document.createElement('div');
+          divLabel.classList.add('bkm-info--label','bkm-info--separator');
+          const textNode = document.createTextNode('|');
+          divLabel.appendChild(textNode);
+          divRow.appendChild(divLabel);
 
-        divRow.appendChild(divLabel);
-      } else if (type === 'history') {
-        const divLabel = document.createElement('div');
-        divLabel.style = STYLE.history;
-        divLabel.addEventListener('click', hideBookmarks);
-        const textNode = document.createTextNode(`${value} :prev. visit`);
-        divLabel.appendChild(textNode);
+          break
+        }
+        case 'recentTag': {
+          const { title, parentId } = value
 
-        divRow.appendChild(divLabel);
+          const divLabel = document.createElement('div');
+          divLabel.classList.add('bkm-info--label', 'bkm-info--recent');
+          divLabel.setAttribute('data-parentid', parentId);
+          divLabel.addEventListener('click', addBookmark);
+          const textNodeLabel = document.createTextNode(`${title} :recent`);
+          divLabel.appendChild(textNodeLabel);
+
+          const divDelBtn = document.createElement('div');
+          divDelBtn.setAttribute('data-parentid', parentId);
+          divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-fix');
+          divDelBtn.addEventListener('click', fixTag);
+    
+          const divDelBtnLetter = document.createElement('div');
+          divDelBtnLetter.classList.add('bkm-info--btn-letter');
+          const textNodeDel = document.createTextNode('⊙');
+          divDelBtnLetter.appendChild(textNodeDel);
+          
+          divDelBtn.appendChild(divDelBtnLetter);    
+          divRow.appendChild(divLabel);
+          divRow.appendChild(divDelBtn);
+
+          break
+        }
+        case 'fixedTag': {
+          const { title, parentId } = value
+
+          const divLabel = document.createElement('div');
+          divLabel.classList.add('bkm-info--label', 'bkm-info--fixed');
+          divLabel.setAttribute('data-parentid', parentId);
+          divLabel.addEventListener('click', addBookmark);
+          const textNodeLabel = document.createTextNode(`${title} :fixed`);
+          divLabel.appendChild(textNodeLabel);
+
+          const divDelBtn = document.createElement('div');
+          divDelBtn.setAttribute('data-parentid', parentId);
+          divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-unfix');
+          divDelBtn.addEventListener('click', unfixTag);
+    
+          const divDelBtnLetter = document.createElement('div');
+          divDelBtnLetter.classList.add('bkm-info--btn-letter');
+          const textNodeDel = document.createTextNode('X');
+          divDelBtnLetter.appendChild(textNodeDel);
+          
+          divDelBtn.appendChild(divDelBtnLetter);    
+          divRow.appendChild(divLabel);
+          divRow.appendChild(divDelBtn);
+
+          break
+        }
+        case 'title': {
+          const divLabel = document.createElement('div');
+          divLabel.classList.add('bkm-info--title');
+          divLabel.addEventListener('click', hideBookmarks);
+          const textNode = document.createTextNode(`${value} :title`);
+          divLabel.appendChild(textNode);
+  
+          divRow.appendChild(divLabel);
+  
+          break
+        }
       }
       
       if (index < beforeRawLength) {
@@ -340,33 +504,21 @@ const log = SHOW_LOG ? console.log : () => {};
     }
   }
 
-  let prevMessage = {};
-
   browser.runtime.onMessage.addListener((message) => {
     log('browser.runtime.onMessage: ', message);
     switch (message.command) {
       case "bookmarkInfo": {
         log('content-script: ', message.bookmarkInfoList);
 
-        // const newHasBookmark = message.bookmarkInfoList.length > 0;
-        //
-        // if (newHasBookmark || hasBookmark || message.isShowPreviousVisit) {
-        //   showBookmarkInfo(message);
-        // }
-  
-        // hasBookmark = newHasBookmark;
-
-        const fullMessage = { ...prevMessage, ...message }
+        fullMessage = { ...fullMessage, ...message }
         showBookmarkInfo(fullMessage);
-        prevMessage = fullMessage
         break
       }
       case "visitInfo": {
         log('content-script: ', message.visitList);
 
-        const fullMessage = { ...prevMessage, ...message }
+        fullMessage = { ...fullMessage, ...message }
         showBookmarkInfo(fullMessage);
-        prevMessage = fullMessage
         break
       }
       case "changeLocationToCleanUrl": {

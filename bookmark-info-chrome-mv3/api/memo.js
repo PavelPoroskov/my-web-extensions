@@ -6,7 +6,7 @@ import {
 import {
   filterFixedTagList,
   getRecentTagList
-} from './bookmarks-api.js'
+} from './recent-api.js'
 import { USER_SETTINGS_DEFAULT_VALUE, USER_SETTINGS_OPTIONS, RECENT_TAG_INTERNAL_LIMIT } from '../constants.js';
 
 const STORAGE_LOCAL__FIXED_TAG_LIST = 'FIXED_TAG_LIST'

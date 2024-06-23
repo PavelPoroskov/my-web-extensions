@@ -33,6 +33,8 @@ const USER_SETTINGS_OPTIONS = {
   SHOW_PATH_LAYERS: 'SHOW_PATH_LAYERS',
   SHOW_PREVIOUS_VISIT: 'SHOW_PREVIOUS_VISIT',
   SHOW_BOOKMARK_TITLE: 'SHOW_BOOKMARK_TITLE',
+  SHOW_PROFILE: 'SHOW_PROFILE',
+  ADD_BOOKMARK: 'ADD_BOOKMARK',
 }
 
 const SHOW_PREVIOUS_VISIT_OPTION = {
@@ -47,6 +49,8 @@ const USER_SETTINGS_DEFAULT_VALUE = {
   [o.SHOW_PATH_LAYERS]: 1,
   [o.SHOW_PREVIOUS_VISIT]: SHOW_PREVIOUS_VISIT_OPTION.ALWAYS,
   [o.SHOW_BOOKMARK_TITLE]: false,
+  [o.SHOW_PROFILE]: false,
+  [o.ADD_BOOKMARK]: false,
 }
 
 function makeSaveCheckboxHandler(optionId) {
@@ -59,9 +63,6 @@ function makeSaveCheckboxHandler(optionId) {
       await browser.storage.local.set({
         [optionId]: element.checked
       })  
-      await browser.runtime.sendMessage({
-        command: "optionsChanged",
-      });  
     }
   }
 }
@@ -74,12 +75,8 @@ function makeSaveInputHandler(optionId) {
   
     if (element) {
       await browser.storage.local.set({
-        // [optionId]: +event.target.value
         [optionId]: +element.value
       })  
-      await browser.runtime.sendMessage({
-        command: "optionsChanged",
-      });  
     }
   }
 }
@@ -92,13 +89,8 @@ function makeSaveSelectHandler(optionId) {
   
     if (element) {
       await browser.storage.local.set({
-        // [optionId]: +event.target.value
         [optionId]: +element.value
       })  
-      await browser.runtime.sendMessage({
-        command: "optionsChanged",
-        optionId,
-      });  
     }
   }
 }
@@ -144,6 +136,12 @@ async function restoreOptions() {
   element = document.querySelector(domId)
   element.value = actualSettings[optionId];
   element.addEventListener('change', makeSaveSelectHandler(optionId) );
+
+  optionId = USER_SETTINGS_OPTIONS.ADD_BOOKMARK;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.checked = actualSettings[optionId];
+  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 }
 
 document.addEventListener('DOMContentLoaded', restoreOptions);

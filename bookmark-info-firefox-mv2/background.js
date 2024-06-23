@@ -33,6 +33,8 @@ const USER_SETTINGS_OPTIONS = {
   SHOW_PATH_LAYERS: 'SHOW_PATH_LAYERS',
   SHOW_PREVIOUS_VISIT: 'SHOW_PREVIOUS_VISIT',
   SHOW_BOOKMARK_TITLE: 'SHOW_BOOKMARK_TITLE',
+  SHOW_PROFILE: 'SHOW_PROFILE',
+  ADD_BOOKMARK: 'ADD_BOOKMARK',
   // MARK_VISITED_URL: 'MARK_VISITED_URL',
 }
 
@@ -47,6 +49,8 @@ const USER_SETTINGS_DEFAULT_VALUE = {
   [o.SHOW_PATH_LAYERS]: 1, // [1, 2, 3]
   [o.SHOW_PREVIOUS_VISIT]: SHOW_PREVIOUS_VISIT_OPTION.ALWAYS,
   [o.SHOW_BOOKMARK_TITLE]: false,
+  [o.SHOW_PROFILE]: false,
+  [o.ADD_BOOKMARK]: false,
 }
 
 const clearUrlTargetList = [
@@ -72,6 +76,9 @@ const clearUrlTargetList = [
     ] 
   },
 ]
+
+const RECENT_TAG_INTERNAL_LIMIT = 30;
+const RECENT_TAG_VISIBLE_LIMIT = 20;
 const CONFIG = {
   SHOW_LOG_CACHE: false,
   SHOW_LOG_SEND_EVENT: false,
@@ -185,65 +192,6 @@ const logSettings = CONFIG.SHOW_SETTINGS ? makeLogWithPrefix('SETTINGS') : () =>
     logCache(this.cache);
   }
 }
-const readSettings = async () => {
-  const savedSettings = await browser.storage.local.get(
-    Object.values(USER_SETTINGS_OPTIONS)
-  );
-
-  return {
-    ...USER_SETTINGS_DEFAULT_VALUE,
-    ...savedSettings,
-  }
-}
-// console.log('IMPORTING', 'memo.js')
-const memo = {
-  activeTabId: '',
-  previousTabId: '',
-  // previousActiveTabId: '',
-  cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
-  cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
-  bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
-  // tabId -> bookmarkId
-  tabMap: new Map(),
-  // isRemovingOnlyUncleanUrlBookmarkSet: new Set(),
-
-  _settings: {},
-  async readActualSettings () {
-    this._settings = await readSettings();
-    logSettings('readActualSettings')
-    logSettings(`actual settings: ${Object.entries(this.settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)
-  },
-  get settings() {
-    return { ...this._settings }
-  },
-
-  profileStartMS: undefined,
-
-  _isMemoInitDone: false,
-  async initMemo() {
-    if (!this._isMemoInitDone) {
-      this._isMemoInitDone = true
-
-      const SESSION_OPTION_START_TIME = 'SESSION_OPTION_START_TIME'
-      const storedSession = await browser.storage.session.get(SESSION_OPTION_START_TIME)
-      logSettings('storedProfileStartTime', storedSession)
-
-      if (storedSession[SESSION_OPTION_START_TIME]) {
-        this.profileStartMS = storedSession[SESSION_OPTION_START_TIME]
-      } else {
-        this.profileStartMS = performance.timeOrigin
-        await browser.storage.session.set({
-          [SESSION_OPTION_START_TIME]: this.profileStartMS
-        })
-      }
-      logSettings('profileStartMS', new Date(this.profileStartMS).toISOString())
-
-      await this.readActualSettings()
-    }
-  }
-};
-
-logSettings('IMPORT END', 'memo.js', new Date().toISOString())
 class PromiseQueue {
   constructor () {
     this.promise = {};
@@ -319,6 +267,309 @@ function isSupportedProtocol(urlString) {
     return false;
   }
 }
+async function getRecentTagList(nItems) {
+  logDebug('getRecentTagList() 00', nItems)
+  const list = await browser.bookmarks.getRecent(nItems*3);
+
+  const folderList = list
+    .filter(({ url }) => !url)
+
+  const folderByIdMap = Object.fromEntries(
+    folderList.map(({ id, title, dateAdded}) => [
+      id,
+      {
+        title,
+        dateAdded,
+        isSourceFolder: true,
+      }
+    ])
+  )
+
+  const bookmarkList = list.filter(({ url }) => url)
+  bookmarkList.forEach(({ parentId, dateAdded }) => {
+    folderByIdMap[parentId] = {
+      ...folderByIdMap[parentId],
+      dateAdded: Math.max(folderByIdMap[parentId]?.dateAdded || 0, dateAdded)
+    }
+  })
+
+  const unknownIdList = Object.entries(folderByIdMap)
+    .filter(([, { isSourceFolder }]) => !isSourceFolder)
+    .map(([id]) => id)
+
+  const unknownFolderList = await browser.bookmarks.get(unknownIdList)
+  unknownFolderList.forEach(({ id, title }) => {
+    folderByIdMap[id].title = title
+  })
+
+  return Object.entries(folderByIdMap)
+    .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+    .sort((a,b) => -(a.dateAdded - b.dateAdded))
+    .slice(0, nItems)
+}
+
+async function filterFixedTagList(list = []) {
+  const idList = list.map(({ parentId }) => parentId)
+
+  if (idList.length === 0) {
+    return []
+  }
+
+  const folderList = await browser.bookmarks.get(idList)
+
+  return folderList
+    .filter(Boolean)
+    .map(({ id, title }) => ({ parentId: id, title }))
+}
+// console.log('IMPORTING', 'memo.js')
+const STORAGE_LOCAL__FIXED_TAG_LIST = 'FIXED_TAG_LIST'
+const STORAGE_SESSION__RECENT_TAG_LIST = 'RECENT_TAG_LIST'
+
+const memo = {
+  activeTabId: '',
+  previousTabId: '',
+  // previousActiveTabId: '',
+  cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
+  cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
+  bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
+  // tabId -> bookmarkId
+  tabMap: new Map(),
+  // isRemovingOnlyUncleanUrlBookmarkSet: new Set(),
+
+  _isSettingsActual: false,
+  get isSettingsActual() {
+    return this._isSettingsActual
+  },
+  invalidateSettings () {
+    this._isSettingsActual = false
+  },
+  _settings: {},
+  async readSettings() {
+    if (!this._isSettingsActual) {
+      logSettings('readSavedSettings START')
+
+      const savedSettings = await browser.storage.local.get(
+        Object.values(USER_SETTINGS_OPTIONS)
+      );
+    
+      this._settings = {
+        ...USER_SETTINGS_DEFAULT_VALUE,
+        ...savedSettings,
+      };
+      logSettings('readSavedSettings')
+      logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
+
+      this._isSettingsActual = true
+    }
+  },
+  get settings() {
+    return { ...this._settings }
+  },
+
+  _profileStartTimeMS: undefined,
+  get profileStartTimeMS() {
+    return this._profileStartTimeMS
+  },
+  _isProfileStartTimeMSActual: false,
+  get isProfileStartTimeMSActual() {
+    return this._isProfileStartTimeMSActual
+  },
+  async readProfileStartTimeMS() {
+    if (!this._isProfileStartTimeMSActual) {
+
+      const STORAGE_SESSION__START_TIME = 'START_TIME'
+      const storedSession = await browser.storage.session.get(STORAGE_SESSION__START_TIME)
+      logSettings('storedSession', storedSession)
+
+      if (storedSession[STORAGE_SESSION__START_TIME]) {
+        this._profileStartTimeMS = storedSession[STORAGE_SESSION__START_TIME]
+      } else {
+        // I get start for service-worker now.
+        //    It is correct if this web-extension was installed in the previous browser session
+        // It is better get for window // min(window.startTime(performance.timeOrigin)) OR min(tab(performance.timeOrigin))
+        //  tab with minimal tabId
+        this._profileStartTimeMS = performance.timeOrigin
+        await browser.storage.session.set({
+          [STORAGE_SESSION__START_TIME]: this._profileStartTimeMS
+        })
+
+      }
+
+      logSettings('profileStartTimeMS', new Date(this._profileStartTimeMS).toISOString())
+      this._isProfileStartTimeMSActual = true
+    }
+  },
+
+  _isTagListActual: false,
+  _fixedTagList: [],
+  _recentTagList: [],
+  get isTagListActual() {
+    return this._isTagListActual
+  },
+  invalidateTagList () {
+    this._isTagListActual = false
+  },
+  get fixedTagList() {
+    return this._fixedTagList
+  },
+  get recentTagList() {
+    return this._recentTagList
+  },
+  // async addFixedTag() {
+  //   const STORAGE_LOCAL__FIXED_TAG_LIST = 'FIXED_TAG_LIST'
+  //   const savedList = await browser.storage.local.get(
+  //     STORAGE_LOCAL__FIXED_TAG_LIST
+  //   );
+  
+  // },
+  async readTagList() {
+    logSettings('readTagList 00')
+    if (!this._isTagListActual) {
+      logSettings('readTagList 11')
+
+      if (this._settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+        logSettings('readTagList 22')
+        const [savedLocal, savedSession] = await Promise.all([
+          browser.storage.local.get(STORAGE_LOCAL__FIXED_TAG_LIST),
+          browser.storage.session.get(STORAGE_SESSION__RECENT_TAG_LIST),
+        ]);
+      
+  
+        if (!savedSession[STORAGE_SESSION__RECENT_TAG_LIST]) {
+          logSettings('readTagList 22 11')
+          this._fixedTagList = await filterFixedTagList(savedLocal[STORAGE_LOCAL__FIXED_TAG_LIST])
+          this._recentTagList = await getRecentTagList(RECENT_TAG_INTERNAL_LIMIT)
+        } else {
+          logSettings('readTagList 22 77')
+          this._fixedTagList = savedLocal[STORAGE_LOCAL__FIXED_TAG_LIST] || []
+          this._recentTagList = savedSession[STORAGE_SESSION__RECENT_TAG_LIST]
+        }  
+      } else {
+        logSettings('readTagList 44')
+
+        this._fixedTagList = []
+        this._recentTagList = []
+      }
+      this._isTagListActual = true
+    }
+  },
+  async addRecentTag({ parentId, dateAdded }) {
+    logSettings('addRecentTag 00', parentId, dateAdded )
+    const actualDateAdded = dateAdded || Date.now()
+    logSettings('addRecentTag 11 actualDateAdded', actualDateAdded )
+
+    const folderByIdMap = Object.fromEntries(
+      this._recentTagList.map(({ parentId, title, dateAdded }) => [
+        parentId,
+        {
+          title,
+          dateAdded,
+          isSourceFolder: true,
+        }
+      ])
+    )
+
+    const [newFolder] = await browser.bookmarks.get(parentId)
+    logSettings('addRecentTag 22 newFolder', newFolder )
+    logSettings('addRecentTag 22 newFolder.title', newFolder.title )
+    folderByIdMap[parentId] = {
+      ...folderByIdMap[parentId],
+      dateAdded: actualDateAdded,
+      title: newFolder.title
+    }
+
+    this._recentTagList = Object.entries(folderByIdMap)
+      .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+      .sort((a,b) => -(a.dateAdded - b.dateAdded))
+      .slice(0, RECENT_TAG_INTERNAL_LIMIT)
+
+    await browser.storage.session.set({
+      [STORAGE_SESSION__RECENT_TAG_LIST]: this._recentTagList
+    })
+  },
+  async removeTag(id) {
+    const isInFixedList = this._fixedTagList.some(({ parentId }) => parentId === id)
+
+    if (isInFixedList) {
+      this._fixedTagList = this._fixedTagList.filter(({ parentId }) => parentId !== id)
+    }
+
+    const isInRecentList = this._recentTagList.some(({ parentId }) => parentId === id)
+
+    if (isInRecentList) {
+      this._recentTagList = this._recentTagList.filter(({ parentId }) => parentId !== id)
+    }
+
+    if (isInFixedList || isInRecentList) {
+      await Promise.all([
+        isInFixedList && browser.storage.local.set({
+          [STORAGE_LOCAL__FIXED_TAG_LIST]: this._fixedTagList
+        }),
+        isInRecentList && browser.storage.session.set({
+          [STORAGE_SESSION__RECENT_TAG_LIST]: this._recentTagList
+        })
+      ])
+    }
+  },
+  async updateTag(id, title) {
+    const isInFixedList = this._fixedTagList.some(({ parentId }) => parentId === id)
+
+    if (isInFixedList) {
+      this._fixedTagList = this._fixedTagList.map(
+        (item) => (item.parentId === id
+          ? {
+            ...item,
+            title,
+          }
+          : item
+        )
+      )
+    }
+
+    const isInRecentList = this._recentTagList.some(({ parentId }) => parentId === id)
+
+    if (isInRecentList) {
+      this._recentTagList = this._recentTagList.map(
+        (item) => (item.parentId === id
+          ? {
+            ...item,
+            title,
+          }
+          : item
+        )
+      )
+    }
+
+    if (isInFixedList || isInRecentList) {
+      await Promise.all([
+        isInFixedList && browser.storage.local.set({
+          [STORAGE_LOCAL__FIXED_TAG_LIST]: this._fixedTagList
+        }),
+        isInRecentList && browser.storage.session.set({
+          [STORAGE_SESSION__RECENT_TAG_LIST]: this._recentTagList
+        })
+      ])
+    }
+  },
+  async addFixedTag({ parentId, title }) {
+    const item = this._fixedTagList.find((item) => item.parentId === parentId)
+
+    if (!item) {
+      this._fixedTagList.push({ parentId, title })
+      await browser.storage.local.set({
+        [STORAGE_LOCAL__FIXED_TAG_LIST]: this._fixedTagList
+      })
+    }
+  },
+  async removeFixedTag(id) {
+    this._fixedTagList = this._fixedTagList.filter(({ parentId }) => parentId !== id)
+    await browser.storage.local.set({
+      [STORAGE_LOCAL__FIXED_TAG_LIST]: this._fixedTagList
+    })
+  }
+};
+
+logSettings('IMPORT END', 'memo.js', new Date().toISOString())
 async function isHasBookmark(url) {
   const bookmarks = await browser.bookmarks.search({ url });
 
@@ -423,6 +674,7 @@ async function getBookmarkInfo(url) {
         id: bookmarkItem.id,
         fullPathList,
         title: bookmarkItem.title,
+        parentId: bookmarkItem.parentId,
       }
     });
 }
@@ -587,7 +839,7 @@ async function getVisitListForUrl(url) {
     
     const mostNewVisitMS = newToOldList[0]?.visitTime
 
-    if (mostNewVisitMS && mostNewVisitMS > memo.profileStartMS) {
+    if (mostNewVisitMS && mostNewVisitMS > memo.profileStartTimeMS) {
       previousList = newToOldList.slice(1)
     } else {
       previousList = newToOldList
@@ -695,7 +947,7 @@ async function cleanUrlIfTarget({ url, tabId }) {
 }
 
 async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
-  log('updateBookmarksForTabTask(', tabId, useCache, url);
+  logDebug('updateBookmarksForTabTask 00 (', tabId, useCache, url);
   // logDebug('updateBookmarksForTabTask(', tabId, useCache, url)
 
   let actualUrl = url
@@ -708,19 +960,51 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
     }
   } 
 
+  logDebug('updateBookmarksForTabTask 11 ');
   const bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
-  const message = {
-    command: "bookmarkInfo",
-    bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
-    showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
-    isShowTitle: memo.settings[USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE],
+  // const usedParentIdSet = new Set(bookmarkInfo.map(({ parentId }) => parentId))
+  const fixedParentIdSet = new Set(memo.fixedTagList.map(({ parentId }) => parentId))
+  // const usedOrFixedParentIdSet = usedParentIdSet.union(fixedParentIdSet)
+
+  logDebug('updateBookmarksForTabTask 22 ');
+  logDebug('memo.fixedTagList Array.isArray', Array.isArray(memo.fixedTagList));
+  logDebug('memo.fixedTagList length', memo.fixedTagList.length);
+  logDebug('memo.recentTagList Array.isArray', Array.isArray(memo.recentTagList));
+  logDebug('memo.recentTagList length', memo.recentTagList.length);
+
+  let message = {}
+  try {
+    // const message = {
+    message = {
+        command: "bookmarkInfo",
+      bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
+      showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
+      isShowTitle: memo.settings[USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE],
+      fixedTagList: memo.fixedTagList
+        // .filter(({ parentId }) => !usedParentIdSet.has(parentId))
+        .filter(({ title }) => title)
+        .sort(({ title: a }, { title: b}) => a.localeCompare(b)),
+      recentTagList: memo.recentTagList
+        // .filter(({ parentId }) => !usedOrFixedParentIdSet.has(parentId))
+        .filter(({ parentId }) => !fixedParentIdSet.has(parentId))
+        .filter(({ title }) => title)
+        .sort(({ title: a }, { title: b }) => a.localeCompare(b))
+        .slice(0, RECENT_TAG_VISIBLE_LIMIT),
+    }
+  
+  }catch (e) {
+    logDebug('updateBookmarksForTabTask got errr', e);
+    logDebug('memo.recentTagList', memo.recentTagList);
   }
 
+  logDebug('updateBookmarksForTabTask 33 ');
   logSendEvent('updateBookmarksForTabTask()', tabId, message);
   // logDebug('updateBookmarksForTabTask() sendMessage', tabId, message)
 
-  return browser.tabs.sendMessage(tabId, message)
-    .then(() => bookmarkInfo);
+  await browser.tabs.sendMessage(tabId, message)
+  logDebug('updateBookmarksForTabTask 44 ');
+  
+  return bookmarkInfo
 }
 async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
   log('updateVisitsForTabTask(', tabId, useCache, url);
@@ -740,7 +1024,20 @@ async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
 
 async function updateTab({ tabId, url, useCache=false, debugCaller }) {
   if (url && isSupportedProtocol(url)) {
-    await memo.initMemo()
+
+    logDebug('updateTab memo.isSettingsActual', memo.isSettingsActual);
+    await Promise.all([
+      !memo.isProfileStartTimeMSActual && memo.readProfileStartTimeMS(),
+      !memo.isSettingsActual && memo.readSettings(),
+    ])
+    logDebug('updateTab memo.readSettings() AFTER');
+
+    logDebug('updateTab memo.isTagListActual', memo.isTagListActual);
+    if (!memo.isTagListActual) {
+      logDebug('updateTab memo.readTagList() BEFORE');
+      await memo.readTagList()
+      logDebug('updateTab memo.readTagList() AFTER');
+    }
 
     log(`${debugCaller} -> updateTab() useCache`, useCache);
     promiseQueue.add({
@@ -935,6 +1232,9 @@ const bookmarksController = {
   async onCreated(bookmarkId, node) {
     logEvent('bookmark.onCreated <-');
 
+    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+      await memo.addRecentTag(node)
+    }
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onCreated'
@@ -962,6 +1262,9 @@ const bookmarksController = {
     memo.bkmFolderById.delete(bookmarkId);
 
 
+    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK] && !changeInfo.title) {
+      await memo.updateTag(bookmarkId, changeInfo.title)
+    }
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onChanged'
@@ -994,6 +1297,10 @@ const bookmarksController = {
   async onMoved(bookmarkId, { oldParentId, parentId }) {
     logEvent('bookmark.onMoved <-');
     memo.bkmFolderById.delete(bookmarkId);
+
+    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+      await memo.addRecentTag({ parentId })
+    }
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onMoved'
@@ -1026,6 +1333,11 @@ const bookmarksController = {
   async onRemoved(bookmarkId, { node }) {
     logEvent('bookmark.onRemoved <-');
     memo.bkmFolderById.delete(bookmarkId);
+
+    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK] && !node.url) {
+      await memo.removeTag(bookmarkId)
+    }
+
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onRemoved'
@@ -1053,6 +1365,41 @@ const bookmarksController = {
     getBookmarkInfoUni({ url: node?.url });
   },
 }
+const contextMenusController = {
+  async onClicked (OnClickData) {
+    logEvent('contextMenus.onClicked <-');
+
+    switch (OnClickData.menuItemId) {
+      case MENU.CLOSE_DUPLICATE: {
+        closeDuplicateTabs();
+        break;
+      }
+      case MENU.CLOSE_BOOKMARKED: {
+        closeBookmarkedTabs();
+        break;
+      }
+      case MENU.CLEAR_URL: {
+        const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+        const [activeTab] = tabs;
+
+        if (activeTab?.id && activeTab?.url) {
+          const cleanUrl = removeQueryParams(activeTab.url);
+
+          if (activeTab.url !== cleanUrl) {
+            const msg = {
+              command: "changeLocationToCleanUrl",
+              cleanUrl,
+            }
+            logSendEvent('contextMenusController.onClicked(CLEAR_URL)', activeTab.id, msg)
+            await browser.tabs.sendMessage(activeTab.id, msg)
+          }
+        }
+
+        break;
+      }
+    }
+  }
+}
 async function createContextMenu() {
   await browser.menus.removeAll();
 
@@ -1079,7 +1426,6 @@ const bookmarksController = {
 const runtimeController = {
   async onStartup() {
     logEvent('runtime.onStartup');
-    await memo.initMemo()
     // is only firefox use it?
     createContextMenu()
     updateActiveTab({
@@ -1089,7 +1435,6 @@ const runtimeController = {
   },
   async onInstalled () {
     logEvent('runtime.onInstalled');
-    await memo.initMemo()
     createContextMenu()
     updateActiveTab({
       useCache: true,
@@ -1104,6 +1449,43 @@ const runtimeController = {
         logEvent('runtime.onMessage deleteBookmark');
   
         deleteBookmark(message.bkmId);
+        break
+      }
+      case "addBookmark": {
+        logEvent('runtime.onMessage addBookmark');
+  
+        await browser.bookmarks.create({
+          index: 0,
+          parentId: message.parentId,
+          title: message.title,
+          url: message.url
+        })
+
+        break
+      }
+      case "fixTag": {
+        logEvent('runtime.onMessage fixTag');
+  
+        await memo.addFixedTag({
+          parentId: message.parentId,
+          title: message.title,
+        })
+        updateActiveTab({
+          debugCaller: 'runtime.onMessage fixTag',
+          useCache: true,
+        });
+    
+        break
+      }
+      case "unfixTag": {
+        logEvent('runtime.onMessage unfixTag');
+  
+        await memo.removeFixedTag(message.parentId)
+        updateActiveTab({
+          debugCaller: 'runtime.onMessage unfixTag',
+          useCache: true,
+        });
+
         break
       }
       case "contentScriptReady": {
@@ -1122,18 +1504,33 @@ const runtimeController = {
 
         break
       }
-      case "optionsChanged": {
-        logEvent('runtime.onMessage optionsChanged');
-        memo.readActualSettings()
+    }
+  }
+};
+const storageController = {
+  
+  async onChanged(changes, namespace) {
+    
+    if (namespace === 'local') {
+      const changesSet = new Set(Object.keys(changes))
+      const settingSet = new Set(Object.values(USER_SETTINGS_OPTIONS))
+      const intersectSet = changesSet.intersection(settingSet)
 
-        if (message?.optionId === USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT) {
+      if (intersectSet.size > 0) {
+        logEvent('storage.onChanged', namespace, changes);
+
+        memo.invalidateSettings()
+
+        if (changesSet.has(USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT)) {
           memo.cacheUrlToVisitList.clear()
         }
 
-        break
+        if (changesSet.has(USER_SETTINGS_OPTIONS.ADD_BOOKMARK)) {
+          memo.invalidateTagList()
+        }
       }
     }
-  }
+  },
 };
 const tabsController = {
   onCreated({ pendingUrl: url, index, id }) {
@@ -1225,7 +1622,6 @@ const runtimeController = {
   async onFocusChanged(windowId) {
     if (0 < windowId) {
       logEvent('windows.onFocusChanged', windowId);
-      await memo.initMemo()
       updateActiveTab({
         useCache: true,
         debugCaller: 'windows.onFocusChanged'
@@ -1233,41 +1629,6 @@ const runtimeController = {
     }
   },
 };
-const contextMenusController = {
-  async onClicked (OnClickData) {
-    logEvent('contextMenus.onClicked <-');
-
-    switch (OnClickData.menuItemId) {
-      case MENU.CLOSE_DUPLICATE: {
-        closeDuplicateTabs();
-        break;
-      }
-      case MENU.CLOSE_BOOKMARKED: {
-        closeBookmarkedTabs();
-        break;
-      }
-      case MENU.CLEAR_URL: {
-        const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
-        const [activeTab] = tabs;
-
-        if (activeTab?.id && activeTab?.url) {
-          const cleanUrl = removeQueryParams(activeTab.url);
-
-          if (activeTab.url !== cleanUrl) {
-            const msg = {
-              command: "changeLocationToCleanUrl",
-              cleanUrl,
-            }
-            logSendEvent('contextMenusController.onClicked(CLEAR_URL)', activeTab.id, msg)
-            await browser.tabs.sendMessage(activeTab.id, msg)
-          }
-        }
-
-        break;
-      }
-    }
-  }
-}
 // console.log('IMPORTING', 'bkm-info-sw.js')
 browser.bookmarks.onCreated.addListener(bookmarksController.onCreated);
 browser.bookmarks.onMoved.addListener(bookmarksController.onMoved);
@@ -1288,5 +1649,7 @@ browser.menus.onClicked.addListener(contextMenusController.onClicked);
 browser.runtime.onStartup.addListener(runtimeController.onStartup)
 browser.runtime.onInstalled.addListener(runtimeController.onInstalled);
 browser.runtime.onMessage.addListener(runtimeController.onMessage);
+
+browser.storage.onChanged.addListener(storageController.onChanged);
 
 // console.log('IMPORT END', 'bkm-info-sw.js')
