@@ -15,7 +15,7 @@ export const storageController = {
     if (namespace === 'local') {
       const changesSet = new Set(Object.keys(changes))
       const settingSet = new Set(Object.values(USER_SETTINGS_OPTIONS))
-      const intersectSet = changesSet.intersect(settingSet)
+      const intersectSet = changesSet.intersection(settingSet)
 
       if (intersectSet.size > 0) {
         logEvent('storage.onChanged', namespace, changes);
@@ -24,6 +24,10 @@ export const storageController = {
 
         if (changesSet.has(USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT)) {
           memo.cacheUrlToVisitList.clear()
+        }
+
+        if (changesSet.has(USER_SETTINGS_OPTIONS.ADD_BOOKMARK)) {
+          memo.invalidateTagList()
         }
       }
     }

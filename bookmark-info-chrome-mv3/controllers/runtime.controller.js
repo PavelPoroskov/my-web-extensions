@@ -68,8 +68,8 @@ export const runtimeController = {
         deleteBookmark(message.bkmId);
         break
       }
-      case "addTag": {
-        logEvent('runtime.onMessage addTag');
+      case "addBookmark": {
+        logEvent('runtime.onMessage addBookmark');
   
         await chrome.bookmarks.create({
           index: 0,
@@ -87,13 +87,21 @@ export const runtimeController = {
           parentId: message.parentId,
           title: message.title,
         })
-
+        updateActiveTab({
+          debugCaller: 'runtime.onMessage fixTag',
+          useCache: true,
+        });
+    
         break
       }
       case "unfixTag": {
         logEvent('runtime.onMessage unfixTag');
   
         await memo.removeFixedTag(message.parentId)
+        updateActiveTab({
+          debugCaller: 'runtime.onMessage unfixTag',
+          useCache: true,
+        });
 
         break
       }

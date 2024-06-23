@@ -1,6 +1,7 @@
 import {
   logOptimization,
-  log
+  log,
+  logDebug,
 } from './debug.js'
 import {
   memo,
@@ -151,6 +152,7 @@ export async function getBookmarkInfoUni({ url, useCache=false }) {
 }
 
 export async function getRecentTagList(nItems) {
+  logDebug('getRecentTagList() 00', nItems)
   const list = await chrome.bookmarks.getRecent(nItems*3);
 
   const folderList = list
@@ -192,6 +194,10 @@ export async function getRecentTagList(nItems) {
 
 export async function filterFixedTagList(list = []) {
   const idList = list.map(({ parentId }) => parentId)
+
+  if (idList.length === 0) {
+    return []
+  }
 
   const folderList = await chrome.bookmarks.get(idList)
 

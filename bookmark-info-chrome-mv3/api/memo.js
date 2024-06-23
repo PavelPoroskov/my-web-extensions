@@ -33,7 +33,7 @@ export const memo = {
   _settings: {},
   async readSettings() {
     if (!this._isSettingsActual) {
-      this._isSettingsActual = true
+      logSettings('readSavedSettings START')
 
       const savedSettings = await chrome.storage.local.get(
         Object.values(USER_SETTINGS_OPTIONS)
@@ -45,6 +45,8 @@ export const memo = {
       };
       logSettings('readSavedSettings')
       logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
+
+      this._isSettingsActual = true
     }
   },
   get settings() {
@@ -61,7 +63,6 @@ export const memo = {
   },
   async readProfileStartTimeMS() {
     if (!this._isProfileStartTimeMSActual) {
-      this._isProfileStartTimeMSActual = true
 
       const STORAGE_SESSION__START_TIME = 'START_TIME'
       const storedSession = await chrome.storage.session.get(STORAGE_SESSION__START_TIME)
@@ -78,8 +79,11 @@ export const memo = {
         await chrome.storage.session.set({
           [STORAGE_SESSION__START_TIME]: this._profileStartTimeMS
         })
+
       }
+
       logSettings('profileStartTimeMS', new Date(this._profileStartTimeMS).toISOString())
+      this._isProfileStartTimeMSActual = true
     }
   },
 
@@ -88,6 +92,9 @@ export const memo = {
   _recentTagList: [],
   get isTagListActual() {
     return this._isTagListActual
+  },
+  invalidateTagList () {
+    this._isTagListActual = false
   },
   get fixedTagList() {
     return this._fixedTagList
@@ -103,10 +110,12 @@ export const memo = {
   
   // },
   async readTagList() {
+    logSettings('readTagList 00')
     if (!this._isTagListActual) {
-      this._isTagListActual = true
+      logSettings('readTagList 11')
 
       if (this._settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+        logSettings('readTagList 22')
         const [savedLocal, savedSession] = await Promise.all([
           chrome.storage.local.get(STORAGE_LOCAL__FIXED_TAG_LIST),
           chrome.storage.session.get(STORAGE_SESSION__RECENT_TAG_LIST),
@@ -114,21 +123,27 @@ export const memo = {
       
   
         if (!savedSession[STORAGE_SESSION__RECENT_TAG_LIST]) {
+          logSettings('readTagList 22 11')
           this._fixedTagList = await filterFixedTagList(savedLocal[STORAGE_LOCAL__FIXED_TAG_LIST])
           this._recentTagList = await getRecentTagList(RECENT_TAG_INTERNAL_LIMIT)
         } else {
+          logSettings('readTagList 22 77')
           this._fixedTagList = savedLocal[STORAGE_LOCAL__FIXED_TAG_LIST] || []
           this._recentTagList = savedSession[STORAGE_SESSION__RECENT_TAG_LIST]
         }  
       } else {
+        logSettings('readTagList 44')
 
         this._fixedTagList = []
         this._recentTagList = []
       }
+      this._isTagListActual = true
     }
   },
   async addRecentTag({ parentId, dateAdded }) {
+    logSettings('addRecentTag 00', parentId, dateAdded )
     const actualDateAdded = dateAdded || Date.now()
+    logSettings('addRecentTag 11 actualDateAdded', actualDateAdded )
 
     const folderByIdMap = Object.fromEntries(
       this._recentTagList.map(({ parentId, title, dateAdded }) => [
@@ -141,7 +156,9 @@ export const memo = {
       ])
     )
 
-    const newFolder = await chrome.bookmarks.get(parentId)
+    const [newFolder] = await chrome.bookmarks.get(parentId)
+    logSettings('addRecentTag 22 newFolder', newFolder )
+    logSettings('addRecentTag 22 newFolder.title', newFolder.title )
     folderByIdMap[parentId] = {
       ...folderByIdMap[parentId],
       dateAdded: actualDateAdded,

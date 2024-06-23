@@ -3,7 +3,7 @@ import {
   logEvent,
   logSendEvent,
   logIgnore,
-  // logDebug
+  logDebug
 } from './debug.js'
 import {
   promiseQueue,
@@ -51,7 +51,7 @@ export async function cleanUrlIfTarget({ url, tabId }) {
 }
 
 async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
-  log('updateBookmarksForTabTask(', tabId, useCache, url);
+  logDebug('updateBookmarksForTabTask 00 (', tabId, useCache, url);
   // logDebug('updateBookmarksForTabTask(', tabId, useCache, url)
 
   let actualUrl = url
@@ -64,30 +64,51 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
     }
   } 
 
+  logDebug('updateBookmarksForTabTask 11 ');
   const bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
-  const usedParentIdSet = new Set(bookmarkInfo.map(({ parentId }) => parentId))
+  // const usedParentIdSet = new Set(bookmarkInfo.map(({ parentId }) => parentId))
   const fixedParentIdSet = new Set(memo.fixedTagList.map(({ parentId }) => parentId))
-  const usedOrFixedParentIdSet = usedParentIdSet.union(fixedParentIdSet)
+  // const usedOrFixedParentIdSet = usedParentIdSet.union(fixedParentIdSet)
 
-  const message = {
-    command: "bookmarkInfo",
-    bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
-    showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
-    isShowTitle: memo.settings[USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE],
-    fixedTagList: memo.fixedTagList
-      .filter(({ parentId }) => !usedParentIdSet.has(parentId))
-      .sort(({ title: a }, { title: b}) => a.localeCompare(b)),
-    recentTagList: memo.recentTagList
-      .filter(({ parentId }) => !usedOrFixedParentIdSet.has(parentId))
-      .sort(({ title: a }, { title: b}) => a.localeCompare(b))
-      .slice(0, RECENT_TAG_VISIBLE_LIMIT),
+  logDebug('updateBookmarksForTabTask 22 ');
+  logDebug('memo.fixedTagList Array.isArray', Array.isArray(memo.fixedTagList));
+  logDebug('memo.fixedTagList length', memo.fixedTagList.length);
+  logDebug('memo.recentTagList Array.isArray', Array.isArray(memo.recentTagList));
+  logDebug('memo.recentTagList length', memo.recentTagList.length);
+
+  let message = {}
+  try {
+    // const message = {
+    message = {
+        command: "bookmarkInfo",
+      bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
+      showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
+      isShowTitle: memo.settings[USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE],
+      fixedTagList: memo.fixedTagList
+        // .filter(({ parentId }) => !usedParentIdSet.has(parentId))
+        .filter(({ title }) => title)
+        .sort(({ title: a }, { title: b}) => a.localeCompare(b)),
+      recentTagList: memo.recentTagList
+        // .filter(({ parentId }) => !usedOrFixedParentIdSet.has(parentId))
+        .filter(({ parentId }) => !fixedParentIdSet.has(parentId))
+        .filter(({ title }) => title)
+        .sort(({ title: a }, { title: b }) => a.localeCompare(b))
+        .slice(0, RECENT_TAG_VISIBLE_LIMIT),
+    }
+  
+  }catch (e) {
+    logDebug('updateBookmarksForTabTask got errr', e);
+    logDebug('memo.recentTagList', memo.recentTagList);
   }
 
+  logDebug('updateBookmarksForTabTask 33 ');
   logSendEvent('updateBookmarksForTabTask()', tabId, message);
   // logDebug('updateBookmarksForTabTask() sendMessage', tabId, message)
 
-  return chrome.tabs.sendMessage(tabId, message)
-    .then(() => bookmarkInfo);
+  await chrome.tabs.sendMessage(tabId, message)
+  logDebug('updateBookmarksForTabTask 44 ');
+  
+  return bookmarkInfo
 }
 async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
   log('updateVisitsForTabTask(', tabId, useCache, url);
@@ -108,13 +129,18 @@ async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
 export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
   if (url && isSupportedProtocol(url)) {
 
+    logDebug('updateTab memo.isSettingsActual', memo.isSettingsActual);
     await Promise.all([
       !memo.isProfileStartTimeMSActual && memo.readProfileStartTimeMS(),
       !memo.isSettingsActual && memo.readSettings(),
     ])
+    logDebug('updateTab memo.readSettings() AFTER');
 
+    logDebug('updateTab memo.isTagListActual', memo.isTagListActual);
     if (!memo.isTagListActual) {
+      logDebug('updateTab memo.readTagList() BEFORE');
       await memo.readTagList()
+      logDebug('updateTab memo.readTagList() AFTER');
     }
 
     log(`${debugCaller} -> updateTab() useCache`, useCache);

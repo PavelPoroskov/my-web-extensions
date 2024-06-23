@@ -30,103 +30,78 @@ const log = SHOW_LOG ? console.log : () => {};
   const BROWSER = BROWSER_OPTIONS.CHROME;
   const BROWSER_SPECIFIC = BROWSER_SPECIFIC_OPTIONS[BROWSER];
     
-  const bkmInfoRootId = 'bkmInfoRootId';
+  const bkmInfoRootId = 'bkm-info--root';
 
-  const STYLE = {
-    root: [
-      'position: fixed',
-      'right: 0',
-      'top: 0',
-      'z-index: 2147483646',
-      'background-color: transparent',
-      // styles for label, delBtn
-      'font-size: 14px',
-      'font-family: sans-serif',
-      'font-weight: normal',
-      'user-select: none',
-      'line-height: 1.2',
-    ].join(';'),
-    row: [
-      'display: flex',
-      'position: relative',
-    ].join(';'),
-    rowLeft: [
-      'flex: 1',
-    ].join(';'),
-    label: [
-      'padding-left: 0.7ch',
-      'border-top-left-radius: 0.5lh 50%',
-      'border-bottom-left-radius: 0.5lh 50%',
-      'color: black',
-      'position: relative',
-    ].join(';'),
-    delBtn: [
-      'padding-left: 0.65ch',
-      `padding-right: ${BROWSER_SPECIFIC.DEL_BTN_RIGHT_PADDING}`,
-      'border-top-left-radius: 0.5lh 50%',
-      'border-bottom-left-radius: 0.5lh 50%',
-      'position: absolute',
-      'top: 0',
-      'right: 0',
-      'z-index: 2147483647',
-      'cursor: pointer',
-      'height: 1lh',
-      'align-items: center',
-      'justify-items: center',
-     ].join(';'),
-    delBtnLetter: [
-      'color: white',
-      'font-size: 10px',
-      'line-height: 1',
-    ].join(';'),
-    history: [
-      'padding-left: 0.7ch',
-      'border-top-left-radius: 0.5lh 50%',
-      'border-bottom-left-radius: 0.5lh 50%',
-      'color: white',
-      'background-color: fuchsia',
-      'position: relative',
-    ].join(';'),
-    title: [
-      'padding-left: 0.5ch',
-      'color: black',
-      'background: lavender',
-    ].join(';'),
-    separator: [
-      'background-color: transparent',
-    ].join(';'),
-    fixedTag: [
-      'padding-left: 0.7ch',
-      'border-top-left-radius: 0.5lh 50%',
-      'border-bottom-left-radius: 0.5lh 50%',
-      'color: black',
-      'background-color: #0ACAD0',
-    ].join(';'),
-    recentTag: [
-      'padding-left: 0.7ch',
-      'border-top-left-radius: 0.5lh 50%',
-      'border-bottom-left-radius: 0.5lh 50%',
-      'color: black',
-      'background-color: #13D44D',
-    ].join(';'),
-  }
   const STYLE_ELEMENT = (
 `
-.bkmLabel:hover + .bkmDelBtn {
-  display: flex;
-  background-color: pink;
+#${bkmInfoRootId} {
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 2147483646;
+  background-color: transparent;
+  font-size: 14px;
+  font-family: sans-serif;
+  font-weight: normal;
+  user-select: none;
+  line-height: 1.2;
 }
-.bkmDelBtn {
+.bkm-info--row {
+  display: flex;
+  position: relative;
+}
+.bkm-info--row-left {
+  flex: 1;
+}
+.bkm-info--label {
+  padding-left: 0.7ch;
+  border-top-left-radius: 0.5lh 50%;
+  border-bottom-left-radius: 0.5lh 50%;
+  position: relative;
+  color: black;
+}
+.bkm-info--btn {
+  padding-left: 0.65ch;
+  padding-right: ${BROWSER_SPECIFIC.DEL_BTN_RIGHT_PADDING};
+  border-top-left-radius: 0.5lh 50%;
+  border-bottom-left-radius: 0.5lh 50%;
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2147483647;
+  cursor: pointer;
+  height: 1lh;
+  align-items: center;
+  justify-items: center;
   display: none;
 }
-.bkmDelBtn:hover {
-  display: flex;
-  background-color: red;
+.bkm-info--btn-letter {
+  color: white;
+  font-size: 10px;
+  line-height: 1;
 }
-.bkmDelBtn:active {
+.bkm-info--btn:active {
   transform: translateY(0.1ch);
 }
-.bkmLabel::before {
+.bkm-info--label:hover + .bkm-info--btn {
+  display: flex;
+}
+.bkm-info--btn:hover {
+  display: flex;
+}
+.bkm-info--bkm-1 {
+  background-color: yellow;
+}
+.bkm-info--bkm-2 {
+  background-color: orange;
+}
+.bkm-info--bkm:hover + .bkm-info--btn-del {
+  background-color: pink;
+}
+.bkm-info--btn-del:hover {
+  background-color: red;
+}
+.bkm-info--bkm::before {
   content: attr(data-restpath);
   text-wrap: nowrap;
   position:absolute;
@@ -137,71 +112,73 @@ const log = SHOW_LOG ? console.log : () => {};
   padding-left: 2px;
   padding-right: 2px;
 }
-.bkmLabel:hover::before {
+.bkm-info--bkm:hover::before {
   display:block;
 }
-.bkmLabel:has(+ .bkmDelBtn:hover) {
+.bkm-info--bkm:has(+ .bkm-info--btn-del:hover) {
   &::before {
     display:block;
   }
 }
-.bkmLabel span:nth-child(even) {
+.bkm-info--bkm span:nth-child(even) {
   background-color: lightgray;
   display: inline-block;
   width: 0.8ch;
 }
-.fixedTag:hover {
-  background-color: #A7FAF8;
+.bkm-info--history {
+  color: white;
+  background-color: fuchsia;
 }
-.fixedTag:active {
+.bkm-info--separator {
+  background-color: transparent;
+  color: transparent;
+}
+.bkm-info--title {
+  padding-left: 0.5ch;
+  color: black;
+  background: lavender;
+}
+
+.bkm-info--fixed {
+  background-color: #40E0D0;
+}
+.bkm-info--fixed:hover {
+  background-color: #00FFFF;
+}
+.bkm-info--fixed:has(+ .bkm-info--btn-unfix:hover) {
+  background-color: #00FFFF;
+}
+.bkm-info--fixed:active {
   transform: translateY(0.1ch);
 }
-.recentTag:hover {
-  background-color: #B5FDC9;
+.bkm-info--fixed:hover + .bkm-info--btn-unfix {
+  background-color: #32CD32;
 }
-.recentTag:active {
+.bkm-info--btn-unfix:hover {
+  background-color: #00FF00;
+}
+
+.bkm-info--recent {
+  background-color: #32CD32;
+}
+.bkm-info--recent:hover {
+  background-color: #00FF00;
+}
+.bkm-info--recent:has(+ .bkm-info--btn-fix:hover) {
+  background-color: #00FF00;
+}
+.bkm-info--recent:active {
   transform: translateY(0.1ch);
+}
+.bkm-info--recent:hover + .bkm-info--btn-fix {
+  background-color: #40E0D0;
+}
+.bkm-info--btn-fix:hover {
+  background-color: #00FFFF;
 }
 `
   );
   
-  async function deleteBookmark(event) {
-    log('deleteBookmark 00');
-    const bkmId = event?.target?.dataset?.bkmid || event?.target?.parentNode?.dataset?.bkmid;
-
-    if (bkmId) {
-      await chrome.runtime.sendMessage({
-        command: "deleteBookmark",
-        bkmId,
-      });
-    }
-  }
-
-  async function addTag(event) {
-    log('addTag 00');
-    const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
-
-    if (parentId) {
-      await chrome.runtime.sendMessage({
-        command: "addTag",
-        parentId,
-        url: document.location.href,
-        title: document.title,
-      });
-    }
-  }
-
-  async function hideBookmarks() {
-    log('hideBookmarks 00');
-    const rootDiv = document.getElementById(bkmInfoRootId);
-
-    if (rootDiv) {
-      while (rootDiv.lastChild) {
-        rootDiv.removeChild(rootDiv.lastChild);
-      }  
-    }
-  }
-
   const dayMS = 86400000;
   const hourMS = 3600000;
   const minMS = 60000;
@@ -234,6 +211,74 @@ const log = SHOW_LOG ? console.log : () => {};
     return result
   }
 
+  let fullMessage = {};
+
+  async function deleteBookmark(event) {
+    log('deleteBookmark 00');
+    const bkmId = event?.target?.dataset?.bkmid || event?.target?.parentNode?.dataset?.bkmid;
+
+    if (bkmId) {
+      await chrome.runtime.sendMessage({
+        command: "deleteBookmark",
+        bkmId,
+      });
+    }
+  }
+
+  async function addBookmark(event) {
+    log('addBookmark 00');
+    const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
+
+    if (parentId) {
+      const isExist = fullMessage.bookmarkInfoList.some((item) => item.parentId === parentId)
+
+      if (!isExist) {
+        await chrome.runtime.sendMessage({
+          command: "addBookmark",
+          parentId,
+          url: document.location.href,
+          title: document.title,
+        });  
+      }
+    }
+  }
+
+  async function fixTag(event) {
+    log('fixTag 00');
+    const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
+
+    if (parentId) {
+      const recentTag = fullMessage.recentTagList.find((item) => item.parentId === parentId)
+      await chrome.runtime.sendMessage({
+        command: "fixTag",
+        parentId,
+        title: recentTag.title,
+      });
+    }
+  }
+  async function unfixTag(event) {
+    log('unfixTag 00');
+    const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
+
+    if (parentId) {
+      await chrome.runtime.sendMessage({
+        command: "unfixTag",
+        parentId,
+      });
+    }
+  }
+
+  async function hideBookmarks() {
+    log('hideBookmarks 00');
+    const rootDiv = document.getElementById(bkmInfoRootId);
+
+    if (rootDiv) {
+      while (rootDiv.lastChild) {
+        rootDiv.removeChild(rootDiv.lastChild);
+      }  
+    }
+  }
+
   function showBookmarkInfo(input) {
     const bookmarkInfoList = input.bookmarkInfoList || []
     const showLayer = input.showLayer || 1
@@ -255,16 +300,11 @@ const log = SHOW_LOG ? console.log : () => {};
 
       rootDiv = document.createElement('div');
       rootDiv.setAttribute('id', bkmInfoRootId);
-      rootDiv.style = STYLE.root;
 
       document.body.insertAdjacentElement('afterbegin', rootStyle);        
       rootStyle.insertAdjacentElement('afterend', rootDiv);        
     }
   
-    const colors = [
-      'yellow',
-      'orange'
-    ]
     const rawNodeList = rootDiv.childNodes;
     const beforeRawLength = rawNodeList.length;
 
@@ -280,7 +320,7 @@ const log = SHOW_LOG ? console.log : () => {};
         }  
       }
       
-      drawList.push({ type: 'bookmark', value, color: colors[index % 2] })
+      drawList.push({ type: 'bookmark', value, bkmIndex: index })
     })
 
     const isShowPreviousVisit = showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS 
@@ -306,11 +346,11 @@ const log = SHOW_LOG ? console.log : () => {};
       })
     }
 
-    drawList.forEach(({ type, value, color }, index) => {
+    drawList.forEach(({ type, value, bkmIndex }, index) => {
       const divRow = document.createElement('div');
-      divRow.style = STYLE.row;
+      divRow.classList.add('bkm-info--row');
       const divL = document.createElement('div');
-      divL.style = STYLE.rowLeft;
+      divL.classList.add('bkm-info--row-left');
       divRow.appendChild(divL);
 
       switch (type) {
@@ -321,8 +361,7 @@ const log = SHOW_LOG ? console.log : () => {};
           const restPath = restPathList.concat('').join('/ ')
     
           const divLabel = document.createElement('div');
-          divLabel.style = `${STYLE.label};background-color:${color}`;
-          divLabel.classList.add('bkmLabel');
+          divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
     
           shortPathList[shortPathList.length - 1] = `${shortPathList[shortPathList.length - 1]} :bkm`
           const shortPathListWithSeparator = shortPathList
@@ -350,12 +389,11 @@ const log = SHOW_LOG ? console.log : () => {};
           divLabel.setAttribute('data-restpath', restPath);
     
           const divDelBtn = document.createElement('div');
-          divDelBtn.style = STYLE.delBtn;
           divDelBtn.setAttribute('data-bkmid', id);
-          divDelBtn.classList.add('bkmDelBtn');
+          divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-del');
     
           const divDelBtnLetter = document.createElement('div');
-          divDelBtnLetter.style = STYLE.delBtnLetter;
+          divDelBtnLetter.classList.add('bkm-info--btn-letter');
           const textNodeDel = document.createTextNode('X');
           divDelBtnLetter.appendChild(textNodeDel);
           
@@ -369,7 +407,7 @@ const log = SHOW_LOG ? console.log : () => {};
         }
         case 'history': {
           const divLabel = document.createElement('div');
-          divLabel.style = STYLE.history;
+          divLabel.classList.add('bkm-info--label', 'bkm-info--history');
           divLabel.addEventListener('click', hideBookmarks);
           const textNode = document.createTextNode(`${value} :prev. visit`);
           divLabel.appendChild(textNode);
@@ -380,8 +418,8 @@ const log = SHOW_LOG ? console.log : () => {};
         }
         case 'separator': {
           const divLabel = document.createElement('div');
-          divLabel.style = STYLE.separator;
-          const textNode = document.createTextNode(' ');
+          divLabel.classList.add('bkm-info--label','bkm-info--separator');
+          const textNode = document.createTextNode('|');
           divLabel.appendChild(textNode);
           divRow.appendChild(divLabel);
 
@@ -389,41 +427,59 @@ const log = SHOW_LOG ? console.log : () => {};
         }
         case 'recentTag': {
           const { title, parentId } = value
-          const divContainer = document.createElement('div');
-          divContainer.setAttribute('data-parentid', parentId);
-
-          const btnFix = document.createElement('div');
-          divLabel.addEventListener('click', fixTag);
-          const textNodeFix = document.createTextNode('fix');
-          btnFix.appendChild(textNodeFix)
 
           const divLabel = document.createElement('div');
-          divLabel.style = STYLE.recentTag;
-          divLabel.addEventListener('click', addTag);
-          const textNodeLabel = document.createTextNode(`${title} :tag`);
+          divLabel.classList.add('bkm-info--label', 'bkm-info--recent');
+          divLabel.setAttribute('data-parentid', parentId);
+          divLabel.addEventListener('click', addBookmark);
+          const textNodeLabel = document.createTextNode(`${title} :recent`);
           divLabel.appendChild(textNodeLabel);
-  
-          divContainer.appendChild(btnFix)
-          divContainer.appendChild(divLabel)
-          divRow.appendChild(divContainer);
+
+          const divDelBtn = document.createElement('div');
+          divDelBtn.setAttribute('data-parentid', parentId);
+          divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-fix');
+          divDelBtn.addEventListener('click', fixTag);
+    
+          const divDelBtnLetter = document.createElement('div');
+          divDelBtnLetter.classList.add('bkm-info--btn-letter');
+          const textNodeDel = document.createTextNode('⊙');
+          divDelBtnLetter.appendChild(textNodeDel);
+          
+          divDelBtn.appendChild(divDelBtnLetter);    
+          divRow.appendChild(divLabel);
+          divRow.appendChild(divDelBtn);
 
           break
         }
         case 'fixedTag': {
-          const { label, id } = value
+          const { title, parentId } = value
+
           const divLabel = document.createElement('div');
-          divLabel.style = STYLE.fixedTag;
-          divLabel.setAttribute('data-parentid', id);
-          divLabel.addEventListener('click', addTag);
-          const textNode = document.createTextNode(`${label} :tag`);
-          divLabel.appendChild(textNode);
-  
+          divLabel.classList.add('bkm-info--label', 'bkm-info--fixed');
+          divLabel.setAttribute('data-parentid', parentId);
+          divLabel.addEventListener('click', addBookmark);
+          const textNodeLabel = document.createTextNode(`${title} :fixed`);
+          divLabel.appendChild(textNodeLabel);
+
+          const divDelBtn = document.createElement('div');
+          divDelBtn.setAttribute('data-parentid', parentId);
+          divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-unfix');
+          divDelBtn.addEventListener('click', unfixTag);
+    
+          const divDelBtnLetter = document.createElement('div');
+          divDelBtnLetter.classList.add('bkm-info--btn-letter');
+          const textNodeDel = document.createTextNode('X');
+          divDelBtnLetter.appendChild(textNodeDel);
+          
+          divDelBtn.appendChild(divDelBtnLetter);    
           divRow.appendChild(divLabel);
+          divRow.appendChild(divDelBtn);
+
           break
         }
         case 'title': {
           const divLabel = document.createElement('div');
-          divLabel.style = STYLE.title;
+          divLabel.classList.add('bkm-info--title');
           divLabel.addEventListener('click', hideBookmarks);
           const textNode = document.createTextNode(`${value} :title`);
           divLabel.appendChild(textNode);
@@ -448,48 +504,21 @@ const log = SHOW_LOG ? console.log : () => {};
     }
   }
 
-  let prevMessage = {};
-
-  async function fixTag(event) {
-    log('fixTag 00');
-    const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
-
-    if (parentId) {
-      const recentTag = prevMessage.recentTagList.find((item) => item.parentId === parentId)
-      await chrome.runtime.sendMessage({
-        command: "fixTag",
-        parentId,
-        title: recentTag.title,
-      });
-    }
-  }
-  async function unfixTag(event) {
-    log('unfixTag 00');
-    const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
-
-    if (parentId) {
-      await chrome.runtime.sendMessage({
-        command: "unfixTag",
-        parentId,
-      });
-    }
-  }
-
   chrome.runtime.onMessage.addListener((message) => {
     log('chrome.runtime.onMessage: ', message);
     switch (message.command) {
       case "bookmarkInfo": {
         log('content-script: ', message.bookmarkInfoList);
 
-        prevMessage = { ...prevMessage, ...message }
-        showBookmarkInfo(prevMessage);
+        fullMessage = { ...fullMessage, ...message }
+        showBookmarkInfo(fullMessage);
         break
       }
       case "visitInfo": {
         log('content-script: ', message.visitList);
 
-        prevMessage = { ...prevMessage, ...message }
-        showBookmarkInfo(prevMessage);
+        fullMessage = { ...fullMessage, ...message }
+        showBookmarkInfo(fullMessage);
         break
       }
       case "changeLocationToCleanUrl": {
