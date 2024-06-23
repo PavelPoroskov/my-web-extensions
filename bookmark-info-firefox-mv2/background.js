@@ -359,6 +359,8 @@ const memo = {
       logSettings('readSavedSettings')
       logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
 
+      await this.readTagList()
+
       this._isSettingsActual = true
     }
   },
@@ -400,57 +402,39 @@ const memo = {
     }
   },
 
-  _isTagListActual: false,
   _fixedTagList: [],
   _recentTagList: [],
-  get isTagListActual() {
-    return this._isTagListActual
-  },
-  invalidateTagList () {
-    this._isTagListActual = false
-  },
   get fixedTagList() {
     return this._fixedTagList
   },
   get recentTagList() {
     return this._recentTagList
   },
-  // async addFixedTag() {
-  //   const STORAGE_LOCAL__FIXED_TAG_LIST = 'FIXED_TAG_LIST'
-  //   const savedList = await browser.storage.local.get(
-  //     STORAGE_LOCAL__FIXED_TAG_LIST
-  //   );
-  
-  // },
   async readTagList() {
-    logSettings('readTagList 00')
-    if (!this._isTagListActual) {
-      logSettings('readTagList 11')
+    logSettings('readTagList 11')
 
-      if (this._settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
-        logSettings('readTagList 22')
-        const [savedLocal, savedSession] = await Promise.all([
-          browser.storage.local.get(STORAGE_LOCAL__FIXED_TAG_LIST),
-          browser.storage.session.get(STORAGE_SESSION__RECENT_TAG_LIST),
-        ]);
-      
-  
-        if (!savedSession[STORAGE_SESSION__RECENT_TAG_LIST]) {
-          logSettings('readTagList 22 11')
-          this._fixedTagList = await filterFixedTagList(savedLocal[STORAGE_LOCAL__FIXED_TAG_LIST])
-          this._recentTagList = await getRecentTagList(RECENT_TAG_INTERNAL_LIMIT)
-        } else {
-          logSettings('readTagList 22 77')
-          this._fixedTagList = savedLocal[STORAGE_LOCAL__FIXED_TAG_LIST] || []
-          this._recentTagList = savedSession[STORAGE_SESSION__RECENT_TAG_LIST]
-        }  
+    if (this._settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+      logSettings('readTagList 22')
+      const [savedLocal, savedSession] = await Promise.all([
+        browser.storage.local.get(STORAGE_LOCAL__FIXED_TAG_LIST),
+        browser.storage.session.get(STORAGE_SESSION__RECENT_TAG_LIST),
+      ]);
+    
+
+      if (!savedSession[STORAGE_SESSION__RECENT_TAG_LIST]) {
+        logSettings('readTagList 22 11')
+        this._fixedTagList = await filterFixedTagList(savedLocal[STORAGE_LOCAL__FIXED_TAG_LIST])
+        this._recentTagList = await getRecentTagList(RECENT_TAG_INTERNAL_LIMIT)
       } else {
-        logSettings('readTagList 44')
+        logSettings('readTagList 22 77')
+        this._fixedTagList = savedLocal[STORAGE_LOCAL__FIXED_TAG_LIST] || []
+        this._recentTagList = savedSession[STORAGE_SESSION__RECENT_TAG_LIST]
+      }  
+    } else {
+      logSettings('readTagList 44')
 
-        this._fixedTagList = []
-        this._recentTagList = []
-      }
-      this._isTagListActual = true
+      this._fixedTagList = []
+      this._recentTagList = []
     }
   },
   async addRecentTag({ parentId, dateAdded }) {
@@ -1032,13 +1016,6 @@ async function updateTab({ tabId, url, useCache=false, debugCaller }) {
     ])
     logDebug('updateTab memo.readSettings() AFTER');
 
-    logDebug('updateTab memo.isTagListActual', memo.isTagListActual);
-    if (!memo.isTagListActual) {
-      logDebug('updateTab memo.readTagList() BEFORE');
-      await memo.readTagList()
-      logDebug('updateTab memo.readTagList() AFTER');
-    }
-
     log(`${debugCaller} -> updateTab() useCache`, useCache);
     promiseQueue.add({
       key: `${tabId}-bkm`,
@@ -1523,10 +1500,6 @@ const runtimeController = {
 
         if (changesSet.has(USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT)) {
           memo.cacheUrlToVisitList.clear()
-        }
-
-        if (changesSet.has(USER_SETTINGS_OPTIONS.ADD_BOOKMARK)) {
-          memo.invalidateTagList()
         }
       }
     }

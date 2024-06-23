@@ -62,12 +62,9 @@ const log = SHOW_LOG ? console.log : () => {};
 }
 .bkm-info--btn {
   padding-left: 0.65ch;
-  padding-right: ${BROWSER_SPECIFIC.DEL_BTN_RIGHT_PADDING};
+  padding-right: 0.65ch;
   border-top-left-radius: 0.5lh 50%;
   border-bottom-left-radius: 0.5lh 50%;
-  position: absolute;
-  top: 0;
-  right: 0;
   z-index: 2147483647;
   cursor: pointer;
   height: 1lh;
@@ -83,23 +80,33 @@ const log = SHOW_LOG ? console.log : () => {};
 .bkm-info--btn:active {
   transform: translateY(0.1ch);
 }
-.bkm-info--label:hover + .bkm-info--btn {
-  display: flex;
-}
-.bkm-info--btn:hover {
-  display: flex;
-}
 .bkm-info--bkm-1 {
   background-color: yellow;
 }
 .bkm-info--bkm-2 {
   background-color: orange;
 }
+.bkm-info--btn-del {
+  padding-right: ${BROWSER_SPECIFIC.DEL_BTN_RIGHT_PADDING};
+  position: absolute;
+  top: 0;
+  right: 0;
+}
 .bkm-info--bkm:hover + .bkm-info--btn-del {
+  display: flex;
   background-color: pink;
 }
 .bkm-info--btn-del:hover {
+  display: flex;
   background-color: red;
+}
+.bkm-info--bkm:hover {
+  min-width: 5ch;
+  transition: min-width 100ms;
+}
+.bkm-info--bkm:has(+ .bkm-info--btn-del:hover) {
+  min-width: 5ch;
+  transition: min-width 100ms;
 }
 .bkm-info--bkm::before {
   content: attr(data-restpath);
@@ -130,8 +137,11 @@ const log = SHOW_LOG ? console.log : () => {};
   background-color: fuchsia;
 }
 .bkm-info--separator {
-  background-color: transparent;
-  color: transparent;
+  background-color: white;
+  border: solid 1px yellow;
+}
+.bkm-info--separator:active {
+  transform: translateY(0.1ch);
 }
 .bkm-info--title {
   padding-left: 0.5ch;
@@ -142,39 +152,41 @@ const log = SHOW_LOG ? console.log : () => {};
 .bkm-info--fixed {
   background-color: #40E0D0;
 }
-.bkm-info--fixed:hover {
-  background-color: #00FFFF;
-}
-.bkm-info--fixed:has(+ .bkm-info--btn-unfix:hover) {
-  background-color: #00FFFF;
-}
 .bkm-info--fixed:active {
   transform: translateY(0.1ch);
 }
-.bkm-info--fixed:hover + .bkm-info--btn-unfix {
-  background-color: #32CD32;
+.bkm-info--fixed:hover, .bkm-info--btn-unfix:hover + .bkm-info--fixed {
+  background-color: #00FFFF;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.bkm-info--btn-unfix:has( + .bkm-info--fixed:hover) {
+  display: flex;
+  background-color: #00FF00;
 }
 .bkm-info--btn-unfix:hover {
-  background-color: #00FF00;
+  display: flex;
+  background-color: #32CD32;
 }
 
 .bkm-info--recent {
   background-color: #32CD32;
 }
-.bkm-info--recent:hover {
-  background-color: #00FF00;
-}
-.bkm-info--recent:has(+ .bkm-info--btn-fix:hover) {
-  background-color: #00FF00;
-}
 .bkm-info--recent:active {
   transform: translateY(0.1ch);
 }
-.bkm-info--recent:hover + .bkm-info--btn-fix {
-  background-color: #40E0D0;
+.bkm-info--recent:hover, .bkm-info--btn-fix:hover + .bkm-info--recent {
+  background-color: #00FF00;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.bkm-info--btn-fix:has(+ .bkm-info--recent:hover) {
+  display: flex;
+  background-color: #00FFFF;
 }
 .bkm-info--btn-fix:hover {
-  background-color: #00FFFF;
+  display: flex;
+  background-color: #00BFFF;
 }
 `
   );
@@ -363,7 +375,7 @@ const log = SHOW_LOG ? console.log : () => {};
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
     
-          shortPathList[shortPathList.length - 1] = `${shortPathList[shortPathList.length - 1]} :bkm`
+          shortPathList[shortPathList.length - 1] = `${shortPathList[shortPathList.length - 1]}`
           const shortPathListWithSeparator = shortPathList
             .slice(0, -1).flatMap((str) => [str, '/ '])
             .concat(shortPathList[shortPathList.length - 1])
@@ -409,7 +421,7 @@ const log = SHOW_LOG ? console.log : () => {};
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--history');
           divLabel.addEventListener('click', hideBookmarks);
-          const textNode = document.createTextNode(`${value} :prev. visit`);
+          const textNode = document.createTextNode(`${value}`);
           divLabel.appendChild(textNode);
   
           divRow.appendChild(divLabel);
@@ -418,8 +430,9 @@ const log = SHOW_LOG ? console.log : () => {};
         }
         case 'separator': {
           const divLabel = document.createElement('div');
-          divLabel.classList.add('bkm-info--label','bkm-info--separator');
-          const textNode = document.createTextNode('|');
+          divLabel.classList.add('bkm-info--label', 'bkm-info--separator');
+          divLabel.addEventListener('click', hideBookmarks);
+          const textNode = document.createTextNode('hide');
           divLabel.appendChild(textNode);
           divRow.appendChild(divLabel);
 
@@ -432,7 +445,7 @@ const log = SHOW_LOG ? console.log : () => {};
           divLabel.classList.add('bkm-info--label', 'bkm-info--recent');
           divLabel.setAttribute('data-parentid', parentId);
           divLabel.addEventListener('click', addBookmark);
-          const textNodeLabel = document.createTextNode(`${title} :recent`);
+          const textNodeLabel = document.createTextNode(`${title}`);
           divLabel.appendChild(textNodeLabel);
 
           const divDelBtn = document.createElement('div');
@@ -444,10 +457,10 @@ const log = SHOW_LOG ? console.log : () => {};
           divDelBtnLetter.classList.add('bkm-info--btn-letter');
           const textNodeDel = document.createTextNode('⊙');
           divDelBtnLetter.appendChild(textNodeDel);
-          
           divDelBtn.appendChild(divDelBtnLetter);    
-          divRow.appendChild(divLabel);
+
           divRow.appendChild(divDelBtn);
+          divRow.appendChild(divLabel);
 
           break
         }
@@ -458,7 +471,7 @@ const log = SHOW_LOG ? console.log : () => {};
           divLabel.classList.add('bkm-info--label', 'bkm-info--fixed');
           divLabel.setAttribute('data-parentid', parentId);
           divLabel.addEventListener('click', addBookmark);
-          const textNodeLabel = document.createTextNode(`${title} :fixed`);
+          const textNodeLabel = document.createTextNode(`${title}`);
           divLabel.appendChild(textNodeLabel);
 
           const divDelBtn = document.createElement('div');
@@ -472,8 +485,9 @@ const log = SHOW_LOG ? console.log : () => {};
           divDelBtnLetter.appendChild(textNodeDel);
           
           divDelBtn.appendChild(divDelBtnLetter);    
-          divRow.appendChild(divLabel);
+
           divRow.appendChild(divDelBtn);
+          divRow.appendChild(divLabel);
 
           break
         }
