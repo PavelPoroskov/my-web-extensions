@@ -13,6 +13,7 @@ The Bookmarks Info extension shows previous visit and folder of a bookmark for t
 4) User can see full path of bookmark on hover cursor over label.
 5) User can delete bookmark by clicking Del button on the label.
 6) User can hide bookmark labels by clicking on label.
-7) Command "close duplicate tabs" in page context menu.
-8) Command "close bookmarked tabs" in page context menu.
-9) Command "clear url" in page context menu. The command removes query parameters from url.
+7) User can add bookmark from recent bookmarks. Turn it in options.
+8) Command "close duplicate tabs" in page context menu.
+9) Command "close bookmarked tabs" in page context menu.
+10) Command "clear url" in page context menu. The command removes query parameters from url.
