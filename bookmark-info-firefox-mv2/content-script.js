@@ -22,9 +22,11 @@ const log = SHOW_LOG ? console.log : () => {};
   const BROWSER_SPECIFIC_OPTIONS = {
     [BROWSER_OPTIONS.CHROME]: {
       DEL_BTN_RIGHT_PADDING: '0.5ch',
+      LABEL_RIGHT_PADDING: '0',
     },
     [BROWSER_OPTIONS.FIREFOX]: {
       DEL_BTN_RIGHT_PADDING: '0.8ch',
+      LABEL_RIGHT_PADDING: '0.6ch',
     },
   }
   const BROWSER = BROWSER_OPTIONS.FIREFOX;
@@ -59,6 +61,7 @@ const log = SHOW_LOG ? console.log : () => {};
   border-bottom-left-radius: 0.5lh 50%;
   position: relative;
   color: black;
+  padding-right: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
 }
 .bkm-info--btn {
   padding-left: 0.65ch;
@@ -182,7 +185,7 @@ const log = SHOW_LOG ? console.log : () => {};
 }
 .bkm-info--btn-fix:has(+ .bkm-info--recent:hover) {
   display: flex;
-  background-color: #00FFFF;
+  background-color: #40E0D0;
 }
 .bkm-info--btn-fix:hover {
   display: flex;

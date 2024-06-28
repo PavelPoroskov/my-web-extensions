@@ -268,7 +268,7 @@ function isSupportedProtocol(urlString) {
   }
 }
 async function getRecentTagList(nItems) {
-  logDebug('getRecentTagList() 00', nItems)
+  log('getRecentTagList() 00', nItems)
   const list = await browser.bookmarks.getRecent(nItems*3);
 
   const folderList = list
@@ -437,10 +437,23 @@ const memo = {
       this._recentTagList = []
     }
   },
-  async addRecentTag({ parentId, dateAdded }) {
-    logSettings('addRecentTag 00', parentId, dateAdded )
-    const actualDateAdded = dateAdded || Date.now()
-    logSettings('addRecentTag 11 actualDateAdded', actualDateAdded )
+  async addRecentTag(bkmNode) {
+    let newFolderId
+    let newFolder
+
+    if (bkmNode.id && !bkmNode.url) {
+      newFolderId = bkmNode.id
+      newFolder = bkmNode
+    } else {
+      newFolderId = bkmNode.parentId;
+      ([newFolder] = await browser.bookmarks.get(newFolderId))
+    }
+
+    const dateAdded = bkmNode.dateAdded || Date.now()
+
+    logSettings('addRecentTag 00', newFolderId, dateAdded )
+    logSettings('addRecentTag 22 newFolder', newFolder )
+    logSettings('addRecentTag 22 newFolder.title', newFolder.title )
 
     const folderByIdMap = Object.fromEntries(
       this._recentTagList.map(({ parentId, title, dateAdded }) => [
@@ -448,17 +461,13 @@ const memo = {
         {
           title,
           dateAdded,
-          isSourceFolder: true,
         }
       ])
     )
 
-    const [newFolder] = await browser.bookmarks.get(parentId)
-    logSettings('addRecentTag 22 newFolder', newFolder )
-    logSettings('addRecentTag 22 newFolder.title', newFolder.title )
-    folderByIdMap[parentId] = {
-      ...folderByIdMap[parentId],
-      dateAdded: actualDateAdded,
+    folderByIdMap[newFolderId] = {
+      ...folderByIdMap[newFolderId],
+      dateAdded,
       title: newFolder.title
     }
 
@@ -550,6 +559,42 @@ const memo = {
     await browser.storage.local.set({
       [STORAGE_LOCAL__FIXED_TAG_LIST]: this._fixedTagList
     })
+  },
+
+  activeDialog: {},
+  activeDialogTabId: undefined,
+  activeDialogTabOnActivated (tabId) {
+    logDebug('### activeDialogTabOnActivated', tabId)
+    if (tabId !== this.activeDialogTabId)  {
+      this.activeDialogTabId = tabId
+      this.activeDialog = {}
+    }
+  },
+  createBkmInActiveDialog (bookmarkId, parentId) {
+    logDebug('### createBkmInActiveDialog', bookmarkId, parentId)
+    const isFirst = Object.values(this.activeDialog).filter(({ bookmarkId }) => bookmarkId).length === 0;
+    this.activeDialog[parentId] = {
+      ...this.activeDialog[parentId],
+      bookmarkId,
+      isFirst,
+    }
+  },
+  createBkmInActiveDialogFromTag (parentId) {
+    logDebug('### createBkmInActiveDialogFromTag', parentId)
+    this.activeDialog[parentId] = {
+      fromTag: true
+    }
+  },
+  isCreatedInActiveDialog(bookmarkId, parentId) {
+    const result = this.activeDialog[parentId]?.bookmarkId === bookmarkId 
+      && this.activeDialog[parentId]?.isFirst === true
+      && this.activeDialog[parentId]?.fromTag !== true
+    logDebug('### isCreatedInActiveDialog', bookmarkId, parentId, result)
+
+    return result
+  },
+  removeFromActiveDialog(parentId) {
+    delete this.activeDialog[parentId]
   }
 };
 
@@ -931,8 +976,7 @@ async function cleanUrlIfTarget({ url, tabId }) {
 }
 
 async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
-  logDebug('updateBookmarksForTabTask 00 (', tabId, useCache, url);
-  // logDebug('updateBookmarksForTabTask(', tabId, useCache, url)
+  // logDebug('updateBookmarksForTabTask 00 (', tabId, useCache, url);
 
   let actualUrl = url
 
@@ -944,17 +988,18 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
     }
   } 
 
-  logDebug('updateBookmarksForTabTask 11 ');
+  // logDebug('updateBookmarksForTabTask 11 ');
   const bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
   // const usedParentIdSet = new Set(bookmarkInfo.map(({ parentId }) => parentId))
   const fixedParentIdSet = new Set(memo.fixedTagList.map(({ parentId }) => parentId))
   // const usedOrFixedParentIdSet = usedParentIdSet.union(fixedParentIdSet)
 
-  logDebug('updateBookmarksForTabTask 22 ');
-  logDebug('memo.fixedTagList Array.isArray', Array.isArray(memo.fixedTagList));
-  logDebug('memo.fixedTagList length', memo.fixedTagList.length);
-  logDebug('memo.recentTagList Array.isArray', Array.isArray(memo.recentTagList));
-  logDebug('memo.recentTagList length', memo.recentTagList.length);
+  // logDebug('updateBookmarksForTabTask 22 ');
+  // logDebug('memo.fixedTagList Array.isArray', Array.isArray(memo.fixedTagList));
+  // logDebug('memo.fixedTagList length', memo.fixedTagList.length);
+  // logDebug('memo.recentTagList Array.isArray', Array.isArray(memo.recentTagList));
+  // logDebug('memo.recentTagList length', memo.recentTagList.length);
+  // logDebug('memo.recentTagList', memo.recentTagList);
 
   let message = {}
   try {
@@ -982,12 +1027,11 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
     throw e
   }
 
-  logDebug('updateBookmarksForTabTask 33 ');
-  logSendEvent('updateBookmarksForTabTask()', tabId, message);
-  // logDebug('updateBookmarksForTabTask() sendMessage', tabId, message)
+  // logDebug('updateBookmarksForTabTask 33 ');
+  // logSendEvent('updateBookmarksForTabTask()', tabId, message);
 
   await browser.tabs.sendMessage(tabId, message)
-  logDebug('updateBookmarksForTabTask 44 ');
+  // logDebug('updateBookmarksForTabTask 44 ');
   
   return bookmarkInfo
 }
@@ -1010,12 +1054,10 @@ async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
 async function updateTab({ tabId, url, useCache=false, debugCaller }) {
   if (url && isSupportedProtocol(url)) {
 
-    logDebug('updateTab memo.isSettingsActual', memo.isSettingsActual);
     await Promise.all([
       !memo.isProfileStartTimeMSActual && memo.readProfileStartTimeMS(),
       !memo.isSettingsActual && memo.readSettings(),
     ])
-    logDebug('updateTab memo.readSettings() AFTER');
 
     log(`${debugCaller} -> updateTab() useCache`, useCache);
     promiseQueue.add({
@@ -1041,7 +1083,6 @@ async function updateTab({ tabId, url, useCache=false, debugCaller }) {
 
 async function updateActiveTab({ useCache=false, debugCaller } = {}) {
   logEvent(' updateActiveTab() 00')
-  // logDebug(' updateActiveTab() 00')
   const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
   const [Tab] = tabs;
 
@@ -1208,9 +1249,10 @@ async function closeBookmarkedTabs() {
 
 const bookmarksController = {
   async onCreated(bookmarkId, node) {
-    logEvent('bookmark.onCreated <-');
+    logEvent('bookmark.onCreated <-', node);
 
     if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+      memo.createBkmInActiveDialog(node.id, node.parentId)
       await memo.addRecentTag(node)
     }
     // changes in active tab
@@ -1240,7 +1282,7 @@ const bookmarksController = {
     memo.bkmFolderById.delete(bookmarkId);
 
 
-    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK] && !changeInfo.title) {
+    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK] && changeInfo.title) {
       await memo.updateTag(bookmarkId, changeInfo.title)
     }
     // changes in active tab
@@ -1273,18 +1315,38 @@ const bookmarksController = {
     getBookmarkInfoUni({ url: node.url });        
   },
   async onMoved(bookmarkId, { oldParentId, parentId }) {
-    logEvent('bookmark.onMoved <-');
+    logEvent('bookmark.onMoved <-', { oldParentId, parentId });
     memo.bkmFolderById.delete(bookmarkId);
 
+    const [node] = await browser.bookmarks.get(bookmarkId)
+    logDebug('bookmark.onMoved <-', node);
+
     if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
-      await memo.addRecentTag({ parentId })
+      if (memo.isCreatedInActiveDialog(bookmarkId, oldParentId)) {
+        memo.removeFromActiveDialog(oldParentId)
+        await memo.addRecentTag({ parentId });
+      } else if (oldParentId && !!node.url) {
+        await Promise.all([
+          browser.bookmarks.create({
+            parentId: oldParentId,
+            title: node.title,
+            url: node.url
+          }),
+          browser.bookmarks.remove(bookmarkId),
+        ])
+        await browser.bookmarks.create({
+          parentId,
+          title: node.title,
+          url: node.url
+        })
+      }
     }
+
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onMoved'
     });
 
-    const [node] = await browser.bookmarks.get(bookmarkId)
 
     if ((oldParentId || parentId) && node.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
       const { cleanUrl } = removeQueryParamsIfTarget(node.url);
@@ -1312,8 +1374,12 @@ const bookmarksController = {
     logEvent('bookmark.onRemoved <-');
     memo.bkmFolderById.delete(bookmarkId);
 
-    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK] && !node.url) {
-      await memo.removeTag(bookmarkId)
+    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+      memo.removeFromActiveDialog(node.parentId)
+      
+      if (!node.url) {
+        await memo.removeTag(bookmarkId)
+      }
     }
 
     // changes in active tab
@@ -1431,7 +1497,7 @@ const runtimeController = {
       }
       case "addBookmark": {
         logEvent('runtime.onMessage addBookmark');
-  
+        memo.createBkmInActiveDialogFromTag(message.parentId)
         await browser.bookmarks.create({
           index: 0,
           parentId: message.parentId,
@@ -1565,6 +1631,7 @@ const runtimeController = {
       memo.activeTabId = tabId;
     }
     logEvent('tabs.onActivated 00', tabId);
+    memo.activeDialogTabOnActivated(tabId)
 
     try {
       const Tab = await browser.tabs.get(tabId);
