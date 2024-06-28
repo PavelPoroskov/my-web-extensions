@@ -80,6 +80,7 @@ export const tabsController = {
       memo.activeTabId = tabId;
     }
     logEvent('tabs.onActivated 00', tabId);
+    memo.activeDialogTabOnActivated(tabId)
 
     try {
       const Tab = await chrome.tabs.get(tabId);

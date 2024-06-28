@@ -51,8 +51,7 @@ export async function cleanUrlIfTarget({ url, tabId }) {
 }
 
 async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
-  logDebug('updateBookmarksForTabTask 00 (', tabId, useCache, url);
-  // logDebug('updateBookmarksForTabTask(', tabId, useCache, url)
+  // logDebug('updateBookmarksForTabTask 00 (', tabId, useCache, url);
 
   let actualUrl = url
 
@@ -64,17 +63,18 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
     }
   } 
 
-  logDebug('updateBookmarksForTabTask 11 ');
+  // logDebug('updateBookmarksForTabTask 11 ');
   const bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
   // const usedParentIdSet = new Set(bookmarkInfo.map(({ parentId }) => parentId))
   const fixedParentIdSet = new Set(memo.fixedTagList.map(({ parentId }) => parentId))
   // const usedOrFixedParentIdSet = usedParentIdSet.union(fixedParentIdSet)
 
-  logDebug('updateBookmarksForTabTask 22 ');
-  logDebug('memo.fixedTagList Array.isArray', Array.isArray(memo.fixedTagList));
-  logDebug('memo.fixedTagList length', memo.fixedTagList.length);
-  logDebug('memo.recentTagList Array.isArray', Array.isArray(memo.recentTagList));
-  logDebug('memo.recentTagList length', memo.recentTagList.length);
+  // logDebug('updateBookmarksForTabTask 22 ');
+  // logDebug('memo.fixedTagList Array.isArray', Array.isArray(memo.fixedTagList));
+  // logDebug('memo.fixedTagList length', memo.fixedTagList.length);
+  // logDebug('memo.recentTagList Array.isArray', Array.isArray(memo.recentTagList));
+  // logDebug('memo.recentTagList length', memo.recentTagList.length);
+  // logDebug('memo.recentTagList', memo.recentTagList);
 
   let message = {}
   try {
@@ -102,12 +102,11 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
     throw e
   }
 
-  logDebug('updateBookmarksForTabTask 33 ');
-  logSendEvent('updateBookmarksForTabTask()', tabId, message);
-  // logDebug('updateBookmarksForTabTask() sendMessage', tabId, message)
+  // logDebug('updateBookmarksForTabTask 33 ');
+  // logSendEvent('updateBookmarksForTabTask()', tabId, message);
 
   await chrome.tabs.sendMessage(tabId, message)
-  logDebug('updateBookmarksForTabTask 44 ');
+  // logDebug('updateBookmarksForTabTask 44 ');
   
   return bookmarkInfo
 }
@@ -130,12 +129,10 @@ async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
 export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
   if (url && isSupportedProtocol(url)) {
 
-    logDebug('updateTab memo.isSettingsActual', memo.isSettingsActual);
     await Promise.all([
       !memo.isProfileStartTimeMSActual && memo.readProfileStartTimeMS(),
       !memo.isSettingsActual && memo.readSettings(),
     ])
-    logDebug('updateTab memo.readSettings() AFTER');
 
     log(`${debugCaller} -> updateTab() useCache`, useCache);
     promiseQueue.add({
@@ -161,7 +158,6 @@ export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
 
 export async function updateActiveTab({ useCache=false, debugCaller } = {}) {
   logEvent(' updateActiveTab() 00')
-  // logDebug(' updateActiveTab() 00')
   const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   const [Tab] = tabs;
 

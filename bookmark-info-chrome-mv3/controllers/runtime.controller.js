@@ -70,7 +70,7 @@ export const runtimeController = {
       }
       case "addBookmark": {
         logEvent('runtime.onMessage addBookmark');
-  
+        memo.createBkmInActiveDialogFromTag(message.parentId)
         await chrome.bookmarks.create({
           index: 0,
           parentId: message.parentId,

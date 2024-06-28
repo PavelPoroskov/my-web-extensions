@@ -185,7 +185,7 @@ const log = SHOW_LOG ? console.log : () => {};
 }
 .bkm-info--btn-fix:has(+ .bkm-info--recent:hover) {
   display: flex;
-  background-color: #00FFFF;
+  background-color: #40E0D0;
 }
 .bkm-info--btn-fix:hover {
   display: flex;

@@ -1,9 +1,9 @@
 import {
-  logDebug,
+  log,
 } from './debug.js'
 
 export async function getRecentTagList(nItems) {
-  logDebug('getRecentTagList() 00', nItems)
+  log('getRecentTagList() 00', nItems)
   const list = await chrome.bookmarks.getRecent(nItems*3);
 
   const folderList = list

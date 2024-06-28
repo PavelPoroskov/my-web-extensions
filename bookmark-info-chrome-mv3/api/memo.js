@@ -2,6 +2,7 @@
 import { CacheWithLimit } from './cache.js'
 import {
   logSettings,
+  logDebug,
 } from './debug.js'
 import {
   filterFixedTagList,
@@ -246,6 +247,42 @@ export const memo = {
     await chrome.storage.local.set({
       [STORAGE_LOCAL__FIXED_TAG_LIST]: this._fixedTagList
     })
+  },
+
+  activeDialog: {},
+  activeDialogTabId: undefined,
+  activeDialogTabOnActivated (tabId) {
+    logDebug('### activeDialogTabOnActivated', tabId)
+    if (tabId !== this.activeDialogTabId)  {
+      this.activeDialogTabId = tabId
+      this.activeDialog = {}
+    }
+  },
+  createBkmInActiveDialog (bookmarkId, parentId) {
+    logDebug('### createBkmInActiveDialog', bookmarkId, parentId)
+    const isFirst = Object.values(this.activeDialog).filter(({ bookmarkId }) => bookmarkId).length === 0;
+    this.activeDialog[parentId] = {
+      ...this.activeDialog[parentId],
+      bookmarkId,
+      isFirst,
+    }
+  },
+  createBkmInActiveDialogFromTag (parentId) {
+    logDebug('### createBkmInActiveDialogFromTag', parentId)
+    this.activeDialog[parentId] = {
+      fromTag: true
+    }
+  },
+  isCreatedInActiveDialog(bookmarkId, parentId) {
+    const result = this.activeDialog[parentId]?.bookmarkId === bookmarkId 
+      && this.activeDialog[parentId]?.isFirst === true
+      && this.activeDialog[parentId]?.fromTag !== true
+    logDebug('### isCreatedInActiveDialog', bookmarkId, parentId, result)
+
+    return result
+  },
+  removeFromActiveDialog(parentId) {
+    delete this.activeDialog[parentId]
   }
 };
 

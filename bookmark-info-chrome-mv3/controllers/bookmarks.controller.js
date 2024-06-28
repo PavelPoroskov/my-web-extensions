@@ -1,6 +1,7 @@
 import {
   logEvent,
   logSendEvent,
+  logDebug,
 } from '../api/debug.js'
 import {
   memo,
@@ -45,9 +46,10 @@ async function replaceUrlToCleanUrl({ node, cleanUrl, activeTab, bookmarkId }) {
 
 export const bookmarksController = {
   async onCreated(bookmarkId, node) {
-    logEvent('bookmark.onCreated <-');
+    logEvent('bookmark.onCreated <-', node);
 
     if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+      memo.createBkmInActiveDialog(node.id, node.parentId)
       await memo.addRecentTag(node)
     }
     // changes in active tab
@@ -110,18 +112,38 @@ export const bookmarksController = {
     getBookmarkInfoUni({ url: node.url });        
   },
   async onMoved(bookmarkId, { oldParentId, parentId }) {
-    logEvent('bookmark.onMoved <-');
+    logEvent('bookmark.onMoved <-', { oldParentId, parentId });
     memo.bkmFolderById.delete(bookmarkId);
 
+    const [node] = await chrome.bookmarks.get(bookmarkId)
+    logDebug('bookmark.onMoved <-', node);
+
     if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
-      await memo.addRecentTag({ parentId })
+      if (memo.isCreatedInActiveDialog(bookmarkId, oldParentId)) {
+        memo.removeFromActiveDialog(oldParentId)
+        await memo.addRecentTag({ parentId });
+      } else if (oldParentId && !!node.url) {
+        await Promise.all([
+          chrome.bookmarks.create({
+            parentId: oldParentId,
+            title: node.title,
+            url: node.url
+          }),
+          chrome.bookmarks.remove(bookmarkId),
+        ])
+        await chrome.bookmarks.create({
+          parentId,
+          title: node.title,
+          url: node.url
+        })
+      }
     }
+
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onMoved'
     });
 
-    const [node] = await chrome.bookmarks.get(bookmarkId)
 
     if ((oldParentId || parentId) && node.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
       const { cleanUrl } = removeQueryParamsIfTarget(node.url);
@@ -149,8 +171,12 @@ export const bookmarksController = {
     logEvent('bookmark.onRemoved <-');
     memo.bkmFolderById.delete(bookmarkId);
 
-    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK] && !node.url) {
-      await memo.removeTag(bookmarkId)
+    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+      memo.removeFromActiveDialog(node.parentId)
+      
+      if (!node.url) {
+        await memo.removeTag(bookmarkId)
+      }
     }
 
     // changes in active tab
