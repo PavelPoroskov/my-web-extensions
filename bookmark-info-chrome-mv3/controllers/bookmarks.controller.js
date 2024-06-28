@@ -77,7 +77,7 @@ export const bookmarksController = {
     memo.bkmFolderById.delete(bookmarkId);
 
 
-    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK] && !changeInfo.title) {
+    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK] && changeInfo.title) {
       await memo.updateTag(bookmarkId, changeInfo.title)
     }
     // changes in active tab

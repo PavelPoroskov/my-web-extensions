@@ -124,10 +124,23 @@ export const memo = {
       this._recentTagList = []
     }
   },
-  async addRecentTag({ parentId, dateAdded }) {
-    logSettings('addRecentTag 00', parentId, dateAdded )
-    const actualDateAdded = dateAdded || Date.now()
-    logSettings('addRecentTag 11 actualDateAdded', actualDateAdded )
+  async addRecentTag(bkmNode) {
+    let newFolderId
+    let newFolder
+
+    if (bkmNode.id && !bkmNode.url) {
+      newFolderId = bkmNode.id
+      newFolder = bkmNode
+    } else {
+      newFolderId = bkmNode.parentId;
+      ([newFolder] = await chrome.bookmarks.get(newFolderId))
+    }
+
+    const dateAdded = bkmNode.dateAdded || Date.now()
+
+    logSettings('addRecentTag 00', newFolderId, dateAdded )
+    logSettings('addRecentTag 22 newFolder', newFolder )
+    logSettings('addRecentTag 22 newFolder.title', newFolder.title )
 
     const folderByIdMap = Object.fromEntries(
       this._recentTagList.map(({ parentId, title, dateAdded }) => [
@@ -135,17 +148,13 @@ export const memo = {
         {
           title,
           dateAdded,
-          isSourceFolder: true,
         }
       ])
     )
 
-    const [newFolder] = await chrome.bookmarks.get(parentId)
-    logSettings('addRecentTag 22 newFolder', newFolder )
-    logSettings('addRecentTag 22 newFolder.title', newFolder.title )
-    folderByIdMap[parentId] = {
-      ...folderByIdMap[parentId],
-      dateAdded: actualDateAdded,
+    folderByIdMap[newFolderId] = {
+      ...folderByIdMap[newFolderId],
+      dateAdded,
       title: newFolder.title
     }
 
