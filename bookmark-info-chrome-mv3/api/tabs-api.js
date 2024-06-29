@@ -25,7 +25,6 @@ import {
 } from './memo.js'
 import {
   USER_SETTINGS_OPTIONS,
-  RECENT_TAG_VISIBLE_LIMIT,
 } from '../constants.js'
 
 let cleanUrl
@@ -51,10 +50,11 @@ export async function cleanUrlIfTarget({ url, tabId }) {
 }
 
 async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
-  // logDebug('updateBookmarksForTabTask 00 (', tabId, useCache, url);
+  logDebug('updateBookmarksForTabTask 00 (', tabId, useCache, url);
 
   let actualUrl = url
 
+  logDebug('updateBookmarksForTabTask 11');
   if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
     const { cleanUrl } = removeQueryParamsIfTarget(url)
 
@@ -62,51 +62,26 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
       actualUrl = cleanUrl
     }
   } 
+  logDebug('updateBookmarksForTabTask 22');
 
-  // logDebug('updateBookmarksForTabTask 11 ');
   const bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
-  // const usedParentIdSet = new Set(bookmarkInfo.map(({ parentId }) => parentId))
-  const fixedParentIdSet = new Set(memo.fixedTagList.map(({ parentId }) => parentId))
-  // const usedOrFixedParentIdSet = usedParentIdSet.union(fixedParentIdSet)
+  logDebug('updateBookmarksForTabTask 33');
+  const usedParentIdSet = new Set(bookmarkInfo.bookmarkInfoList.map(({ parentId }) => parentId))
+  logDebug('updateBookmarksForTabTask 44 memo.tagList', memo.tagList);
 
-  // logDebug('updateBookmarksForTabTask 22 ');
-  // logDebug('memo.fixedTagList Array.isArray', Array.isArray(memo.fixedTagList));
-  // logDebug('memo.fixedTagList length', memo.fixedTagList.length);
-  // logDebug('memo.recentTagList Array.isArray', Array.isArray(memo.recentTagList));
-  // logDebug('memo.recentTagList length', memo.recentTagList.length);
-  // logDebug('memo.recentTagList', memo.recentTagList);
-
-  let message = {}
-  try {
-    // const message = {
-    message = {
-      command: "bookmarkInfo",
-      bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
-      showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
-      isShowTitle: memo.settings[USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE],
-      fixedTagList: memo.fixedTagList
-        // .filter(({ parentId }) => !usedParentIdSet.has(parentId))
-        .filter(({ title }) => title)
-        .sort(({ title: a }, { title: b}) => a.localeCompare(b)),
-      recentTagList: memo.recentTagList
-        // .filter(({ parentId }) => !usedOrFixedParentIdSet.has(parentId))
-        .filter(({ parentId }) => !fixedParentIdSet.has(parentId))
-        .filter(({ title }) => title)
-        .slice(0, RECENT_TAG_VISIBLE_LIMIT)
-        .sort(({ title: a }, { title: b }) => a.localeCompare(b)),
-    }
-  
-  }catch (e) {
-    logDebug('updateBookmarksForTabTask got errr', e);
-    logDebug('memo.recentTagList', memo.recentTagList);
-    throw e
+  const message = {
+    command: "bookmarkInfo",
+    bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
+    showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
+    isShowTitle: memo.settings[USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE],
+    tagList: memo.tagList.map(({ parentId, title, isFixed }) => ({
+      parentId,
+      title, 
+      isFixed,
+      isUsed: usedParentIdSet.has(parentId)
+    }))
   }
-
-  // logDebug('updateBookmarksForTabTask 33 ');
-  // logSendEvent('updateBookmarksForTabTask()', tabId, message);
-
   await chrome.tabs.sendMessage(tabId, message)
-  // logDebug('updateBookmarksForTabTask 44 ');
   
   return bookmarkInfo
 }

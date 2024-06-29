@@ -5,13 +5,18 @@ import {
   logDebug,
 } from './debug.js'
 import {
-  filterFixedTagList,
-  getRecentTagList
+  filterFixedTagObj,
+  getRecentTagObj
 } from './recent-api.js'
-import { USER_SETTINGS_DEFAULT_VALUE, USER_SETTINGS_OPTIONS, RECENT_TAG_INTERNAL_LIMIT } from '../constants.js';
+import {
+  USER_SETTINGS_DEFAULT_VALUE,
+  USER_SETTINGS_OPTIONS,
+  RECENT_TAG_INTERNAL_LIMIT,
+  RECENT_TAG_VISIBLE_LIMIT
+} from '../constants.js';
 
-const STORAGE_LOCAL__FIXED_TAG_LIST = 'FIXED_TAG_LIST'
-const STORAGE_SESSION__RECENT_TAG_LIST = 'RECENT_TAG_LIST'
+const STORAGE_LOCAL__FIXED_TAG_MAP = 'FIXED_TAG_MAP'
+const STORAGE_SESSION__RECENT_TAG_MAP = 'RECENT_TAG_MAP'
 
 export const memo = {
   activeTabId: '',
@@ -90,13 +95,29 @@ export const memo = {
     }
   },
 
-  _fixedTagList: [],
-  _recentTagList: [],
-  get fixedTagList() {
-    return this._fixedTagList
+  _recentTagObj: {},
+  _fixedTagObj: {},
+  _tagList: [],
+  get tagList() {
+    return this._tagList
   },
-  get recentTagList() {
-    return this._recentTagList
+  getTagList() {
+    const recentTagList = Object.entries(this._recentTagObj)
+      .filter(([parentId]) => !(parentId in this._fixedTagObj))
+      .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+      .sort((a,b) => -(a.dateAdded - b.dateAdded))
+      .slice(0, RECENT_TAG_VISIBLE_LIMIT)
+    
+    const fullList = [].concat(
+      recentTagList
+        .map(({ parentId, title }) => ({ parentId, title, isFixed: false })),
+      Object.entries(this._fixedTagObj)
+        .map(([parentId, title]) => ({ parentId, title, isFixed: true }))
+    )
+
+    return fullList
+      .filter(({ title }) => !!title)
+      .sort(({ title: a }, { title: b }) => a.localeCompare(b))
   },
   async readTagList() {
     logSettings('readTagList 11')
@@ -104,25 +125,28 @@ export const memo = {
     if (this._settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
       logSettings('readTagList 22')
       const [savedLocal, savedSession] = await Promise.all([
-        chrome.storage.local.get(STORAGE_LOCAL__FIXED_TAG_LIST),
-        chrome.storage.session.get(STORAGE_SESSION__RECENT_TAG_LIST),
+        chrome.storage.local.get(STORAGE_LOCAL__FIXED_TAG_MAP),
+        chrome.storage.session.get(STORAGE_SESSION__RECENT_TAG_MAP),
       ]);
-    
 
-      if (!savedSession[STORAGE_SESSION__RECENT_TAG_LIST]) {
+      if (!savedSession[STORAGE_SESSION__RECENT_TAG_MAP]) {
         logSettings('readTagList 22 11')
-        this._fixedTagList = await filterFixedTagList(savedLocal[STORAGE_LOCAL__FIXED_TAG_LIST])
-        this._recentTagList = await getRecentTagList(RECENT_TAG_INTERNAL_LIMIT)
+        this._fixedTagObj = await filterFixedTagObj(savedLocal[STORAGE_LOCAL__FIXED_TAG_MAP])
+        this._recentTagObj = await getRecentTagObj(RECENT_TAG_INTERNAL_LIMIT)
       } else {
         logSettings('readTagList 22 77')
-        this._fixedTagList = savedLocal[STORAGE_LOCAL__FIXED_TAG_LIST] || []
-        this._recentTagList = savedSession[STORAGE_SESSION__RECENT_TAG_LIST]
-      }  
+        this._fixedTagObj = savedLocal[STORAGE_LOCAL__FIXED_TAG_MAP] || {}
+        this._recentTagObj = savedSession[STORAGE_SESSION__RECENT_TAG_MAP] 
+      }
+      logSettings('readTagList this._recentTagObj ', this._recentTagObj)
+      this._tagList = this.getTagList()
+      logSettings('readTagList this._tagList ', this._tagList)
     } else {
       logSettings('readTagList 44')
 
-      this._fixedTagList = []
-      this._recentTagList = []
+      this._fixedTagObj = {}
+      this._recentTagObj = {}
+      this._tagList = []
     }
   },
   async addRecentTag(bkmNode) {
@@ -143,109 +167,98 @@ export const memo = {
     logSettings('addRecentTag 22 newFolder', newFolder )
     logSettings('addRecentTag 22 newFolder.title', newFolder.title )
 
-    const folderByIdMap = Object.fromEntries(
-      this._recentTagList.map(({ parentId, title, dateAdded }) => [
-        parentId,
-        {
-          title,
-          dateAdded,
-        }
-      ])
-    )
-
-    folderByIdMap[newFolderId] = {
-      ...folderByIdMap[newFolderId],
+    this._recentTagObj[newFolderId] = {
       dateAdded,
       title: newFolder.title
     }
 
-    this._recentTagList = Object.entries(folderByIdMap)
-      .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-      .sort((a,b) => -(a.dateAdded - b.dateAdded))
-      .slice(0, RECENT_TAG_INTERNAL_LIMIT)
+    if (RECENT_TAG_INTERNAL_LIMIT < Object.keys(this._recentTagObj).length) {
+      const redundantIdList = Object.entries(this._recentTagObj)
+        .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+        .sort((a,b) => -(a.dateAdded - b.dateAdded))
+        .slice(RECENT_TAG_INTERNAL_LIMIT)
+        .map(({ parentId }) => parentId)
 
+        redundantIdList.forEach((id) => {
+          delete this._recentTagObj[id]
+        })
+    }
+
+    this._tagList = this.getTagList()
     await chrome.storage.session.set({
-      [STORAGE_SESSION__RECENT_TAG_LIST]: this._recentTagList
+      [STORAGE_SESSION__RECENT_TAG_MAP]: this._recentTagObj
     })
   },
   async removeTag(id) {
-    const isInFixedList = this._fixedTagList.some(({ parentId }) => parentId === id)
+    const isInFixedList = id in this._fixedTagObj
 
     if (isInFixedList) {
-      this._fixedTagList = this._fixedTagList.filter(({ parentId }) => parentId !== id)
+      delete this._fixedTagObj[id] 
     }
 
-    const isInRecentList = this._recentTagList.some(({ parentId }) => parentId === id)
+    const isInRecentList = id in this._recentTagObj
 
     if (isInRecentList) {
-      this._recentTagList = this._recentTagList.filter(({ parentId }) => parentId !== id)
+      delete this._recentTagObj[id]
     }
 
     if (isInFixedList || isInRecentList) {
+      this._tagList = this.getTagList()
       await Promise.all([
         isInFixedList && chrome.storage.local.set({
-          [STORAGE_LOCAL__FIXED_TAG_LIST]: this._fixedTagList
+          [STORAGE_LOCAL__FIXED_TAG_MAP]: this._fixedTagObj
         }),
         isInRecentList && chrome.storage.session.set({
-          [STORAGE_SESSION__RECENT_TAG_LIST]: this._recentTagList
+          [STORAGE_SESSION__RECENT_TAG_MAP]: this._recentTagObj
         })
       ])
     }
   },
   async updateTag(id, title) {
-    const isInFixedList = this._fixedTagList.some(({ parentId }) => parentId === id)
+    const isInFixedList = id in this._fixedTagObj
 
     if (isInFixedList) {
-      this._fixedTagList = this._fixedTagList.map(
-        (item) => (item.parentId === id
-          ? {
-            ...item,
-            title,
-          }
-          : item
-        )
-      )
+      this._fixedTagObj[id] = title
     }
 
-    const isInRecentList = this._recentTagList.some(({ parentId }) => parentId === id)
+    const isInRecentList = id in this._recentTagObj
 
     if (isInRecentList) {
-      this._recentTagList = this._recentTagList.map(
-        (item) => (item.parentId === id
-          ? {
-            ...item,
-            title,
-          }
-          : item
-        )
-      )
+      this._recentTagObj[id].title = title
     }
 
     if (isInFixedList || isInRecentList) {
+      this._tagList = this.getTagList()
       await Promise.all([
         isInFixedList && chrome.storage.local.set({
-          [STORAGE_LOCAL__FIXED_TAG_LIST]: this._fixedTagList
+          [STORAGE_LOCAL__FIXED_TAG_MAP]: this._fixedTagObj
         }),
         isInRecentList && chrome.storage.session.set({
-          [STORAGE_SESSION__RECENT_TAG_LIST]: this._recentTagList
+          [STORAGE_SESSION__RECENT_TAG_MAP]: this._recentTagObj
         })
       ])
     }
   },
   async addFixedTag({ parentId, title }) {
-    const item = this._fixedTagList.find((item) => item.parentId === parentId)
+    if (!title || !parentId) {
+      return
+    }
 
-    if (!item) {
-      this._fixedTagList.push({ parentId, title })
+    if (!(parentId in this._fixedTagObj)) {
+      this._fixedTagObj[parentId] = title
+
+      this._tagList = this.getTagList()
       await chrome.storage.local.set({
-        [STORAGE_LOCAL__FIXED_TAG_LIST]: this._fixedTagList
+        [STORAGE_LOCAL__FIXED_TAG_MAP]: this._fixedTagObj
       })
     }
   },
   async removeFixedTag(id) {
-    this._fixedTagList = this._fixedTagList.filter(({ parentId }) => parentId !== id)
+    delete this._fixedTagObj[id]
+
+    this._tagList = this.getTagList()
     await chrome.storage.local.set({
-      [STORAGE_LOCAL__FIXED_TAG_LIST]: this._fixedTagList
+      [STORAGE_LOCAL__FIXED_TAG_MAP]: this._fixedTagObj
     })
   },
 
