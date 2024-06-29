@@ -22,7 +22,7 @@ const log = SHOW_LOG ? console.log : () => {};
   const BROWSER_SPECIFIC_OPTIONS = {
     [BROWSER_OPTIONS.CHROME]: {
       DEL_BTN_RIGHT_PADDING: '0.5ch',
-      LABEL_RIGHT_PADDING: '0',
+      LABEL_RIGHT_PADDING: '0.3ch',
     },
     [BROWSER_OPTIONS.FIREFOX]: {
       DEL_BTN_RIGHT_PADDING: '0.8ch',
@@ -191,6 +191,10 @@ const log = SHOW_LOG ? console.log : () => {};
   display: flex;
   background-color: #00BFFF;
 }
+
+.bkm-info--used-tag {
+  text-decoration-line: line-through;
+}
 `
   );
   
@@ -263,7 +267,7 @@ const log = SHOW_LOG ? console.log : () => {};
     const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
 
     if (parentId) {
-      const recentTag = fullMessage.recentTagList.find((item) => item.parentId === parentId)
+      const recentTag = fullMessage.tagList.find((item) => item.parentId === parentId)
       await browser.runtime.sendMessage({
         command: "fixTag",
         parentId,
@@ -300,8 +304,7 @@ const log = SHOW_LOG ? console.log : () => {};
     const visitList = input.visitList || []
     const showPreviousVisit = input.showPreviousVisit || SHOW_PREVIOUS_VISIT_OPTION.NEVER
     const isShowTitle = input.isShowTitle || false
-    const fixedTagList = input.fixedTagList || []
-    const recentTagList = input.recentTagList || []
+    const tagList = input.tagList || []
 
     log('showBookmarkInfo 00');
 
@@ -350,14 +353,14 @@ const log = SHOW_LOG ? console.log : () => {};
       drawList.push({ type: 'history', value: prevVisit })
     }
 
-    if (fixedTagList.length > 0 || recentTagList.length > 0) {
+    if (tagList.length > 0) {
       drawList.push({ type: 'separator' })
 
-      fixedTagList.forEach((value) => {
-        drawList.push({ type: 'fixedTag', value })
-      })
-      recentTagList.forEach((value) => {
-        drawList.push({ type: 'recentTag', value })
+      tagList.forEach(({ isFixed, parentId, title, isUsed }) => {
+        drawList.push({
+          type: isFixed ? 'fixedTag' : 'recentTag',
+          value: { parentId, title, isUsed },
+        })
       })
     }
 
@@ -442,10 +445,12 @@ const log = SHOW_LOG ? console.log : () => {};
           break
         }
         case 'recentTag': {
-          const { title, parentId } = value
+          const { parentId, title, isUsed } = value
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--recent');
+          divLabel.classList.toggle('bkm-info--used-tag', isUsed);
+          
           divLabel.setAttribute('data-parentid', parentId);
           divLabel.addEventListener('click', addBookmark);
           const textNodeLabel = document.createTextNode(`${title}`);
@@ -468,10 +473,11 @@ const log = SHOW_LOG ? console.log : () => {};
           break
         }
         case 'fixedTag': {
-          const { title, parentId } = value
+          const { parentId, title, isUsed } = value
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--fixed');
+          divLabel.classList.toggle('bkm-info--used-tag', isUsed);
           divLabel.setAttribute('data-parentid', parentId);
           divLabel.addEventListener('click', addBookmark);
           const textNodeLabel = document.createTextNode(`${title}`);

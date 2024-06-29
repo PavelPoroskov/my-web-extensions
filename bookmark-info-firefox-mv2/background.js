@@ -267,15 +267,15 @@ function isSupportedProtocol(urlString) {
     return false;
   }
 }
-async function getRecentTagList(nItems) {
-  log('getRecentTagList() 00', nItems)
+async function getRecentTagObj(nItems) {
+  log('getRecentTagObj() 00', nItems)
   const list = await browser.bookmarks.getRecent(nItems*3);
 
   const folderList = list
     .filter(({ url }) => !url)
 
   const folderByIdMap = Object.fromEntries(
-    folderList.map(({ id, title, dateAdded}) => [
+    folderList.map(({ id, title, dateAdded }) => [
       id,
       {
         title,
@@ -302,28 +302,34 @@ function isSupportedProtocol(urlString) {
     folderByIdMap[id].title = title
   })
 
-  return Object.entries(folderByIdMap)
-    .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-    .sort((a,b) => -(a.dateAdded - b.dateAdded))
-    .slice(0, nItems)
+  return Object.fromEntries(
+    Object.entries(folderByIdMap)
+      .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+      .sort((a,b) => -(a.dateAdded - b.dateAdded))
+      .slice(0, nItems)
+      .map(({ parentId, title, dateAdded }) => [parentId, { title, dateAdded }])
+  )
 }
 
-async function filterFixedTagList(list = []) {
-  const idList = list.map(({ parentId }) => parentId)
+async function filterFixedTagObj(obj = {}) {
+  const idList = Object.keys(obj)
 
   if (idList.length === 0) {
-    return []
+    return {}
   }
 
   const folderList = await browser.bookmarks.get(idList)
-
-  return folderList
+  const filteredFolderList = folderList
     .filter(Boolean)
-    .map(({ id, title }) => ({ parentId: id, title }))
+    .filter(({ title }) => !!title)
+
+  return Object.fromEntries(
+    filteredFolderList.map(({ id, title }) => [id, title])
+  )
 }
 // console.log('IMPORTING', 'memo.js')
-const STORAGE_LOCAL__FIXED_TAG_LIST = 'FIXED_TAG_LIST'
-const STORAGE_SESSION__RECENT_TAG_LIST = 'RECENT_TAG_LIST'
+const STORAGE_LOCAL__FIXED_TAG_MAP = 'FIXED_TAG_MAP'
+const STORAGE_SESSION__RECENT_TAG_MAP = 'RECENT_TAG_MAP'
 
 const memo = {
   activeTabId: '',
@@ -402,13 +408,29 @@ const memo = {
     }
   },
 
-  _fixedTagList: [],
-  _recentTagList: [],
-  get fixedTagList() {
-    return this._fixedTagList
+  _recentTagObj: {},
+  _fixedTagObj: {},
+  _tagList: [],
+  get tagList() {
+    return this._tagList
   },
-  get recentTagList() {
-    return this._recentTagList
+  getTagList() {
+    const recentTagList = Object.entries(this._recentTagObj)
+      .filter(([parentId]) => !(parentId in this._fixedTagObj))
+      .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+      .sort((a,b) => -(a.dateAdded - b.dateAdded))
+      .slice(0, RECENT_TAG_VISIBLE_LIMIT)
+    
+    const fullList = [].concat(
+      recentTagList
+        .map(({ parentId, title }) => ({ parentId, title, isFixed: false })),
+      Object.entries(this._fixedTagObj)
+        .map(([parentId, title]) => ({ parentId, title, isFixed: true }))
+    )
+
+    return fullList
+      .filter(({ title }) => !!title)
+      .sort(({ title: a }, { title: b }) => a.localeCompare(b))
   },
   async readTagList() {
     logSettings('readTagList 11')
@@ -416,25 +438,28 @@ const memo = {
     if (this._settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
       logSettings('readTagList 22')
       const [savedLocal, savedSession] = await Promise.all([
-        browser.storage.local.get(STORAGE_LOCAL__FIXED_TAG_LIST),
-        browser.storage.session.get(STORAGE_SESSION__RECENT_TAG_LIST),
+        browser.storage.local.get(STORAGE_LOCAL__FIXED_TAG_MAP),
+        browser.storage.session.get(STORAGE_SESSION__RECENT_TAG_MAP),
       ]);
-    
 
-      if (!savedSession[STORAGE_SESSION__RECENT_TAG_LIST]) {
+      if (!savedSession[STORAGE_SESSION__RECENT_TAG_MAP]) {
         logSettings('readTagList 22 11')
-        this._fixedTagList = await filterFixedTagList(savedLocal[STORAGE_LOCAL__FIXED_TAG_LIST])
-        this._recentTagList = await getRecentTagList(RECENT_TAG_INTERNAL_LIMIT)
+        this._fixedTagObj = await filterFixedTagObj(savedLocal[STORAGE_LOCAL__FIXED_TAG_MAP])
+        this._recentTagObj = await getRecentTagObj(RECENT_TAG_INTERNAL_LIMIT)
       } else {
         logSettings('readTagList 22 77')
-        this._fixedTagList = savedLocal[STORAGE_LOCAL__FIXED_TAG_LIST] || []
-        this._recentTagList = savedSession[STORAGE_SESSION__RECENT_TAG_LIST]
-      }  
+        this._fixedTagObj = savedLocal[STORAGE_LOCAL__FIXED_TAG_MAP] || {}
+        this._recentTagObj = savedSession[STORAGE_SESSION__RECENT_TAG_MAP] 
+      }
+      logSettings('readTagList this._recentTagObj ', this._recentTagObj)
+      this._tagList = this.getTagList()
+      logSettings('readTagList this._tagList ', this._tagList)
     } else {
       logSettings('readTagList 44')
 
-      this._fixedTagList = []
-      this._recentTagList = []
+      this._fixedTagObj = {}
+      this._recentTagObj = {}
+      this._tagList = []
     }
   },
   async addRecentTag(bkmNode) {
@@ -455,109 +480,98 @@ const memo = {
     logSettings('addRecentTag 22 newFolder', newFolder )
     logSettings('addRecentTag 22 newFolder.title', newFolder.title )
 
-    const folderByIdMap = Object.fromEntries(
-      this._recentTagList.map(({ parentId, title, dateAdded }) => [
-        parentId,
-        {
-          title,
-          dateAdded,
-        }
-      ])
-    )
-
-    folderByIdMap[newFolderId] = {
-      ...folderByIdMap[newFolderId],
+    this._recentTagObj[newFolderId] = {
       dateAdded,
       title: newFolder.title
     }
 
-    this._recentTagList = Object.entries(folderByIdMap)
-      .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-      .sort((a,b) => -(a.dateAdded - b.dateAdded))
-      .slice(0, RECENT_TAG_INTERNAL_LIMIT)
+    if (RECENT_TAG_INTERNAL_LIMIT < Object.keys(this._recentTagObj).length) {
+      const redundantIdList = Object.entries(this._recentTagObj)
+        .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+        .sort((a,b) => -(a.dateAdded - b.dateAdded))
+        .slice(RECENT_TAG_INTERNAL_LIMIT)
+        .map(({ parentId }) => parentId)
 
+        redundantIdList.forEach((id) => {
+          delete this._recentTagObj[id]
+        })
+    }
+
+    this._tagList = this.getTagList()
     await browser.storage.session.set({
-      [STORAGE_SESSION__RECENT_TAG_LIST]: this._recentTagList
+      [STORAGE_SESSION__RECENT_TAG_MAP]: this._recentTagObj
     })
   },
   async removeTag(id) {
-    const isInFixedList = this._fixedTagList.some(({ parentId }) => parentId === id)
+    const isInFixedList = id in this._fixedTagObj
 
     if (isInFixedList) {
-      this._fixedTagList = this._fixedTagList.filter(({ parentId }) => parentId !== id)
+      delete this._fixedTagObj[id] 
     }
 
-    const isInRecentList = this._recentTagList.some(({ parentId }) => parentId === id)
+    const isInRecentList = id in this._recentTagObj
 
     if (isInRecentList) {
-      this._recentTagList = this._recentTagList.filter(({ parentId }) => parentId !== id)
+      delete this._recentTagObj[id]
     }
 
     if (isInFixedList || isInRecentList) {
+      this._tagList = this.getTagList()
       await Promise.all([
         isInFixedList && browser.storage.local.set({
-          [STORAGE_LOCAL__FIXED_TAG_LIST]: this._fixedTagList
+          [STORAGE_LOCAL__FIXED_TAG_MAP]: this._fixedTagObj
         }),
         isInRecentList && browser.storage.session.set({
-          [STORAGE_SESSION__RECENT_TAG_LIST]: this._recentTagList
+          [STORAGE_SESSION__RECENT_TAG_MAP]: this._recentTagObj
         })
       ])
     }
   },
   async updateTag(id, title) {
-    const isInFixedList = this._fixedTagList.some(({ parentId }) => parentId === id)
+    const isInFixedList = id in this._fixedTagObj
 
     if (isInFixedList) {
-      this._fixedTagList = this._fixedTagList.map(
-        (item) => (item.parentId === id
-          ? {
-            ...item,
-            title,
-          }
-          : item
-        )
-      )
+      this._fixedTagObj[id] = title
     }
 
-    const isInRecentList = this._recentTagList.some(({ parentId }) => parentId === id)
+    const isInRecentList = id in this._recentTagObj
 
     if (isInRecentList) {
-      this._recentTagList = this._recentTagList.map(
-        (item) => (item.parentId === id
-          ? {
-            ...item,
-            title,
-          }
-          : item
-        )
-      )
+      this._recentTagObj[id].title = title
     }
 
     if (isInFixedList || isInRecentList) {
+      this._tagList = this.getTagList()
       await Promise.all([
         isInFixedList && browser.storage.local.set({
-          [STORAGE_LOCAL__FIXED_TAG_LIST]: this._fixedTagList
+          [STORAGE_LOCAL__FIXED_TAG_MAP]: this._fixedTagObj
         }),
         isInRecentList && browser.storage.session.set({
-          [STORAGE_SESSION__RECENT_TAG_LIST]: this._recentTagList
+          [STORAGE_SESSION__RECENT_TAG_MAP]: this._recentTagObj
         })
       ])
     }
   },
   async addFixedTag({ parentId, title }) {
-    const item = this._fixedTagList.find((item) => item.parentId === parentId)
+    if (!title || !parentId) {
+      return
+    }
 
-    if (!item) {
-      this._fixedTagList.push({ parentId, title })
+    if (!(parentId in this._fixedTagObj)) {
+      this._fixedTagObj[parentId] = title
+
+      this._tagList = this.getTagList()
       await browser.storage.local.set({
-        [STORAGE_LOCAL__FIXED_TAG_LIST]: this._fixedTagList
+        [STORAGE_LOCAL__FIXED_TAG_MAP]: this._fixedTagObj
       })
     }
   },
   async removeFixedTag(id) {
-    this._fixedTagList = this._fixedTagList.filter(({ parentId }) => parentId !== id)
+    delete this._fixedTagObj[id]
+
+    this._tagList = this.getTagList()
     await browser.storage.local.set({
-      [STORAGE_LOCAL__FIXED_TAG_LIST]: this._fixedTagList
+      [STORAGE_LOCAL__FIXED_TAG_MAP]: this._fixedTagObj
     })
   },
 
@@ -976,10 +990,11 @@ async function cleanUrlIfTarget({ url, tabId }) {
 }
 
 async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
-  // logDebug('updateBookmarksForTabTask 00 (', tabId, useCache, url);
+  logDebug('updateBookmarksForTabTask 00 (', tabId, useCache, url);
 
   let actualUrl = url
 
+  logDebug('updateBookmarksForTabTask 11');
   if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
     const { cleanUrl } = removeQueryParamsIfTarget(url)
 
@@ -987,51 +1002,26 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
       actualUrl = cleanUrl
     }
   } 
+  logDebug('updateBookmarksForTabTask 22');
 
-  // logDebug('updateBookmarksForTabTask 11 ');
   const bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
-  // const usedParentIdSet = new Set(bookmarkInfo.map(({ parentId }) => parentId))
-  const fixedParentIdSet = new Set(memo.fixedTagList.map(({ parentId }) => parentId))
-  // const usedOrFixedParentIdSet = usedParentIdSet.union(fixedParentIdSet)
+  logDebug('updateBookmarksForTabTask 33');
+  const usedParentIdSet = new Set(bookmarkInfo.bookmarkInfoList.map(({ parentId }) => parentId))
+  logDebug('updateBookmarksForTabTask 44 memo.tagList', memo.tagList);
 
-  // logDebug('updateBookmarksForTabTask 22 ');
-  // logDebug('memo.fixedTagList Array.isArray', Array.isArray(memo.fixedTagList));
-  // logDebug('memo.fixedTagList length', memo.fixedTagList.length);
-  // logDebug('memo.recentTagList Array.isArray', Array.isArray(memo.recentTagList));
-  // logDebug('memo.recentTagList length', memo.recentTagList.length);
-  // logDebug('memo.recentTagList', memo.recentTagList);
-
-  let message = {}
-  try {
-    // const message = {
-    message = {
-      command: "bookmarkInfo",
-      bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
-      showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
-      isShowTitle: memo.settings[USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE],
-      fixedTagList: memo.fixedTagList
-        // .filter(({ parentId }) => !usedParentIdSet.has(parentId))
-        .filter(({ title }) => title)
-        .sort(({ title: a }, { title: b}) => a.localeCompare(b)),
-      recentTagList: memo.recentTagList
-        // .filter(({ parentId }) => !usedOrFixedParentIdSet.has(parentId))
-        .filter(({ parentId }) => !fixedParentIdSet.has(parentId))
-        .filter(({ title }) => title)
-        .slice(0, RECENT_TAG_VISIBLE_LIMIT)
-        .sort(({ title: a }, { title: b }) => a.localeCompare(b)),
-    }
-  
-  }catch (e) {
-    logDebug('updateBookmarksForTabTask got errr', e);
-    logDebug('memo.recentTagList', memo.recentTagList);
-    throw e
+  const message = {
+    command: "bookmarkInfo",
+    bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
+    showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
+    isShowTitle: memo.settings[USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE],
+    tagList: memo.tagList.map(({ parentId, title, isFixed }) => ({
+      parentId,
+      title, 
+      isFixed,
+      isUsed: usedParentIdSet.has(parentId)
+    }))
   }
-
-  // logDebug('updateBookmarksForTabTask 33 ');
-  // logSendEvent('updateBookmarksForTabTask()', tabId, message);
-
   await browser.tabs.sendMessage(tabId, message)
-  // logDebug('updateBookmarksForTabTask 44 ');
   
   return bookmarkInfo
 }
