@@ -11,8 +11,7 @@ import {
 import {
   USER_SETTINGS_DEFAULT_VALUE,
   USER_SETTINGS_OPTIONS,
-  RECENT_TAG_INTERNAL_LIMIT,
-  RECENT_TAG_VISIBLE_LIMIT
+  TAG_LIST_VISIBLE_LIMIT
 } from '../constants.js';
 
 const STORAGE_LOCAL__FIXED_TAG_MAP = 'FIXED_TAG_MAP'
@@ -102,11 +101,16 @@ export const memo = {
     return this._tagList
   },
   getTagList() {
+    const recentTaLimit = Math.max(
+      TAG_LIST_VISIBLE_LIMIT - Object.keys(this._fixedTagObj).length,
+      0
+    )
+
     const recentTagList = Object.entries(this._recentTagObj)
       .filter(([parentId]) => !(parentId in this._fixedTagObj))
       .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
       .sort((a,b) => -(a.dateAdded - b.dateAdded))
-      .slice(0, RECENT_TAG_VISIBLE_LIMIT)
+      .slice(0, recentTaLimit)
     
     const fullList = [].concat(
       recentTagList
@@ -132,7 +136,7 @@ export const memo = {
       if (!savedSession[STORAGE_SESSION__RECENT_TAG_MAP]) {
         logSettings('readTagList 22 11')
         this._fixedTagObj = await filterFixedTagObj(savedLocal[STORAGE_LOCAL__FIXED_TAG_MAP])
-        this._recentTagObj = await getRecentTagObj(RECENT_TAG_INTERNAL_LIMIT)
+        this._recentTagObj = await getRecentTagObj(TAG_LIST_VISIBLE_LIMIT)
       } else {
         logSettings('readTagList 22 77')
         this._fixedTagObj = savedLocal[STORAGE_LOCAL__FIXED_TAG_MAP] || {}
@@ -172,11 +176,11 @@ export const memo = {
       title: newFolder.title
     }
 
-    if (RECENT_TAG_INTERNAL_LIMIT < Object.keys(this._recentTagObj).length) {
+    if (TAG_LIST_VISIBLE_LIMIT < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
         .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
         .sort((a,b) => -(a.dateAdded - b.dateAdded))
-        .slice(RECENT_TAG_INTERNAL_LIMIT)
+        .slice(TAG_LIST_VISIBLE_LIMIT)
         .map(({ parentId }) => parentId)
 
         redundantIdList.forEach((id) => {

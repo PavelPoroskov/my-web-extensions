@@ -75,7 +75,12 @@ export const clearUrlTargetList = [
       '/list/',
     ] 
   },
+  {
+    hostname: 'udemy.com',  
+    paths: [
+      '/course/',
+    ] 
+  },
 ]
 
-export const RECENT_TAG_INTERNAL_LIMIT = 30;
-export const RECENT_TAG_VISIBLE_LIMIT = 20;
+export const TAG_LIST_VISIBLE_LIMIT = 25;

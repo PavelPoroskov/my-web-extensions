@@ -567,4 +567,18 @@ const log = SHOW_LOG ? console.log : () => {};
   } catch (er) {
     log('IGNORE send contentScriptReady', er);
   }
+
+  function fullscreenchanged() {
+    let rootDiv = document.getElementById(bkmInfoRootId);
+
+    if (rootDiv) {
+      if (document.fullscreenElement) {
+        rootDiv.style = 'display:none;';      
+      } else {
+        rootDiv.style = 'display:block;';
+      }
+    }
+  }
+  
+  document.addEventListener("fullscreenchange", fullscreenchanged);
 })();

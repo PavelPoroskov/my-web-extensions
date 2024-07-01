@@ -2,9 +2,9 @@ import {
   log,
 } from './debug.js'
 
-export async function getRecentTagObj(nItems) {
+async function getRecentList(nItems) {
   log('getRecentTagObj() 00', nItems)
-  const list = await chrome.bookmarks.getRecent(nItems*3);
+  const list = await chrome.bookmarks.getRecent(nItems);
 
   const folderList = list
     .filter(({ url }) => !url)
@@ -37,10 +37,20 @@ export async function getRecentTagObj(nItems) {
     folderByIdMap[id].title = title
   })
 
+  return Object.entries(folderByIdMap)
+    .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+    .sort((a,b) => -(a.dateAdded - b.dateAdded))
+}
+
+export async function getRecentTagObj(nItems) {
+  let list = await getRecentList(nItems * 4)
+
+  if (list.length < nItems) {
+    list = await getRecentList(nItems * 10)
+  }
+
   return Object.fromEntries(
-    Object.entries(folderByIdMap)
-      .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-      .sort((a,b) => -(a.dateAdded - b.dateAdded))
+    list
       .slice(0, nItems)
       .map(({ parentId, title, dateAdded }) => [parentId, { title, dateAdded }])
   )
