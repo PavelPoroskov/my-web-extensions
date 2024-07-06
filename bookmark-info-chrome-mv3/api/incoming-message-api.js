@@ -1,30 +1,38 @@
 
 
 import {
-  logEvent
+  logEvent,
 } from './log-api.js'
+import {
+  memo,
+} from './memo.js'
+import {
+  clearUrlInTab,
+  removeQueryParamsIfTarget,
+} from './clean-url-api.js'
 import {
   deleteBookmark,
 } from './bookmarks-api.js'
 import {
-  cleanUrlIfTarget,
   updateActiveTab,
   updateTab,
 } from './tabs-api.js'
 import {
-  memo,
-} from './memo.js'
+  EXTENSION_COMMAND_ID,
+  USER_SETTINGS_OPTIONS
+} from '../constant/index.js'
 
 export async function onIncomingMessage (message, sender) {
 
   switch (message?.command) {
-    case "deleteBookmark": {
+
+    case EXTENSION_COMMAND_ID.DELETE_BOOKMARK: {
       logEvent('runtime.onMessage deleteBookmark');
 
       deleteBookmark(message.bkmId);
       break
     }
-    case "addBookmark": {
+    case EXTENSION_COMMAND_ID.ADD_BOOKMARK: {
       logEvent('runtime.onMessage addBookmark');
       memo.createBkmInActiveDialogFromTag(message.parentId)
       await chrome.bookmarks.create({
@@ -36,7 +44,7 @@ export async function onIncomingMessage (message, sender) {
 
       break
     }
-    case "fixTag": {
+    case EXTENSION_COMMAND_ID.FIX_TAG: {
       logEvent('runtime.onMessage fixTag');
 
       await memo.addFixedTag({
@@ -50,7 +58,7 @@ export async function onIncomingMessage (message, sender) {
   
       break
     }
-    case "unfixTag": {
+    case EXTENSION_COMMAND_ID.UNFIX_TAG: {
       logEvent('runtime.onMessage unfixTag');
 
       await memo.removeFixedTag(message.parentId)
@@ -61,15 +69,25 @@ export async function onIncomingMessage (message, sender) {
 
       break
     }
-    case "contentScriptReady": {
-      const senderTabId = sender?.tab?.id;
-      logEvent('runtime.onMessage contentScriptReady', senderTabId);
+    case EXTENSION_COMMAND_ID.TAB_IS_READY: {
+      const tabId = sender?.tab?.id;
+      logEvent('runtime.onMessage contentScriptReady', tabId);
 
-      if (senderTabId) {
-        const cleanUrl = await cleanUrlIfTarget({ url: message.url, tabId: senderTabId })
+      if (tabId) {
+        const url = message.url
+        let cleanUrl
+
+        if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+          ({ cleanUrl } = removeQueryParamsIfTarget(url));
+          
+          if (url !== cleanUrl) {
+            await clearUrlInTab({ tabId, cleanUrl })
+          }
+        }
+
         updateTab({
-          tabId: senderTabId,
-          url: cleanUrl || message.url,
+          tabId,
+          url: cleanUrl || url,
           useCache: true,
           debugCaller: 'runtime.onMessage contentScriptReady',
         })

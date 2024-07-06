@@ -16,6 +16,7 @@ import {
   removeQueryParamsIfTarget,
 } from '../api/clean-url-api.js'
 import {
+  CONTENT_SCRIPT_COMMAND_ID,
   USER_SETTINGS_OPTIONS,
 } from '../constant/index.js'
 
@@ -32,7 +33,7 @@ async function replaceUrlToCleanUrl({ node, cleanUrl, activeTab, bookmarkId }) {
   }
 
   const msg = {
-    command: "changeLocationToCleanUrl",
+    command: CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL,
     cleanUrl,
   }
   logSendEvent('bookmarksController.onCreated()', activeTab.id, msg)
@@ -43,6 +44,8 @@ async function replaceUrlToCleanUrl({ node, cleanUrl, activeTab, bookmarkId }) {
     originalUrl: node.url
   })
 }
+
+// TODO now url is cleared on open. Remove clear url on save (create/update/move/remove)
 
 export const bookmarksController = {
   async onCreated(bookmarkId, node) {

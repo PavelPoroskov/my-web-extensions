@@ -1,11 +1,16 @@
-import {
-  deleteUncleanUrlBookmarkForTab,
-  getBookmarkInfoUni,
-} from '../api/bookmarks-api.js'
+
 import {
   logEvent,
   logIgnore,
 } from '../api/log-api.js'
+import {
+  clearUrlInTab,
+  removeQueryParamsIfTarget,
+} from './clean-url-api.js'
+import {
+  deleteUncleanUrlBookmarkForTab,
+  getBookmarkInfoUni,
+} from '../api/bookmarks-api.js'
 import {
   getHistoryInfo,
 } from '../api/history-api.js'
@@ -13,11 +18,12 @@ import {
   memo,
 } from '../api/memo.js'
 import {
-  cleanUrlIfTarget,
   updateTab,
 } from '../api/tabs-api.js'
+
 import {
   IS_BROWSER_FIREFOX,
+  USER_SETTINGS_OPTIONS,
 } from '../constant/index.js'
 
 
@@ -35,9 +41,19 @@ export const tabsController = {
     switch (changeInfo?.status) {
       case ('loading'): {
         if (changeInfo?.url) {
-          logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, changeInfo.url);
-          const cleanUrl = await cleanUrlIfTarget({ url: changeInfo.url, tabId })
-          const actualUrl = cleanUrl || changeInfo.url
+          const url = changeInfo.url
+          logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, url);
+          let cleanUrl
+
+          if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+            ({ cleanUrl } = removeQueryParamsIfTarget(url));
+            
+            if (url !== cleanUrl) {
+              await clearUrlInTab({ tabId, cleanUrl })
+            }
+          }
+
+          const actualUrl = cleanUrl || url
           getBookmarkInfoUni({
             url: actualUrl,
             useCache: true,

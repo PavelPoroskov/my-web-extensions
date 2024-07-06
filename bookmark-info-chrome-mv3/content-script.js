@@ -10,6 +10,19 @@ const log = SHOW_LOG ? console.log : () => {};
   }
   window.hasRun = true;
 
+  const EXTENSION_COMMAND_ID = {
+    DELETE_BOOKMARK: 'DELETE_BOOKMARK',
+    ADD_BOOKMARK: 'ADD_BOOKMARK',
+    FIX_TAG: 'FIX_TAG',
+    UNFIX_TAG: 'UNFIX_TAG',
+    TAB_IS_READY: 'TAB_IS_READY',
+  }
+  const CONTENT_SCRIPT_COMMAND_ID = {
+    BOOKMARK_INFO: 'BOOKMARK_INFO',
+    HISTORY_INFO: 'HISTORY_INFO',
+    CLEAR_URL: 'CLEAR_URL',
+  }
+
   const SHOW_PREVIOUS_VISIT_OPTION = {
     NEVER: 0,
     ONLY_NO_BKM: 1,
@@ -238,7 +251,7 @@ const log = SHOW_LOG ? console.log : () => {};
 
     if (bkmId) {
       await chrome.runtime.sendMessage({
-        command: "deleteBookmark",
+        command: EXTENSION_COMMAND_ID.DELETE_BOOKMARK,
         bkmId,
       });
     }
@@ -253,7 +266,7 @@ const log = SHOW_LOG ? console.log : () => {};
 
       if (!isExist) {
         await chrome.runtime.sendMessage({
-          command: "addBookmark",
+          command: EXTENSION_COMMAND_ID.ADD_BOOKMARK,
           parentId,
           url: document.location.href,
           title: document.title,
@@ -269,7 +282,7 @@ const log = SHOW_LOG ? console.log : () => {};
     if (parentId) {
       const recentTag = fullMessage.tagList.find((item) => item.parentId === parentId)
       await chrome.runtime.sendMessage({
-        command: "fixTag",
+        command: EXTENSION_COMMAND_ID.FIX_TAG,
         parentId,
         title: recentTag.title,
       });
@@ -281,7 +294,7 @@ const log = SHOW_LOG ? console.log : () => {};
 
     if (parentId) {
       await chrome.runtime.sendMessage({
-        command: "unfixTag",
+        command: EXTENSION_COMMAND_ID.UNFIX_TAG,
         parentId,
       });
     }
@@ -530,22 +543,22 @@ const log = SHOW_LOG ? console.log : () => {};
   chrome.runtime.onMessage.addListener((message) => {
     log('chrome.runtime.onMessage: ', message);
     switch (message.command) {
-      case "bookmarkInfo": {
+      case CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO: {
         log('content-script: ', message.bookmarkInfoList);
 
         fullMessage = { ...fullMessage, ...message }
         showBookmarkInfo(fullMessage);
         break
       }
-      case "visitInfo": {
+      case CONTENT_SCRIPT_COMMAND_ID.HISTORY_INFO: {
         log('content-script: ', message.visitList);
 
         fullMessage = { ...fullMessage, ...message }
         showBookmarkInfo(fullMessage);
         break
       }
-      case "changeLocationToCleanUrl": {
-        log('content-script: changeLocationToCleanUrl', message);
+      case CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL: {
+        log('content-script:', message.cleanUrl);
         if (document.location.href.startsWith(message.cleanUrl)) {
           //document.location.href = message.cleanUrl
           //window.history.pushState(message.cleanUrl)
@@ -560,7 +573,7 @@ const log = SHOW_LOG ? console.log : () => {};
   log('before send contentScriptReady');
   try {
     await chrome.runtime.sendMessage({
-      command: "contentScriptReady",
+      command: EXTENSION_COMMAND_ID.TAB_IS_READY,
       url: document.location.href,
     });
     log('after send contentScriptReady');

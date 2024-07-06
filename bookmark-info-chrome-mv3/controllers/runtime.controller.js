@@ -11,7 +11,6 @@ import {
   onIncomingMessage,
 } from '../api/incoming-message-api.js'
 
-
 export const runtimeController = {
   async onStartup() {
     logEvent('runtime.onStartup');

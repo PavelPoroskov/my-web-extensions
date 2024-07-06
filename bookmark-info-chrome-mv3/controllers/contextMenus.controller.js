@@ -4,7 +4,8 @@ import {
   logSendEvent,
 } from '../api/log-api.js'
 import {
-  MENU,
+  CONTENT_SCRIPT_COMMAND_ID,
+  CONTEXT_MENU_ID,
 } from '../constant/index.js';
 import {
   closeDuplicateTabs,
@@ -19,15 +20,15 @@ export const contextMenusController = {
     logEvent('contextMenus.onClicked <-');
 
     switch (OnClickData.menuItemId) {
-      case MENU.CLOSE_DUPLICATE: {
+      case CONTEXT_MENU_ID.CLOSE_DUPLICATE: {
         closeDuplicateTabs();
         break;
       }
-      case MENU.CLOSE_BOOKMARKED: {
+      case CONTEXT_MENU_ID.CLOSE_BOOKMARKED: {
         closeBookmarkedTabs();
         break;
       }
-      case MENU.CLEAR_URL: {
+      case CONTEXT_MENU_ID.CLEAR_URL: {
         const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
         const [activeTab] = tabs;
 
@@ -36,7 +37,7 @@ export const contextMenusController = {
 
           if (activeTab.url !== cleanUrl) {
             const msg = {
-              command: "changeLocationToCleanUrl",
+              command: CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL,
               cleanUrl,
             }
             logSendEvent('contextMenusController.onClicked(CLEAR_URL)', activeTab.id, msg)

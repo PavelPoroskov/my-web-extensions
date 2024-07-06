@@ -2,7 +2,6 @@ import {
   log,
   logEvent,
   logSendEvent,
-  logIgnore,
   logDebug
 } from './log-api.js'
 import {
@@ -24,30 +23,9 @@ import {
   memo,
 } from './memo.js'
 import {
+  CONTENT_SCRIPT_COMMAND_ID,
   USER_SETTINGS_OPTIONS,
 } from '../constant/index.js'
-
-let cleanUrl
-
-export async function cleanUrlIfTarget({ url, tabId }) {
-  if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
-    ({ cleanUrl } = removeQueryParamsIfTarget(url));
-    
-    if (url !== cleanUrl) {
-      const msg = {
-        command: "changeLocationToCleanUrl",
-        cleanUrl,
-      }
-      logSendEvent('runtimeController.onMessage(contentScriptReady)', tabId, msg)
-      await chrome.tabs.sendMessage(tabId, msg)
-        .catch((err) => {
-          logIgnore('runtimeController.onMessage(contentScriptReady) sendMessage(changeLocationToCleanUrl)', err)
-        })
-
-      return cleanUrl
-    }
-  }
-}
 
 async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
   logDebug('updateBookmarksForTabTask 00 (', tabId, useCache, url);
@@ -70,7 +48,7 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
   logDebug('updateBookmarksForTabTask 44 memo.tagList', memo.tagList);
 
   const message = {
-    command: "bookmarkInfo",
+    command: CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO,
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
     isShowTitle: memo.settings[USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE],
@@ -91,7 +69,7 @@ async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
   const visitInfo = await getHistoryInfo({ url, useCache })
 
   const message = {
-    command: "visitInfo",
+    command: CONTENT_SCRIPT_COMMAND_ID.HISTORY_INFO,
     showPreviousVisit: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT],
     visitList: visitInfo.visitList,
   }

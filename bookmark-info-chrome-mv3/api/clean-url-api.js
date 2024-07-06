@@ -1,6 +1,12 @@
 
-import { clearUrlTargetList } from '../constant/index.js'
-
+import {
+  CONTENT_SCRIPT_COMMAND_ID,
+  clearUrlTargetList 
+} from '../constant/index.js'
+import {
+  logSendEvent,
+  logIgnore,
+} from './log-api.js'
 
 const targetMap = new Map(
   clearUrlTargetList.map(({ hostname, paths }) => [hostname, paths])
@@ -63,3 +69,15 @@ export const removeQueryParams = (link) => {
 // console.log('test ', removeQueryParamsIfTarget(testStr))
 //
 // https://career.proxify.io/apply?uuid=566c933b-432e-64e0-b317-dd4390d6a74e&step=AdditionalInformation
+
+export async function clearUrlInTab({ tabId, cleanUrl }) {
+  const msg = {
+    command: CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL,
+    cleanUrl,
+  }
+  logSendEvent('runtimeController.onMessage(contentScriptReady)', tabId, msg)
+  await chrome.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logIgnore(`runtimeController.onMessage(contentScriptReady) sendMessage(${msg.command})`, err)
+    })
+}
