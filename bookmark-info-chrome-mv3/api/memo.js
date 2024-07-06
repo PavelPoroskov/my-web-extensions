@@ -2,7 +2,6 @@
 import { CacheWithLimit } from './cache.js'
 import {
   logSettings,
-  logDebug,
 } from './log-api.js'
 import {
   filterFixedTagObj,
@@ -20,6 +19,7 @@ const STORAGE_SESSION__RECENT_TAG_MAP = 'RECENT_TAG_MAP'
 export const memo = {
   activeTabId: '',
   previousTabId: '',
+  isActiveTabBookmarkManager: false,
   // previousActiveTabId: '',
   cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
   cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
@@ -269,14 +269,12 @@ export const memo = {
   activeDialog: {},
   activeDialogTabId: undefined,
   activeDialogTabOnActivated (tabId) {
-    logDebug('### activeDialogTabOnActivated', tabId)
     if (tabId !== this.activeDialogTabId)  {
       this.activeDialogTabId = tabId
       this.activeDialog = {}
     }
   },
   createBkmInActiveDialog (bookmarkId, parentId) {
-    logDebug('### createBkmInActiveDialog', bookmarkId, parentId)
     const isFirst = Object.values(this.activeDialog).filter(({ bookmarkId }) => bookmarkId).length === 0;
     this.activeDialog[parentId] = {
       ...this.activeDialog[parentId],
@@ -285,7 +283,6 @@ export const memo = {
     }
   },
   createBkmInActiveDialogFromTag (parentId) {
-    logDebug('### createBkmInActiveDialogFromTag', parentId)
     this.activeDialog[parentId] = {
       fromTag: true
     }
@@ -294,7 +291,6 @@ export const memo = {
     const result = this.activeDialog[parentId]?.bookmarkId === bookmarkId 
       && this.activeDialog[parentId]?.isFirst === true
       && this.activeDialog[parentId]?.fromTag !== true
-    logDebug('### isCreatedInActiveDialog', bookmarkId, parentId, result)
 
     return result
   },

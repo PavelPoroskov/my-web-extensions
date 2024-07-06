@@ -1,5 +1,6 @@
 
 import {
+  logDebug,
   logEvent,
   logIgnore,
 } from '../api/log-api.js'
@@ -100,7 +101,8 @@ export const tabsController = {
 
     try {
       const Tab = await chrome.tabs.get(tabId);
-      logEvent('tabs.onActivated 11', Tab.index, tabId, Tab.url);
+      logDebug('tabs.onActivated 11', Tab.index, tabId, Tab.url);
+      memo.isActiveTabBookmarkManager = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
       
       updateTab({
         tabId, 

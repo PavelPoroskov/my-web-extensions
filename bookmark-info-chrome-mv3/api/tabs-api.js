@@ -2,7 +2,6 @@ import {
   log,
   logEvent,
   logSendEvent,
-  logDebug
 } from './log-api.js'
 import {
   promiseQueue,
@@ -28,11 +27,8 @@ import {
 } from '../constant/index.js'
 
 async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
-  logDebug('updateBookmarksForTabTask 00 (', tabId, useCache, url);
-
   let actualUrl = url
 
-  logDebug('updateBookmarksForTabTask 11');
   if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
     const { cleanUrl } = removeQueryParamsIfTarget(url)
 
@@ -40,12 +36,9 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
       actualUrl = cleanUrl
     }
   } 
-  logDebug('updateBookmarksForTabTask 22');
 
   const bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
-  logDebug('updateBookmarksForTabTask 33');
   const usedParentIdSet = new Set(bookmarkInfo.bookmarkInfoList.map(({ parentId }) => parentId))
-  logDebug('updateBookmarksForTabTask 44 memo.tagList', memo.tagList);
 
   const message = {
     command: CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO,

@@ -13,6 +13,7 @@ import {
 } from '../api/tabs-api.js'
 import {
   USER_SETTINGS_OPTIONS,
+  IS_BROWSER_CHROME,
 } from '../constant/index.js'
 
 export const bookmarksController = {
@@ -61,7 +62,7 @@ export const bookmarksController = {
       if (memo.isCreatedInActiveDialog(bookmarkId, oldParentId)) {
         memo.removeFromActiveDialog(oldParentId)
         await memo.addRecentTag({ parentId });
-      } else if (oldParentId && !!node.url) {
+      } else if (oldParentId && !!node.url && IS_BROWSER_CHROME && !memo.isActiveTabBookmarkManager) {
         await Promise.all([
           chrome.bookmarks.create({
             parentId: oldParentId,
