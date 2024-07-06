@@ -1,85 +1,4 @@
-const BROWSER_OPTIONS = {
-  CHROME: 'CHROME',
-  FIREFOX: 'FIREFOX',
-}
-const BROWSER_SPECIFIC_OPTIONS = {
-  [BROWSER_OPTIONS.CHROME]: {
-    MENU_CONTEXT: ['all'],
-  },
-  [BROWSER_OPTIONS.FIREFOX]: {
-    MENU_CONTEXT: ['all','tab'],
-  },
-}
-const BROWSER = BROWSER_OPTIONS.FIREFOX;
-const IS_BROWSER_FIREFOX = BROWSER === BROWSER_OPTIONS.FIREFOX;
-const BROWSER_SPECIFIC = BROWSER_SPECIFIC_OPTIONS[BROWSER];
-
-const SOURCE = {
-  CACHE: 'CACHE',
-  ACTUAL: 'ACTUAL',
-};
-
-const BASE_ID = 'BKM_INF';
-
-const MENU = {
-  CLOSE_DUPLICATE: `${BASE_ID}_CLOSE_DUPLICATE`,
-  CLOSE_BOOKMARKED: `${BASE_ID}_CLOSE_BOOKMARKED`,
-  CLEAR_URL: `${BASE_ID}_CLEAR_URL`,
-  // BOOKMARK_AND_CLOSE: `${BASE_ID}_BOOKMARK_AND_CLOSE`,
-};
-
-const USER_SETTINGS_OPTIONS = {
-  CLEAR_URL_FROM_QUERY_PARAMS: 'CLEAR_URL_FROM_QUERY_PARAMS',
-  SHOW_PATH_LAYERS: 'SHOW_PATH_LAYERS',
-  SHOW_PREVIOUS_VISIT: 'SHOW_PREVIOUS_VISIT',
-  SHOW_BOOKMARK_TITLE: 'SHOW_BOOKMARK_TITLE',
-  SHOW_PROFILE: 'SHOW_PROFILE',
-  ADD_BOOKMARK: 'ADD_BOOKMARK',
-  // MARK_VISITED_URL: 'MARK_VISITED_URL',
-}
-
-const SHOW_PREVIOUS_VISIT_OPTION = {
-  NEVER: 0,
-  ONLY_NO_BKM: 1,
-  ALWAYS: 2,
-}
-const o = USER_SETTINGS_OPTIONS
-const USER_SETTINGS_DEFAULT_VALUE = {
-  [o.CLEAR_URL_FROM_QUERY_PARAMS]: true,
-  [o.SHOW_PATH_LAYERS]: 1, // [1, 2, 3]
-  [o.SHOW_PREVIOUS_VISIT]: SHOW_PREVIOUS_VISIT_OPTION.ALWAYS,
-  [o.SHOW_BOOKMARK_TITLE]: false,
-  [o.SHOW_PROFILE]: false,
-  [o.ADD_BOOKMARK]: false,
-}
-
-const clearUrlTargetList = [
-  {
-    hostname: 'linkedin.com',  
-    paths: [
-      '/jobs/view/',
-      '/posts/'
-    ] 
-  },
-  {
-    hostname: 'djinni.co',
-    paths: [
-      '/my/profile/',
-      '/jobs/',
-    ] 
-  },
-  {
-    hostname: 'imdb.com',  
-    paths: [
-      '/title/',
-      '/list/',
-    ] 
-  },
-]
-
-const RECENT_TAG_INTERNAL_LIMIT = 30;
-const RECENT_TAG_VISIBLE_LIMIT = 20;
-const CONFIG = {
+const LOG_CONFIG = {
   SHOW_LOG_CACHE: false,
   SHOW_LOG_SEND_EVENT: false,
   SHOW_LOG_EVENT: false,
@@ -125,15 +44,129 @@ const makeLogWithPrefix = (prefix = '') => {
   }
 }
 
-const log = CONFIG.SHOW_LOG ? makeLogWithPrefix() : () => { };
-const logCache = CONFIG.SHOW_LOG_CACHE ? logWithTime : () => { };
-const logSendEvent = CONFIG.SHOW_LOG_SEND_EVENT ? makeLogWithPrefix('SEND =>') : () => { };
-const logEvent = CONFIG.SHOW_LOG_EVENT ? makeLogWithPrefix('EVENT <=') : () => { };
-const logIgnore = CONFIG.SHOW_LOG_IGNORE ? makeLogWithPrefix('IGNORE') : () => { };
-const logOptimization = CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OPTIMIZATION') : () => { };
-const logPromiseQueue = CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
-const logDebug = CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
-const logSettings = CONFIG.SHOW_SETTINGS ? makeLogWithPrefix('SETTINGS') : () => { };
+const log = LOG_CONFIG.SHOW_LOG ? makeLogWithPrefix() : () => { };
+const logCache = LOG_CONFIG.SHOW_LOG_CACHE ? logWithTime : () => { };
+const logSendEvent = LOG_CONFIG.SHOW_LOG_SEND_EVENT ? makeLogWithPrefix('SEND =>') : () => { };
+const logEvent = LOG_CONFIG.SHOW_LOG_EVENT ? makeLogWithPrefix('EVENT <=') : () => { };
+const logIgnore = LOG_CONFIG.SHOW_LOG_IGNORE ? makeLogWithPrefix('IGNORE') : () => { };
+const logOptimization = LOG_CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OPTIMIZATION') : () => { };
+const logPromiseQueue = LOG_CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
+const logDebug = LOG_CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
+const logSettings = LOG_CONFIG.SHOW_SETTINGS ? makeLogWithPrefix('SETTINGS') : () => { };
+const BROWSER_OPTIONS = {
+  CHROME: 'CHROME',
+  FIREFOX: 'FIREFOX',
+}
+
+const BROWSER_SPECIFIC_OPTIONS = {
+  MENU_CONTEXT: {
+    [BROWSER_OPTIONS.CHROME]: ['all'],
+    [BROWSER_OPTIONS.FIREFOX]: ['all','tab']
+  },
+  // TODO remove duplication for DEL_BTN_RIGHT_PADDING, LABEL_RIGHT_PADDING in context-script
+  // ? can context script import file.js
+  // OR insert to context-script on build
+  DEL_BTN_RIGHT_PADDING: {
+    [BROWSER_OPTIONS.CHROME]: '0.5ch',
+    [BROWSER_OPTIONS.FIREFOX]: '1ch'
+  },
+  LABEL_RIGHT_PADDING: {
+    [BROWSER_OPTIONS.CHROME]: '0.3ch',
+    [BROWSER_OPTIONS.FIREFOX]: '0.6ch'
+  }
+}
+
+const BROWSER = BROWSER_OPTIONS.FIREFOX;
+
+const IS_BROWSER_FIREFOX = BROWSER === BROWSER_OPTIONS.FIREFOX;
+const BROWSER_SPECIFIC = Object.fromEntries(
+  Object.entries(BROWSER_SPECIFIC_OPTIONS)
+    .map(([option, obj]) => [option, obj[BROWSER]])
+);
+const clearUrlTargetList = [
+  {
+    hostname: 'linkedin.com',  
+    paths: [
+      '/jobs/view/',
+      '/posts/'
+    ] 
+  },
+  {
+    hostname: 'djinni.co',
+    paths: [
+      '/my/profile/',
+      '/jobs/',
+    ] 
+  },
+  {
+    hostname: 'imdb.com',  
+    paths: [
+      '/title/',
+      '/list/',
+    ] 
+  },
+  {
+    hostname: 'udemy.com',  
+    paths: [
+      '/course/',
+    ] 
+  },
+]
+// TODO remove duplication of EXTENSION_COMMAND_ID, CONTENT_SCRIPT_COMMAND_ID in content-script
+const EXTENSION_COMMAND_ID = {
+  DELETE_BOOKMARK: 'DELETE_BOOKMARK',
+  ADD_BOOKMARK: 'ADD_BOOKMARK',
+  FIX_TAG: 'FIX_TAG',
+  UNFIX_TAG: 'UNFIX_TAG',
+  TAB_IS_READY: 'TAB_IS_READY',
+}
+
+const CONTENT_SCRIPT_COMMAND_ID = {
+  BOOKMARK_INFO: 'BOOKMARK_INFO',
+  HISTORY_INFO: 'HISTORY_INFO',
+  CLEAR_URL: 'CLEAR_URL',
+}
+const BASE_ID = 'BKM_INF';
+
+const CONTEXT_MENU_ID = {
+  CLOSE_DUPLICATE: `${BASE_ID}_CLOSE_DUPLICATE`,
+  CLOSE_BOOKMARKED: `${BASE_ID}_CLOSE_BOOKMARKED`,
+  CLEAR_URL: `${BASE_ID}_CLEAR_URL`,
+  // BOOKMARK_AND_CLOSE: `${BASE_ID}_BOOKMARK_AND_CLOSE`,
+};
+const SOURCE = {
+  CACHE: 'CACHE',
+  ACTUAL: 'ACTUAL',
+};
+const USER_SETTINGS_OPTIONS = {
+  CLEAR_URL_FROM_QUERY_PARAMS: 'CLEAR_URL_FROM_QUERY_PARAMS',
+  SHOW_PATH_LAYERS: 'SHOW_PATH_LAYERS',
+  SHOW_PREVIOUS_VISIT: 'SHOW_PREVIOUS_VISIT',
+  SHOW_BOOKMARK_TITLE: 'SHOW_BOOKMARK_TITLE',
+  SHOW_PROFILE: 'SHOW_PROFILE',
+  ADD_BOOKMARK: 'ADD_BOOKMARK',
+  // MARK_VISITED_URL: 'MARK_VISITED_URL',
+}
+
+const SHOW_PREVIOUS_VISIT_OPTION = {
+  NEVER: 0,
+  ONLY_NO_BKM: 1,
+  ALWAYS: 2,
+}
+
+const o = USER_SETTINGS_OPTIONS
+
+const USER_SETTINGS_DEFAULT_VALUE = {
+  [o.CLEAR_URL_FROM_QUERY_PARAMS]: true,
+  [o.SHOW_PATH_LAYERS]: 1, // [1, 2, 3]
+  [o.SHOW_PREVIOUS_VISIT]: SHOW_PREVIOUS_VISIT_OPTION.ALWAYS,
+  [o.SHOW_BOOKMARK_TITLE]: false,
+  [o.SHOW_PROFILE]: false,
+  [o.ADD_BOOKMARK]: false,
+}
+
+const TAG_LIST_VISIBLE_LIMIT = 25;
+
 class CacheWithLimit {
   constructor ({ name='cache', size = 100 }) {
     this.cache = new Map();
@@ -267,9 +300,9 @@ function isSupportedProtocol(urlString) {
     return false;
   }
 }
-async function getRecentTagObj(nItems) {
+async function getRecentList(nItems) {
   log('getRecentTagObj() 00', nItems)
-  const list = await browser.bookmarks.getRecent(nItems*3);
+  const list = await browser.bookmarks.getRecent(nItems);
 
   const folderList = list
     .filter(({ url }) => !url)
@@ -302,10 +335,20 @@ function isSupportedProtocol(urlString) {
     folderByIdMap[id].title = title
   })
 
+  return Object.entries(folderByIdMap)
+    .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+    .sort((a,b) => -(a.dateAdded - b.dateAdded))
+}
+
+async function getRecentTagObj(nItems) {
+  let list = await getRecentList(nItems * 4)
+
+  if (list.length < nItems) {
+    list = await getRecentList(nItems * 10)
+  }
+
   return Object.fromEntries(
-    Object.entries(folderByIdMap)
-      .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-      .sort((a,b) => -(a.dateAdded - b.dateAdded))
+    list
       .slice(0, nItems)
       .map(({ parentId, title, dateAdded }) => [parentId, { title, dateAdded }])
   )
@@ -326,6 +369,101 @@ async function filterFixedTagObj(obj = {}) {
   return Object.fromEntries(
     filteredFolderList.map(({ id, title }) => [id, title])
   )
+}
+const targetMap = new Map(
+  clearUrlTargetList.map(({ hostname, paths }) => [hostname, paths])
+)
+
+const getHostBase = (str) => str.split('.').slice(-2).join('.')
+
+const removeQueryParamsIfTarget = (url) => {
+  let cleanUrl = url
+  let isPattern = false
+
+  try {
+    const oLink = new URL(url);
+    const { hostname, pathname } = oLink;
+    const targetPathList = targetMap.get(getHostBase(hostname))
+
+    if (targetPathList && targetPathList.some((targetPath) => pathname.startsWith(targetPath))) {
+      isPattern = true
+      oLink.search = ''
+
+      cleanUrl = oLink.toString();  
+    }
+  
+  /* eslint-disable no-unused-vars */
+  // eslint-disable-next-line no-empty
+  } catch (_e) {
+    
+  }
+  /* eslint-enable no-unused-vars */
+
+  return {
+    cleanUrl,
+    isPattern,
+  }
+}
+
+const removeQueryParams = (link) => {
+  try {
+    const oLink = new URL(link);
+    oLink.search = ''
+  
+    return oLink.toString();  
+  // eslint-disable-next-line no-unused-vars
+  } catch (e) {
+    return link
+  }
+}
+
+// let testStr = "https://www.linkedin.com/jobs/view/3920634940/?alternateChannel=search&refId=dvaqme%2FfxHehSAa5o4nVnA%3D%3D&trackingId=8%2FZKaGcTAInuTTH4NyKDoA%3D%3D"
+// console.log('test ', removeQueryParamsIfTarget(testStr))
+
+// testStr = "https://www.youtube.com/watch?v=YuJ6SasIS_E&t=356s"
+// console.log('test ', removeQueryParamsIfTarget(testStr))
+
+// testStr = "https://youtube.com/watch?v=YuJ6SasIS_E&t=356s"
+// console.log('test ', removeQueryParamsIfTarget(testStr))
+
+// testStr = "https://youtu.be/watch?v=YuJ6SasIS_E&t=356s"
+// console.log('test ', removeQueryParamsIfTarget(testStr))
+//
+// https://career.proxify.io/apply?uuid=566c933b-432e-64e0-b317-dd4390d6a74e&step=AdditionalInformation
+
+async function clearUrlInTab({ tabId, cleanUrl }) {
+  const msg = {
+    command: CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL,
+    cleanUrl,
+  }
+  logSendEvent('clearUrlInTab()', tabId, msg)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logIgnore('clearUrlInTab()', err)
+    })
+}
+// TODO did can we not create menu on evert time
+async function createContextMenu() {
+  await browser.menus.removeAll();
+
+  browser.menus.create({
+    id: CONTEXT_MENU_ID.CLOSE_DUPLICATE,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'close duplicate tabs',
+  });  
+  // TODO? bookmark and close all tabs (tabs without bookmarks and tabs with bookmarks)
+  //   copy bookmarked tabs
+  browser.menus.create({
+    id: CONTEXT_MENU_ID.CLOSE_BOOKMARKED,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'close bookmarked tabs',
+  });
+  // TODO? bookmark and close tabs (tabs without bookmarks)
+  browser.menus.create({
+    id: CONTEXT_MENU_ID.CLEAR_URL,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'clear url',
+  });
 }
 // console.log('IMPORTING', 'memo.js')
 const STORAGE_LOCAL__FIXED_TAG_MAP = 'FIXED_TAG_MAP'
@@ -415,11 +553,16 @@ const memo = {
     return this._tagList
   },
   getTagList() {
+    const recentTaLimit = Math.max(
+      TAG_LIST_VISIBLE_LIMIT - Object.keys(this._fixedTagObj).length,
+      0
+    )
+
     const recentTagList = Object.entries(this._recentTagObj)
       .filter(([parentId]) => !(parentId in this._fixedTagObj))
       .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
       .sort((a,b) => -(a.dateAdded - b.dateAdded))
-      .slice(0, RECENT_TAG_VISIBLE_LIMIT)
+      .slice(0, recentTaLimit)
     
     const fullList = [].concat(
       recentTagList
@@ -445,7 +588,7 @@ const memo = {
       if (!savedSession[STORAGE_SESSION__RECENT_TAG_MAP]) {
         logSettings('readTagList 22 11')
         this._fixedTagObj = await filterFixedTagObj(savedLocal[STORAGE_LOCAL__FIXED_TAG_MAP])
-        this._recentTagObj = await getRecentTagObj(RECENT_TAG_INTERNAL_LIMIT)
+        this._recentTagObj = await getRecentTagObj(TAG_LIST_VISIBLE_LIMIT)
       } else {
         logSettings('readTagList 22 77')
         this._fixedTagObj = savedLocal[STORAGE_LOCAL__FIXED_TAG_MAP] || {}
@@ -485,11 +628,11 @@ const memo = {
       title: newFolder.title
     }
 
-    if (RECENT_TAG_INTERNAL_LIMIT < Object.keys(this._recentTagObj).length) {
+    if (TAG_LIST_VISIBLE_LIMIT < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
         .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
         .sort((a,b) => -(a.dateAdded - b.dateAdded))
-        .slice(RECENT_TAG_INTERNAL_LIMIT)
+        .slice(TAG_LIST_VISIBLE_LIMIT)
         .map(({ parentId }) => parentId)
 
         redundantIdList.forEach((id) => {
@@ -750,67 +893,6 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
     source,
   };
 }
-const targetMap = new Map(
-  clearUrlTargetList.map(({ hostname, paths }) => [hostname, paths])
-)
-
-const getHostBase = (str) => str.split('.').slice(-2).join('.')
-
-
-const removeQueryParamsIfTarget = (url) => {
-  let cleanUrl = url
-  let isPattern = false
-
-  try {
-    const oLink = new URL(url);
-    const { hostname, pathname } = oLink;
-    const targetPathList = targetMap.get(getHostBase(hostname))
-
-    if (targetPathList && targetPathList.some((targetPath) => pathname.startsWith(targetPath))) {
-      isPattern = true
-      oLink.search = ''
-
-      cleanUrl = oLink.toString();  
-    }
-  
-  /* eslint-disable no-unused-vars */
-  // eslint-disable-next-line no-empty
-  } catch (_e) {
-    
-  }
-  /* eslint-enable no-unused-vars */
-
-  return {
-    cleanUrl,
-    isPattern,
-  }
-}
-
-const removeQueryParams = (link) => {
-  try {
-    const oLink = new URL(link);
-    oLink.search = ''
-  
-    return oLink.toString();  
-  // eslint-disable-next-line no-unused-vars
-  } catch (e) {
-    return link
-  }
-}
-
-// let testStr = "https://www.linkedin.com/jobs/view/3920634940/?alternateChannel=search&refId=dvaqme%2FfxHehSAa5o4nVnA%3D%3D&trackingId=8%2FZKaGcTAInuTTH4NyKDoA%3D%3D"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
-
-// testStr = "https://www.youtube.com/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
-
-// testStr = "https://youtube.com/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
-
-// testStr = "https://youtu.be/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
-//
-// https://career.proxify.io/apply?uuid=566c933b-432e-64e0-b317-dd4390d6a74e&step=AdditionalInformation
 const dayMS = 86400000;
 const hourMS = 3600000;
 const minMS = 60000;
@@ -967,29 +1049,7 @@ async function getHistoryInfo({ url, useCache=false }) {
     source,
   };
 }
-let cleanUrl
-
-async function cleanUrlIfTarget({ url, tabId }) {
-  if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
-    ({ cleanUrl } = removeQueryParamsIfTarget(url));
-    
-    if (url !== cleanUrl) {
-      const msg = {
-        command: "changeLocationToCleanUrl",
-        cleanUrl,
-      }
-      logSendEvent('runtimeController.onMessage(contentScriptReady)', tabId, msg)
-      await browser.tabs.sendMessage(tabId, msg)
-        .catch((err) => {
-          logIgnore('runtimeController.onMessage(contentScriptReady) sendMessage(changeLocationToCleanUrl)', err)
-        })
-
-      return cleanUrl
-    }
-  }
-}
-
-async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
+async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
   logDebug('updateBookmarksForTabTask 00 (', tabId, useCache, url);
 
   let actualUrl = url
@@ -1010,7 +1070,7 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
   logDebug('updateBookmarksForTabTask 44 memo.tagList', memo.tagList);
 
   const message = {
-    command: "bookmarkInfo",
+    command: CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO,
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
     isShowTitle: memo.settings[USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE],
@@ -1031,7 +1091,7 @@ async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
   const visitInfo = await getHistoryInfo({ url, useCache })
 
   const message = {
-    command: "visitInfo",
+    command: CONTENT_SCRIPT_COMMAND_ID.HISTORY_INFO,
     showPreviousVisit: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT],
     visitList: visitInfo.visitList,
   }
@@ -1212,32 +1272,82 @@ async function closeBookmarkedTabs() {
     closeTabIdList.length > 0 && browser.tabs.remove(closeTabIdList),
   ])
 }
-async function replaceUrlToCleanUrl({ node, cleanUrl, activeTab, bookmarkId }) {
-  const bookmarkList = await browser.bookmarks.search({ url: cleanUrl });
-  const isExist = bookmarkList.some(({ parentId }) => parentId === node.parentId)
+async function onIncomingMessage (message, sender) {
 
-  if (!isExist) {
-    await browser.bookmarks.create({
-      parentId: node.parentId,
-      title: node.title,
-      url: cleanUrl
-    })
+  switch (message?.command) {
+
+    case EXTENSION_COMMAND_ID.DELETE_BOOKMARK: {
+      logEvent('runtime.onMessage deleteBookmark');
+
+      deleteBookmark(message.bkmId);
+      break
+    }
+    case EXTENSION_COMMAND_ID.ADD_BOOKMARK: {
+      logEvent('runtime.onMessage addBookmark');
+      memo.createBkmInActiveDialogFromTag(message.parentId)
+      await browser.bookmarks.create({
+        index: 0,
+        parentId: message.parentId,
+        title: message.title,
+        url: message.url
+      })
+
+      break
+    }
+    case EXTENSION_COMMAND_ID.FIX_TAG: {
+      logEvent('runtime.onMessage fixTag');
+
+      await memo.addFixedTag({
+        parentId: message.parentId,
+        title: message.title,
+      })
+      updateActiveTab({
+        debugCaller: 'runtime.onMessage fixTag',
+        useCache: true,
+      });
+  
+      break
+    }
+    case EXTENSION_COMMAND_ID.UNFIX_TAG: {
+      logEvent('runtime.onMessage unfixTag');
+
+      await memo.removeFixedTag(message.parentId)
+      updateActiveTab({
+        debugCaller: 'runtime.onMessage unfixTag',
+        useCache: true,
+      });
+
+      break
+    }
+    case EXTENSION_COMMAND_ID.TAB_IS_READY: {
+      const tabId = sender?.tab?.id;
+      logEvent('runtime.onMessage contentScriptReady', tabId);
+
+      if (tabId) {
+        const url = message.url
+        let cleanUrl
+
+        if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+          ({ cleanUrl } = removeQueryParamsIfTarget(url));
+          
+          if (url !== cleanUrl) {
+            await clearUrlInTab({ tabId, cleanUrl })
+          }
+        }
+
+        updateTab({
+          tabId,
+          url: cleanUrl || url,
+          useCache: true,
+          debugCaller: 'runtime.onMessage contentScriptReady',
+        })
+      }
+
+      break
+    }
   }
-
-  const msg = {
-    command: "changeLocationToCleanUrl",
-    cleanUrl,
-  }
-  logSendEvent('bookmarksController.onCreated()', activeTab.id, msg)
-  await browser.tabs.sendMessage(activeTab.id, msg)
-
-  memo.tabMap.set(activeTab.id, {
-    bookmarkId,
-    originalUrl: node.url
-  })
 }
-
-const bookmarksController = {
+const bookmarksController = {
   async onCreated(bookmarkId, node) {
     logEvent('bookmark.onCreated <-', node);
 
@@ -1250,19 +1360,6 @@ const bookmarksController = {
       debugCaller: 'bookmark.onCreated'
     });
 
-    if (node.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
-      const { cleanUrl } = removeQueryParamsIfTarget(node.url);
-
-      if (node.url !== cleanUrl) {
-        const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
-        const [activeTab] = tabs;
-  
-        if (node.url === activeTab?.url) {
-          replaceUrlToCleanUrl({ node, cleanUrl, activeTab, bookmarkId })
-        }
-      }      
-    }
-  
     // changes in bookmark manager
     getBookmarkInfoUni({ url: node.url });
   },
@@ -1281,25 +1378,6 @@ const bookmarksController = {
     });
 
     const [node] = await browser.bookmarks.get(bookmarkId)
-
-    if (changeInfo.title && node.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
-      const { cleanUrl } = removeQueryParamsIfTarget(node.url);
-      
-      if (node.url !== cleanUrl) {
-        const [activeTab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
-
-        if (node.url === activeTab?.url) {
-          replaceUrlToCleanUrl({ node, cleanUrl, activeTab, bookmarkId })
-        } else if (activeTab && activeTab.id && node.url === memo.tabMap.get(activeTab.id)?.originalUrl) {
-          const bookmarkList = await browser.bookmarks.search({ url: cleanUrl });
-
-          await Promise.all(bookmarkList.map(
-            bItem => browser.bookmarks.update(bItem.id, { title: changeInfo.title })
-          ))
-        }
-
-      }
-    }
 
     // changes in bookmark manager
     getBookmarkInfoUni({ url: node.url });        
@@ -1337,26 +1415,6 @@ const bookmarksController = {
       debugCaller: 'bookmark.onMoved'
     });
 
-
-    if ((oldParentId || parentId) && node.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
-      const { cleanUrl } = removeQueryParamsIfTarget(node.url);
-      
-      if (node.url !== cleanUrl) {
-        const [activeTab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
-        
-        if (node.url === activeTab?.url) {
-          replaceUrlToCleanUrl({ node, cleanUrl, activeTab, bookmarkId })
-        } else if (activeTab && activeTab.id && node.url === memo.tabMap.get(activeTab.id)?.originalUrl) {
-          const bookmarkList = await browser.bookmarks.search({ url: cleanUrl });
-          const cleanBkmWithOldParentId = bookmarkList.filter(({ parentId }) => parentId === oldParentId)
-
-          await Promise.all(cleanBkmWithOldParentId.map(
-            bItem => browser.bookmarks.move(bItem.id, { parentId })
-          ))
-        }
-      }
-    }
-
     // changes in bookmark manager
     getBookmarkInfoUni({ url: node.url });
   },
@@ -1377,24 +1435,6 @@ const bookmarksController = {
       debugCaller: 'bookmark.onRemoved'
     });
 
-    if (node.url && memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
-      const { cleanUrl } = removeQueryParamsIfTarget(node.url);
-      
-      if (node.url !== cleanUrl) {
-        const [activeTab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
-
-        if (activeTab && activeTab.id && node.url === memo.tabMap.get(activeTab.id)?.originalUrl) {
-          const bookmarkList = await browser.bookmarks.search({ url: cleanUrl });
-
-          await Promise.all(bookmarkList.map(
-            bItem => browser.bookmarks.remove(bItem.id)
-          ))  
-
-          memo.tabMap.delete(activeTab.id)
-        }
-      }
-    }
-
     // changes in bookmark manager
     getBookmarkInfoUni({ url: node?.url });
   },
@@ -1404,15 +1444,15 @@ const bookmarksController = {
     logEvent('contextMenus.onClicked <-');
 
     switch (OnClickData.menuItemId) {
-      case MENU.CLOSE_DUPLICATE: {
+      case CONTEXT_MENU_ID.CLOSE_DUPLICATE: {
         closeDuplicateTabs();
         break;
       }
-      case MENU.CLOSE_BOOKMARKED: {
+      case CONTEXT_MENU_ID.CLOSE_BOOKMARKED: {
         closeBookmarkedTabs();
         break;
       }
-      case MENU.CLEAR_URL: {
+      case CONTEXT_MENU_ID.CLEAR_URL: {
         const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
         const [activeTab] = tabs;
 
@@ -1420,12 +1460,7 @@ const bookmarksController = {
           const cleanUrl = removeQueryParams(activeTab.url);
 
           if (activeTab.url !== cleanUrl) {
-            const msg = {
-              command: "changeLocationToCleanUrl",
-              cleanUrl,
-            }
-            logSendEvent('contextMenusController.onClicked(CLEAR_URL)', activeTab.id, msg)
-            await browser.tabs.sendMessage(activeTab.id, msg)
+            await clearUrlInTab({ tabId: activeTab.id, cleanUrl })
           }
         }
 
@@ -1434,30 +1469,7 @@ const bookmarksController = {
     }
   }
 }
-async function createContextMenu() {
-  await browser.menus.removeAll();
-
-  browser.menus.create({
-    id: MENU.CLOSE_DUPLICATE,
-    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'close duplicate tabs',
-  });  
-  // TODO? bookmark and close all tabs (tabs without bookmarks and tabs with bookmarks)
-  //   copy bookmarked tabs
-  browser.menus.create({
-    id: MENU.CLOSE_BOOKMARKED,
-    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'close bookmarked tabs',
-  });
-  // TODO? bookmark and close tabs (tabs without bookmarks)
-  browser.menus.create({
-    id: MENU.CLEAR_URL,
-    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'clear url',
-  });
-}
-
-const runtimeController = {
+const runtimeController = {
   async onStartup() {
     logEvent('runtime.onStartup');
     // is only firefox use it?
@@ -1478,67 +1490,7 @@ const runtimeController = {
   async onMessage (message, sender) {
     logEvent('runtime.onMessage message', message);
 
-    switch (message?.command) {
-      case "deleteBookmark": {
-        logEvent('runtime.onMessage deleteBookmark');
-  
-        deleteBookmark(message.bkmId);
-        break
-      }
-      case "addBookmark": {
-        logEvent('runtime.onMessage addBookmark');
-        memo.createBkmInActiveDialogFromTag(message.parentId)
-        await browser.bookmarks.create({
-          index: 0,
-          parentId: message.parentId,
-          title: message.title,
-          url: message.url
-        })
-
-        break
-      }
-      case "fixTag": {
-        logEvent('runtime.onMessage fixTag');
-  
-        await memo.addFixedTag({
-          parentId: message.parentId,
-          title: message.title,
-        })
-        updateActiveTab({
-          debugCaller: 'runtime.onMessage fixTag',
-          useCache: true,
-        });
-    
-        break
-      }
-      case "unfixTag": {
-        logEvent('runtime.onMessage unfixTag');
-  
-        await memo.removeFixedTag(message.parentId)
-        updateActiveTab({
-          debugCaller: 'runtime.onMessage unfixTag',
-          useCache: true,
-        });
-
-        break
-      }
-      case "contentScriptReady": {
-        const senderTabId = sender?.tab?.id;
-        logEvent('runtime.onMessage contentScriptReady', senderTabId);
-
-        if (senderTabId) {
-          const cleanUrl = await cleanUrlIfTarget({ url: message.url, tabId: senderTabId })
-          updateTab({
-            tabId: senderTabId,
-            url: cleanUrl || message.url,
-            useCache: true,
-            debugCaller: 'runtime.onMessage contentScriptReady',
-          })
-        }
-
-        break
-      }
-    }
+    await onIncomingMessage(message, sender)
   }
 };
 const storageController = {
@@ -1576,9 +1528,19 @@ const runtimeController = {
     switch (changeInfo?.status) {
       case ('loading'): {
         if (changeInfo?.url) {
-          logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, changeInfo.url);
-          const cleanUrl = await cleanUrlIfTarget({ url: changeInfo.url, tabId })
-          const actualUrl = cleanUrl || changeInfo.url
+          const url = changeInfo.url
+          logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, url);
+          let cleanUrl
+
+          if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+            ({ cleanUrl } = removeQueryParamsIfTarget(url));
+            
+            if (url !== cleanUrl) {
+              await clearUrlInTab({ tabId, cleanUrl })
+            }
+          }
+
+          const actualUrl = cleanUrl || url
           getBookmarkInfoUni({
             url: actualUrl,
             useCache: true,
@@ -1661,10 +1623,15 @@ const runtimeController = {
   },
 };
 // console.log('IMPORTING', 'bkm-info-sw.js')
+browser.storage.onChanged.addListener(storageController.onChanged);
+
 browser.bookmarks.onCreated.addListener(bookmarksController.onCreated);
 browser.bookmarks.onMoved.addListener(bookmarksController.onMoved);
 browser.bookmarks.onChanged.addListener(bookmarksController.onChanged);
 browser.bookmarks.onRemoved.addListener(bookmarksController.onRemoved);
+
+// listen for window switching
+browser.windows.onFocusChanged.addListener(windowsController.onFocusChanged);
 
 browser.tabs.onCreated.addListener(tabsController.onCreated);
 browser.tabs.onUpdated.addListener(tabsController.onUpdated);
@@ -1672,15 +1639,10 @@ browser.tabs.onUpdated.addListener(tabsController.onUpdated);
 browser.tabs.onActivated.addListener(tabsController.onActivated);
 browser.tabs.onRemoved.addListener(tabsController.onRemoved);
 
-// listen for window switching
-browser.windows.onFocusChanged.addListener(windowsController.onFocusChanged);
-
 browser.menus.onClicked.addListener(contextMenusController.onClicked); 
 
 browser.runtime.onStartup.addListener(runtimeController.onStartup)
 browser.runtime.onInstalled.addListener(runtimeController.onInstalled);
 browser.runtime.onMessage.addListener(runtimeController.onMessage);
-
-browser.storage.onChanged.addListener(storageController.onChanged);
 
 // console.log('IMPORT END', 'bkm-info-sw.js')
