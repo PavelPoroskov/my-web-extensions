@@ -4,7 +4,7 @@ import {
   logSendEvent,
   logIgnore,
   logDebug
-} from './debug.js'
+} from './log-api.js'
 import {
   promiseQueue,
 } from './promiseQueue.js'
@@ -19,13 +19,13 @@ import {
 } from './history-api.js'
 import {
   removeQueryParamsIfTarget,
-} from './link-api.js'
+} from './clean-url-api.js'
 import {
   memo,
 } from './memo.js'
 import {
   USER_SETTINGS_OPTIONS,
-} from '../constants.js'
+} from '../constant/index.js'
 
 let cleanUrl
 

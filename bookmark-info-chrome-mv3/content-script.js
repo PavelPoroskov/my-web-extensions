@@ -25,7 +25,7 @@ const log = SHOW_LOG ? console.log : () => {};
       LABEL_RIGHT_PADDING: '0.3ch',
     },
     [BROWSER_OPTIONS.FIREFOX]: {
-      DEL_BTN_RIGHT_PADDING: '0.8ch',
+      DEL_BTN_RIGHT_PADDING: '1ch',
       LABEL_RIGHT_PADDING: '0.6ch',
     },
   }

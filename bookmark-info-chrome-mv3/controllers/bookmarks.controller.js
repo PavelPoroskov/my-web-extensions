@@ -2,7 +2,7 @@ import {
   logEvent,
   logSendEvent,
   logDebug,
-} from '../api/debug.js'
+} from '../api/log-api.js'
 import {
   memo,
 } from '../api/memo.js'
@@ -14,10 +14,10 @@ import {
 } from '../api/tabs-api.js'
 import {
   removeQueryParamsIfTarget,
-} from '../api/link-api.js'
+} from '../api/clean-url-api.js'
 import {
   USER_SETTINGS_OPTIONS,
-} from '../constants.js'
+} from '../constant/index.js'
 
 async function replaceUrlToCleanUrl({ node, cleanUrl, activeTab, bookmarkId }) {
   const bookmarkList = await chrome.bookmarks.search({ url: cleanUrl });

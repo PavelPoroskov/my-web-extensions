@@ -3,7 +3,7 @@ import { CacheWithLimit } from './cache.js'
 import {
   logSettings,
   logDebug,
-} from './debug.js'
+} from './log-api.js'
 import {
   filterFixedTagObj,
   getRecentTagObj
@@ -12,7 +12,7 @@ import {
   USER_SETTINGS_DEFAULT_VALUE,
   USER_SETTINGS_OPTIONS,
   TAG_LIST_VISIBLE_LIMIT
-} from '../constants.js';
+} from '../constant/index.js';
 
 const STORAGE_LOCAL__FIXED_TAG_MAP = 'FIXED_TAG_MAP'
 const STORAGE_SESSION__RECENT_TAG_MAP = 'RECENT_TAG_MAP'

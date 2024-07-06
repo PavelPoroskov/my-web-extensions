@@ -1,4 +1,4 @@
-export const CONFIG = {
+export const LOG_CONFIG = {
   SHOW_LOG_CACHE: false,
   SHOW_LOG_SEND_EVENT: false,
   SHOW_LOG_EVENT: false,

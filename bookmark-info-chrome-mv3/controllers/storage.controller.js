@@ -1,9 +1,9 @@
 import {
   logEvent,
-} from '../api/debug.js'
+} from '../api/log-api.js'
 import {
   USER_SETTINGS_OPTIONS,
-} from '../constants.js'
+} from '../constant/index.js'
 import {
   memo,
 } from '../api/memo.js'

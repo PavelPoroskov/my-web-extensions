@@ -1,10 +1,10 @@
 import {
   logIgnore,
   logPromiseQueue,
-} from './debug.js'
+} from './log-api.js'
 import {
   SOURCE,
-} from '../constants.js'
+} from '../constant/index.js'
 
 class PromiseQueue {
   constructor () {

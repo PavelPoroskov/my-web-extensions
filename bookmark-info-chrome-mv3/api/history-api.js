@@ -3,13 +3,13 @@ import {
   SHOW_PREVIOUS_VISIT_OPTION,
   SOURCE,
   USER_SETTINGS_OPTIONS,
-} from '../constants.js';
+} from '../constant/index.js';
 import {
   logOptimization,
-} from './debug.js';
+} from './log-api.js';
 import {
   removeQueryParamsIfTarget,
-} from './link-api.js';
+} from './clean-url-api.js';
 import {
   memo,
 } from './memo.js';

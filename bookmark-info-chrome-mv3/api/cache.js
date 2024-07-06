@@ -1,7 +1,7 @@
 
 import {
   logCache,
-} from './debug.js'
+} from './log-api.js'
 
 export class CacheWithLimit {
   constructor ({ name='cache', size = 100 }) {

@@ -1,6 +1,6 @@
 import {
   logEvent,
-} from '../api/debug.js'
+} from '../api/log-api.js'
 import {
   updateActiveTab,
 } from '../api/tabs-api.js'

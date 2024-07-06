@@ -1,6 +1,6 @@
 import {
   log,
-} from './debug.js'
+} from './log-api.js'
 
 async function getRecentList(nItems) {
   log('getRecentTagObj() 00', nItems)

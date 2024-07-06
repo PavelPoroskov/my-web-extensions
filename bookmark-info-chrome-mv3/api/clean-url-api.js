@@ -1,5 +1,5 @@
 
-import { clearUrlTargetList } from '../constants.js'
+import { clearUrlTargetList } from '../constant/index.js'
 
 
 const targetMap = new Map(

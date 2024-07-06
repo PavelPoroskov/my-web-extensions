@@ -2,18 +2,17 @@
 import {
   logEvent,
   logSendEvent,
-} from '../api/debug.js'
+} from '../api/log-api.js'
 import {
   MENU,
-} from '../constants.js';
+} from '../constant/index.js';
 import {
   closeDuplicateTabs,
   closeBookmarkedTabs,
 } from '../api/tabs-list-api.js'
 import {
   removeQueryParams,
-} from '../api/link-api.js'
-
+} from '../api/clean-url-api.js'
 
 export const contextMenusController = {
   async onClicked (OnClickData) {

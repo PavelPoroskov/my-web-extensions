@@ -5,7 +5,7 @@ import {
 import {
   logEvent,
   logIgnore,
-} from '../api/debug.js'
+} from '../api/log-api.js'
 import {
   getHistoryInfo,
 } from '../api/history-api.js'
@@ -18,7 +18,7 @@ import {
 } from '../api/tabs-api.js'
 import {
   IS_BROWSER_FIREFOX,
-} from '../constants.js'
+} from '../constant/index.js'
 
 
 export const tabsController = {

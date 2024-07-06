@@ -1,7 +1,7 @@
 import {
   logOptimization,
   log,
-} from './debug.js'
+} from './log-api.js'
 import {
   memo,
 } from './memo.js'
@@ -10,7 +10,7 @@ import {
 } from './common-api.js'
 import {
   SOURCE,
-} from '../constants.js'
+} from '../constant/index.js'
 
 export async function isHasBookmark(url) {
   const bookmarks = await chrome.bookmarks.search({ url });

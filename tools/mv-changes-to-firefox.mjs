@@ -5,9 +5,13 @@ import {
 
 createFileForFirefox(
   [
-    'constants.js',
-    'config.js',
-    'api/debug.js',
+    'constant/log-config.js',
+    'api/log-api.js',
+    'constant/browser-specific.js',
+    'constant/clean-url.js',
+    'constant/menu-id.js',
+    'constant/optimization-cache.js',
+    'constant/storage.js',
     'api/cache.js',
     'api/promiseQueue.js',
     'api/common-api.js',
