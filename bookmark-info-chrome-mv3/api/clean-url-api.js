@@ -14,7 +14,6 @@ const targetMap = new Map(
 
 const getHostBase = (str) => str.split('.').slice(-2).join('.')
 
-
 export const removeQueryParamsIfTarget = (url) => {
   let cleanUrl = url
   let isPattern = false
@@ -75,9 +74,9 @@ export async function clearUrlInTab({ tabId, cleanUrl }) {
     command: CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL,
     cleanUrl,
   }
-  logSendEvent('runtimeController.onMessage(contentScriptReady)', tabId, msg)
+  logSendEvent('clearUrlInTab()', tabId, msg)
   await chrome.tabs.sendMessage(tabId, msg)
     .catch((err) => {
-      logIgnore(`runtimeController.onMessage(contentScriptReady) sendMessage(${msg.command})`, err)
+      logIgnore('clearUrlInTab()', err)
     })
 }

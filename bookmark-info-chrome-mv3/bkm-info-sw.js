@@ -1,9 +1,9 @@
 // console.log('IMPORTING', 'bkm-info-sw.js')
+import { storageController } from './controllers/storage.controller.js';
 import { bookmarksController } from './controllers/bookmarks.controller.js';
 import { tabsController } from './controllers/tabs.controller.js';
 import { windowsController } from './controllers/windows.controller.js';
 import { contextMenusController } from './controllers/contextMenus.controller.js';
-import { storageController } from './controllers/storage.controller.js';
 
 import { runtimeController } from './controllers/runtime.controller.js';
 

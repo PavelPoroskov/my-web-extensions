@@ -6,7 +6,7 @@ import {
 import {
   clearUrlInTab,
   removeQueryParamsIfTarget,
-} from './clean-url-api.js'
+} from '../api/clean-url-api.js'
 import {
   deleteUncleanUrlBookmarkForTab,
   getBookmarkInfoUni,

@@ -1,10 +1,8 @@
 
 import {
   logEvent,
-  logSendEvent,
 } from '../api/log-api.js'
 import {
-  CONTENT_SCRIPT_COMMAND_ID,
   CONTEXT_MENU_ID,
 } from '../constant/index.js';
 import {
@@ -12,6 +10,7 @@ import {
   closeBookmarkedTabs,
 } from '../api/tabs-list-api.js'
 import {
+  clearUrlInTab,
   removeQueryParams,
 } from '../api/clean-url-api.js'
 
@@ -36,12 +35,7 @@ export const contextMenusController = {
           const cleanUrl = removeQueryParams(activeTab.url);
 
           if (activeTab.url !== cleanUrl) {
-            const msg = {
-              command: CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL,
-              cleanUrl,
-            }
-            logSendEvent('contextMenusController.onClicked(CLEAR_URL)', activeTab.id, msg)
-            await chrome.tabs.sendMessage(activeTab.id, msg)
+            await clearUrlInTab({ tabId: activeTab.id, cleanUrl })
           }
         }
 
