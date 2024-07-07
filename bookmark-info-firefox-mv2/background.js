@@ -84,7 +84,8 @@ const BROWSER_SPECIFIC = Object.fromEntries(
   Object.entries(BROWSER_SPECIFIC_OPTIONS)
     .map(([option, obj]) => [option, obj[BROWSER]])
 );
-const clearUrlTargetList = [
+// TODO remove duplication clearUrlTargetList in options/options.js
+const clearUrlTargetList = [
   {
     hostname: 'linkedin.com',  
     paths: [
@@ -120,6 +121,7 @@ const EXTENSION_COMMAND_ID = {
   FIX_TAG: 'FIX_TAG',
   UNFIX_TAG: 'UNFIX_TAG',
   TAB_IS_READY: 'TAB_IS_READY',
+  SHOW_TAG_LIST: 'SHOW_TAG_LIST',
 }
 
 const CONTENT_SCRIPT_COMMAND_ID = {
@@ -139,14 +141,9 @@ const CONTEXT_MENU_ID = {
   CACHE: 'CACHE',
   ACTUAL: 'ACTUAL',
 };
-const USER_SETTINGS_OPTIONS = {
-  CLEAR_URL_FROM_QUERY_PARAMS: 'CLEAR_URL_FROM_QUERY_PARAMS',
-  SHOW_PATH_LAYERS: 'SHOW_PATH_LAYERS',
-  SHOW_PREVIOUS_VISIT: 'SHOW_PREVIOUS_VISIT',
-  SHOW_BOOKMARK_TITLE: 'SHOW_BOOKMARK_TITLE',
-  SHOW_PROFILE: 'SHOW_PROFILE',
-  ADD_BOOKMARK: 'ADD_BOOKMARK',
-  // MARK_VISITED_URL: 'MARK_VISITED_URL',
+const STORAGE_TYPE = {
+  LOCAL: 'LOCAL',
+  SESSION: 'SESSION',
 }
 
 const SHOW_PREVIOUS_VISIT_OPTION = {
@@ -155,18 +152,58 @@ const SHOW_PREVIOUS_VISIT_OPTION = {
   ALWAYS: 2,
 }
 
-const o = USER_SETTINGS_OPTIONS
+const STORAGE_KEY_META = {
+  CLEAR_URL: {
+    storageKey: 'CLEAR_URL_FROM_QUERY_PARAMS',
+    default: true,
+  },
+  SHOW_PATH_LAYERS: {
+    storageKey: 'SHOW_PATH_LAYERS',
+    default: 1,
+  },
+  SHOW_PREVIOUS_VISIT: {
+    storageKey: 'SHOW_PREVIOUS_VISIT',
+    default: SHOW_PREVIOUS_VISIT_OPTION.ALWAYS,
+  },
+  SHOW_BOOKMARK_TITLE: {
+    storageKey: 'SHOW_BOOKMARK_TITLE',
+    default: false,
+  },
+  // SHOW_PROFILE: {
+  //   storageKey: 'SHOW_PROFILE', 
+  //   default: false,
+  // },
+  ADD_BOOKMARK_IS_ON: {
+    storageKey: 'ADD_BOOKMARK',
+    default: true,
+  },
+  ADD_BOOKMARK_LIST_SHOW: {
+    storageKey: 'ADD_BOOKMARK_LIST_SHOW',
+    default: true,
+  },
+  ADD_BOOKMARK_LIST_LIMIT: {
+    storageKey: 'ADD_BOOKMARK_LIST_LIMIT', 
+    default: 30,
+  },
 
-const USER_SETTINGS_DEFAULT_VALUE = {
-  [o.CLEAR_URL_FROM_QUERY_PARAMS]: true,
-  [o.SHOW_PATH_LAYERS]: 1, // [1, 2, 3]
-  [o.SHOW_PREVIOUS_VISIT]: SHOW_PREVIOUS_VISIT_OPTION.ALWAYS,
-  [o.SHOW_BOOKMARK_TITLE]: false,
-  [o.SHOW_PROFILE]: false,
-  [o.ADD_BOOKMARK]: false,
+  ADD_BOOKMARK_RECENT_MAP: {
+    storageKey: 'ADD_BOOKMARK_RECENT_MAP',
+    storage: STORAGE_TYPE.SESSION,
+    default: {},
+  },
+  ADD_BOOKMARK_FIXED_MAP: {
+    storageKey: 'ADD_BOOKMARK_FIXED_MAP',
+    default: {},
+  },
+  START_TIME: {
+    storageKey: 'START_TIME',
+    storage: STORAGE_TYPE.SESSION,
+  },
 }
 
-const TAG_LIST_VISIBLE_LIMIT = 25;
+const STORAGE_KEY = Object.fromEntries(
+  Object.keys(STORAGE_KEY_META).map((key) => [key, key])
+)
 
 class CacheWithLimit {
   constructor ({ name='cache', size = 100 }) {
@@ -466,10 +503,97 @@ async function createContextMenu() {
     title: 'clear url',
   });
 }
-// console.log('IMPORTING', 'memo.js')
-const STORAGE_LOCAL__FIXED_TAG_MAP = 'FIXED_TAG_MAP'
-const STORAGE_SESSION__RECENT_TAG_MAP = 'RECENT_TAG_MAP'
+async function setOptions(obj) {
+  const entryList = Object.entries(obj)
+    .map(([key, value]) => ({
+      key, 
+      storage: STORAGE_KEY_META[key].storage || STORAGE_TYPE.LOCAL,
+      value,
+    }))
 
+  
+  const localList = entryList
+    .filter((item) => item.storage === STORAGE_TYPE.LOCAL)
+  const localObj = Object.fromEntries(
+    localList.map(({ key, value }) => [STORAGE_KEY_META[key].storageKey, value])
+  )
+
+  const sessionList = entryList
+    .filter((item) => item.storage === STORAGE_TYPE.SESSION)
+  const sessionObj = Object.fromEntries(
+    sessionList.map(({ key, value }) => [STORAGE_KEY_META[key].storageKey, value])
+  )
+
+  await Promise.all([
+    localList.length > 0 && browser.storage.local.set(localObj),
+    sessionList.length > 0 && browser.storage.session.set(sessionObj),
+  ])
+}
+
+async function getOptions(keyList) {
+  const inKeyList = Array.isArray(keyList) ? keyList : [keyList]
+
+  const entryList = inKeyList
+    .map((key) => ({
+      key, 
+      storage: STORAGE_KEY_META[key].storage || STORAGE_TYPE.LOCAL,
+    }))
+
+  const localList = entryList
+    .filter((item) => item.storage === STORAGE_TYPE.LOCAL)
+    .map(({ key }) => key)
+
+  const sessionList = entryList
+    .filter((item) => item.storage === STORAGE_TYPE.SESSION)
+    .map(({ key }) => key)
+
+  const [
+    localStoredObj,
+    sessionStoredObj,
+  ] = await Promise.all([
+    localList.length > 0 
+      ? browser.storage.local.get(
+        localList.map((key) => STORAGE_KEY_META[key].storageKey)
+      )
+      : {},
+    sessionList.length > 0 
+      ? browser.storage.session.get(
+        sessionList.map((key) => STORAGE_KEY_META[key].storageKey)
+      ) 
+      : {},
+  ])
+
+  const localObj = Object.fromEntries(
+    localList.map((key) => {
+      const storageKey = STORAGE_KEY_META[key].storageKey
+
+      return [
+        key,
+        localStoredObj[storageKey] !== undefined 
+          ? localStoredObj[storageKey] 
+          : STORAGE_KEY_META[key].default
+      ]
+    })
+  )
+  const sessionObj = Object.fromEntries(
+    sessionList.map((key) => {
+      const storageKey = STORAGE_KEY_META[key].storageKey
+
+      return [
+        key,
+        sessionStoredObj[storageKey] !== undefined 
+          ? sessionStoredObj[storageKey] 
+          : STORAGE_KEY_META[key].default
+      ]
+    })
+  )
+
+  return {
+    ...localObj,
+    ...sessionObj,
+  }
+}
+// console.log('IMPORTING', 'memo.js')
 const memo = {
   activeTabId: '',
   previousTabId: '',
@@ -494,14 +618,15 @@ const memo = {
     if (!this._isSettingsActual) {
       logSettings('readSavedSettings START')
 
-      const savedSettings = await browser.storage.local.get(
-        Object.values(USER_SETTINGS_OPTIONS)
-      );
-    
-      this._settings = {
-        ...USER_SETTINGS_DEFAULT_VALUE,
-        ...savedSettings,
-      };
+      this._settings = await getOptions([
+        STORAGE_KEY.CLEAR_URL,
+        STORAGE_KEY.SHOW_PATH_LAYERS,
+        STORAGE_KEY.SHOW_PREVIOUS_VISIT,
+        STORAGE_KEY.SHOW_BOOKMARK_TITLE,
+        STORAGE_KEY.ADD_BOOKMARK_IS_ON,
+        STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
+        STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
+      ]);
       logSettings('readSavedSettings')
       logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
 
@@ -512,6 +637,12 @@ const memo = {
   },
   get settings() {
     return { ...this._settings }
+  },
+  async updateShowTagList(value) {
+    this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW] = value
+    await setOptions({
+      [STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW]: value
+    })
   },
 
   _profileStartTimeMS: undefined,
@@ -525,20 +656,20 @@ const memo = {
   async readProfileStartTimeMS() {
     if (!this._isProfileStartTimeMSActual) {
 
-      const STORAGE_SESSION__START_TIME = 'START_TIME'
-      const storedSession = await browser.storage.session.get(STORAGE_SESSION__START_TIME)
+
+      const storedSession = await getOptions(STORAGE_KEY.START_TIME)
       logSettings('storedSession', storedSession)
 
-      if (storedSession[STORAGE_SESSION__START_TIME]) {
-        this._profileStartTimeMS = storedSession[STORAGE_SESSION__START_TIME]
+      if (storedSession[STORAGE_KEY.START_TIME]) {
+        this._profileStartTimeMS = storedSession[STORAGE_KEY.START_TIME]
       } else {
         // I get start for service-worker now.
         //    It is correct if this web-extension was installed in the previous browser session
         // It is better get for window // min(window.startTime(performance.timeOrigin)) OR min(tab(performance.timeOrigin))
         //  tab with minimal tabId
         this._profileStartTimeMS = performance.timeOrigin
-        await browser.storage.session.set({
-          [STORAGE_SESSION__START_TIME]: this._profileStartTimeMS
+        await setOptions({
+          [STORAGE_KEY.START_TIME]: this._profileStartTimeMS
         })
 
       }
@@ -556,7 +687,7 @@ const memo = {
   },
   getTagList() {
     const recentTaLimit = Math.max(
-      TAG_LIST_VISIBLE_LIMIT - Object.keys(this._fixedTagObj).length,
+      this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT] - Object.keys(this._fixedTagObj).length,
       0
     )
 
@@ -580,21 +711,19 @@ const memo = {
   async readTagList() {
     logSettings('readTagList 11')
 
-    if (this._settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+    if (this._settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
       logSettings('readTagList 22')
-      const [savedLocal, savedSession] = await Promise.all([
-        browser.storage.local.get(STORAGE_LOCAL__FIXED_TAG_MAP),
-        browser.storage.session.get(STORAGE_SESSION__RECENT_TAG_MAP),
+      const savedObj = await getOptions([
+        STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP,
+        STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP,
       ]);
 
-      if (!savedSession[STORAGE_SESSION__RECENT_TAG_MAP]) {
-        logSettings('readTagList 22 11')
-        this._fixedTagObj = await filterFixedTagObj(savedLocal[STORAGE_LOCAL__FIXED_TAG_MAP])
-        this._recentTagObj = await getRecentTagObj(TAG_LIST_VISIBLE_LIMIT)
+      if (Object.keys(savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]).length === 0) {
+        this._fixedTagObj = await filterFixedTagObj(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP])
+        this._recentTagObj = await getRecentTagObj(this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT])
       } else {
-        logSettings('readTagList 22 77')
-        this._fixedTagObj = savedLocal[STORAGE_LOCAL__FIXED_TAG_MAP] || {}
-        this._recentTagObj = savedSession[STORAGE_SESSION__RECENT_TAG_MAP] 
+        this._fixedTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]
+        this._recentTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP] 
       }
       logSettings('readTagList this._recentTagObj ', this._recentTagObj)
       this._tagList = this.getTagList()
@@ -630,11 +759,11 @@ const memo = {
       title: newFolder.title
     }
 
-    if (TAG_LIST_VISIBLE_LIMIT < Object.keys(this._recentTagObj).length) {
+    if (this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT] < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
         .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
         .sort((a,b) => -(a.dateAdded - b.dateAdded))
-        .slice(TAG_LIST_VISIBLE_LIMIT)
+        .slice(this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT])
         .map(({ parentId }) => parentId)
 
         redundantIdList.forEach((id) => {
@@ -643,58 +772,66 @@ const memo = {
     }
 
     this._tagList = this.getTagList()
-    await browser.storage.session.set({
-      [STORAGE_SESSION__RECENT_TAG_MAP]: this._recentTagObj
+    await setOptions({
+      [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
     })
   },
   async removeTag(id) {
     const isInFixedList = id in this._fixedTagObj
+    let fixedTagUpdate
 
     if (isInFixedList) {
       delete this._fixedTagObj[id] 
+      fixedTagUpdate = {
+        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
+      }
     }
 
     const isInRecentList = id in this._recentTagObj
+    let recentTagUpdate
 
     if (isInRecentList) {
       delete this._recentTagObj[id]
+      recentTagUpdate = {
+        [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
+      }
     }
 
     if (isInFixedList || isInRecentList) {
       this._tagList = this.getTagList()
-      await Promise.all([
-        isInFixedList && browser.storage.local.set({
-          [STORAGE_LOCAL__FIXED_TAG_MAP]: this._fixedTagObj
-        }),
-        isInRecentList && browser.storage.session.set({
-          [STORAGE_SESSION__RECENT_TAG_MAP]: this._recentTagObj
-        })
-      ])
+      await setOptions({
+        ...fixedTagUpdate,
+        ...recentTagUpdate,
+      })
     }
   },
   async updateTag(id, title) {
     const isInFixedList = id in this._fixedTagObj
+    let fixedTagUpdate
 
     if (isInFixedList) {
       this._fixedTagObj[id] = title
+      fixedTagUpdate = {
+        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
+      }
     }
 
     const isInRecentList = id in this._recentTagObj
+    let recentTagUpdate
 
     if (isInRecentList) {
       this._recentTagObj[id].title = title
+      recentTagUpdate = {
+        [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
+      }
     }
 
     if (isInFixedList || isInRecentList) {
       this._tagList = this.getTagList()
-      await Promise.all([
-        isInFixedList && browser.storage.local.set({
-          [STORAGE_LOCAL__FIXED_TAG_MAP]: this._fixedTagObj
-        }),
-        isInRecentList && browser.storage.session.set({
-          [STORAGE_SESSION__RECENT_TAG_MAP]: this._recentTagObj
-        })
-      ])
+      await setOptions({
+        ...fixedTagUpdate,
+        ...recentTagUpdate,
+      })
     }
   },
   async addFixedTag({ parentId, title }) {
@@ -706,8 +843,8 @@ const memo = {
       this._fixedTagObj[parentId] = title
 
       this._tagList = this.getTagList()
-      await browser.storage.local.set({
-        [STORAGE_LOCAL__FIXED_TAG_MAP]: this._fixedTagObj
+      await setOptions({
+        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
       })
     }
   },
@@ -715,8 +852,8 @@ const memo = {
     delete this._fixedTagObj[id]
 
     this._tagList = this.getTagList()
-    await browser.storage.local.set({
-      [STORAGE_LOCAL__FIXED_TAG_MAP]: this._fixedTagObj
+    await setOptions({
+      [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
     })
   },
 
@@ -992,7 +1129,7 @@ async function getVisitListForUrlList(urlList) {
 async function getPreviousVisitList(url) {
   let rootUrl
 
-  if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+  if (memo.settings[STORAGE_KEY.CLEAR_URL]) {
     const { cleanUrl, isPattern } = removeQueryParamsIfTarget(url)
 
     if (isPattern) {
@@ -1014,7 +1151,7 @@ async function getPreviousVisitList(url) {
 }
 
 async function getHistoryInfo({ url, useCache=false }) {
-  const showPreviousVisit = memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT]
+  const showPreviousVisit = memo.settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT]
   
   if (!(showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS || showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM)) {
     return {
@@ -1050,7 +1187,7 @@ async function getHistoryInfo({ url, useCache=false }) {
 async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
   let actualUrl = url
 
-  if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+  if (memo.settings[STORAGE_KEY.CLEAR_URL]) {
     const { cleanUrl } = removeQueryParamsIfTarget(url)
 
     if (url !== cleanUrl) {
@@ -1064,14 +1201,15 @@ async function getHistoryInfo({ url, useCache=false }) {
   const message = {
     command: CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO,
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
-    showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
-    isShowTitle: memo.settings[USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE],
+    showLayer: memo.settings[STORAGE_KEY.SHOW_PATH_LAYERS],
+    isShowTitle: memo.settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
     tagList: memo.tagList.map(({ parentId, title, isFixed }) => ({
       parentId,
       title, 
       isFixed,
       isUsed: usedParentIdSet.has(parentId)
-    }))
+    })),
+    isShowTagList: memo.settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
   }
   await browser.tabs.sendMessage(tabId, message)
   
@@ -1084,7 +1222,7 @@ async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
 
   const message = {
     command: CONTENT_SCRIPT_COMMAND_ID.HISTORY_INFO,
-    showPreviousVisit: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT],
+    showPreviousVisit: memo.settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT],
     visitList: visitInfo.visitList,
   }
   logSendEvent('updateVisitsForTabTask()', tabId, message);
@@ -1319,7 +1457,7 @@ async function closeBookmarkedTabs() {
         const url = message.url
         let cleanUrl
 
-        if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+        if (memo.settings[STORAGE_KEY.CLEAR_URL]) {
           ({ cleanUrl } = removeQueryParamsIfTarget(url));
           
           if (url !== cleanUrl) {
@@ -1337,13 +1475,24 @@ async function closeBookmarkedTabs() {
 
       break
     }
+    case EXTENSION_COMMAND_ID.SHOW_TAG_LIST: {
+      logEvent('runtime.onMessage SHOW_RECENT_LIST');
+
+      await memo.updateShowTagList(message.value)
+      // updateActiveTab({
+      //   debugCaller: 'runtime.onMessage SHOW_RECENT_LIST',
+      //   useCache: true,
+      // });
+
+      break
+    }
   }
 }
 const bookmarksController = {
   async onCreated(bookmarkId, node) {
     logEvent('bookmark.onCreated <-', node);
 
-    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
       memo.createBkmInActiveDialog(node.id, node.parentId)
       await memo.addRecentTag(node)
     }
@@ -1361,7 +1510,7 @@ async function closeBookmarkedTabs() {
     memo.bkmFolderById.delete(bookmarkId);
 
 
-    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK] && changeInfo.title) {
+    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && changeInfo.title) {
       await memo.updateTag(bookmarkId, changeInfo.title)
     }
     // changes in active tab
@@ -1381,7 +1530,7 @@ async function closeBookmarkedTabs() {
     const [node] = await browser.bookmarks.get(bookmarkId)
     logDebug('bookmark.onMoved <-', node);
 
-    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
       if (memo.isCreatedInActiveDialog(bookmarkId, oldParentId)) {
         memo.removeFromActiveDialog(oldParentId)
         await memo.addRecentTag({ parentId });
@@ -1414,7 +1563,7 @@ async function closeBookmarkedTabs() {
     logEvent('bookmark.onRemoved <-');
     memo.bkmFolderById.delete(bookmarkId);
 
-    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
       memo.removeFromActiveDialog(node.parentId)
       
       if (!node.url) {
@@ -1491,7 +1640,15 @@ async function closeBookmarkedTabs() {
     
     if (namespace === 'local') {
       const changesSet = new Set(Object.keys(changes))
-      const settingSet = new Set(Object.values(USER_SETTINGS_OPTIONS))
+      const settingSet = new Set([
+        STORAGE_KEY.CLEAR_URL,
+        STORAGE_KEY.SHOW_PATH_LAYERS,
+        STORAGE_KEY.SHOW_PREVIOUS_VISIT,
+        STORAGE_KEY.SHOW_BOOKMARK_TITLE,
+        STORAGE_KEY.ADD_BOOKMARK_IS_ON,
+        //STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
+        STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
+      ].map((key) => STORAGE_KEY_META[key].storageKey))
       const intersectSet = changesSet.intersection(settingSet)
 
       if (intersectSet.size > 0) {
@@ -1499,7 +1656,7 @@ async function closeBookmarkedTabs() {
 
         memo.invalidateSettings()
 
-        if (changesSet.has(USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT)) {
+        if (changesSet.has(STORAGE_KEY.SHOW_PREVIOUS_VISIT)) {
           memo.cacheUrlToVisitList.clear()
         }
       }
@@ -1524,7 +1681,7 @@ async function closeBookmarkedTabs() {
           logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, url);
           let cleanUrl
 
-          if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+          if (memo.settings[STORAGE_KEY.CLEAR_UR]) {
             ({ cleanUrl } = removeQueryParamsIfTarget(url));
             
             if (url !== cleanUrl) {

@@ -16,6 +16,7 @@ const log = SHOW_LOG ? console.log : () => {};
     FIX_TAG: 'FIX_TAG',
     UNFIX_TAG: 'UNFIX_TAG',
     TAB_IS_READY: 'TAB_IS_READY',
+    SHOW_TAG_LIST: 'SHOW_TAG_LIST',
   }
   const CONTENT_SCRIPT_COMMAND_ID = {
     BOOKMARK_INFO: 'BOOKMARK_INFO',
@@ -153,7 +154,7 @@ const log = SHOW_LOG ? console.log : () => {};
   background-color: fuchsia;
 }
 .bkm-info--separator {
-  background-color: white;
+  background-color: #DAF7A6;
   border: solid 1px yellow;
 }
 .bkm-info--separator:active {
@@ -168,13 +169,15 @@ const log = SHOW_LOG ? console.log : () => {};
 .bkm-info--fixed {
   background-color: #40E0D0;
 }
-.bkm-info--fixed:active {
+.bkm-info--fixed:active:not(.bkm-info--used-tag) {
   transform: translateY(0.1ch);
 }
 .bkm-info--fixed:hover, .bkm-info--btn-unfix:hover + .bkm-info--fixed {
-  background-color: #00FFFF;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
+}
+.bkm-info--fixed:hover:not(.bkm-info--used-tag), .bkm-info--btn-unfix:hover + .bkm-info--fixed:not(.bkm-info--used-tag) {
+  background-color: #00FFFF;
 }
 .bkm-info--btn-unfix:has( + .bkm-info--fixed:hover) {
   display: flex;
@@ -188,13 +191,15 @@ const log = SHOW_LOG ? console.log : () => {};
 .bkm-info--recent {
   background-color: #32CD32;
 }
-.bkm-info--recent:active {
+.bkm-info--recent:active:not(.bkm-info--used-tag) {
   transform: translateY(0.1ch);
 }
 .bkm-info--recent:hover, .bkm-info--btn-fix:hover + .bkm-info--recent {
-  background-color: #00FF00;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
+}
+.bkm-info--recent:hover:not(.bkm-info--used-tag), .bkm-info--btn-fix:hover + .bkm-info--recent:not(.bkm-info--used-tag) {
+  background-color: #00FF00;
 }
 .bkm-info--btn-fix:has(+ .bkm-info--recent:hover) {
   display: flex;
@@ -206,7 +211,7 @@ const log = SHOW_LOG ? console.log : () => {};
 }
 
 .bkm-info--used-tag {
-  text-decoration-line: line-through;
+  color: gray;
 }
 `
   );
@@ -311,6 +316,19 @@ const log = SHOW_LOG ? console.log : () => {};
     }
   }
 
+  
+  async function updateIsShowTagList() {
+    log('updateIsShowTagList');
+    const before = !!fullMessage.isShowTagList
+    fullMessage.isShowTagList = !before
+    showBookmarkInfo(fullMessage);
+
+    await browser.runtime.sendMessage({
+      command: EXTENSION_COMMAND_ID.SHOW_TAG_LIST,
+      value: !before,
+    });
+  }
+
   function showBookmarkInfo(input) {
     const bookmarkInfoList = input.bookmarkInfoList || []
     const showLayer = input.showLayer || 1
@@ -318,7 +336,8 @@ const log = SHOW_LOG ? console.log : () => {};
     const showPreviousVisit = input.showPreviousVisit || SHOW_PREVIOUS_VISIT_OPTION.NEVER
     const isShowTitle = input.isShowTitle || false
     const tagList = input.tagList || []
-
+    const isShowTagList = input.isShowTagList || false
+    
     log('showBookmarkInfo 00');
 
     let rootDiv = document.getElementById(bkmInfoRootId);
@@ -369,12 +388,14 @@ const log = SHOW_LOG ? console.log : () => {};
     if (tagList.length > 0) {
       drawList.push({ type: 'separator' })
 
-      tagList.forEach(({ isFixed, parentId, title, isUsed }) => {
-        drawList.push({
-          type: isFixed ? 'fixedTag' : 'recentTag',
-          value: { parentId, title, isUsed },
+      if (isShowTagList) {
+        tagList.forEach(({ isFixed, parentId, title, isUsed }) => {
+          drawList.push({
+            type: isFixed ? 'fixedTag' : 'recentTag',
+            value: { parentId, title, isUsed },
+          })
         })
-      })
+      }
     }
 
     drawList.forEach(({ type, value, bkmIndex }, index) => {
@@ -450,8 +471,8 @@ const log = SHOW_LOG ? console.log : () => {};
         case 'separator': {
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--separator');
-          divLabel.addEventListener('click', hideBookmarks);
-          const textNode = document.createTextNode('hide');
+          divLabel.addEventListener('click', updateIsShowTagList);
+          const textNode = document.createTextNode( isShowTagList ? '▴ hide' : '▾ add' );
           divLabel.appendChild(textNode);
           divRow.appendChild(divLabel);
 
@@ -462,10 +483,14 @@ const log = SHOW_LOG ? console.log : () => {};
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--recent');
-          divLabel.classList.toggle('bkm-info--used-tag', isUsed);
-          
-          divLabel.setAttribute('data-parentid', parentId);
-          divLabel.addEventListener('click', addBookmark);
+
+          if (isUsed) {
+            divLabel.classList.toggle('bkm-info--used-tag', isUsed);
+          } else {
+            divLabel.setAttribute('data-parentid', parentId);
+            divLabel.addEventListener('click', addBookmark);
+          }
+
           const textNodeLabel = document.createTextNode(`${title}`);
           divLabel.appendChild(textNodeLabel);
 
@@ -490,9 +515,14 @@ const log = SHOW_LOG ? console.log : () => {};
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--fixed');
-          divLabel.classList.toggle('bkm-info--used-tag', isUsed);
-          divLabel.setAttribute('data-parentid', parentId);
-          divLabel.addEventListener('click', addBookmark);
+
+          if (isUsed) {
+            divLabel.classList.toggle('bkm-info--used-tag', isUsed);
+          } else {
+            divLabel.setAttribute('data-parentid', parentId);
+            divLabel.addEventListener('click', addBookmark);
+          }
+
           const textNodeLabel = document.createTextNode(`${title}`);
           divLabel.appendChild(textNodeLabel);
 

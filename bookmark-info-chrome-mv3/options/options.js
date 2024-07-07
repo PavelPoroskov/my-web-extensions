@@ -63,7 +63,7 @@ const STORAGE_KEY_META = {
   // },
   ADD_BOOKMARK_IS_ON: {
     storageKey: 'ADD_BOOKMARK',
-    default: false,
+    default: true,
   },
   ADD_BOOKMARK_LIST_SHOW: {
     storageKey: 'ADD_BOOKMARK_LIST_SHOW',
@@ -71,7 +71,7 @@ const STORAGE_KEY_META = {
   },
   ADD_BOOKMARK_LIST_LIMIT: {
     storageKey: 'ADD_BOOKMARK_LIST_LIMIT', 
-    default: 25,
+    default: 30,
   },
 
   ADD_BOOKMARK_RECENT_MAP: {
