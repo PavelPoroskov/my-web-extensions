@@ -24,7 +24,7 @@ import {
 
 import {
   IS_BROWSER_FIREFOX,
-  USER_SETTINGS_OPTIONS,
+  STORAGE_KEY,
 } from '../constant/index.js'
 
 
@@ -46,7 +46,7 @@ export const tabsController = {
           logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, url);
           let cleanUrl
 
-          if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+          if (memo.settings[STORAGE_KEY.CLEAR_UR]) {
             ({ cleanUrl } = removeQueryParamsIfTarget(url));
             
             if (url !== cleanUrl) {

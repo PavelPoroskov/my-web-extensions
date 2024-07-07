@@ -16,6 +16,7 @@ const log = SHOW_LOG ? console.log : () => {};
     FIX_TAG: 'FIX_TAG',
     UNFIX_TAG: 'UNFIX_TAG',
     TAB_IS_READY: 'TAB_IS_READY',
+    SHOW_TAG_LIST: 'SHOW_TAG_LIST',
   }
   const CONTENT_SCRIPT_COMMAND_ID = {
     BOOKMARK_INFO: 'BOOKMARK_INFO',
@@ -153,7 +154,7 @@ const log = SHOW_LOG ? console.log : () => {};
   background-color: fuchsia;
 }
 .bkm-info--separator {
-  background-color: white;
+  background-color: #DAF7A6;
   border: solid 1px yellow;
 }
 .bkm-info--separator:active {
@@ -315,6 +316,19 @@ const log = SHOW_LOG ? console.log : () => {};
     }
   }
 
+  
+  async function updateIsShowTagList() {
+    log('updateIsShowTagList');
+    const before = !!fullMessage.isShowTagList
+    fullMessage.isShowTagList = !before
+    showBookmarkInfo(fullMessage);
+
+    await chrome.runtime.sendMessage({
+      command: EXTENSION_COMMAND_ID.SHOW_TAG_LIST,
+      value: !before,
+    });
+  }
+
   function showBookmarkInfo(input) {
     const bookmarkInfoList = input.bookmarkInfoList || []
     const showLayer = input.showLayer || 1
@@ -322,7 +336,8 @@ const log = SHOW_LOG ? console.log : () => {};
     const showPreviousVisit = input.showPreviousVisit || SHOW_PREVIOUS_VISIT_OPTION.NEVER
     const isShowTitle = input.isShowTitle || false
     const tagList = input.tagList || []
-
+    const isShowTagList = input.isShowTagList || false
+    
     log('showBookmarkInfo 00');
 
     let rootDiv = document.getElementById(bkmInfoRootId);
@@ -373,12 +388,14 @@ const log = SHOW_LOG ? console.log : () => {};
     if (tagList.length > 0) {
       drawList.push({ type: 'separator' })
 
-      tagList.forEach(({ isFixed, parentId, title, isUsed }) => {
-        drawList.push({
-          type: isFixed ? 'fixedTag' : 'recentTag',
-          value: { parentId, title, isUsed },
+      if (isShowTagList) {
+        tagList.forEach(({ isFixed, parentId, title, isUsed }) => {
+          drawList.push({
+            type: isFixed ? 'fixedTag' : 'recentTag',
+            value: { parentId, title, isUsed },
+          })
         })
-      })
+      }
     }
 
     drawList.forEach(({ type, value, bkmIndex }, index) => {
@@ -454,8 +471,8 @@ const log = SHOW_LOG ? console.log : () => {};
         case 'separator': {
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--separator');
-          divLabel.addEventListener('click', hideBookmarks);
-          const textNode = document.createTextNode('hide');
+          divLabel.addEventListener('click', updateIsShowTagList);
+          const textNode = document.createTextNode( isShowTagList ? '▴ hide' : '▾ add' );
           divLabel.appendChild(textNode);
           divRow.appendChild(divLabel);
 

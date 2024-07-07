@@ -23,13 +23,13 @@ import {
 } from './memo.js'
 import {
   CONTENT_SCRIPT_COMMAND_ID,
-  USER_SETTINGS_OPTIONS,
+  STORAGE_KEY,
 } from '../constant/index.js'
 
 async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
   let actualUrl = url
 
-  if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+  if (memo.settings[STORAGE_KEY.CLEAR_URL]) {
     const { cleanUrl } = removeQueryParamsIfTarget(url)
 
     if (url !== cleanUrl) {
@@ -43,14 +43,15 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
   const message = {
     command: CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO,
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
-    showLayer: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PATH_LAYERS],
-    isShowTitle: memo.settings[USER_SETTINGS_OPTIONS.SHOW_BOOKMARK_TITLE],
+    showLayer: memo.settings[STORAGE_KEY.SHOW_PATH_LAYERS],
+    isShowTitle: memo.settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
     tagList: memo.tagList.map(({ parentId, title, isFixed }) => ({
       parentId,
       title, 
       isFixed,
       isUsed: usedParentIdSet.has(parentId)
-    }))
+    })),
+    isShowTagList: memo.settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
   }
   await chrome.tabs.sendMessage(tabId, message)
   
@@ -63,7 +64,7 @@ async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
 
   const message = {
     command: CONTENT_SCRIPT_COMMAND_ID.HISTORY_INFO,
-    showPreviousVisit: memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT],
+    showPreviousVisit: memo.settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT],
     visitList: visitInfo.visitList,
   }
   logSendEvent('updateVisitsForTabTask()', tabId, message);

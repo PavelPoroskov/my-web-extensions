@@ -1,3 +1,4 @@
+// TODO remove duplication clearUrlTargetList in options/options.js
 export const clearUrlTargetList = [
   {
     hostname: 'linkedin.com',  

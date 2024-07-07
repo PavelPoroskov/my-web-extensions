@@ -2,7 +2,7 @@ import {
   IS_BROWSER_FIREFOX,
   SHOW_PREVIOUS_VISIT_OPTION,
   SOURCE,
-  USER_SETTINGS_OPTIONS,
+  STORAGE_KEY,
 } from '../constant/index.js';
 import {
   logOptimization,
@@ -115,7 +115,7 @@ async function getVisitListForUrlList(urlList) {
 async function getPreviousVisitList(url) {
   let rootUrl
 
-  if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+  if (memo.settings[STORAGE_KEY.CLEAR_URL]) {
     const { cleanUrl, isPattern } = removeQueryParamsIfTarget(url)
 
     if (isPattern) {
@@ -137,7 +137,7 @@ async function getPreviousVisitList(url) {
 }
 
 export async function getHistoryInfo({ url, useCache=false }) {
-  const showPreviousVisit = memo.settings[USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT]
+  const showPreviousVisit = memo.settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT]
   
   if (!(showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS || showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM)) {
     return {

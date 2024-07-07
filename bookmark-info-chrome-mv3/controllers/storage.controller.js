@@ -2,7 +2,8 @@ import {
   logEvent,
 } from '../api/log-api.js'
 import {
-  USER_SETTINGS_OPTIONS,
+  STORAGE_KEY,
+  STORAGE_KEY_META,
 } from '../constant/index.js'
 import {
   memo,
@@ -14,7 +15,15 @@ export const storageController = {
     
     if (namespace === 'local') {
       const changesSet = new Set(Object.keys(changes))
-      const settingSet = new Set(Object.values(USER_SETTINGS_OPTIONS))
+      const settingSet = new Set([
+        STORAGE_KEY.CLEAR_URL,
+        STORAGE_KEY.SHOW_PATH_LAYERS,
+        STORAGE_KEY.SHOW_PREVIOUS_VISIT,
+        STORAGE_KEY.SHOW_BOOKMARK_TITLE,
+        STORAGE_KEY.ADD_BOOKMARK_IS_ON,
+        //STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
+        STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
+      ].map((key) => STORAGE_KEY_META[key].storageKey))
       const intersectSet = changesSet.intersection(settingSet)
 
       if (intersectSet.size > 0) {
@@ -22,7 +31,7 @@ export const storageController = {
 
         memo.invalidateSettings()
 
-        if (changesSet.has(USER_SETTINGS_OPTIONS.SHOW_PREVIOUS_VISIT)) {
+        if (changesSet.has(STORAGE_KEY.SHOW_PREVIOUS_VISIT)) {
           memo.cacheUrlToVisitList.clear()
         }
       }

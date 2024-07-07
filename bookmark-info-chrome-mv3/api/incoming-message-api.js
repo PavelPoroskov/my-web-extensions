@@ -19,7 +19,7 @@ import {
 } from './tabs-api.js'
 import {
   EXTENSION_COMMAND_ID,
-  USER_SETTINGS_OPTIONS
+  STORAGE_KEY,
 } from '../constant/index.js'
 
 export async function onIncomingMessage (message, sender) {
@@ -77,7 +77,7 @@ export async function onIncomingMessage (message, sender) {
         const url = message.url
         let cleanUrl
 
-        if (memo.settings[USER_SETTINGS_OPTIONS.CLEAR_URL_FROM_QUERY_PARAMS]) {
+        if (memo.settings[STORAGE_KEY.CLEAR_URL]) {
           ({ cleanUrl } = removeQueryParamsIfTarget(url));
           
           if (url !== cleanUrl) {
@@ -92,6 +92,17 @@ export async function onIncomingMessage (message, sender) {
           debugCaller: 'runtime.onMessage contentScriptReady',
         })
       }
+
+      break
+    }
+    case EXTENSION_COMMAND_ID.SHOW_TAG_LIST: {
+      logEvent('runtime.onMessage SHOW_RECENT_LIST');
+
+      await memo.updateShowTagList(message.value)
+      // updateActiveTab({
+      //   debugCaller: 'runtime.onMessage SHOW_RECENT_LIST',
+      //   useCache: true,
+      // });
 
       break
     }

@@ -1,12 +1,6 @@
-
-export const USER_SETTINGS_OPTIONS = {
-  CLEAR_URL_FROM_QUERY_PARAMS: 'CLEAR_URL_FROM_QUERY_PARAMS',
-  SHOW_PATH_LAYERS: 'SHOW_PATH_LAYERS',
-  SHOW_PREVIOUS_VISIT: 'SHOW_PREVIOUS_VISIT',
-  SHOW_BOOKMARK_TITLE: 'SHOW_BOOKMARK_TITLE',
-  SHOW_PROFILE: 'SHOW_PROFILE',
-  ADD_BOOKMARK: 'ADD_BOOKMARK',
-  // MARK_VISITED_URL: 'MARK_VISITED_URL',
+export const STORAGE_TYPE = {
+  LOCAL: 'LOCAL',
+  SESSION: 'SESSION',
 }
 
 export const SHOW_PREVIOUS_VISIT_OPTION = {
@@ -15,15 +9,55 @@ export const SHOW_PREVIOUS_VISIT_OPTION = {
   ALWAYS: 2,
 }
 
-const o = USER_SETTINGS_OPTIONS
+export const STORAGE_KEY_META = {
+  CLEAR_URL: {
+    storageKey: 'CLEAR_URL_FROM_QUERY_PARAMS',
+    default: true,
+  },
+  SHOW_PATH_LAYERS: {
+    storageKey: 'SHOW_PATH_LAYERS',
+    default: 1,
+  },
+  SHOW_PREVIOUS_VISIT: {
+    storageKey: 'SHOW_PREVIOUS_VISIT',
+    default: SHOW_PREVIOUS_VISIT_OPTION.ALWAYS,
+  },
+  SHOW_BOOKMARK_TITLE: {
+    storageKey: 'SHOW_BOOKMARK_TITLE',
+    default: false,
+  },
+  // SHOW_PROFILE: {
+  //   storageKey: 'SHOW_PROFILE', 
+  //   default: false,
+  // },
+  ADD_BOOKMARK_IS_ON: {
+    storageKey: 'ADD_BOOKMARK',
+    default: false,
+  },
+  ADD_BOOKMARK_LIST_SHOW: {
+    storageKey: 'ADD_BOOKMARK_LIST_SHOW',
+    default: true,
+  },
+  ADD_BOOKMARK_LIST_LIMIT: {
+    storageKey: 'ADD_BOOKMARK_LIST_LIMIT', 
+    default: 25,
+  },
 
-export const USER_SETTINGS_DEFAULT_VALUE = {
-  [o.CLEAR_URL_FROM_QUERY_PARAMS]: true,
-  [o.SHOW_PATH_LAYERS]: 1, // [1, 2, 3]
-  [o.SHOW_PREVIOUS_VISIT]: SHOW_PREVIOUS_VISIT_OPTION.ALWAYS,
-  [o.SHOW_BOOKMARK_TITLE]: false,
-  [o.SHOW_PROFILE]: false,
-  [o.ADD_BOOKMARK]: false,
+  ADD_BOOKMARK_RECENT_MAP: {
+    storageKey: 'ADD_BOOKMARK_RECENT_MAP',
+    storage: STORAGE_TYPE.SESSION,
+    default: {},
+  },
+  ADD_BOOKMARK_FIXED_MAP: {
+    storageKey: 'ADD_BOOKMARK_FIXED_MAP',
+    default: {},
+  },
+  START_TIME: {
+    storageKey: 'START_TIME',
+    storage: STORAGE_TYPE.SESSION,
+  },
 }
 
-export const TAG_LIST_VISIBLE_LIMIT = 25;
+export const STORAGE_KEY = Object.fromEntries(
+  Object.keys(STORAGE_KEY_META).map((key) => [key, key])
+)

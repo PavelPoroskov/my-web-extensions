@@ -12,7 +12,7 @@ import {
   updateActiveTab,
 } from '../api/tabs-api.js'
 import {
-  USER_SETTINGS_OPTIONS,
+  STORAGE_KEY,
   IS_BROWSER_CHROME,
 } from '../constant/index.js'
 
@@ -20,7 +20,7 @@ export const bookmarksController = {
   async onCreated(bookmarkId, node) {
     logEvent('bookmark.onCreated <-', node);
 
-    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
       memo.createBkmInActiveDialog(node.id, node.parentId)
       await memo.addRecentTag(node)
     }
@@ -38,7 +38,7 @@ export const bookmarksController = {
     memo.bkmFolderById.delete(bookmarkId);
 
 
-    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK] && changeInfo.title) {
+    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && changeInfo.title) {
       await memo.updateTag(bookmarkId, changeInfo.title)
     }
     // changes in active tab
@@ -58,7 +58,7 @@ export const bookmarksController = {
     const [node] = await chrome.bookmarks.get(bookmarkId)
     logDebug('bookmark.onMoved <-', node);
 
-    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
       if (memo.isCreatedInActiveDialog(bookmarkId, oldParentId)) {
         memo.removeFromActiveDialog(oldParentId)
         await memo.addRecentTag({ parentId });
@@ -91,7 +91,7 @@ export const bookmarksController = {
     logEvent('bookmark.onRemoved <-');
     memo.bkmFolderById.delete(bookmarkId);
 
-    if (memo.settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
       memo.removeFromActiveDialog(node.parentId)
       
       if (!node.url) {

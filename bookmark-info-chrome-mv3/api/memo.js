@@ -8,13 +8,11 @@ import {
   getRecentTagObj
 } from './recent-api.js'
 import {
-  USER_SETTINGS_DEFAULT_VALUE,
-  USER_SETTINGS_OPTIONS,
-  TAG_LIST_VISIBLE_LIMIT
+  getOptions, setOptions
+} from './storage-api.js'
+import {
+  STORAGE_KEY
 } from '../constant/index.js';
-
-const STORAGE_LOCAL__FIXED_TAG_MAP = 'FIXED_TAG_MAP'
-const STORAGE_SESSION__RECENT_TAG_MAP = 'RECENT_TAG_MAP'
 
 export const memo = {
   activeTabId: '',
@@ -40,14 +38,15 @@ export const memo = {
     if (!this._isSettingsActual) {
       logSettings('readSavedSettings START')
 
-      const savedSettings = await chrome.storage.local.get(
-        Object.values(USER_SETTINGS_OPTIONS)
-      );
-    
-      this._settings = {
-        ...USER_SETTINGS_DEFAULT_VALUE,
-        ...savedSettings,
-      };
+      this._settings = await getOptions([
+        STORAGE_KEY.CLEAR_URL,
+        STORAGE_KEY.SHOW_PATH_LAYERS,
+        STORAGE_KEY.SHOW_PREVIOUS_VISIT,
+        STORAGE_KEY.SHOW_BOOKMARK_TITLE,
+        STORAGE_KEY.ADD_BOOKMARK_IS_ON,
+        STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
+        STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
+      ]);
       logSettings('readSavedSettings')
       logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
 
@@ -58,6 +57,12 @@ export const memo = {
   },
   get settings() {
     return { ...this._settings }
+  },
+  async updateShowTagList(value) {
+    this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW] = value
+    await setOptions({
+      [STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW]: value
+    })
   },
 
   _profileStartTimeMS: undefined,
@@ -71,20 +76,20 @@ export const memo = {
   async readProfileStartTimeMS() {
     if (!this._isProfileStartTimeMSActual) {
 
-      const STORAGE_SESSION__START_TIME = 'START_TIME'
-      const storedSession = await chrome.storage.session.get(STORAGE_SESSION__START_TIME)
+
+      const storedSession = await getOptions(STORAGE_KEY.START_TIME)
       logSettings('storedSession', storedSession)
 
-      if (storedSession[STORAGE_SESSION__START_TIME]) {
-        this._profileStartTimeMS = storedSession[STORAGE_SESSION__START_TIME]
+      if (storedSession[STORAGE_KEY.START_TIME]) {
+        this._profileStartTimeMS = storedSession[STORAGE_KEY.START_TIME]
       } else {
         // I get start for service-worker now.
         //    It is correct if this web-extension was installed in the previous browser session
         // It is better get for window // min(window.startTime(performance.timeOrigin)) OR min(tab(performance.timeOrigin))
         //  tab with minimal tabId
         this._profileStartTimeMS = performance.timeOrigin
-        await chrome.storage.session.set({
-          [STORAGE_SESSION__START_TIME]: this._profileStartTimeMS
+        await setOptions({
+          [STORAGE_KEY.START_TIME]: this._profileStartTimeMS
         })
 
       }
@@ -102,7 +107,7 @@ export const memo = {
   },
   getTagList() {
     const recentTaLimit = Math.max(
-      TAG_LIST_VISIBLE_LIMIT - Object.keys(this._fixedTagObj).length,
+      this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT] - Object.keys(this._fixedTagObj).length,
       0
     )
 
@@ -126,21 +131,19 @@ export const memo = {
   async readTagList() {
     logSettings('readTagList 11')
 
-    if (this._settings[USER_SETTINGS_OPTIONS.ADD_BOOKMARK]) {
+    if (this._settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
       logSettings('readTagList 22')
-      const [savedLocal, savedSession] = await Promise.all([
-        chrome.storage.local.get(STORAGE_LOCAL__FIXED_TAG_MAP),
-        chrome.storage.session.get(STORAGE_SESSION__RECENT_TAG_MAP),
+      const savedObj = await getOptions([
+        STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP,
+        STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP,
       ]);
 
-      if (!savedSession[STORAGE_SESSION__RECENT_TAG_MAP]) {
-        logSettings('readTagList 22 11')
-        this._fixedTagObj = await filterFixedTagObj(savedLocal[STORAGE_LOCAL__FIXED_TAG_MAP])
-        this._recentTagObj = await getRecentTagObj(TAG_LIST_VISIBLE_LIMIT)
+      if (Object.keys(savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]).length === 0) {
+        this._fixedTagObj = await filterFixedTagObj(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP])
+        this._recentTagObj = await getRecentTagObj(this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT])
       } else {
-        logSettings('readTagList 22 77')
-        this._fixedTagObj = savedLocal[STORAGE_LOCAL__FIXED_TAG_MAP] || {}
-        this._recentTagObj = savedSession[STORAGE_SESSION__RECENT_TAG_MAP] 
+        this._fixedTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]
+        this._recentTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP] 
       }
       logSettings('readTagList this._recentTagObj ', this._recentTagObj)
       this._tagList = this.getTagList()
@@ -176,11 +179,11 @@ export const memo = {
       title: newFolder.title
     }
 
-    if (TAG_LIST_VISIBLE_LIMIT < Object.keys(this._recentTagObj).length) {
+    if (this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT] < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
         .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
         .sort((a,b) => -(a.dateAdded - b.dateAdded))
-        .slice(TAG_LIST_VISIBLE_LIMIT)
+        .slice(this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT])
         .map(({ parentId }) => parentId)
 
         redundantIdList.forEach((id) => {
@@ -189,58 +192,66 @@ export const memo = {
     }
 
     this._tagList = this.getTagList()
-    await chrome.storage.session.set({
-      [STORAGE_SESSION__RECENT_TAG_MAP]: this._recentTagObj
+    await setOptions({
+      [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
     })
   },
   async removeTag(id) {
     const isInFixedList = id in this._fixedTagObj
+    let fixedTagUpdate
 
     if (isInFixedList) {
       delete this._fixedTagObj[id] 
+      fixedTagUpdate = {
+        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
+      }
     }
 
     const isInRecentList = id in this._recentTagObj
+    let recentTagUpdate
 
     if (isInRecentList) {
       delete this._recentTagObj[id]
+      recentTagUpdate = {
+        [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
+      }
     }
 
     if (isInFixedList || isInRecentList) {
       this._tagList = this.getTagList()
-      await Promise.all([
-        isInFixedList && chrome.storage.local.set({
-          [STORAGE_LOCAL__FIXED_TAG_MAP]: this._fixedTagObj
-        }),
-        isInRecentList && chrome.storage.session.set({
-          [STORAGE_SESSION__RECENT_TAG_MAP]: this._recentTagObj
-        })
-      ])
+      await setOptions({
+        ...fixedTagUpdate,
+        ...recentTagUpdate,
+      })
     }
   },
   async updateTag(id, title) {
     const isInFixedList = id in this._fixedTagObj
+    let fixedTagUpdate
 
     if (isInFixedList) {
       this._fixedTagObj[id] = title
+      fixedTagUpdate = {
+        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
+      }
     }
 
     const isInRecentList = id in this._recentTagObj
+    let recentTagUpdate
 
     if (isInRecentList) {
       this._recentTagObj[id].title = title
+      recentTagUpdate = {
+        [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
+      }
     }
 
     if (isInFixedList || isInRecentList) {
       this._tagList = this.getTagList()
-      await Promise.all([
-        isInFixedList && chrome.storage.local.set({
-          [STORAGE_LOCAL__FIXED_TAG_MAP]: this._fixedTagObj
-        }),
-        isInRecentList && chrome.storage.session.set({
-          [STORAGE_SESSION__RECENT_TAG_MAP]: this._recentTagObj
-        })
-      ])
+      await setOptions({
+        ...fixedTagUpdate,
+        ...recentTagUpdate,
+      })
     }
   },
   async addFixedTag({ parentId, title }) {
@@ -252,8 +263,8 @@ export const memo = {
       this._fixedTagObj[parentId] = title
 
       this._tagList = this.getTagList()
-      await chrome.storage.local.set({
-        [STORAGE_LOCAL__FIXED_TAG_MAP]: this._fixedTagObj
+      await setOptions({
+        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
       })
     }
   },
@@ -261,8 +272,8 @@ export const memo = {
     delete this._fixedTagObj[id]
 
     this._tagList = this.getTagList()
-    await chrome.storage.local.set({
-      [STORAGE_LOCAL__FIXED_TAG_MAP]: this._fixedTagObj
+    await setOptions({
+      [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
     })
   },
 
