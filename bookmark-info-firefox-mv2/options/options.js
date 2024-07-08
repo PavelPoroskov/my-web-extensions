@@ -73,7 +73,10 @@ const STORAGE_KEY_META = {
     storageKey: 'ADD_BOOKMARK_LIST_LIMIT', 
     default: 30,
   },
-
+  ADD_BOOKMARK_TAG_LENGTH: {
+    storageKey: 'ADD_BOOKMARK_TAG_LENGTH', 
+    default: 15,
+  },
   ADD_BOOKMARK_RECENT_MAP: {
     storageKey: 'ADD_BOOKMARK_RECENT_MAP',
     storage: STORAGE_TYPE.SESSION,
@@ -240,6 +243,7 @@ async function restoreOptions() {
     STORAGE_KEY.SHOW_PREVIOUS_VISIT,
     STORAGE_KEY.ADD_BOOKMARK_IS_ON,
     STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
+    STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
   ]);
 
   let optionId = STORAGE_KEY.CLEAR_URL;
@@ -282,6 +286,11 @@ async function restoreOptions() {
   element = document.querySelector(domId)
   element.value = settings[optionId];
   element.addEventListener('input', makeSaveInputHandler(optionId) );
-}
+
+  optionId = STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.value = settings[optionId];
+  element.addEventListener('input', makeSaveInputHandler(optionId) );}
 
 document.addEventListener('DOMContentLoaded', restoreOptions);

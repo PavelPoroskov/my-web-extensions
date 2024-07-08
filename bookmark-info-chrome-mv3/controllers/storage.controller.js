@@ -23,6 +23,7 @@ export const storageController = {
         STORAGE_KEY.ADD_BOOKMARK_IS_ON,
         //STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
         STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
+        STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH
       ].map((key) => STORAGE_KEY_META[key].storageKey))
       const intersectSet = changesSet.intersection(settingSet)
 

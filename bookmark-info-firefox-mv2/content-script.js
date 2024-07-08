@@ -47,6 +47,7 @@ const log = SHOW_LOG ? console.log : () => {};
   const BROWSER_SPECIFIC = BROWSER_SPECIFIC_OPTIONS[BROWSER];
     
   const bkmInfoRootId = 'bkm-info--root';
+  const bkmInfoStyle2Id = 'bkm-info--style2';
 
   const STYLE_ELEMENT = (
 `
@@ -61,6 +62,8 @@ const log = SHOW_LOG ? console.log : () => {};
   font-weight: normal;
   user-select: none;
   line-height: 1.2;
+  max-height: 100vh;
+  overflow-y: clip;
 }
 .bkm-info--row {
   display: flex;
@@ -117,11 +120,7 @@ const log = SHOW_LOG ? console.log : () => {};
   display: flex;
   background-color: red;
 }
-.bkm-info--bkm:hover {
-  min-width: 5ch;
-  transition: min-width 100ms;
-}
-.bkm-info--bkm:has(+ .bkm-info--btn-del:hover) {
+.bkm-info--bkm:hover, .bkm-info--bkm:has(+ .bkm-info--btn-del:hover) {
   min-width: 5ch;
   transition: min-width 100ms;
 }
@@ -166,6 +165,13 @@ const log = SHOW_LOG ? console.log : () => {};
   background: lavender;
 }
 
+.bkm-info--tag {
+  padding-left: 0.7ch;
+  position: relative;
+  color: black;
+  padding-right: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
+  text-wrap: nowrap;
+}
 .bkm-info--fixed {
   background-color: #40E0D0;
 }
@@ -173,8 +179,7 @@ const log = SHOW_LOG ? console.log : () => {};
   transform: translateY(0.1ch);
 }
 .bkm-info--fixed:hover, .bkm-info--btn-unfix:hover + .bkm-info--fixed {
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
+  max-width: fit-content;
 }
 .bkm-info--fixed:hover:not(.bkm-info--used-tag), .bkm-info--btn-unfix:hover + .bkm-info--fixed:not(.bkm-info--used-tag) {
   background-color: #00FFFF;
@@ -195,8 +200,7 @@ const log = SHOW_LOG ? console.log : () => {};
   transform: translateY(0.1ch);
 }
 .bkm-info--recent:hover, .bkm-info--btn-fix:hover + .bkm-info--recent {
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
+  max-width: fit-content;
 }
 .bkm-info--recent:hover:not(.bkm-info--used-tag), .bkm-info--btn-fix:hover + .bkm-info--recent:not(.bkm-info--used-tag) {
   background-color: #00FF00;
@@ -337,6 +341,7 @@ const log = SHOW_LOG ? console.log : () => {};
     const isShowTitle = input.isShowTitle || false
     const tagList = input.tagList || []
     const isShowTagList = input.isShowTagList || false
+    const tagLength = input.tagLength || 8
     
     log('showBookmarkInfo 00');
 
@@ -351,9 +356,32 @@ const log = SHOW_LOG ? console.log : () => {};
       rootDiv = document.createElement('div');
       rootDiv.setAttribute('id', bkmInfoRootId);
 
-      document.body.insertAdjacentElement('afterbegin', rootStyle);        
-      rootStyle.insertAdjacentElement('afterend', rootDiv);        
+      document.body.insertAdjacentElement('afterbegin', rootStyle);    
+      
+      const rootStyle2 = document.createElement('style');
+      rootStyle2.setAttribute('id', bkmInfoStyle2Id);
+      const textNodeStyle2 = document.createTextNode(
+        `.bkm-info--tag {
+          min-width: ${tagLength}ch;
+          max-width: ${tagLength}ch;
+        }`
+      );
+      rootStyle2.appendChild(textNodeStyle2);
+
+      rootStyle.insertAdjacentElement('afterend', rootStyle2);     
+      rootStyle2.insertAdjacentElement('afterend', rootDiv);    
+    } else {
+      const rootStyle2 = document.getElementById(bkmInfoStyle2Id);
+      const textNodeStyle2 = document.createTextNode(
+        `.bkm-info--tag {
+          min-width: ${tagLength}ch;
+          max-width: ${tagLength}ch;
+        }`
+      );
+      rootStyle2.replaceChild(textNodeStyle2, rootStyle2.firstChild);
     }
+
+    
   
     const rawNodeList = rootDiv.childNodes;
     const beforeRawLength = rawNodeList.length;
@@ -482,7 +510,7 @@ const log = SHOW_LOG ? console.log : () => {};
           const { parentId, title, isUsed } = value
 
           const divLabel = document.createElement('div');
-          divLabel.classList.add('bkm-info--label', 'bkm-info--recent');
+          divLabel.classList.add('bkm-info--tag', 'bkm-info--recent');
 
           if (isUsed) {
             divLabel.classList.toggle('bkm-info--used-tag', isUsed);
@@ -514,7 +542,7 @@ const log = SHOW_LOG ? console.log : () => {};
           const { parentId, title, isUsed } = value
 
           const divLabel = document.createElement('div');
-          divLabel.classList.add('bkm-info--label', 'bkm-info--fixed');
+          divLabel.classList.add('bkm-info--tag', 'bkm-info--fixed');
 
           if (isUsed) {
             divLabel.classList.toggle('bkm-info--used-tag', isUsed);

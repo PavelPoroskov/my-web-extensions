@@ -185,7 +185,10 @@ const STORAGE_KEY_META = {
     storageKey: 'ADD_BOOKMARK_LIST_LIMIT', 
     default: 30,
   },
-
+  ADD_BOOKMARK_TAG_LENGTH: {
+    storageKey: 'ADD_BOOKMARK_TAG_LENGTH', 
+    default: 15,
+  },
   ADD_BOOKMARK_RECENT_MAP: {
     storageKey: 'ADD_BOOKMARK_RECENT_MAP',
     storage: STORAGE_TYPE.SESSION,
@@ -628,6 +631,7 @@ const memo = {
         STORAGE_KEY.ADD_BOOKMARK_IS_ON,
         STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
         STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
+        STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
       ]);
       logSettings('readSavedSettings')
       logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
@@ -722,6 +726,9 @@ const memo = {
 
       if (Object.keys(savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]).length === 0) {
         this._fixedTagObj = await filterFixedTagObj(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP])
+        this._recentTagObj = await getRecentTagObj(this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT])
+      } else if (Object.keys(savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]).length < this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT]) {
+        this._fixedTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]
         this._recentTagObj = await getRecentTagObj(this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT])
       } else {
         this._fixedTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]
@@ -1215,6 +1222,7 @@ async function getHistoryInfo({ url, useCache=false }) {
       isUsed: usedParentIdSet.has(parentId)
     })),
     isShowTagList: memo.settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
+    tagLength: memo.settings[STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH],
   }
   await browser.tabs.sendMessage(tabId, message)
   
@@ -1657,6 +1665,7 @@ async function closeBookmarkedTabs() {
         STORAGE_KEY.ADD_BOOKMARK_IS_ON,
         //STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
         STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
+        STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH
       ].map((key) => STORAGE_KEY_META[key].storageKey))
       const intersectSet = changesSet.intersection(settingSet)
 

@@ -52,6 +52,7 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
       isUsed: usedParentIdSet.has(parentId)
     })),
     isShowTagList: memo.settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
+    tagLength: memo.settings[STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH],
   }
   await chrome.tabs.sendMessage(tabId, message)
   
