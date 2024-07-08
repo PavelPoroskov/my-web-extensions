@@ -1,4 +1,7 @@
 import {
+  logDebug,
+} from './log-api.js'
+import {
   STORAGE_TYPE,
   STORAGE_KEY_META,
 } from '../constant/index.js';
@@ -24,6 +27,8 @@ export async function setOptions(obj) {
     sessionList.map(({ key, value }) => [STORAGE_KEY_META[key].storageKey, value])
   )
 
+  logDebug('setOptions localObj', localObj)
+  logDebug('setOptions sessionObj', sessionObj)
   await Promise.all([
     localList.length > 0 && chrome.storage.local.set(localObj),
     sessionList.length > 0 && chrome.storage.session.set(sessionObj),

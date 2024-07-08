@@ -524,6 +524,8 @@ async function createContextMenu() {
     sessionList.map(({ key, value }) => [STORAGE_KEY_META[key].storageKey, value])
   )
 
+  logDebug('setOptions localObj', localObj)
+  logDebug('setOptions sessionObj', sessionObj)
   await Promise.all([
     localList.length > 0 && browser.storage.local.set(localObj),
     sessionList.length > 0 && browser.storage.session.set(sessionObj),
@@ -750,9 +752,9 @@ const memo = {
 
     const dateAdded = bkmNode.dateAdded || Date.now()
 
-    logSettings('addRecentTag 00', newFolderId, dateAdded )
-    logSettings('addRecentTag 22 newFolder', newFolder )
-    logSettings('addRecentTag 22 newFolder.title', newFolder.title )
+    // logDebug('addRecentTag 00', newFolderId, dateAdded )
+    // logDebug('addRecentTag 22 newFolder', newFolder )
+    // logDebug('addRecentTag 22 newFolder.title', newFolder.title )
 
     this._recentTagObj[newFolderId] = {
       dateAdded,
@@ -882,6 +884,9 @@ const memo = {
     const result = this.activeDialog[parentId]?.bookmarkId === bookmarkId 
       && this.activeDialog[parentId]?.isFirst === true
       && this.activeDialog[parentId]?.fromTag !== true
+
+    // logDebug('isCreatedInActiveDialog 1', result)
+    // logDebug('isCreatedInActiveDialog 2', this.activeDialog[parentId])
 
     return result
   },
@@ -1531,10 +1536,13 @@ async function closeBookmarkedTabs() {
     logDebug('bookmark.onMoved <-', node);
 
     if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+      await memo.addRecentTag({ parentId });
+
       if (memo.isCreatedInActiveDialog(bookmarkId, oldParentId)) {
+        logDebug('bookmark.onMoved 11');
         memo.removeFromActiveDialog(oldParentId)
-        await memo.addRecentTag({ parentId });
       } else if (oldParentId && !!node.url && IS_BROWSER_CHROME && !memo.isActiveTabBookmarkManager) {
+        logDebug('bookmark.onMoved 22');
         await Promise.all([
           browser.bookmarks.create({
             parentId: oldParentId,
@@ -1549,6 +1557,7 @@ async function closeBookmarkedTabs() {
           url: node.url
         })
       }
+      logDebug('bookmark.onMoved 33');
     }
 
     // changes in active tab

@@ -59,10 +59,13 @@ export const bookmarksController = {
     logDebug('bookmark.onMoved <-', node);
 
     if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+      await memo.addRecentTag({ parentId });
+
       if (memo.isCreatedInActiveDialog(bookmarkId, oldParentId)) {
+        logDebug('bookmark.onMoved 11');
         memo.removeFromActiveDialog(oldParentId)
-        await memo.addRecentTag({ parentId });
       } else if (oldParentId && !!node.url && IS_BROWSER_CHROME && !memo.isActiveTabBookmarkManager) {
+        logDebug('bookmark.onMoved 22');
         await Promise.all([
           chrome.bookmarks.create({
             parentId: oldParentId,
@@ -77,6 +80,7 @@ export const bookmarksController = {
           url: node.url
         })
       }
+      logDebug('bookmark.onMoved 33');
     }
 
     // changes in active tab

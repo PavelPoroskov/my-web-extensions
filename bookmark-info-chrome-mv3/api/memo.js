@@ -2,6 +2,7 @@
 import { CacheWithLimit } from './cache.js'
 import {
   logSettings,
+  logDebug,
 } from './log-api.js'
 import {
   filterFixedTagObj,
@@ -170,9 +171,9 @@ export const memo = {
 
     const dateAdded = bkmNode.dateAdded || Date.now()
 
-    logSettings('addRecentTag 00', newFolderId, dateAdded )
-    logSettings('addRecentTag 22 newFolder', newFolder )
-    logSettings('addRecentTag 22 newFolder.title', newFolder.title )
+    // logDebug('addRecentTag 00', newFolderId, dateAdded )
+    // logDebug('addRecentTag 22 newFolder', newFolder )
+    // logDebug('addRecentTag 22 newFolder.title', newFolder.title )
 
     this._recentTagObj[newFolderId] = {
       dateAdded,
@@ -302,6 +303,9 @@ export const memo = {
     const result = this.activeDialog[parentId]?.bookmarkId === bookmarkId 
       && this.activeDialog[parentId]?.isFirst === true
       && this.activeDialog[parentId]?.fromTag !== true
+
+    // logDebug('isCreatedInActiveDialog 1', result)
+    // logDebug('isCreatedInActiveDialog 2', this.activeDialog[parentId])
 
     return result
   },
