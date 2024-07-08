@@ -194,7 +194,7 @@ const log = SHOW_LOG ? console.log : () => {};
 }
 
 .bkm-info--recent {
-  background-color: #32CD32;
+  background-color: #DAF7A6;
 }
 .bkm-info--recent:active:not(.bkm-info--used-tag) {
   transform: translateY(0.1ch);
