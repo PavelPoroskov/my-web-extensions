@@ -70,4 +70,11 @@ createFileForFirefox(
   'popup/popup.js',
 )
 
+createFileForFirefox(
+  [
+    'README.md',
+  ],
+  'README.md',
+)
+
 moveVersionToManifest()

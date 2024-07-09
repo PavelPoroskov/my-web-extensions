@@ -1,7 +1,7 @@
 const LOG_CONFIG = {
   SHOW_LOG_CACHE: false,
-  SHOW_LOG_SEND_EVENT: false,
-  SHOW_LOG_EVENT: false,
+  SHOW_LOG_EVENT_OUT: false,
+  SHOW_LOG_EVENT_IN: false,
   SHOW_LOG_IGNORE: false,
   SHOW_LOG_OPTIMIZATION: false,
   SHOW_LOG_QUEUE: false,
@@ -46,8 +46,8 @@ const makeLogWithPrefix = (prefix = '') => {
 
 const log = LOG_CONFIG.SHOW_LOG ? makeLogWithPrefix() : () => { };
 const logCache = LOG_CONFIG.SHOW_LOG_CACHE ? logWithTime : () => { };
-const logSendEvent = LOG_CONFIG.SHOW_LOG_SEND_EVENT ? makeLogWithPrefix('SEND =>') : () => { };
-const logEvent = LOG_CONFIG.SHOW_LOG_EVENT ? makeLogWithPrefix('EVENT <=') : () => { };
+const logSendEvent = LOG_CONFIG.SHOW_LOG_EVENT_OUT ? makeLogWithPrefix('SEND =>') : () => { };
+const logEvent = LOG_CONFIG.SHOW_LOG_EVENT_IN ? makeLogWithPrefix('EVENT <=') : () => { };
 const logIgnore = LOG_CONFIG.SHOW_LOG_IGNORE ? makeLogWithPrefix('IGNORE') : () => { };
 const logOptimization = LOG_CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OPTIMIZATION') : () => { };
 const logPromiseQueue = LOG_CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
@@ -1224,6 +1224,7 @@ async function getHistoryInfo({ url, useCache=false }) {
     isShowTagList: memo.settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
     tagLength: memo.settings[STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH],
   }
+  logSendEvent('updateBookmarksForTabTask()', tabId, message);
   await browser.tabs.sendMessage(tabId, message)
   
   return bookmarkInfo
