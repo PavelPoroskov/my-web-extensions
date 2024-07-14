@@ -67,7 +67,8 @@ const STORAGE_KEY_META = {
   },
   ADD_BOOKMARK_LIST_SHOW: {
     storageKey: 'ADD_BOOKMARK_LIST_SHOW',
-    default: true,
+    default: false,
+    storage: STORAGE_TYPE.SESSION,
   },
   ADD_BOOKMARK_LIST_LIMIT: {
     storageKey: 'ADD_BOOKMARK_LIST_LIMIT', 

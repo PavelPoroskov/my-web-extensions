@@ -179,7 +179,8 @@ const STORAGE_KEY_META = {
   },
   ADD_BOOKMARK_LIST_SHOW: {
     storageKey: 'ADD_BOOKMARK_LIST_SHOW',
-    default: true,
+    default: false,
+    storage: STORAGE_TYPE.SESSION,
   },
   ADD_BOOKMARK_LIST_LIMIT: {
     storageKey: 'ADD_BOOKMARK_LIST_LIMIT', 
@@ -341,7 +342,14 @@ function isSupportedProtocol(urlString) {
     return false;
   }
 }
-async function getRecentList(nItems) {
+const EMPTY_FOLDER_NAME_LIST = [
+  'New folder',
+  '[Folder Name]',
+]
+
+const emptyFolderNameSet = new Set(EMPTY_FOLDER_NAME_LIST)
+
+async function getRecentList(nItems) {
   log('getRecentTagObj() 00', nItems)
   const list = await browser.bookmarks.getRecent(nItems);
 
@@ -378,6 +386,7 @@ function isSupportedProtocol(urlString) {
 
   return Object.entries(folderByIdMap)
     .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+    .filter(({ title }) => !emptyFolderNameSet.has(title))
     .sort((a,b) => -(a.dateAdded - b.dateAdded))
 }
 
@@ -763,12 +772,16 @@ const memo = {
     // logDebug('addRecentTag 22 newFolder', newFolder )
     // logDebug('addRecentTag 22 newFolder.title', newFolder.title )
 
+    if (emptyFolderNameSet.has(newFolder.title)) {
+      return
+    }
+
     this._recentTagObj[newFolderId] = {
       dateAdded,
       title: newFolder.title
     }
 
-    if (this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT] < Object.keys(this._recentTagObj).length) {
+    if (this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT] + 10 < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
         .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
         .sort((a,b) => -(a.dateAdded - b.dateAdded))
