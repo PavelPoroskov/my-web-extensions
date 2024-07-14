@@ -20,8 +20,6 @@ This increases your productivity when you need to view many pages.
 9) Command "close bookmarked tabs" in page context menu.
 10) Command "clear url" in page context menu. The command removes query parameters from url.
 
-Buy me a coffee:
-https://buymeacoffee.com/pavelporoskov
 
 ## Install  
 For Chrome/Chromium  
@@ -30,10 +28,6 @@ https://chromewebstore.google.com/detail/bookmark-info/eeedbdcmiolpefelelbahcbdm
 For Firefox  
 https://addons.mozilla.org/en-US/firefox/addon/bookmark-info/
 
-## Buy Me A Coffee
-I am a Web Developer. I create web extensions.
-If my app has made your life better, please thank me
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/pavelporoskov)
 
 ## How to install extension to every browser profile using policies.  
 ### Instruction for Linux. 

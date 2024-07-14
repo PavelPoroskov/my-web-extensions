@@ -6,7 +6,8 @@ import {
 } from './log-api.js'
 import {
   filterFixedTagObj,
-  getRecentTagObj
+  getRecentTagObj,
+  emptyFolderNameSet,
 } from './recent-api.js'
 import {
   getOptions, setOptions
@@ -179,12 +180,16 @@ export const memo = {
     // logDebug('addRecentTag 22 newFolder', newFolder )
     // logDebug('addRecentTag 22 newFolder.title', newFolder.title )
 
+    if (emptyFolderNameSet.has(newFolder.title)) {
+      return
+    }
+
     this._recentTagObj[newFolderId] = {
       dateAdded,
       title: newFolder.title
     }
 
-    if (this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT] < Object.keys(this._recentTagObj).length) {
+    if (this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT] + 10 < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
         .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
         .sort((a,b) => -(a.dateAdded - b.dateAdded))

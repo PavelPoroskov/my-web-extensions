@@ -2,6 +2,14 @@ import {
   log,
 } from './log-api.js'
 
+
+const EMPTY_FOLDER_NAME_LIST = [
+  'New folder',
+  '[Folder Name]',
+]
+
+export const emptyFolderNameSet = new Set(EMPTY_FOLDER_NAME_LIST)
+
 async function getRecentList(nItems) {
   log('getRecentTagObj() 00', nItems)
   const list = await chrome.bookmarks.getRecent(nItems);
@@ -39,6 +47,7 @@ async function getRecentList(nItems) {
 
   return Object.entries(folderByIdMap)
     .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+    .filter(({ title }) => !emptyFolderNameSet.has(title))
     .sort((a,b) => -(a.dateAdded - b.dateAdded))
 }
 
