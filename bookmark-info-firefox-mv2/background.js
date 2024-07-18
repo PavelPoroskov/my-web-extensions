@@ -85,7 +85,19 @@ const BROWSER_SPECIFIC = Object.fromEntries(
     .map(([option, obj]) => [option, obj[BROWSER]])
 );
 // TODO remove duplication clearUrlTargetList in options/options.js
+//  can options.js get clearUrlTargetList using sendMessage?
 const clearUrlTargetList = [
+  // TODO if we clean url on open then we loose check-in, check-out dates
+  //    need search bookmark for clean url
+  //    strategy01: clean url on open
+  //    strategy02: clean url on save
+  //    strategy00: don't clear url, default
+  // {
+  //   hostname: 'airbnb.com',  
+  //   paths: [
+  //     '/rooms/',
+  //   ] 
+  // },
   {
     hostname: 'linkedin.com',  
     paths: [
@@ -122,6 +134,8 @@ const EXTENSION_COMMAND_ID = {
   UNFIX_TAG: 'UNFIX_TAG',
   TAB_IS_READY: 'TAB_IS_READY',
   SHOW_TAG_LIST: 'SHOW_TAG_LIST',
+  OPTIONS_ASKS_DATA: 'OPTIONS_ASKS_DATA',
+  DATA_FOR_OPTIONS: 'DATA_FOR_OPTIONS',
 }
 
 const CONTENT_SCRIPT_COMMAND_ID = {
@@ -497,6 +511,11 @@ async function createContextMenu() {
   await browser.menus.removeAll();
 
   browser.menus.create({
+    id: CONTEXT_MENU_ID.CLEAR_URL,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'clear url',
+  });
+  browser.menus.create({
     id: CONTEXT_MENU_ID.CLOSE_DUPLICATE,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'close duplicate tabs',
@@ -509,11 +528,6 @@ async function createContextMenu() {
     title: 'close bookmarked tabs',
   });
   // TODO? bookmark and close tabs (tabs without bookmarks)
-  browser.menus.create({
-    id: CONTEXT_MENU_ID.CLEAR_URL,
-    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'clear url',
-  });
 }
 async function setOptions(obj) {
   const entryList = Object.entries(obj)
@@ -1294,6 +1308,7 @@ async function updateActiveTab({ useCache=false, debugCaller } = {}) {
   const [Tab] = tabs;
 
   if (Tab) {
+    memo.isActiveTabBookmarkManager = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
     updateTab({
       tabId: Tab.id, 
       url: Tab.url, 
@@ -1429,92 +1444,6 @@ async function closeBookmarkedTabs() {
     closeTabIdList.length > 0 && browser.tabs.remove(closeTabIdList),
   ])
 }
-async function onIncomingMessage (message, sender) {
-
-  switch (message?.command) {
-
-    case EXTENSION_COMMAND_ID.DELETE_BOOKMARK: {
-      logEvent('runtime.onMessage deleteBookmark');
-
-      deleteBookmark(message.bkmId);
-      break
-    }
-    case EXTENSION_COMMAND_ID.ADD_BOOKMARK: {
-      logEvent('runtime.onMessage addBookmark');
-      memo.createBkmInActiveDialogFromTag(message.parentId)
-      await browser.bookmarks.create({
-        index: 0,
-        parentId: message.parentId,
-        title: message.title,
-        url: message.url
-      })
-
-      break
-    }
-    case EXTENSION_COMMAND_ID.FIX_TAG: {
-      logEvent('runtime.onMessage fixTag');
-
-      await memo.addFixedTag({
-        parentId: message.parentId,
-        title: message.title,
-      })
-      updateActiveTab({
-        debugCaller: 'runtime.onMessage fixTag',
-        useCache: true,
-      });
-  
-      break
-    }
-    case EXTENSION_COMMAND_ID.UNFIX_TAG: {
-      logEvent('runtime.onMessage unfixTag');
-
-      await memo.removeFixedTag(message.parentId)
-      updateActiveTab({
-        debugCaller: 'runtime.onMessage unfixTag',
-        useCache: true,
-      });
-
-      break
-    }
-    case EXTENSION_COMMAND_ID.TAB_IS_READY: {
-      const tabId = sender?.tab?.id;
-      logEvent('runtime.onMessage contentScriptReady', tabId);
-
-      if (tabId) {
-        const url = message.url
-        let cleanUrl
-
-        if (memo.settings[STORAGE_KEY.CLEAR_URL]) {
-          ({ cleanUrl } = removeQueryParamsIfTarget(url));
-          
-          if (url !== cleanUrl) {
-            await clearUrlInTab({ tabId, cleanUrl })
-          }
-        }
-
-        updateTab({
-          tabId,
-          url: cleanUrl || url,
-          useCache: true,
-          debugCaller: 'runtime.onMessage contentScriptReady',
-        })
-      }
-
-      break
-    }
-    case EXTENSION_COMMAND_ID.SHOW_TAG_LIST: {
-      logEvent('runtime.onMessage SHOW_RECENT_LIST');
-
-      await memo.updateShowTagList(message.value)
-      // updateActiveTab({
-      //   debugCaller: 'runtime.onMessage SHOW_RECENT_LIST',
-      //   useCache: true,
-      // });
-
-      break
-    }
-  }
-}
 const bookmarksController = {
   async onCreated(bookmarkId, node) {
     logEvent('bookmark.onCreated <-', node);
@@ -1638,6 +1567,104 @@ async function closeBookmarkedTabs() {
 
         break;
       }
+    }
+  }
+}
+async function onIncomingMessage (message, sender) {
+  switch (message?.command) {
+
+    case EXTENSION_COMMAND_ID.DELETE_BOOKMARK: {
+      logEvent('runtime.onMessage deleteBookmark');
+
+      deleteBookmark(message.bkmId);
+      break
+    }
+    case EXTENSION_COMMAND_ID.ADD_BOOKMARK: {
+      logEvent('runtime.onMessage addBookmark');
+      memo.createBkmInActiveDialogFromTag(message.parentId)
+      await browser.bookmarks.create({
+        index: 0,
+        parentId: message.parentId,
+        title: message.title,
+        url: message.url
+      })
+
+      break
+    }
+    case EXTENSION_COMMAND_ID.FIX_TAG: {
+      logEvent('runtime.onMessage fixTag');
+
+      await memo.addFixedTag({
+        parentId: message.parentId,
+        title: message.title,
+      })
+      updateActiveTab({
+        debugCaller: 'runtime.onMessage fixTag',
+        useCache: true,
+      });
+  
+      break
+    }
+    case EXTENSION_COMMAND_ID.UNFIX_TAG: {
+      logEvent('runtime.onMessage unfixTag');
+
+      await memo.removeFixedTag(message.parentId)
+      updateActiveTab({
+        debugCaller: 'runtime.onMessage unfixTag',
+        useCache: true,
+      });
+
+      break
+    }
+    case EXTENSION_COMMAND_ID.TAB_IS_READY: {
+      const tabId = sender?.tab?.id;
+      logEvent('runtime.onMessage contentScriptReady', tabId);
+
+      if (tabId) {
+        const url = message.url
+        let cleanUrl
+
+        if (memo.settings[STORAGE_KEY.CLEAR_URL]) {
+          ({ cleanUrl } = removeQueryParamsIfTarget(url));
+          
+          if (url !== cleanUrl) {
+            await clearUrlInTab({ tabId, cleanUrl })
+          }
+        }
+
+        updateTab({
+          tabId,
+          url: cleanUrl || url,
+          useCache: true,
+          debugCaller: 'runtime.onMessage contentScriptReady',
+        })
+      }
+
+      break
+    }
+    case EXTENSION_COMMAND_ID.SHOW_TAG_LIST: {
+      logEvent('runtime.onMessage SHOW_RECENT_LIST');
+
+      await memo.updateShowTagList(message.value)
+      // updateActiveTab({
+      //   debugCaller: 'runtime.onMessage SHOW_RECENT_LIST',
+      //   useCache: true,
+      // });
+
+      break
+    }
+    case EXTENSION_COMMAND_ID.OPTIONS_ASKS_DATA: {
+      logEvent('runtime.onMessage OPTIONS_ASKS_DATA');
+
+      browser.runtime.sendMessage({
+        command: EXTENSION_COMMAND_ID.DATA_FOR_OPTIONS,
+        clearUrlTargetList,
+        STORAGE_TYPE,
+        STORAGE_KEY_META,
+        STORAGE_KEY,
+      });
+
+      break
     }
   }
 }

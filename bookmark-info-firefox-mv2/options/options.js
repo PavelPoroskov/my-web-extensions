@@ -1,101 +1,6 @@
-// TODO remove duplication clearUrlTargetList in options/options.js
-const clearUrlTargetList = [
-  {
-    hostname: 'linkedin.com',  
-    paths: [
-      '/jobs/view/',
-      '/posts/'
-    ] 
-  },
-  {
-    hostname: 'djinni.co',
-    paths: [
-      '/my/profile/',
-      '/jobs/',
-    ] 
-  },
-  {
-    hostname: 'imdb.com',  
-    paths: [
-      '/title/',
-      '/list/',
-    ] 
-  },
-  {
-    hostname: 'udemy.com',  
-    paths: [
-      '/course/',
-    ] 
-  },
-]
-
-const STORAGE_TYPE = {
-  LOCAL: 'LOCAL',
-  SESSION: 'SESSION',
-}
-
-const SHOW_PREVIOUS_VISIT_OPTION = {
-  NEVER: 0,
-  ONLY_NO_BKM: 1,
-  ALWAYS: 2,
-}
-
-const STORAGE_KEY_META = {
-  CLEAR_URL: {
-    storageKey: 'CLEAR_URL_FROM_QUERY_PARAMS',
-    default: true,
-  },
-  SHOW_PATH_LAYERS: {
-    storageKey: 'SHOW_PATH_LAYERS',
-    default: 1,
-  },
-  SHOW_PREVIOUS_VISIT: {
-    storageKey: 'SHOW_PREVIOUS_VISIT',
-    default: SHOW_PREVIOUS_VISIT_OPTION.ALWAYS,
-  },
-  SHOW_BOOKMARK_TITLE: {
-    storageKey: 'SHOW_BOOKMARK_TITLE',
-    default: false,
-  },
-  // SHOW_PROFILE: {
-  //   storageKey: 'SHOW_PROFILE', 
-  //   default: false,
-  // },
-  ADD_BOOKMARK_IS_ON: {
-    storageKey: 'ADD_BOOKMARK',
-    default: true,
-  },
-  ADD_BOOKMARK_LIST_SHOW: {
-    storageKey: 'ADD_BOOKMARK_LIST_SHOW',
-    default: false,
-    storage: STORAGE_TYPE.SESSION,
-  },
-  ADD_BOOKMARK_LIST_LIMIT: {
-    storageKey: 'ADD_BOOKMARK_LIST_LIMIT', 
-    default: 30,
-  },
-  ADD_BOOKMARK_TAG_LENGTH: {
-    storageKey: 'ADD_BOOKMARK_TAG_LENGTH', 
-    default: 15,
-  },
-  ADD_BOOKMARK_RECENT_MAP: {
-    storageKey: 'ADD_BOOKMARK_RECENT_MAP',
-    storage: STORAGE_TYPE.SESSION,
-    default: {},
-  },
-  ADD_BOOKMARK_FIXED_MAP: {
-    storageKey: 'ADD_BOOKMARK_FIXED_MAP',
-    default: {},
-  },
-  START_TIME: {
-    storageKey: 'START_TIME',
-    storage: STORAGE_TYPE.SESSION,
-  },
-}
-
-const STORAGE_KEY = Object.fromEntries(
-  Object.keys(STORAGE_KEY_META).map((key) => [key, key])
-)
+// TODO remove duplication setOptions(), getOptions() in options/options.js
+//  ?import script in options.html
+//  <script src="options.js"> type="module"
 
 async function setOptions(obj) {
   const entryList = Object.entries(obj)
@@ -105,7 +10,6 @@ async function setOptions(obj) {
       value,
     }))
 
-  
   const localList = entryList
     .filter((item) => item.storage === STORAGE_TYPE.LOCAL)
   const localObj = Object.fromEntries(
@@ -188,7 +92,7 @@ async function getOptions(keyList) {
   }
 }
 
-function formatTargetList () { 
+function formatTargetList (clearUrlTargetList) { 
   return clearUrlTargetList.toSorted().map(
   ({ hostname, paths }) => `${hostname}{${paths.toSorted().join(',')}}`
   )
@@ -237,6 +141,7 @@ function makeSaveSelectHandler(optionId) {
 }
 
 async function restoreOptions() {
+
   const settings = await getOptions([
     STORAGE_KEY.CLEAR_URL,
     STORAGE_KEY.SHOW_BOOKMARK_TITLE,
@@ -256,7 +161,7 @@ async function restoreOptions() {
   optionId = 'CLEAR_URL_LIST';
   domId = `#${optionId}`
   element = document.querySelector(domId)
-  element.value = formatTargetList().join('\n');
+  element.value = formatTargetList(clearUrlTargetList).join('\n');
 
   optionId = STORAGE_KEY.SHOW_BOOKMARK_TITLE;
   domId = `#${optionId}`
@@ -292,6 +197,35 @@ async function restoreOptions() {
   domId = `#${optionId}`
   element = document.querySelector(domId)
   element.value = settings[optionId];
-  element.addEventListener('input', makeSaveInputHandler(optionId) );}
+  element.addEventListener('input', makeSaveInputHandler(optionId) );
 
-document.addEventListener('DOMContentLoaded', restoreOptions);
+  const value = document.querySelector(`#${optionId}-VALUE`);
+  value.textContent = element.value;
+  element.addEventListener("input", (event) => {
+    value.textContent = event.target.value;
+  });
+}
+
+let clearUrlTargetList
+let STORAGE_TYPE
+let STORAGE_KEY_META
+let STORAGE_KEY
+
+browser.runtime.onMessage.addListener((message) => {
+  switch (message?.command) {
+    case 'DATA_FOR_OPTIONS': {
+      clearUrlTargetList = message.clearUrlTargetList
+      STORAGE_TYPE = message.STORAGE_TYPE
+      STORAGE_KEY_META = message.STORAGE_KEY_META
+      STORAGE_KEY = message.STORAGE_KEY
+      restoreOptions()
+      break
+    }
+  }
+})
+//document.addEventListener('DOMContentLoaded', restoreOptions);
+document.addEventListener('DOMContentLoaded', async () => {
+  await browser.runtime.sendMessage({
+    command: 'OPTIONS_ASKS_DATA',
+  });
+});
