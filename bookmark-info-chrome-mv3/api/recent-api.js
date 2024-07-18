@@ -65,6 +65,29 @@ export async function getRecentTagObj(nItems) {
   )
 }
 
+export async function filterRecentTagObj(inObj = {}) {
+  const idList = Object.keys(inObj)
+
+  if (idList.length === 0) {
+    return {}
+  }
+
+  const folderList = await chrome.bookmarks.get(idList)
+  const filteredFolderList = folderList
+    .filter(Boolean)
+    .filter(({ title }) => !!title)
+
+  return Object.fromEntries(
+    filteredFolderList.map(({ id, title }) => [
+      id, 
+      {
+        title, 
+        dateAdded: inObj[id].dateAdded,
+      }
+    ])
+  )
+}
+
 export async function filterFixedTagObj(obj = {}) {
   const idList = Object.keys(obj)
 

@@ -3,8 +3,7 @@
   "name": "Bookmark Info",
   "version": "2.9.11",
   "description": "Show bookmark folder for current url",
-  "homepage_url": "https://github.com/PavelPoroskov/my-web-extensions/bookmark-info-firefox-mv2",
-
+  "homepage_url": "https://github.com/PavelPoroskov/my-web-extensions",
   "permissions": [
     "bookmarks",
     "history",

@@ -6,6 +6,7 @@ import {
 } from './log-api.js'
 import {
   filterFixedTagObj,
+  filterRecentTagObj,
   getRecentTagObj,
   emptyFolderNameSet,
 } from './recent-api.js'
@@ -13,7 +14,8 @@ import {
   getOptions, setOptions
 } from './storage-api.js'
 import {
-  STORAGE_KEY
+  STORAGE_KEY,
+  ADD_BOOKMARK_LIST_MAX
 } from '../constant/index.js';
 
 export const memo = {
@@ -79,7 +81,6 @@ export const memo = {
   async readProfileStartTimeMS() {
     if (!this._isProfileStartTimeMSActual) {
 
-
       const storedSession = await getOptions(STORAGE_KEY.START_TIME)
       logSettings('storedSession', storedSession)
 
@@ -137,28 +138,37 @@ export const memo = {
     if (this._settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
       logSettings('readTagList 22')
       const savedObj = await getOptions([
+        STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED,
         STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP,
         STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP,
       ]);
 
-      if (Object.keys(savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]).length === 0) {
+      if (!savedObj[STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]) {
+        const actualRecentTagObj = await getRecentTagObj(ADD_BOOKMARK_LIST_MAX)
+        const storedRecentTagObj = await filterRecentTagObj(savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP])
+        this._recentTagObj = {
+          ...storedRecentTagObj,
+          ...actualRecentTagObj,
+        }
         this._fixedTagObj = await filterFixedTagObj(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP])
-        this._recentTagObj = await getRecentTagObj(this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT])
-      } else if (Object.keys(savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]).length < this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT]) {
-        this._fixedTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]
-        this._recentTagObj = await getRecentTagObj(this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT])
+
+        await setOptions({
+          [STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]: true,
+          [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
+        })
       } else {
-        this._fixedTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]
         this._recentTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP] 
+        this._fixedTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]
       }
+
       logSettings('readTagList this._recentTagObj ', this._recentTagObj)
       this._tagList = this.getTagList()
       logSettings('readTagList this._tagList ', this._tagList)
     } else {
       logSettings('readTagList 44')
 
-      this._fixedTagObj = {}
       this._recentTagObj = {}
+      this._fixedTagObj = {}
       this._tagList = []
     }
   },
@@ -176,10 +186,6 @@ export const memo = {
 
     const dateAdded = bkmNode.dateAdded || Date.now()
 
-    // logDebug('addRecentTag 00', newFolderId, dateAdded )
-    // logDebug('addRecentTag 22 newFolder', newFolder )
-    // logDebug('addRecentTag 22 newFolder.title', newFolder.title )
-
     if (emptyFolderNameSet.has(newFolder.title)) {
       return
     }
@@ -189,11 +195,11 @@ export const memo = {
       title: newFolder.title
     }
 
-    if (this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT] + 10 < Object.keys(this._recentTagObj).length) {
+    if (ADD_BOOKMARK_LIST_MAX + 10 < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
         .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
         .sort((a,b) => -(a.dateAdded - b.dateAdded))
-        .slice(this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT])
+        .slice(ADD_BOOKMARK_LIST_MAX)
         .map(({ parentId }) => parentId)
 
         redundantIdList.forEach((id) => {

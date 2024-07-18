@@ -47,9 +47,13 @@ export const STORAGE_KEY_META = {
     storageKey: 'ADD_BOOKMARK_TAG_LENGTH', 
     default: 15,
   },
+  ADD_BOOKMARK_SESSION_STARTED: {
+    storageKey: 'ADD_BOOKMARK_SESSION_STARTED',
+    storage: STORAGE_TYPE.SESSION,
+    default: false,
+  },
   ADD_BOOKMARK_RECENT_MAP: {
     storageKey: 'ADD_BOOKMARK_RECENT_MAP',
-    storage: STORAGE_TYPE.SESSION,
     default: {},
   },
   ADD_BOOKMARK_FIXED_MAP: {
@@ -65,3 +69,7 @@ export const STORAGE_KEY_META = {
 export const STORAGE_KEY = Object.fromEntries(
   Object.keys(STORAGE_KEY_META).map((key) => [key, key])
 )
+
+export const ADD_BOOKMARK_LIST_MAX = 50
+
+
