@@ -111,6 +111,7 @@ export async function updateActiveTab({ useCache=false, debugCaller } = {}) {
   const [Tab] = tabs;
 
   if (Tab) {
+    memo.isActiveTabBookmarkManager = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
     updateTab({
       tabId: Tab.id, 
       url: Tab.url, 

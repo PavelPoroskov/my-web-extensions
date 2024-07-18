@@ -64,6 +64,7 @@ const log = SHOW_LOG ? console.log : () => {};
   line-height: 1.2;
   max-height: 100vh;
   overflow-y: clip;
+  text-align: left;
 }
 .bkm-info--row {
   display: flex;

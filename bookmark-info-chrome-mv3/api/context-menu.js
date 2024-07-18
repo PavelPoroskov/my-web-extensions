@@ -8,6 +8,11 @@ export async function createContextMenu() {
   await chrome.contextMenus.removeAll();
 
   chrome.contextMenus.create({
+    id: CONTEXT_MENU_ID.CLEAR_URL,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'clear url',
+  });
+  chrome.contextMenus.create({
     id: CONTEXT_MENU_ID.CLOSE_DUPLICATE,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'close duplicate tabs',
@@ -20,9 +25,4 @@ export async function createContextMenu() {
     title: 'close bookmarked tabs',
   });
   // TODO? bookmark and close tabs (tabs without bookmarks)
-  chrome.contextMenus.create({
-    id: CONTEXT_MENU_ID.CLEAR_URL,
-    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'clear url',
-  });
 }

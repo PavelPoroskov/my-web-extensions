@@ -2,28 +2,30 @@
 
 import {
   logEvent,
-} from './log-api.js'
+} from '../api/log-api.js'
 import {
   memo,
-} from './memo.js'
+} from '../api/memo.js'
 import {
   clearUrlInTab,
   removeQueryParamsIfTarget,
-} from './clean-url-api.js'
+} from '../api/clean-url-api.js'
 import {
   deleteBookmark,
-} from './bookmarks-api.js'
+} from '../api/bookmarks-api.js'
 import {
   updateActiveTab,
   updateTab,
-} from './tabs-api.js'
+} from '../api/tabs-api.js'
 import {
   EXTENSION_COMMAND_ID,
+  STORAGE_TYPE,
+  STORAGE_KEY_META,
   STORAGE_KEY,
+  clearUrlTargetList,
 } from '../constant/index.js'
 
 export async function onIncomingMessage (message, sender) {
-
   switch (message?.command) {
 
     case EXTENSION_COMMAND_ID.DELETE_BOOKMARK: {
@@ -103,6 +105,19 @@ export async function onIncomingMessage (message, sender) {
       //   debugCaller: 'runtime.onMessage SHOW_RECENT_LIST',
       //   useCache: true,
       // });
+
+      break
+    }
+    case EXTENSION_COMMAND_ID.OPTIONS_ASKS_DATA: {
+      logEvent('runtime.onMessage OPTIONS_ASKS_DATA');
+
+      chrome.runtime.sendMessage({
+        command: EXTENSION_COMMAND_ID.DATA_FOR_OPTIONS,
+        clearUrlTargetList,
+        STORAGE_TYPE,
+        STORAGE_KEY_META,
+        STORAGE_KEY,
+      });
 
       break
     }

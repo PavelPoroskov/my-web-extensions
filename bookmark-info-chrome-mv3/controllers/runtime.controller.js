@@ -9,7 +9,7 @@ import {
 } from '../api/tabs-api.js'
 import {
   onIncomingMessage,
-} from '../api/incoming-message-api.js'
+} from './incoming-message.js'
 
 export const runtimeController = {
   async onStartup() {
