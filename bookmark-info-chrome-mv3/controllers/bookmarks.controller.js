@@ -51,45 +51,76 @@ export const bookmarksController = {
     // changes in bookmark manager
     getBookmarkInfoUni({ url: node.url });        
   },
-  async onMoved(bookmarkId, { oldParentId, parentId }) {
-    logEvent('bookmark.onMoved <-', { oldParentId, parentId });
-    memo.bkmFolderById.delete(bookmarkId);
+  async onMoved(bookmarkId, { oldIndex, index, oldParentId, parentId }) {
+    logEvent('bookmark.onMoved <-', { oldIndex, index, oldParentId, parentId });
+    
+    // switch (true) {
+    //   // in bookmark manager. no changes for this extension
+    //   case parentId === oldParentId: {
+    //     break
+    //   }
+    //   // in bookmark manager.
+    //   case index < lastIndex: {
+    //     getBookmarkInfoUni({ url: node.url });
+    //     break
+    //   }
+    //   // parentId !== oldParentId && index == lastIndex
+    //   // in bookmark manager OR in active tab
+    //   default: {
 
-    const [node] = await chrome.bookmarks.get(bookmarkId)
-    logDebug('bookmark.onMoved <-', node);
-
+    //   }
+    // }
     if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
       await memo.addRecentTag({ parentId });
-
-      if (memo.isCreatedInActiveDialog(bookmarkId, oldParentId)) {
-        logDebug('bookmark.onMoved 11');
-        memo.removeFromActiveDialog(oldParentId)
-      } else if (oldParentId && !!node.url && IS_BROWSER_CHROME && !memo.isActiveTabBookmarkManager) {
-        logDebug('bookmark.onMoved 22');
-        await Promise.all([
-          chrome.bookmarks.create({
-            parentId: oldParentId,
-            title: node.title,
-            url: node.url
-          }),
-          chrome.bookmarks.remove(bookmarkId),
-        ])
-        await chrome.bookmarks.create({
-          parentId,
-          title: node.title,
-          url: node.url
-        })
-      }
-      logDebug('bookmark.onMoved 33');
     }
 
-    // changes in active tab
-    await updateActiveTab({
-      debugCaller: 'bookmark.onMoved'
-    });
+    // EPIC_ERROR if (parentId ==! oldParentId) {
+    if (parentId !== oldParentId) {
+      const [node] = await chrome.bookmarks.get(bookmarkId)
+      logDebug('bookmark.onMoved <-', node);
 
-    // changes in bookmark manager
-    getBookmarkInfoUni({ url: node.url });
+      if (!node.url) {
+        memo.bkmFolderById.delete(bookmarkId);
+      }
+
+      const childrenList = await chrome.bookmarks.getChildren(parentId)
+      const lastIndex = childrenList.length - 1
+
+      // changes in active tab or in bookmark manager
+      if (index === lastIndex) {
+        if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+
+          if (memo.isCreatedInActiveDialog(bookmarkId, oldParentId)) {
+            logDebug('bookmark.onMoved 11');
+            memo.removeFromActiveDialog(oldParentId)
+          } else if (oldParentId && !!node.url && IS_BROWSER_CHROME && !memo.isActiveTabBookmarkManager) {
+            logDebug('bookmark.onMoved 22');
+            await Promise.all([
+              chrome.bookmarks.create({
+                parentId: oldParentId,
+                title: node.title,
+                url: node.url
+              }),
+              chrome.bookmarks.remove(bookmarkId),
+            ])
+            await chrome.bookmarks.create({
+              parentId,
+              title: node.title,
+              url: node.url
+            })
+          }
+          logDebug('bookmark.onMoved 33');
+        }
+  
+        await updateActiveTab({
+          debugCaller: 'bookmark.onMoved'
+        });
+      }
+
+      // changes in bookmark manager
+      getBookmarkInfoUni({ url: node.url });
+    }
+
   },
   async onRemoved(bookmarkId, { node }) {
     logEvent('bookmark.onRemoved <-');
