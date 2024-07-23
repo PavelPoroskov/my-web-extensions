@@ -20,6 +20,7 @@ import {
 
 export const memo = {
   activeTabId: '',
+  activeTabUrl: '',
   previousTabId: '',
   isActiveTabBookmarkManager: false,
   // previousActiveTabId: '',
@@ -208,7 +209,7 @@ export const memo = {
     }
 
     this._tagList = this.getTagList()
-    await setOptions({
+    setOptions({
       [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
     })
   },
@@ -308,6 +309,8 @@ export const memo = {
       bookmarkId,
       isFirst,
     }
+
+    return this.activeDialog[parentId]
   },
   createBkmInActiveDialogFromTag (parentId) {
     this.activeDialog[parentId] = {

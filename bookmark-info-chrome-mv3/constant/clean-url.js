@@ -31,6 +31,7 @@ export const clearUrlTargetList = [
     paths: [
       '/title/',
       '/list/',
+      '/imdbpicks/',
     ] 
   },
   {

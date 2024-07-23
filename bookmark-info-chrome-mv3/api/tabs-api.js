@@ -107,14 +107,22 @@ export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
 
 export async function updateActiveTab({ useCache=false, debugCaller } = {}) {
   logEvent(' updateActiveTab() 00')
-  const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-  const [Tab] = tabs;
 
-  if (Tab) {
-    memo.isActiveTabBookmarkManager = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
+  if (!memo.activeTabId) {
+    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    const [Tab] = tabs;
+
+    if (Tab) {
+      memo.activeTabId = Tab.id
+      memo.activeTabUrl = Tab.url
+      memo.isActiveTabBookmarkManager = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
+    }
+  }
+
+  if (memo.activeTabId && memo.activeTabUrl) {   
     updateTab({
-      tabId: Tab.id, 
-      url: Tab.url, 
+      tabId: memo.activeTabId, 
+      url: memo.activeTabUrl, 
       useCache,
       debugCaller: `${debugCaller} -> updateActiveTab()`
     });

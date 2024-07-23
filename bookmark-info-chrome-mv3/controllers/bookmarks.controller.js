@@ -20,17 +20,29 @@ export const bookmarksController = {
   async onCreated(bookmarkId, node) {
     logEvent('bookmark.onCreated <-', node);
 
+    let fromTag
     if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-      memo.createBkmInActiveDialog(node.id, node.parentId)
-      await memo.addRecentTag(node)
+      ({ fromTag } = memo.createBkmInActiveDialog(node.id, node.parentId))
+      if (!fromTag) {
+        await memo.addRecentTag(node)
+      }
     }
-    // changes in active tab
-    await updateActiveTab({
-      debugCaller: 'bookmark.onCreated'
-    });
 
-    // changes in bookmark manager
-    getBookmarkInfoUni({ url: node.url });
+    if (node.url) {
+      if (node.url === memo.activeTabUrl) {
+        // changes in active tab
+        await updateActiveTab({
+          debugCaller: 'bookmark.onCreated'
+        });
+      } else {
+        // changes in bookmark manager
+        getBookmarkInfoUni({ url: node.url });
+      }
+    }
+
+    if (fromTag) {
+      memo.addRecentTag(node)
+    }
   },
   async onChanged(bookmarkId, changeInfo) {
     logEvent('bookmark.onChanged 00 <-', changeInfo);

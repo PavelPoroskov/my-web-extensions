@@ -39,6 +39,13 @@ export const tabsController = {
   },
   async onUpdated(tabId, changeInfo, Tab) {
     logEvent('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
+
+    if (changeInfo?.url) {
+      if (memo.activeTabId && tabId === memo.activeTabId) {
+        memo.activeTabUrl = changeInfo.url
+      }
+    }
+
     switch (changeInfo?.status) {
       case ('loading'): {
         if (changeInfo?.url) {
@@ -91,19 +98,23 @@ export const tabsController = {
     }
   },
   async onActivated({ tabId }) {
-    
+    logEvent('tabs.onActivated 00', tabId);
+    memo.activeDialogTabOnActivated(tabId)
+
     if (memo.activeTabId !== tabId) {
       memo.previousTabId = memo.activeTabId;
       memo.activeTabId = tabId;
     }
-    logEvent('tabs.onActivated 00', tabId);
-    memo.activeDialogTabOnActivated(tabId)
 
     try {
       const Tab = await chrome.tabs.get(tabId);
-      logDebug('tabs.onActivated 11', Tab.index, tabId, Tab.url);
-      memo.isActiveTabBookmarkManager = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
-      
+
+      if (Tab) {
+        logDebug('tabs.onActivated 11', Tab.index, tabId, Tab.url);
+        memo.activeTabUrl = Tab.url
+        memo.isActiveTabBookmarkManager = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
+      }
+
       updateTab({
         tabId, 
         url: Tab.url, 
