@@ -105,7 +105,7 @@ const log = SHOW_LOG ? console.log : () => {};
   background-color: yellow;
 }
 .bkm-info--bkm-2 {
-  background-color: orange;
+  background-color: greenyellow;
 }
 .bkm-info--btn-del {
   padding-right: ${BROWSER_SPECIFIC.DEL_BTN_RIGHT_PADDING};

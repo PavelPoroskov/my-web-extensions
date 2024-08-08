@@ -204,6 +204,18 @@ async function restoreOptions() {
   element.addEventListener("input", (event) => {
     value.textContent = event.target.value;
   });
+
+  optionId = 'FLAT_BOOKMARKS';
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.addEventListener('click', async () => {
+    await browser.runtime.sendMessage({
+      command: 'OPTIONS_ASKS_FLAT_BOOKMARKS',
+    });
+    const text = 'Operation started'
+    const value = document.querySelector('#FLAT_BOOKMARKS-RESULT');
+    value.textContent = text;
+  });
 }
 
 let clearUrlTargetList
@@ -214,11 +226,24 @@ let STORAGE_KEY
 browser.runtime.onMessage.addListener((message) => {
   switch (message?.command) {
     case 'DATA_FOR_OPTIONS': {
+      // console.log('option in DATA_FOR_OPTIONS')
       clearUrlTargetList = message.clearUrlTargetList
       STORAGE_TYPE = message.STORAGE_TYPE
       STORAGE_KEY_META = message.STORAGE_KEY_META
       STORAGE_KEY = message.STORAGE_KEY
       restoreOptions()
+      break
+    }
+    case 'FLAT_BOOKMARKS_RESULT': {
+      // console.log('option in FLAT_BOOKMARKS_RESULT', message.success)
+      const text = message.success 
+        ? 'Operation completed successfully'
+        : 'Operation failed'
+      const value = document.querySelector('#FLAT_BOOKMARKS-RESULT');
+      // TODO it is not updated in form for firefox. chrome is ok
+      //  message has received, element is found
+      //  may be debug mode
+      value.textContent = text;
       break
     }
   }

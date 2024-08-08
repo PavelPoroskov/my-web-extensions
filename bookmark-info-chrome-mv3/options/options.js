@@ -226,6 +226,7 @@ let STORAGE_KEY
 chrome.runtime.onMessage.addListener((message) => {
   switch (message?.command) {
     case 'DATA_FOR_OPTIONS': {
+      // console.log('option in DATA_FOR_OPTIONS')
       clearUrlTargetList = message.clearUrlTargetList
       STORAGE_TYPE = message.STORAGE_TYPE
       STORAGE_KEY_META = message.STORAGE_KEY_META
@@ -234,10 +235,14 @@ chrome.runtime.onMessage.addListener((message) => {
       break
     }
     case 'FLAT_BOOKMARKS_RESULT': {
+      // console.log('option in FLAT_BOOKMARKS_RESULT', message.success)
       const text = message.success 
         ? 'Operation completed successfully'
         : 'Operation failed'
       const value = document.querySelector('#FLAT_BOOKMARKS-RESULT');
+      // TODO it is not updated in form for firefox. chrome is ok
+      //  message has received, element is found
+      //  may be debug mode
       value.textContent = text;
       break
     }

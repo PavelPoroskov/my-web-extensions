@@ -1,7 +1,17 @@
 import { ExtraMap } from './module.js'
+import {
+  IS_BROWSER_FIREFOX,
+} from '../constant/index.js';
 
-const bookmarksBarId = '1'
-const otherBookmarksId = '2'
+let BOOKMARKS_BAR_ID = '1'
+let OTHER_BOOKMARKS_ID = '2'
+
+if (IS_BROWSER_FIREFOX) {
+  BOOKMARKS_BAR_ID = 'toolbar_____'
+  OTHER_BOOKMARKS_ID = 'unfiled_____'
+}
+
+
 const nestedRootTitle = 'yy-bookmark-info--nested'
 const unclassifiedTitle = 'unclassified'
 
@@ -151,7 +161,7 @@ export async function flatBookmarks() {
     nestedRootId = findItem.id
   } else {
     const createdItem = await chrome.bookmarks.create({
-      parentId: otherBookmarksId,
+      parentId: OTHER_BOOKMARKS_ID,
       title: nestedRootTitle
     })
     nestedRootId = createdItem.id
@@ -164,22 +174,22 @@ export async function flatBookmarks() {
     unclassifiedId = findItem2.id
   } else {
     const createdItem2 = await chrome.bookmarks.create({
-      parentId: otherBookmarksId,
+      parentId: OTHER_BOOKMARKS_ID,
       title: unclassifiedTitle
     })
     unclassifiedId = createdItem2.id
   }
 
   await Promise.all(
-    folderById[bookmarksBarId].node.children
+    folderById[BOOKMARKS_BAR_ID].node.children
       .filter(({ url }) => !url)
-      .map((node) => chrome.bookmarks.move(node.id, { parentId: otherBookmarksId }))
+      .map((node) => chrome.bookmarks.move(node.id, { parentId: OTHER_BOOKMARKS_ID }))
   ) 
 
   const toFlatFolderList = []
   const rootBookmarkList = []
   const flatFolderNameSet = new Set()
-  const [otherBookmarks] = await chrome.bookmarks.getSubTree(otherBookmarksId)
+  const [otherBookmarks] = await chrome.bookmarks.getSubTree(OTHER_BOOKMARKS_ID)
 
   for (const node of otherBookmarks.children) {
     if (!node.url) {
@@ -224,8 +234,7 @@ export async function flatBookmarks() {
       ))
 
       if (folderLevel > 0) {
-        // TODO if name is in use
-        await chrome.bookmarks.move(folderNode.id, { parentId: otherBookmarksId })
+        await chrome.bookmarks.move(folderNode.id, { parentId: OTHER_BOOKMARKS_ID })
 
         if (flatFolderNameSet.has(folderNode.title)) {
           const newTitle = `${folderNode.title} ${freeSuffix}`
@@ -262,7 +271,7 @@ export async function flatBookmarks() {
     .toSorted((a,b) => a - b)
 
   const oldToNewIdMap = {
-    [otherBookmarksId]: nestedRootId,
+    [OTHER_BOOKMARKS_ID]: nestedRootId,
   }
   const childrenMap = {}
 
@@ -304,6 +313,6 @@ export async function flatBookmarks() {
 
   await createNestedFolders()
 
-  await sortChildren({ id: otherBookmarksId })
+  await sortChildren({ id: OTHER_BOOKMARKS_ID })
   await sortChildren({ id: nestedRootId, recursively: true })
 }

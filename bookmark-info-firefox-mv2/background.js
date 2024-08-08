@@ -117,6 +117,7 @@ const clearUrlTargetList = [
     paths: [
       '/title/',
       '/list/',
+      '/imdbpicks/',
     ] 
   },
   {
@@ -136,6 +137,8 @@ const EXTENSION_COMMAND_ID = {
   SHOW_TAG_LIST: 'SHOW_TAG_LIST',
   OPTIONS_ASKS_DATA: 'OPTIONS_ASKS_DATA',
   DATA_FOR_OPTIONS: 'DATA_FOR_OPTIONS',
+  OPTIONS_ASKS_FLAT_BOOKMARKS: 'OPTIONS_ASKS_FLAT_BOOKMARKS',
+  FLAT_BOOKMARKS_RESULT: 'FLAT_BOOKMARKS_RESULT',
 }
 
 const CONTENT_SCRIPT_COMMAND_ID = {
@@ -229,6 +232,23 @@ const STORAGE_KEY = Object.fromEntries(
 
 const ADD_BOOKMARK_LIST_MAX = 50
 
+class ExtraMap extends Map {
+  sum(key, addValue) {
+    super.set(key, (super.get(key) || 0) + addValue)
+  }
+  update(key, updateObj) {
+    super.set(key, {
+      ...super.get(key),
+      ...updateObj,
+    })
+  }
+  concat(key, inItem) {
+    const item = inItem === undefined ? [] : inItem
+    // item -- single item or array
+    const ar = super.get(key) || []
+    super.set(key, ar.concat(item))
+  }
+}
 class CacheWithLimit {
   constructor ({ name='cache', size = 100 }) {
     this.cache = new Map();
@@ -540,15 +560,15 @@ async function createContextMenu() {
   await browser.menus.removeAll();
 
   browser.menus.create({
-    id: CONTEXT_MENU_ID.CLEAR_URL,
-    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'clear url',
-  });
-  browser.menus.create({
     id: CONTEXT_MENU_ID.CLOSE_DUPLICATE,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'close duplicate tabs',
   });  
+  browser.menus.create({
+    id: CONTEXT_MENU_ID.CLEAR_URL,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'clear url',
+  });
   // TODO? bookmark and close all tabs (tabs without bookmarks and tabs with bookmarks)
   //   copy bookmarked tabs
   browser.menus.create({
@@ -653,6 +673,7 @@ async function getOptions(keyList) {
 // console.log('IMPORTING', 'memo.js')
 const memo = {
   activeTabId: '',
+  activeTabUrl: '',
   previousTabId: '',
   isActiveTabBookmarkManager: false,
   // previousActiveTabId: '',
@@ -841,7 +862,7 @@ const memo = {
     }
 
     this._tagList = this.getTagList()
-    await setOptions({
+    setOptions({
       [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
     })
   },
@@ -941,6 +962,8 @@ const memo = {
       bookmarkId,
       isFirst,
     }
+
+    return this.activeDialog[parentId]
   },
   createBkmInActiveDialogFromTag (parentId) {
     this.activeDialog[parentId] = {
@@ -1337,14 +1360,22 @@ async function updateTab({ tabId, url, useCache=false, debugCaller }) {
 
 async function updateActiveTab({ useCache=false, debugCaller } = {}) {
   logEvent(' updateActiveTab() 00')
-  const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
-  const [Tab] = tabs;
 
-  if (Tab) {
-    memo.isActiveTabBookmarkManager = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
+  if (!memo.activeTabId) {
+    const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+    const [Tab] = tabs;
+
+    if (Tab) {
+      memo.activeTabId = Tab.id
+      memo.activeTabUrl = Tab.url
+      memo.isActiveTabBookmarkManager = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
+    }
+  }
+
+  if (memo.activeTabId && memo.activeTabUrl) {   
     updateTab({
-      tabId: Tab.id, 
-      url: Tab.url, 
+      tabId: memo.activeTabId, 
+      url: memo.activeTabUrl, 
       useCache,
       debugCaller: `${debugCaller} -> updateActiveTab()`
     });
@@ -1477,21 +1508,346 @@ async function closeBookmarkedTabs() {
     closeTabIdList.length > 0 && browser.tabs.remove(closeTabIdList),
   ])
 }
+let BOOKMARKS_BAR_ID = '1'
+let OTHER_BOOKMARKS_ID = '2'
+
+if (IS_BROWSER_FIREFOX) {
+  BOOKMARKS_BAR_ID = 'toolbar_____'
+  OTHER_BOOKMARKS_ID = 'unfiled_____'
+}
+
+
+const nestedRootTitle = 'yy-bookmark-info--nested'
+const unclassifiedTitle = 'unclassified'
+
+function getMaxUsedSuffix(folderById) {
+  let maxUsedSuffix
+  const allowedFirstChar = '123456789'
+  const allowedSecondChar = '0123456789'
+
+  Object.values(folderById).forEach(({ title }) => {
+    const wordList = title.trimEnd().split(' ')
+    const lastWord = wordList.at(-1)
+    const firstWord = wordList.at(-2)
+
+    if (firstWord) {
+      const firstChar = lastWord[0]
+      const secondCharList = Array.from(lastWord.slice(1))
+  
+      const isNumber = allowedFirstChar.includes(firstChar) && secondCharList.every((secondChar) => allowedSecondChar.includes(secondChar))
+
+      if (isNumber) {
+        maxUsedSuffix = Math.max(maxUsedSuffix || 0, +lastWord)
+      }
+    }
+  })
+
+  return maxUsedSuffix
+}
+
+function getFoldersFromTree(tree) {
+  const folderById = {};
+  let nTotalBookmark = 0
+  let nTotalFolder = 0
+
+  function getFoldersFromNodeArray (nodeArray) {
+    let nBookmark = 0
+    let nFolder = 0
+
+    nodeArray.forEach((node) => {
+      if (node.url) {
+        nBookmark += 1
+      } else {
+        nFolder += 1
+
+        folderById[node.id] = {
+          id: node.id,
+          title: node.title,
+          parentId: node.parentId,
+          node,
+        }
+
+        getFoldersFromNodeArray(node.children)
+      }
+    });
+
+    nTotalBookmark += nBookmark
+    nTotalFolder += nFolder
+  }
+
+  getFoldersFromNodeArray(tree);
+
+  return {
+    folderById,
+    nTotalBookmark,
+    nTotalFolder,
+  };
+}
+
+
+async function sortChildren({ id, recursively = false }) {
+  const nodeList = await browser.bookmarks.getChildren(id)
+
+  const sortedList = nodeList
+    .filter(({ url }) => !url)
+    .map(({ id, index, title }) => ({ id, index, title }))
+    .toSorted(({ title: a }, { title: b }) => a.localeCompare(b))
+
+  await Promise.all(
+    sortedList.map(
+      ({ id }, index) => browser.bookmarks.move(id, { index })
+    )
+  )
+
+  if (recursively) {
+    await Promise.all(
+      sortedList.map(
+        ({ id }) => sortChildren({ id })
+      )
+    )
+  }
+}
+
+async function getAllChildrenByTitle(id) {
+  const folderList = []
+
+  function getFoldersFromNodeArray (nodeArray) {
+    nodeArray.forEach((node) => {
+      if (!node.url) {
+        folderList.push({
+          id: node.id,
+          title: node.title,
+        })
+
+        getFoldersFromNodeArray(node.children)
+      }
+    });
+  }
+
+  const [rootNode] = await browser.bookmarks.getSubTree(id)
+  getFoldersFromNodeArray(rootNode.children);
+
+  return Object.fromEntries(
+    folderList
+      .map(({ title, id }) => [title, id])
+  )
+}
+
+async function flatBookmarks() {
+  // get last used suffix
+  
+
+  //1) get information: 
+  //  folder has subfolders
+  //  level
+
+  //2) move bookmarks to flat folders
+  // from most deep
+
+  //3) sort
+
+  const bookmarkTree = await browser.bookmarks.getTree();
+  const {
+    folderById,
+    // nTotalBookmark,
+    // nTotalFolder,
+  } = getFoldersFromTree(bookmarkTree);
+  // console.log('nTotalFolder ', nTotalFolder)
+  // console.log('nTotalBookmark ', nTotalBookmark)
+
+  const usedSuffix = getMaxUsedSuffix(folderById)
+  let freeSuffix = usedSuffix ? usedSuffix + 1 : 1;
+
+
+  let nestedRootId
+  const findItem = Object.values(folderById).find(({ title }) => title === nestedRootTitle)
+
+  if (findItem) {
+    nestedRootId = findItem.id
+  } else {
+    const createdItem = await browser.bookmarks.create({
+      parentId: OTHER_BOOKMARKS_ID,
+      title: nestedRootTitle
+    })
+    nestedRootId = createdItem.id
+  }
+
+  let unclassifiedId
+  const findItem2 = Object.values(folderById).find(({ title }) => title === unclassifiedTitle)
+
+  if (findItem2) {
+    unclassifiedId = findItem2.id
+  } else {
+    const createdItem2 = await browser.bookmarks.create({
+      parentId: OTHER_BOOKMARKS_ID,
+      title: unclassifiedTitle
+    })
+    unclassifiedId = createdItem2.id
+  }
+
+  await Promise.all(
+    folderById[BOOKMARKS_BAR_ID].node.children
+      .filter(({ url }) => !url)
+      .map((node) => browser.bookmarks.move(node.id, { parentId: OTHER_BOOKMARKS_ID }))
+  ) 
+
+  const toFlatFolderList = []
+  const rootBookmarkList = []
+  const flatFolderNameSet = new Set()
+  const [otherBookmarks] = await browser.bookmarks.getSubTree(OTHER_BOOKMARKS_ID)
+
+  for (const node of otherBookmarks.children) {
+    if (!node.url) {
+      const childrenFolderList = node.children.filter(({ url }) => !url)
+
+      if (node.id !== nestedRootId) {
+        if (childrenFolderList.length > 0) {
+          toFlatFolderList.push(node)
+        } else {
+          flatFolderNameSet.add(node.title)
+        }
+      }
+    } else {
+      rootBookmarkList.push(node.id)
+    }
+  }
+
+  if (rootBookmarkList.length > 0) {
+    await Promise.all(rootBookmarkList.map(
+      (id) => browser.bookmarks.move(id, { parentId: unclassifiedId })
+    ))    
+  }
+
+  // let order = 0
+  const toCopyFolderById = {}
+
+  async function flatFolder(rootFolder) {
+    async function traverseSubFolder(folderNode, folderLevel) {
+      // order += 1
+      toCopyFolderById[folderNode.id] = {
+        id: folderNode.id,
+        parentId: folderNode.parentId,
+        title: folderNode.title,
+        folderLevel,
+        // order,
+      }
+      const folderList = folderNode.children
+        .filter(({ url }) => !url)
+      
+      await Promise.all(folderList.map(
+        (node) => traverseSubFolder(node, folderLevel + 1)
+      ))
+
+      if (folderLevel > 0) {
+        await browser.bookmarks.move(folderNode.id, { parentId: OTHER_BOOKMARKS_ID })
+
+        if (flatFolderNameSet.has(folderNode.title)) {
+          const newTitle = `${folderNode.title} ${freeSuffix}`
+          freeSuffix += 1
+
+          await browser.bookmarks.update(folderNode.id, {
+            title: newTitle,
+          })
+          toCopyFolderById[folderNode.id].newTitle = newTitle
+          flatFolderNameSet.add(newTitle)
+        } else {
+          flatFolderNameSet.add(folderNode.title)
+        }
+      }
+    }
+
+    await traverseSubFolder(rootFolder, 0)
+  }
+
+
+  // flat
+  await Promise.all(toFlatFolderList.map(
+    (node) => flatFolder(node)
+  )) 
+
+  // create nested
+  // group by level
+  const folderByLevelMap = new ExtraMap()
+  Object.values(toCopyFolderById).forEach((item) => {
+    folderByLevelMap.concat(item.folderLevel, item)
+  })
+
+  const sortedLevelList = Array.from(folderByLevelMap.keys())
+    .toSorted((a,b) => a - b)
+
+  const oldToNewIdMap = {
+    [OTHER_BOOKMARKS_ID]: nestedRootId,
+  }
+  const childrenMap = {}
+
+  async function findOrCreateFolder({ id, title, newTitle, parentId }) {
+    const newParentId = oldToNewIdMap[parentId]
+
+    if (!childrenMap[newParentId]) {
+      // childrenMap[newParentId] = browser.bookmarks.getChildren(newParentId)
+      //   .then((nodes) => Object.fromEntries(
+      //     nodes
+      //       .filter(({ url }) => !url)
+      //       .map(({ title, id }) => [title, id])
+      //   ))
+      childrenMap[newParentId] = getAllChildrenByTitle(newParentId)
+    }
+    const children = await childrenMap[newParentId]
+    let newId = children[title]
+
+    if (!newId) {
+      const newNode = await browser.bookmarks.create({
+        parentId: newParentId,
+        title: newTitle || title
+      })
+      newId = newNode.id
+    }
+
+    oldToNewIdMap[id] = newId
+  }
+  async function createNestedFolders() {
+    const level = sortedLevelList.shift()
+
+    if (level !== undefined) {
+      const list = folderByLevelMap.get(level)
+      await Promise.all(list.map(findOrCreateFolder))
+
+      await createNestedFolders()
+    }
+  }
+
+  await createNestedFolders()
+
+  await sortChildren({ id: OTHER_BOOKMARKS_ID })
+  await sortChildren({ id: nestedRootId, recursively: true })
+}
 const bookmarksController = {
   async onCreated(bookmarkId, node) {
     logEvent('bookmark.onCreated <-', node);
 
+    let fromTag
     if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-      memo.createBkmInActiveDialog(node.id, node.parentId)
-      await memo.addRecentTag(node)
+      ({ fromTag } = memo.createBkmInActiveDialog(node.id, node.parentId))
+      if (!fromTag) {
+        await memo.addRecentTag(node)
+      }
     }
-    // changes in active tab
-    await updateActiveTab({
-      debugCaller: 'bookmark.onCreated'
-    });
 
-    // changes in bookmark manager
-    getBookmarkInfoUni({ url: node.url });
+    if (node.url) {
+      if (node.url === memo.activeTabUrl) {
+        // changes in active tab
+        await updateActiveTab({
+          debugCaller: 'bookmark.onCreated'
+        });
+      } else {
+        // changes in bookmark manager
+        getBookmarkInfoUni({ url: node.url });
+      }
+    }
+
+    if (fromTag) {
+      memo.addRecentTag(node)
+    }
   },
   async onChanged(bookmarkId, changeInfo) {
     logEvent('bookmark.onChanged 00 <-', changeInfo);
@@ -1512,45 +1868,76 @@ async function closeBookmarkedTabs() {
     // changes in bookmark manager
     getBookmarkInfoUni({ url: node.url });        
   },
-  async onMoved(bookmarkId, { oldParentId, parentId }) {
-    logEvent('bookmark.onMoved <-', { oldParentId, parentId });
-    memo.bkmFolderById.delete(bookmarkId);
+  async onMoved(bookmarkId, { oldIndex, index, oldParentId, parentId }) {
+    logEvent('bookmark.onMoved <-', { oldIndex, index, oldParentId, parentId });
+    
+    // switch (true) {
+    //   // in bookmark manager. no changes for this extension
+    //   case parentId === oldParentId: {
+    //     break
+    //   }
+    //   // in bookmark manager.
+    //   case index < lastIndex: {
+    //     getBookmarkInfoUni({ url: node.url });
+    //     break
+    //   }
+    //   // parentId !== oldParentId && index == lastIndex
+    //   // in bookmark manager OR in active tab
+    //   default: {
 
-    const [node] = await browser.bookmarks.get(bookmarkId)
-    logDebug('bookmark.onMoved <-', node);
-
+    //   }
+    // }
     if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
       await memo.addRecentTag({ parentId });
-
-      if (memo.isCreatedInActiveDialog(bookmarkId, oldParentId)) {
-        logDebug('bookmark.onMoved 11');
-        memo.removeFromActiveDialog(oldParentId)
-      } else if (oldParentId && !!node.url && IS_BROWSER_CHROME && !memo.isActiveTabBookmarkManager) {
-        logDebug('bookmark.onMoved 22');
-        await Promise.all([
-          browser.bookmarks.create({
-            parentId: oldParentId,
-            title: node.title,
-            url: node.url
-          }),
-          browser.bookmarks.remove(bookmarkId),
-        ])
-        await browser.bookmarks.create({
-          parentId,
-          title: node.title,
-          url: node.url
-        })
-      }
-      logDebug('bookmark.onMoved 33');
     }
 
-    // changes in active tab
-    await updateActiveTab({
-      debugCaller: 'bookmark.onMoved'
-    });
+    // EPIC_ERROR if (parentId ==! oldParentId) {
+    if (parentId !== oldParentId) {
+      const [node] = await browser.bookmarks.get(bookmarkId)
+      logDebug('bookmark.onMoved <-', node);
 
-    // changes in bookmark manager
-    getBookmarkInfoUni({ url: node.url });
+      if (!node.url) {
+        memo.bkmFolderById.delete(bookmarkId);
+      }
+
+      const childrenList = await browser.bookmarks.getChildren(parentId)
+      const lastIndex = childrenList.length - 1
+
+      // changes in active tab or in bookmark manager
+      if (index === lastIndex) {
+        if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+
+          if (memo.isCreatedInActiveDialog(bookmarkId, oldParentId)) {
+            logDebug('bookmark.onMoved 11');
+            memo.removeFromActiveDialog(oldParentId)
+          } else if (oldParentId && !!node.url && IS_BROWSER_CHROME && !memo.isActiveTabBookmarkManager) {
+            logDebug('bookmark.onMoved 22');
+            await Promise.all([
+              browser.bookmarks.create({
+                parentId: oldParentId,
+                title: node.title,
+                url: node.url
+              }),
+              browser.bookmarks.remove(bookmarkId),
+            ])
+            await browser.bookmarks.create({
+              parentId,
+              title: node.title,
+              url: node.url
+            })
+          }
+          logDebug('bookmark.onMoved 33');
+        }
+  
+        await updateActiveTab({
+          debugCaller: 'bookmark.onMoved'
+        });
+      }
+
+      // changes in bookmark manager
+      getBookmarkInfoUni({ url: node.url });
+    }
+
   },
   async onRemoved(bookmarkId, { node }) {
     logEvent('bookmark.onRemoved <-');
@@ -1606,10 +1993,30 @@ async function closeBookmarkedTabs() {
 async function onIncomingMessage (message, sender) {
   switch (message?.command) {
 
-    case EXTENSION_COMMAND_ID.DELETE_BOOKMARK: {
-      logEvent('runtime.onMessage deleteBookmark');
+    case EXTENSION_COMMAND_ID.TAB_IS_READY: {
+      const tabId = sender?.tab?.id;
+      logEvent('runtime.onMessage contentScriptReady', tabId);
 
-      deleteBookmark(message.bkmId);
+      if (tabId) {
+        const url = message.url
+        let cleanUrl
+
+        if (memo.settings[STORAGE_KEY.CLEAR_URL]) {
+          ({ cleanUrl } = removeQueryParamsIfTarget(url));
+          
+          if (url !== cleanUrl) {
+            await clearUrlInTab({ tabId, cleanUrl })
+          }
+        }
+
+        updateTab({
+          tabId,
+          url: cleanUrl || url,
+          useCache: true,
+          debugCaller: 'runtime.onMessage contentScriptReady',
+        })
+      }
+
       break
     }
     case EXTENSION_COMMAND_ID.ADD_BOOKMARK: {
@@ -1621,6 +2028,23 @@ async function closeBookmarkedTabs() {
         title: message.title,
         url: message.url
       })
+
+      break
+    }
+    case EXTENSION_COMMAND_ID.DELETE_BOOKMARK: {
+      logEvent('runtime.onMessage deleteBookmark');
+
+      deleteBookmark(message.bkmId);
+      break
+    }
+    case EXTENSION_COMMAND_ID.SHOW_TAG_LIST: {
+      logEvent('runtime.onMessage SHOW_RECENT_LIST');
+
+      await memo.updateShowTagList(message.value)
+      // updateActiveTab({
+      //   debugCaller: 'runtime.onMessage SHOW_RECENT_LIST',
+      //   useCache: true,
+      // });
 
       break
     }
@@ -1649,43 +2073,6 @@ async function closeBookmarkedTabs() {
 
       break
     }
-    case EXTENSION_COMMAND_ID.TAB_IS_READY: {
-      const tabId = sender?.tab?.id;
-      logEvent('runtime.onMessage contentScriptReady', tabId);
-
-      if (tabId) {
-        const url = message.url
-        let cleanUrl
-
-        if (memo.settings[STORAGE_KEY.CLEAR_URL]) {
-          ({ cleanUrl } = removeQueryParamsIfTarget(url));
-          
-          if (url !== cleanUrl) {
-            await clearUrlInTab({ tabId, cleanUrl })
-          }
-        }
-
-        updateTab({
-          tabId,
-          url: cleanUrl || url,
-          useCache: true,
-          debugCaller: 'runtime.onMessage contentScriptReady',
-        })
-      }
-
-      break
-    }
-    case EXTENSION_COMMAND_ID.SHOW_TAG_LIST: {
-      logEvent('runtime.onMessage SHOW_RECENT_LIST');
-
-      await memo.updateShowTagList(message.value)
-      // updateActiveTab({
-      //   debugCaller: 'runtime.onMessage SHOW_RECENT_LIST',
-      //   useCache: true,
-      // });
-
-      break
-    }
     case EXTENSION_COMMAND_ID.OPTIONS_ASKS_DATA: {
       logEvent('runtime.onMessage OPTIONS_ASKS_DATA');
 
@@ -1695,6 +2082,25 @@ async function closeBookmarkedTabs() {
         STORAGE_TYPE,
         STORAGE_KEY_META,
         STORAGE_KEY,
+      });
+
+      break
+    }
+    case EXTENSION_COMMAND_ID.OPTIONS_ASKS_FLAT_BOOKMARKS: {
+      logEvent('runtime.onMessage OPTIONS_ASKS_FLAT_BOOKMARKS');
+
+      let success
+
+      try {
+        await flatBookmarks()
+        success = true
+      } catch (e) {
+        console.log('Error on flatting bookmarks', e)
+      }
+      
+      browser.runtime.sendMessage({
+        command: EXTENSION_COMMAND_ID.FLAT_BOOKMARKS_RESULT,
+        success,
       });
 
       break
@@ -1766,6 +2172,13 @@ async function closeBookmarkedTabs() {
   },
   async onUpdated(tabId, changeInfo, Tab) {
     logEvent('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
+
+    if (changeInfo?.url) {
+      if (memo.activeTabId && tabId === memo.activeTabId) {
+        memo.activeTabUrl = changeInfo.url
+      }
+    }
+
     switch (changeInfo?.status) {
       case ('loading'): {
         if (changeInfo?.url) {
@@ -1818,19 +2231,23 @@ async function closeBookmarkedTabs() {
     }
   },
   async onActivated({ tabId }) {
-    
+    logEvent('tabs.onActivated 00', tabId);
+    memo.activeDialogTabOnActivated(tabId)
+
     if (memo.activeTabId !== tabId) {
       memo.previousTabId = memo.activeTabId;
       memo.activeTabId = tabId;
     }
-    logEvent('tabs.onActivated 00', tabId);
-    memo.activeDialogTabOnActivated(tabId)
 
     try {
       const Tab = await browser.tabs.get(tabId);
-      logDebug('tabs.onActivated 11', Tab.index, tabId, Tab.url);
-      memo.isActiveTabBookmarkManager = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
-      
+
+      if (Tab) {
+        logDebug('tabs.onActivated 11', Tab.index, tabId, Tab.url);
+        memo.activeTabUrl = Tab.url
+        memo.isActiveTabBookmarkManager = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
+      }
+
       updateTab({
         tabId, 
         url: Tab.url, 
