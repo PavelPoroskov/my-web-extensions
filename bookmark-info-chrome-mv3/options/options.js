@@ -204,6 +204,15 @@ async function restoreOptions() {
   element.addEventListener("input", (event) => {
     value.textContent = event.target.value;
   });
+
+  optionId = 'FLAT_BOOKMARKS';
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.addEventListener('click', async () => {
+    await chrome.runtime.sendMessage({
+      command: 'OPTIONS_ASKS_FLAT_BOOKMARKS',
+    });
+  });
 }
 
 let clearUrlTargetList
@@ -219,6 +228,13 @@ chrome.runtime.onMessage.addListener((message) => {
       STORAGE_KEY_META = message.STORAGE_KEY_META
       STORAGE_KEY = message.STORAGE_KEY
       restoreOptions()
+      break
+    }
+    case 'FLAT_BOOKMARKS_RESULT': {
+      const text = message.success 
+        ? 'Operation completed successfully'
+        : 'Operation failed'
+      alert(text)
       break
     }
   }

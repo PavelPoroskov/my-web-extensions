@@ -18,6 +18,9 @@ import {
   updateTab,
 } from '../api/tabs-api.js'
 import {
+  flatBookmarks,
+} from '../api/flat-bookmark-api.js'
+import {
   EXTENSION_COMMAND_ID,
   STORAGE_TYPE,
   STORAGE_KEY_META,
@@ -117,6 +120,25 @@ export async function onIncomingMessage (message, sender) {
         STORAGE_TYPE,
         STORAGE_KEY_META,
         STORAGE_KEY,
+      });
+
+      break
+    }
+    case EXTENSION_COMMAND_ID.OPTIONS_ASKS_FLAT_BOOKMARKS: {
+      logEvent('runtime.onMessage OPTIONS_ASKS_FLAT_BOOKMARKS');
+
+      let success
+
+      try {
+        await flatBookmarks()
+        success = true
+      } catch (e) {
+        console.log('Error on flatting bookmarks', e)
+      }
+      
+      chrome.runtime.sendMessage({
+        command: EXTENSION_COMMAND_ID.FLAT_BOOKMARKS_RESULT,
+        success,
       });
 
       break
