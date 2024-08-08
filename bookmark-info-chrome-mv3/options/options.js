@@ -212,6 +212,9 @@ async function restoreOptions() {
     await chrome.runtime.sendMessage({
       command: 'OPTIONS_ASKS_FLAT_BOOKMARKS',
     });
+    const text = 'Operation started'
+    const value = document.querySelector('#FLAT_BOOKMARKS-RESULT');
+    value.textContent = text;
   });
 }
 
@@ -234,7 +237,8 @@ chrome.runtime.onMessage.addListener((message) => {
       const text = message.success 
         ? 'Operation completed successfully'
         : 'Operation failed'
-      alert(text)
+      const value = document.querySelector('#FLAT_BOOKMARKS-RESULT');
+      value.textContent = text;
       break
     }
   }

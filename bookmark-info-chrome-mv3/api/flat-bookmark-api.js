@@ -5,7 +5,7 @@ const otherBookmarksId = '2'
 const nestedRootTitle = 'yy-bookmark-info--nested'
 const unclassifiedTitle = 'unclassified'
 
-async function getMaxUsedSuffix(folderById) {
+function getMaxUsedSuffix(folderById) {
   let maxUsedSuffix
   const allowedFirstChar = '123456789'
   const allowedSecondChar = '0123456789'
@@ -40,31 +40,24 @@ function getFoldersFromTree(tree) {
     let nFolder = 0
 
     nodeArray.forEach((node) => {
-      if (!node.url) {
+      if (node.url) {
         nBookmark += 1
       } else {
         nFolder += 1
-
-        const { childBookmark, childFolder } = getFoldersFromNodeArray(node.children)
 
         folderById[node.id] = {
           id: node.id,
           title: node.title,
           parentId: node.parentId,
           node,
-          childBookmark,
-          childFolder,
         }
+
+        getFoldersFromNodeArray(node.children)
       }
     });
 
     nTotalBookmark += nBookmark
     nTotalFolder += nFolder
-
-    return {
-      childBookmark: nBookmark,
-      childFolder: nFolder,
-    }
   }
 
   getFoldersFromNodeArray(tree);
@@ -77,17 +70,51 @@ function getFoldersFromTree(tree) {
 }
 
 
-async function sortChildren(folderId) {
-  const [otherBookmarks] = await chrome.bookmarks.getSubTree(folderId)
+async function sortChildren({ id, recursively = false }) {
+  const nodeList = await chrome.bookmarks.getChildren(id)
 
-  const sortedList = otherBookmarks.children
-    .map(({ id, index, title }) => { id, index, title })
-    .sorted(({ title: a }, { title: b }) => a.localeCompare(b))
+  const sortedList = nodeList
+    .filter(({ url }) => !url)
+    .map(({ id, index, title }) => ({ id, index, title }))
+    .toSorted(({ title: a }, { title: b }) => a.localeCompare(b))
 
   await Promise.all(
     sortedList.map(
       ({ id }, index) => chrome.bookmarks.move(id, { index })
     )
+  )
+
+  if (recursively) {
+    await Promise.all(
+      sortedList.map(
+        ({ id }) => sortChildren({ id })
+      )
+    )
+  }
+}
+
+async function getAllChildrenByTitle(id) {
+  const folderList = []
+
+  function getFoldersFromNodeArray (nodeArray) {
+    nodeArray.forEach((node) => {
+      if (!node.url) {
+        folderList.push({
+          id: node.id,
+          title: node.title,
+        })
+
+        getFoldersFromNodeArray(node.children)
+      }
+    });
+  }
+
+  const [rootNode] = await chrome.bookmarks.getSubTree(id)
+  getFoldersFromNodeArray(rootNode.children);
+
+  return Object.fromEntries(
+    folderList
+      .map(({ title, id }) => [title, id])
   )
 }
 
@@ -107,11 +134,11 @@ export async function flatBookmarks() {
   const bookmarkTree = await chrome.bookmarks.getTree();
   const {
     folderById,
-    nTotalBookmark,
-    nTotalFolder,
+    // nTotalBookmark,
+    // nTotalFolder,
   } = getFoldersFromTree(bookmarkTree);
-  console.log('nTotalFolder ', nTotalFolder)
-  console.log('nTotalBookmark ', nTotalBookmark)
+  // console.log('nTotalFolder ', nTotalFolder)
+  // console.log('nTotalBookmark ', nTotalBookmark)
 
   const usedSuffix = getMaxUsedSuffix(folderById)
   let freeSuffix = usedSuffix ? usedSuffix + 1 : 1;
@@ -143,7 +170,6 @@ export async function flatBookmarks() {
     unclassifiedId = createdItem2.id
   }
 
-
   await Promise.all(
     folderById[bookmarksBarId].node.children
       .filter(({ url }) => !url)
@@ -153,15 +179,18 @@ export async function flatBookmarks() {
   const toFlatFolderList = []
   const rootBookmarkList = []
   const flatFolderNameSet = new Set()
-
   const [otherBookmarks] = await chrome.bookmarks.getSubTree(otherBookmarksId)
 
   for (const node of otherBookmarks.children) {
     if (!node.url) {
-      if (folderById[node.id].childFolder > 0) {
-        toFlatFolderList.push(node)
-      } else {
-        flatFolderNameSet.add(node.title)
+      const childrenFolderList = node.children.filter(({ url }) => !url)
+
+      if (node.id !== nestedRootId) {
+        if (childrenFolderList.length > 0) {
+          toFlatFolderList.push(node)
+        } else {
+          flatFolderNameSet.add(node.title)
+        }
       }
     } else {
       rootBookmarkList.push(node.id)
@@ -205,8 +234,10 @@ export async function flatBookmarks() {
           await chrome.bookmarks.update(folderNode.id, {
             title: newTitle,
           })
-          flatFolderNameSet.add(newTitle)
           toCopyFolderById[folderNode.id].newTitle = newTitle
+          flatFolderNameSet.add(newTitle)
+        } else {
+          flatFolderNameSet.add(folderNode.title)
         }
       }
     }
@@ -228,7 +259,7 @@ export async function flatBookmarks() {
   })
 
   const sortedLevelList = Array.from(folderByLevelMap.keys())
-    .sorted((a,b) => a - b)
+    .toSorted((a,b) => a - b)
 
   const oldToNewIdMap = {
     [otherBookmarksId]: nestedRootId,
@@ -239,12 +270,13 @@ export async function flatBookmarks() {
     const newParentId = oldToNewIdMap[parentId]
 
     if (!childrenMap[newParentId]) {
-      childrenMap[newParentId] = chrome.bookmarks.getChildren(newParentId)
-        .then((nodes) => Object.fromEntries(
-          nodes
-            .filter(({ url }) => !url)
-            .map(({ title, id }) => [title, id])
-        ))
+      // childrenMap[newParentId] = chrome.bookmarks.getChildren(newParentId)
+      //   .then((nodes) => Object.fromEntries(
+      //     nodes
+      //       .filter(({ url }) => !url)
+      //       .map(({ title, id }) => [title, id])
+      //   ))
+      childrenMap[newParentId] = getAllChildrenByTitle(newParentId)
     }
     const children = await childrenMap[newParentId]
     let newId = children[title]
@@ -272,5 +304,6 @@ export async function flatBookmarks() {
 
   await createNestedFolders()
 
-  await sortChildren(otherBookmarksId)
+  await sortChildren({ id: otherBookmarksId })
+  await sortChildren({ id: nestedRootId, recursively: true })
 }

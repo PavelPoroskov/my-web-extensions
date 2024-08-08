@@ -130,7 +130,14 @@
 
     <article>
       <p>Irreversible operation. It will replace nested folders with first level folders. The flat folder structure makes it easy to sort folders and quickly find the folder you need</p>
-      <button name="FLAT_BOOKMARKS_NAME" id="FLAT_BOOKMARKS">Flat bookmarks</button>
+      <div style="display: flex">
+        <div>
+          <button name="FLAT_BOOKMARKS_NAME" id="FLAT_BOOKMARKS">Flat bookmarks</button> 
+        </div>
+        <div style="flex: 1; padding-left: 2ch; padding-top: 0.7ch;">
+          <output id="FLAT_BOOKMARKS-RESULT"></output>
+        </div>
+      </div>
     </article>
 
     <script src="options.js"></script>
