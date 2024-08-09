@@ -313,6 +313,10 @@ export async function flatBookmarks() {
 
   await createNestedFolders()
 
+  // TODO ?delete empty folders
+
+  // TODO ?delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
+
   await sortChildren({ id: OTHER_BOOKMARKS_ID })
   await sortChildren({ id: nestedRootId, recursively: true })
 }

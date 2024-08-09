@@ -128,26 +128,28 @@
         </article>
     </fieldset>
 
-    <article>
-      <p>
-        Irreversible operation. <br/>
-        It will replace nested folders with first level folders. <br/>
-        The flat folder structure makes it easy to sort folders and quickly find the folder you need.<br/>
-        All bookmarks are stored only in first level folders.<br/>
-        If necessary, rename first-level folders so that the name reflects the contents and you can quickly find the folder.<br/>
-        (You can see old nested folder structure in "Other bookmarks/yy-bookmark-info--nested".<br/>
-        It has not bookmarks. It has only empty nested folders.<br/> 
-        Use it to find out where the first level folder was previously located.)
-      </p>
-      <div style="display: flex">
-        <div>
-          <button name="FLAT_BOOKMARKS_NAME" id="FLAT_BOOKMARKS">Flat bookmarks</button> 
+    <fieldset>
+      <article>
+        <p>
+          Irreversible operation. <br/>
+          It will replace nested folders with first level folders. <br/>
+          The flat folder structure makes it easy to sort folders and quickly find the folder you need.<br/>
+          All bookmarks are stored only in first level folders.<br/>
+          If necessary, rename first-level folders so that the name reflects the contents and you can quickly find the folder.<br/>
+          (You can see old nested folder structure in "Other bookmarks/yy-bookmark-info--nested".<br/>
+          It has not bookmarks. It has only empty nested folders.<br/> 
+          Use it to find out where the first level folder was previously located.)
+        </p>
+        <div style="display: flex">
+          <div>
+            <button name="FLAT_BOOKMARKS_NAME" id="FLAT_BOOKMARKS">Flat bookmarks</button> 
+          </div>
+          <div style="flex: 1; padding-left: 2ch;">
+            <output id="FLAT_BOOKMARKS-RESULT"></output>
+          </div>
         </div>
-        <div style="flex: 1; padding-left: 2ch;">
-          <output id="FLAT_BOOKMARKS-RESULT"></output>
-        </div>
-      </div>
-    </article>
+      </article>
+    </fieldset>
 
     <script src="options.js"></script>
   </body>
