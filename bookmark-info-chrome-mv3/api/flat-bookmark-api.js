@@ -138,20 +138,24 @@ async function flatFolders({ nestedRootId, unclassifiedId, freeSuffix }) {
         (node) => traverseSubFolder(node, folderLevel + 1)
       ))
 
-      if (folderLevel > 0 && bookmarkList.length > 0) {
-        await chrome.bookmarks.move(folderNode.id, { parentId: OTHER_BOOKMARKS_ID })
+      if (folderLevel > 0) {
+        if (bookmarkList.length > 0) {
+          await chrome.bookmarks.move(folderNode.id, { parentId: OTHER_BOOKMARKS_ID })
 
-        if (flatFolderNameSet.has(folderNode.title)) {
-          const newTitle = `${folderNode.title} ${freeSuffix}`
-          freeSuffix += 1
+          if (flatFolderNameSet.has(folderNode.title)) {
+            const newTitle = `${folderNode.title} ${freeSuffix}`
+            freeSuffix += 1
 
-          await chrome.bookmarks.update(folderNode.id, {
-            title: newTitle,
-          })
-          toCopyFolderById[folderNode.id].newTitle = newTitle
-          flatFolderNameSet.add(newTitle)
+            await chrome.bookmarks.update(folderNode.id, {
+              title: newTitle,
+            })
+            toCopyFolderById[folderNode.id].newTitle = newTitle
+            flatFolderNameSet.add(newTitle)
+          } else {
+            flatFolderNameSet.add(folderNode.title)
+          }
         } else {
-          flatFolderNameSet.add(folderNode.title)
+          await chrome.bookmarks.remove(folderNode.id)
         }
       }
     }
