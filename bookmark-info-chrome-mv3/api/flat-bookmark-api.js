@@ -131,12 +131,14 @@ async function flatFolders({ nestedRootId, unclassifiedId, freeSuffix }) {
       }
       const folderList = folderNode.children
         .filter(({ url }) => !url)
-      
+      const bookmarkList = folderNode.children
+        .filter(({ url }) => !!url)
+
       await Promise.all(folderList.map(
         (node) => traverseSubFolder(node, folderLevel + 1)
       ))
 
-      if (folderLevel > 0) {
+      if (folderLevel > 0 && bookmarkList.length > 0) {
         await chrome.bookmarks.move(folderNode.id, { parentId: OTHER_BOOKMARKS_ID })
 
         if (flatFolderNameSet.has(folderNode.title)) {
