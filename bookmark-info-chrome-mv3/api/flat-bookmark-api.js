@@ -88,11 +88,14 @@ async function sortChildren({ id, recursively = false }) {
     .map(({ id, index, title }) => ({ id, index, title }))
     .toSorted(({ title: a }, { title: b }) => a.localeCompare(b))
 
-  await Promise.all(
-    sortedList.map(
-      ({ id }, index) => chrome.bookmarks.move(id, { index })
-    )
-  )
+  // await Promise.all(
+  //   sortedList.map(
+  //     ({ id }, index) => chrome.bookmarks.move(id, { index })
+  //   )
+  // )
+  for (let index = 0; index < sortedList.length; index += 1) {
+    await chrome.bookmarks.move(sortedList[index].id, { index })
+  }
 
   if (recursively) {
     await Promise.all(
