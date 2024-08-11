@@ -28,6 +28,7 @@ createFileForFirefox(
     'api/tabs-api.js',
     'api/tabs-list-api.js',
     'api/flat-bookmark-api.js',
+    'api/remove-double.js',
     'controllers/bookmarks.controller.js',
     'controllers/contextMenus.controller.js',
     'controllers/incoming-message.js',

@@ -139,6 +139,8 @@ const EXTENSION_COMMAND_ID = {
   DATA_FOR_OPTIONS: 'DATA_FOR_OPTIONS',
   OPTIONS_ASKS_FLAT_BOOKMARKS: 'OPTIONS_ASKS_FLAT_BOOKMARKS',
   FLAT_BOOKMARKS_RESULT: 'FLAT_BOOKMARKS_RESULT',
+  OPTIONS_ASKS_DELETE_DOUBLES: 'OPTIONS_ASKS_DELETE_DOUBLES',
+  DELETE_DOUBLES_RESULT: 'DELETE_DOUBLES_RESULT',
 }
 
 const CONTENT_SCRIPT_COMMAND_ID = {
@@ -1643,8 +1645,8 @@ async function flatFolders({ nestedRootId, unclassifiedId, freeSuffix }) {
         (node) => traverseSubFolder(node, folderLevel + 1)
       ))
 
-      if (folderLevel > 0) {
-        if (bookmarkList.length > 0) {
+      if (bookmarkList.length > 0) {
+        if (folderLevel > 0) {
           await browser.bookmarks.move(folderNode.id, { parentId: OTHER_BOOKMARKS_ID })
 
           if (flatFolderNameSet.has(folderNode.title)) {
@@ -1659,10 +1661,11 @@ async function flatFolders({ nestedRootId, unclassifiedId, freeSuffix }) {
           } else {
             flatFolderNameSet.add(folderNode.title)
           }
-        } else {
-          await browser.bookmarks.remove(folderNode.id)
         }
+      } else {
+        await browser.bookmarks.remove(folderNode.id)
       }
+
     }
 
     await traverseSubFolder(rootFolder, 0)
@@ -2082,6 +2085,64 @@ async function flatBookmarks() {
   await sortChildren({ id: OTHER_BOOKMARKS_ID })
   await sortChildren({ id: nestedRootId, recursively: true })
 }
+async function getDoubles() {
+  const doubleList = []
+
+  async function traverseNodeList(nodeList) {
+    const urlToIdMap = new ExtraMap()
+    nodeList
+      .filter(({ url }) => !!url)
+      .forEach(({ id, url, title }) => {
+        urlToIdMap.concat(url, { id, title })
+      })
+
+    for (const idList of urlToIdMap.values()) {
+      if (idList.length > 1) {
+        const titleToIdMap = new ExtraMap()
+
+        idList.forEach(({ id, title }) => {
+          titleToIdMap.concat(title, id)
+        })
+
+        for (const idList of titleToIdMap.values()) {
+          if (idList.length > 1) {
+            idList
+              .slice(1)
+              .forEach(
+                (id) => doubleList.push(id)
+              )
+          }
+        }
+      }
+    }
+
+    nodeList
+      .filter(({ url }) => !url)
+      .map(
+        (node) => traverseNodeList(node.children)
+      )
+  }
+
+  const nodeList = await browser.bookmarks.getTree()
+  traverseNodeList(nodeList)
+
+  return doubleList
+}
+
+async function removeDoubleBookmark() {
+  const doubleList = await getDoubles()
+  // console.log('Double bookmarks:', doubleList.length)
+
+  await Promise.all(
+    doubleList.map(
+      (id) => browser.bookmarks.remove(id)
+    )
+  )
+
+  return {
+    nRemovedDoubles: doubleList.length
+  }
+}
 const bookmarksController = {
   async onCreated(bookmarkId, node) {
     logEvent('bookmark.onCreated <-', node);
@@ -2362,6 +2423,27 @@ async function flatBookmarks() {
       browser.runtime.sendMessage({
         command: EXTENSION_COMMAND_ID.FLAT_BOOKMARKS_RESULT,
         success,
+      });
+
+      break
+    }
+    case EXTENSION_COMMAND_ID.OPTIONS_ASKS_DELETE_DOUBLES: {
+      logEvent('runtime.onMessage OPTIONS_ASKS_DELETE_DOUBLES');
+
+      let success
+      let nRemovedDoubles
+
+      try {
+        ({ nRemovedDoubles } = await removeDoubleBookmark())
+        success = true
+      } catch (e) {
+        console.log('Error on flatting bookmarks', e)
+      }
+      
+      browser.runtime.sendMessage({
+        command: EXTENSION_COMMAND_ID.DELETE_DOUBLES_RESULT,
+        success,
+        nRemovedDoubles,
       });
 
       break

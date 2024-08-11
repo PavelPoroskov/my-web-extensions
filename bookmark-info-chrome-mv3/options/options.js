@@ -213,7 +213,19 @@ async function restoreOptions() {
       command: 'OPTIONS_ASKS_FLAT_BOOKMARKS',
     });
     const text = 'Operation started'
-    const value = document.querySelector('#FLAT_BOOKMARKS-RESULT');
+    const value = document.querySelector('#FLAT_BOOKMARKS_RESULT');
+    value.textContent = text;
+  });
+
+  optionId = 'DELETE_DOUBLES';
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.addEventListener('click', async () => {
+    await chrome.runtime.sendMessage({
+      command: 'OPTIONS_ASKS_DELETE_DOUBLES',
+    });
+    const text = 'Operation started'
+    const value = document.querySelector('#DELETE_DOUBLES_RESULT');
     value.textContent = text;
   });
 }
@@ -239,10 +251,18 @@ chrome.runtime.onMessage.addListener((message) => {
       const text = message.success 
         ? 'Operation completed successfully'
         : 'Operation failed'
-      const value = document.querySelector('#FLAT_BOOKMARKS-RESULT');
+      const value = document.querySelector('#FLAT_BOOKMARKS_RESULT');
       // TODO it is not updated in form for firefox. chrome is ok
       //  message has received, element is found
       //  may be debug mode
+      value.textContent = text;
+      break
+    }
+    case 'DELETE_DOUBLES_RESULT': {
+      const text = message.success 
+        ? `Operation completed successfully. Deleted ${message.nRemovedDoubles}`
+        : 'Operation failed'
+      const value = document.querySelector('#DELETE_DOUBLES_RESULT');
       value.textContent = text;
       break
     }

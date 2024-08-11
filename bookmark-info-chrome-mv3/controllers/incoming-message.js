@@ -21,6 +21,9 @@ import {
   flatBookmarks,
 } from '../api/flat-bookmark-api.js'
 import {
+  removeDoubleBookmark,
+} from '../api/remove-double.js'
+import {
   EXTENSION_COMMAND_ID,
   STORAGE_TYPE,
   STORAGE_KEY_META,
@@ -139,6 +142,27 @@ export async function onIncomingMessage (message, sender) {
       chrome.runtime.sendMessage({
         command: EXTENSION_COMMAND_ID.FLAT_BOOKMARKS_RESULT,
         success,
+      });
+
+      break
+    }
+    case EXTENSION_COMMAND_ID.OPTIONS_ASKS_DELETE_DOUBLES: {
+      logEvent('runtime.onMessage OPTIONS_ASKS_DELETE_DOUBLES');
+
+      let success
+      let nRemovedDoubles
+
+      try {
+        ({ nRemovedDoubles } = await removeDoubleBookmark())
+        success = true
+      } catch (e) {
+        console.log('Error on flatting bookmarks', e)
+      }
+      
+      chrome.runtime.sendMessage({
+        command: EXTENSION_COMMAND_ID.DELETE_DOUBLES_RESULT,
+        success,
+        nRemovedDoubles,
       });
 
       break
