@@ -384,6 +384,99 @@ function isSupportedProtocol(urlString) {
     return false;
   }
 }
+const BOOKMARKS_BAR_FOLDER_ID = IS_BROWSER_FIREFOX ? 'toolbar_____' : '1'
+const OTHER_BOOKMARKS_FOLDER_ID = IS_BROWSER_FIREFOX ? 'unfiled_____' : '2'
+
+async function getFolderByTitleInRoot({ title, oldTitle }) {
+  const nodeList = await browser.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
+
+  const foundOldItem = nodeList.find((node) => !node.url && node.title === oldTitle)
+  const foundItem = nodeList.find((node) => !node.url && node.title === title)
+
+  if (foundOldItem && !foundItem) {
+    await browser.bookmarks.update(
+      foundOldItem.id,
+      { title }
+    )
+
+    return foundOldItem.id
+  }
+
+  if (foundItem) {
+    return foundItem.id
+  }
+}
+
+async function getOrCreateFolderByTitleInRoot({ title, oldTitle }) {
+  const nodeList = await browser.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
+
+  const foundOldItem = nodeList.find((node) => !node.url && node.title === oldTitle)
+  const foundItem = nodeList.find((node) => !node.url && node.title === title)
+
+  if (foundOldItem && !foundItem) {
+    await browser.bookmarks.update(
+      foundOldItem.id,
+      { title }
+    )
+
+    return foundOldItem.id
+  }
+
+  if (foundItem) {
+    return foundItem.id
+  }
+
+  const newNode = await browser.bookmarks.create({
+    parentId: OTHER_BOOKMARKS_FOLDER_ID,
+    title
+  })
+
+  return newNode.id
+}
+
+function memoize({ fnGetValue, fnGetOrCreateValue }) {
+  let isGetValueWasGet = false
+  let getValue
+  let getOrCreateValue
+
+  return {
+    async get () {
+      if (isGetValueWasGet) {
+        return getValue 
+      }
+  
+      isGetValueWasGet = true
+
+      return getValue = fnGetValue()
+    },
+    async getOrCreate () {
+      if (getOrCreateValue) {
+        return getOrCreateValue
+      }
+  
+      return getOrCreateValue = fnGetOrCreateValue().then((result) => {
+        isGetValueWasGet = false
+
+        return result
+      })
+    },
+  }
+}
+
+const NESTED_ROOT_TITLE_OLD = 'yy-bookmark-info--nested'
+const NESTED_ROOT_TITLE = 'zz-bookmark-info--nested'
+
+const UNCLASSIFIED_TITLE_OLD = 'unclassified'
+const UNCLASSIFIED_TITLE = 'zz-bookmark-info--unclassified'
+
+const {
+  get: getNestedRootFolderId,
+  getOrCreate: getOrCreateNestedRootFolderId
+} = memoize({
+  fnGetValue: async () => getFolderByTitleInRoot({ title: NESTED_ROOT_TITLE, oldTitle: NESTED_ROOT_TITLE_OLD }),
+  fnGetOrCreateValue: async () => getOrCreateFolderByTitleInRoot({ title: NESTED_ROOT_TITLE, oldTitle: NESTED_ROOT_TITLE_OLD })
+})
+const getOrCreateUnclassifiedFolderId = async () => getOrCreateFolderByTitleInRoot({ title: UNCLASSIFIED_TITLE, oldTitle: UNCLASSIFIED_TITLE_OLD })
 const EMPTY_FOLDER_NAME_LIST = [
   'New folder',
   '[Folder Name]',
@@ -458,8 +551,14 @@ async function filterRecentTagObj(inObj = {}) {
     .filter(Boolean)
     .filter(({ title }) => !!title)
 
+  // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
+  const nestedRootFolderId = await getNestedRootFolderId()
+  const filteredFolderList2 = nestedRootFolderId
+    ? filteredFolderList.filter(({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId)
+    : filteredFolderList
+
   return Object.fromEntries(
-    filteredFolderList.map(({ id, title }) => [
+    filteredFolderList2.map(({ id, title }) => [
       id, 
       {
         title, 
@@ -481,8 +580,14 @@ async function filterFixedTagObj(obj = {}) {
     .filter(Boolean)
     .filter(({ title }) => !!title)
 
+  // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
+  const nestedRootFolderId = await getNestedRootFolderId()
+  const filteredFolderList2 = nestedRootFolderId
+    ? filteredFolderList.filter(({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId)
+    : filteredFolderList
+
   return Object.fromEntries(
-    filteredFolderList.map(({ id, title }) => [id, title])
+    filteredFolderList2.map(({ id, title }) => [id, title])
   )
 }
 const targetMap = new Map(
@@ -801,11 +906,10 @@ const memo = {
 
       if (!savedObj[STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]) {
         const actualRecentTagObj = await getRecentTagObj(ADD_BOOKMARK_LIST_MAX)
-        const storedRecentTagObj = await filterRecentTagObj(savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP])
-        this._recentTagObj = {
-          ...storedRecentTagObj,
+        this._recentTagObj = await filterRecentTagObj({
+          ...savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP],
           ...actualRecentTagObj,
-        }
+        })
         this._fixedTagObj = await filterFixedTagObj(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP])
 
         await setOptions({
@@ -828,6 +932,15 @@ const memo = {
       this._tagList = []
     }
   },
+  async filterTagList() {
+    this._recentTagObj =  await filterRecentTagObj(this._recentTagObj)
+    this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj)
+    this._tagList = this.getTagList()
+    setOptions({
+      [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,
+      [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
+    })
+  },
   async addRecentTag(bkmNode) {
     let newFolderId
     let newFolder
@@ -840,11 +953,19 @@ const memo = {
       ([newFolder] = await browser.bookmarks.get(newFolderId))
     }
 
-    const dateAdded = bkmNode.dateAdded || Date.now()
-
+    // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
+    const nestedRootFolderId = await getNestedRootFolderId()
+    if (nestedRootFolderId) {
+      if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID && newFolder.id !== nestedRootFolderId)) {
+        return
+      }
+    }
+  
     if (emptyFolderNameSet.has(newFolder.title)) {
       return
     }
+
+    const dateAdded = bkmNode.dateAdded || Date.now()
 
     this._recentTagObj[newFolderId] = {
       dateAdded,
@@ -1510,18 +1631,47 @@ async function closeBookmarkedTabs() {
     closeTabIdList.length > 0 && browser.tabs.remove(closeTabIdList),
   ])
 }
-let BOOKMARKS_BAR_ID = '1'
-let OTHER_BOOKMARKS_ID = '2'
+async function getMaxUsedSuffix() {
+  function getFoldersFromTree(tree) {
+    const folderById = {};
+    let nTotalBookmark = 0
+    let nTotalFolder = 0
+  
+    function getFoldersFromNodeArray (nodeArray) {
+      let nBookmark = 0
+      let nFolder = 0
+  
+      nodeArray.forEach((node) => {
+        if (node.url) {
+          nBookmark += 1
+        } else {
+          nFolder += 1
+  
+          folderById[node.id] = {
+            id: node.id,
+            title: node.title,
+          }
+  
+          getFoldersFromNodeArray(node.children)
+        }
+      });
+  
+      nTotalBookmark += nBookmark
+      nTotalFolder += nFolder
+    }
+  
+    getFoldersFromNodeArray(tree);
+  
+    return {
+      folderById,
+      nTotalBookmark,
+      nTotalFolder,
+    };
+  }
 
-if (IS_BROWSER_FIREFOX) {
-  BOOKMARKS_BAR_ID = 'toolbar_____'
-  OTHER_BOOKMARKS_ID = 'unfiled_____'
-}
+  const bookmarkTree = await browser.bookmarks.getTree();
+  const { folderById } = getFoldersFromTree(bookmarkTree);
 
-const nestedRootTitle = 'yy-bookmark-info--nested'
-const unclassifiedTitle = 'unclassified'
-
-function getMaxUsedSuffix(folderById) {
   let maxUsedSuffix
   const allowedFirstChar = '123456789'
   const allowedSecondChar = '0123456789'
@@ -1546,58 +1696,19 @@ function getMaxUsedSuffix(folderById) {
   return maxUsedSuffix
 }
 
-function getFoldersFromTree(tree) {
-  const folderById = {};
-  let nTotalBookmark = 0
-  let nTotalFolder = 0
-
-  function getFoldersFromNodeArray (nodeArray) {
-    let nBookmark = 0
-    let nFolder = 0
-
-    nodeArray.forEach((node) => {
-      if (node.url) {
-        nBookmark += 1
-      } else {
-        nFolder += 1
-
-        folderById[node.id] = {
-          id: node.id,
-          title: node.title,
-          parentId: node.parentId,
-          node,
-        }
-
-        getFoldersFromNodeArray(node.children)
-      }
-    });
-
-    nTotalBookmark += nBookmark
-    nTotalFolder += nFolder
-  }
-
-  getFoldersFromNodeArray(tree);
-
-  return {
-    folderById,
-    nTotalBookmark,
-    nTotalFolder,
-  };
-}
-
 async function flatFolders({ nestedRootId, unclassifiedId, freeSuffix }) {
-  const bookmarksBarChildrenList = await browser.bookmarks.getChildren(BOOKMARKS_BAR_ID)
+  const bookmarksBarChildrenList = await browser.bookmarks.getChildren(BOOKMARKS_BAR_FOLDER_ID)
   await Promise.all(
     bookmarksBarChildrenList
       .filter(({ url }) => !url)
-      .map((node) => browser.bookmarks.move(node.id, { parentId: OTHER_BOOKMARKS_ID }))
+      .map((node) => browser.bookmarks.move(node.id, { parentId: OTHER_BOOKMARKS_FOLDER_ID }))
   ) 
 
   const notFlatFolderList = []
   const flatFolderList = []
   const rootBookmarkList = []
 
-  const [otherBookmarks] = await browser.bookmarks.getSubTree(OTHER_BOOKMARKS_ID)
+  const [otherBookmarks] = await browser.bookmarks.getSubTree(OTHER_BOOKMARKS_FOLDER_ID)
 
   for (const node of otherBookmarks.children) {
     if (!node.url) {
@@ -1647,7 +1758,7 @@ async function flatFolders({ nestedRootId, unclassifiedId, freeSuffix }) {
 
       if (bookmarkList.length > 0) {
         if (folderLevel > 0) {
-          await browser.bookmarks.move(folderNode.id, { parentId: OTHER_BOOKMARKS_ID })
+          await browser.bookmarks.move(folderNode.id, { parentId: OTHER_BOOKMARKS_FOLDER_ID })
 
           if (flatFolderNameSet.has(folderNode.title)) {
             const newTitle = `${folderNode.title} ${freeSuffix}`
@@ -1743,7 +1854,7 @@ async function moveLinksFromNestedRoot({ nestedRootId, unclassifiedId }) {
     (node) => traverseFolder(node)
   )) 
 
-  const otherBookmarksChildrenList = await browser.bookmarks.getChildren(OTHER_BOOKMARKS_ID)
+  const otherBookmarksChildrenList = await browser.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
   const flatFolderNameToIdMap = Object.fromEntries(
     otherBookmarksChildrenList
       .filter((node) => !node.url)
@@ -1756,7 +1867,7 @@ async function moveLinksFromNestedRoot({ nestedRootId, unclassifiedId }) {
 
     if (!parentId) {
       const createdItem = await browser.bookmarks.create({
-        parentId: OTHER_BOOKMARKS_ID,
+        parentId: OTHER_BOOKMARKS_FOLDER_ID,
         title
       })
       parentId = createdItem.id
@@ -1774,7 +1885,7 @@ async function moveLinksFromNestedRoot({ nestedRootId, unclassifiedId }) {
 
 async function createNestedFolders({ toCopyFolderById, nestedRootId }) {
   const oldToNewIdMap = {
-    [OTHER_BOOKMARKS_ID]: nestedRootId,
+    [OTHER_BOOKMARKS_FOLDER_ID]: nestedRootId,
   }
   const childrenMap = {}
 
@@ -1844,7 +1955,7 @@ async function createNestedFolders({ toCopyFolderById, nestedRootId }) {
 }
 
 async function updateNestedFolders({ nestedRootId }) {
-  const otherBookmarksChildrenList = await browser.bookmarks.getChildren(OTHER_BOOKMARKS_ID)
+  const otherBookmarksChildrenList = await browser.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
   const flatFolderNameSet = new Set(
     otherBookmarksChildrenList
       .filter((node) => !node.url)
@@ -2034,44 +2145,16 @@ async function flatBookmarks() {
 
   //3) sort
 
-  const bookmarkTree = await browser.bookmarks.getTree();
-  const {
-    folderById,
-    // nTotalBookmark,
-    // nTotalFolder,
-  } = getFoldersFromTree(bookmarkTree);
+
   // console.log('nTotalFolder ', nTotalFolder)
   // console.log('nTotalBookmark ', nTotalBookmark)
 
-  const usedSuffix = getMaxUsedSuffix(folderById)
+  const usedSuffix = await getMaxUsedSuffix()
   let freeSuffix = usedSuffix ? usedSuffix + 1 : 1;
 
 
-  let nestedRootId
-  const findItem = Object.values(folderById).find(({ title }) => title === nestedRootTitle)
-
-  if (findItem) {
-    nestedRootId = findItem.id
-  } else {
-    const createdItem = await browser.bookmarks.create({
-      parentId: OTHER_BOOKMARKS_ID,
-      title: nestedRootTitle
-    })
-    nestedRootId = createdItem.id
-  }
-
-  let unclassifiedId
-  const findItem2 = Object.values(folderById).find(({ title }) => title === unclassifiedTitle)
-
-  if (findItem2) {
-    unclassifiedId = findItem2.id
-  } else {
-    const createdItem2 = await browser.bookmarks.create({
-      parentId: OTHER_BOOKMARKS_ID,
-      title: unclassifiedTitle
-    })
-    unclassifiedId = createdItem2.id
-  }
+  const nestedRootId = await getOrCreateNestedRootFolderId()
+  const unclassifiedId = await getOrCreateUnclassifiedFolderId()
 
   const { toCopyFolderById } = await flatFolders({ nestedRootId, unclassifiedId, freeSuffix })
   await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
@@ -2082,7 +2165,9 @@ async function flatBookmarks() {
   // TODO ?delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
   //await updateNestedFolders({ nestedRootId })
 
-  await sortChildren({ id: OTHER_BOOKMARKS_ID })
+  await memo.filterTagList()
+
+  await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
   await sortChildren({ id: nestedRootId, recursively: true })
 }
 async function getDoubles() {
