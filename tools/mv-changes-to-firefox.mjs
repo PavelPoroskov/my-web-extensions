@@ -18,6 +18,7 @@ createFileForFirefox(
     'api/cache.js',
     'api/promiseQueue.js',
     'api/common-api.js',
+    'api/special-folder.api.js',
     'api/recent-api.js',
     'api/clean-url-api.js',
     'api/context-menu.js',

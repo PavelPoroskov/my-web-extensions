@@ -1,7 +1,10 @@
 import {
   log,
 } from './log-api.js'
-
+import {
+  OTHER_BOOKMARKS_FOLDER_ID,
+  getNestedRootFolderId
+} from './special-folder.api.js'
 
 const EMPTY_FOLDER_NAME_LIST = [
   'New folder',
@@ -77,8 +80,14 @@ export async function filterRecentTagObj(inObj = {}) {
     .filter(Boolean)
     .filter(({ title }) => !!title)
 
+  // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
+  const nestedRootFolderId = await getNestedRootFolderId()
+  const filteredFolderList2 = nestedRootFolderId
+    ? filteredFolderList.filter(({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId)
+    : filteredFolderList
+
   return Object.fromEntries(
-    filteredFolderList.map(({ id, title }) => [
+    filteredFolderList2.map(({ id, title }) => [
       id, 
       {
         title, 
@@ -100,7 +109,13 @@ export async function filterFixedTagObj(obj = {}) {
     .filter(Boolean)
     .filter(({ title }) => !!title)
 
+  // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
+  const nestedRootFolderId = await getNestedRootFolderId()
+  const filteredFolderList2 = nestedRootFolderId
+    ? filteredFolderList.filter(({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId)
+    : filteredFolderList
+
   return Object.fromEntries(
-    filteredFolderList.map(({ id, title }) => [id, title])
+    filteredFolderList2.map(({ id, title }) => [id, title])
   )
 }

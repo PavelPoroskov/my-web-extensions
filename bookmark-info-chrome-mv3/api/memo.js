@@ -14,6 +14,10 @@ import {
   getOptions, setOptions
 } from './storage-api.js'
 import {
+  OTHER_BOOKMARKS_FOLDER_ID,
+  getNestedRootFolderId
+} from './special-folder.api.js'
+import {
   STORAGE_KEY,
   ADD_BOOKMARK_LIST_MAX
 } from '../constant/index.js';
@@ -146,11 +150,10 @@ export const memo = {
 
       if (!savedObj[STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]) {
         const actualRecentTagObj = await getRecentTagObj(ADD_BOOKMARK_LIST_MAX)
-        const storedRecentTagObj = await filterRecentTagObj(savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP])
-        this._recentTagObj = {
-          ...storedRecentTagObj,
+        this._recentTagObj = await filterRecentTagObj({
+          ...savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP],
           ...actualRecentTagObj,
-        }
+        })
         this._fixedTagObj = await filterFixedTagObj(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP])
 
         await setOptions({
@@ -173,6 +176,15 @@ export const memo = {
       this._tagList = []
     }
   },
+  async filterTagList() {
+    this._recentTagObj =  await filterRecentTagObj(this._recentTagObj)
+    this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj)
+    this._tagList = this.getTagList()
+    setOptions({
+      [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,
+      [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
+    })
+  },
   async addRecentTag(bkmNode) {
     let newFolderId
     let newFolder
@@ -185,11 +197,19 @@ export const memo = {
       ([newFolder] = await chrome.bookmarks.get(newFolderId))
     }
 
-    const dateAdded = bkmNode.dateAdded || Date.now()
-
+    // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
+    const nestedRootFolderId = await getNestedRootFolderId()
+    if (nestedRootFolderId) {
+      if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID && newFolder.id !== nestedRootFolderId)) {
+        return
+      }
+    }
+  
     if (emptyFolderNameSet.has(newFolder.title)) {
       return
     }
+
+    const dateAdded = bkmNode.dateAdded || Date.now()
 
     this._recentTagObj[newFolderId] = {
       dateAdded,
