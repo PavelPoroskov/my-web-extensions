@@ -2,6 +2,9 @@
 //  ?import script in options.html
 //  <script src="options.js"> type="module"
 
+
+const wait = ms => new Promise(res => setTimeout(res, ms));
+
 async function setOptions(obj) {
   const entryList = Object.entries(obj)
     .map(([key, value]) => ({
@@ -215,6 +218,8 @@ async function restoreOptions() {
     const text = 'Operation started'
     const value = document.querySelector('#FLAT_BOOKMARKS_RESULT');
     value.textContent = text;
+
+    await wait(50)
   });
 
   optionId = 'DELETE_DOUBLES';
@@ -227,6 +232,8 @@ async function restoreOptions() {
     const text = 'Operation started'
     const value = document.querySelector('#DELETE_DOUBLES_RESULT');
     value.textContent = text;
+
+    await wait(50)
   });
 }
 
@@ -235,7 +242,7 @@ let STORAGE_TYPE
 let STORAGE_KEY_META
 let STORAGE_KEY
 
-chrome.runtime.onMessage.addListener((message) => {
+chrome.runtime.onMessage.addListener(async (message) => {
   switch (message?.command) {
     case 'DATA_FOR_OPTIONS': {
       // console.log('option in DATA_FOR_OPTIONS')
@@ -256,6 +263,8 @@ chrome.runtime.onMessage.addListener((message) => {
       //  message has received, element is found
       //  may be debug mode
       value.textContent = text;
+      await wait(50)
+
       break
     }
     case 'DELETE_DOUBLES_RESULT': {
@@ -264,6 +273,8 @@ chrome.runtime.onMessage.addListener((message) => {
         : 'Operation failed'
       const value = document.querySelector('#DELETE_DOUBLES_RESULT');
       value.textContent = text;
+      await wait(50)
+
       break
     }
   }
