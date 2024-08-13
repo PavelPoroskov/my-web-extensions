@@ -3,7 +3,7 @@
   <head>
     <title>Bookmark Info Options</title>
     <style>
-      #show-layers-values, #list-limit-values {
+      #show-layers-values, #list-limit-values, #highlight-last-values {
         display: flex;
         justify-content: space-between;
         width: 100%;
@@ -126,6 +126,31 @@
           </div>  
         </div>
         </article>
+
+        <article>
+          <label for="highlight-last-n">
+            Highlight last N recent tag. 
+          </label>
+          <div style="display: flex">
+            <div>
+              <input type="range" id="ADD_BOOKMARK_HIGHLIGHT_LAST" name="highlight-last" list="highlight-last-values" min="0" max="7" step="1"/>
+              <datalist id="highlight-last-values">
+                <option value="0" label="0">0</option>
+                <option value="1" label="1">1</option>
+                <option value="2" label="2">2</option>
+                <option value="3" label="3">3</option>
+                <option value="4" label="4">4</option>
+                <option value="5" label="5">5</option>
+                <option value="6" label="6">6</option>
+                <option value="7" label="7">7</option>
+              </datalist>  
+            </div>
+            <div style="flex: 1">
+    
+            </div>  
+          </div>
+        </article>
+
     </fieldset>
 
     <fieldset>

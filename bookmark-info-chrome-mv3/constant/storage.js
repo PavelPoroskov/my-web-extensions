@@ -47,6 +47,10 @@ export const STORAGE_KEY_META = {
     storageKey: 'ADD_BOOKMARK_TAG_LENGTH', 
     default: 15,
   },
+  ADD_BOOKMARK_HIGHLIGHT_LAST: {
+    storageKey: 'ADD_BOOKMARK_HIGHLIGHT_LAST', 
+    default: 3,
+  },
   ADD_BOOKMARK_SESSION_STARTED: {
     storageKey: 'ADD_BOOKMARK_SESSION_STARTED',
     storage: STORAGE_TYPE.SESSION,

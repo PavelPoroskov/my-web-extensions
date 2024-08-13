@@ -153,6 +153,7 @@ async function restoreOptions() {
     STORAGE_KEY.ADD_BOOKMARK_IS_ON,
     STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
     STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
+    STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
   ]);
 
   let optionId = STORAGE_KEY.CLEAR_URL;
@@ -235,6 +236,12 @@ async function restoreOptions() {
 
     await wait(50)
   });
+
+  optionId = STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.value = settings[optionId];
+  element.addEventListener('input', makeSaveInputHandler(optionId) );
 }
 
 let clearUrlTargetList

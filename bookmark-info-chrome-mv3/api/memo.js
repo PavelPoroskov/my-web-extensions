@@ -56,6 +56,7 @@ export const memo = {
         STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
         STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
         STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
+        STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
       ]);
       logSettings('readSavedSettings')
       logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
@@ -125,6 +126,14 @@ export const memo = {
       .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
       .sort((a,b) => -(a.dateAdded - b.dateAdded))
       .slice(0, recentTaLimit)
+
+    const lastTagList = Object.entries(this._recentTagObj)
+      .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+      .sort((a,b) => -(a.dateAdded - b.dateAdded))
+      .slice(0, this._settings[STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST])
+    const lastTagSet = new Set(
+      lastTagList.map(({ parentId }) => parentId)
+    )
     
     const fullList = [].concat(
       recentTagList
@@ -132,6 +141,7 @@ export const memo = {
       Object.entries(this._fixedTagObj)
         .map(([parentId, title]) => ({ parentId, title, isFixed: true }))
     )
+      .map((item) => ({ ...item, isLast: lastTagSet.has(item.parentId) }))
 
     return fullList
       .filter(({ title }) => !!title)

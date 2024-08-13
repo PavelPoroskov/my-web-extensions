@@ -45,10 +45,11 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     showLayer: memo.settings[STORAGE_KEY.SHOW_PATH_LAYERS],
     isShowTitle: memo.settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
-    tagList: memo.tagList.map(({ parentId, title, isFixed }) => ({
+    tagList: memo.tagList.map(({ parentId, title, isFixed, isLast}) => ({
       parentId,
       title, 
       isFixed,
+      isLast,
       isUsed: usedParentIdSet.has(parentId)
     })),
     isShowTagList: memo.settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],

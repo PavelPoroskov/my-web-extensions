@@ -218,6 +218,9 @@ const log = SHOW_LOG ? console.log : () => {};
 .bkm-info--used-tag {
   color: gray;
 }
+.bkm-info--last-tag {
+  font-weight: bold;
+}
 `
   );
   
@@ -383,7 +386,6 @@ const log = SHOW_LOG ? console.log : () => {};
     }
 
     
-  
     const rawNodeList = rootDiv.childNodes;
     const beforeRawLength = rawNodeList.length;
 
@@ -418,10 +420,10 @@ const log = SHOW_LOG ? console.log : () => {};
       drawList.push({ type: 'separator' })
 
       if (isShowTagList) {
-        tagList.forEach(({ isFixed, parentId, title, isUsed }) => {
+        tagList.forEach(({ isFixed, isLast, parentId, title, isUsed }) => {
           drawList.push({
             type: isFixed ? 'fixedTag' : 'recentTag',
-            value: { parentId, title, isUsed },
+            value: { parentId, title, isUsed, isLast },
           })
         })
       }
@@ -508,7 +510,7 @@ const log = SHOW_LOG ? console.log : () => {};
           break
         }
         case 'recentTag': {
-          const { parentId, title, isUsed } = value
+          const { parentId, title, isUsed, isLast } = value
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag', 'bkm-info--recent');
@@ -518,6 +520,10 @@ const log = SHOW_LOG ? console.log : () => {};
           } else {
             divLabel.setAttribute('data-parentid', parentId);
             divLabel.addEventListener('click', addBookmark);
+          }
+
+          if (isLast) {
+            divLabel.classList.toggle('bkm-info--last-tag', isLast);
           }
 
           const textNodeLabel = document.createTextNode(`${title}`);
@@ -540,7 +546,7 @@ const log = SHOW_LOG ? console.log : () => {};
           break
         }
         case 'fixedTag': {
-          const { parentId, title, isUsed } = value
+          const { parentId, title, isUsed, isLast } = value
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag', 'bkm-info--fixed');
@@ -550,6 +556,10 @@ const log = SHOW_LOG ? console.log : () => {};
           } else {
             divLabel.setAttribute('data-parentid', parentId);
             divLabel.addEventListener('click', addBookmark);
+          }
+
+          if (isLast) {
+            divLabel.classList.toggle('bkm-info--last-tag', isLast);
           }
 
           const textNodeLabel = document.createTextNode(`${title}`);
