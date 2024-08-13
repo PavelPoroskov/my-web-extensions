@@ -209,6 +209,10 @@ const STORAGE_KEY_META = {
     storageKey: 'ADD_BOOKMARK_TAG_LENGTH', 
     default: 15,
   },
+  ADD_BOOKMARK_HIGHLIGHT_LAST: {
+    storageKey: 'ADD_BOOKMARK_HIGHLIGHT_LAST', 
+    default: 3,
+  },
   ADD_BOOKMARK_SESSION_STARTED: {
     storageKey: 'ADD_BOOKMARK_SESSION_STARTED',
     storage: STORAGE_TYPE.SESSION,
@@ -812,6 +816,7 @@ const memo = {
         STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
         STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
         STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
+        STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
       ]);
       logSettings('readSavedSettings')
       logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
@@ -881,6 +886,14 @@ const memo = {
       .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
       .sort((a,b) => -(a.dateAdded - b.dateAdded))
       .slice(0, recentTaLimit)
+
+    const lastTagList = Object.entries(this._recentTagObj)
+      .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+      .sort((a,b) => -(a.dateAdded - b.dateAdded))
+      .slice(0, this._settings[STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST])
+    const lastTagSet = new Set(
+      lastTagList.map(({ parentId }) => parentId)
+    )
     
     const fullList = [].concat(
       recentTagList
@@ -888,6 +901,7 @@ const memo = {
       Object.entries(this._fixedTagObj)
         .map(([parentId, title]) => ({ parentId, title, isFixed: true }))
     )
+      .map((item) => ({ ...item, isLast: lastTagSet.has(item.parentId) }))
 
     return fullList
       .filter(({ title }) => !!title)
@@ -1421,10 +1435,11 @@ async function getHistoryInfo({ url, useCache=false }) {
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     showLayer: memo.settings[STORAGE_KEY.SHOW_PATH_LAYERS],
     isShowTitle: memo.settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
-    tagList: memo.tagList.map(({ parentId, title, isFixed }) => ({
+    tagList: memo.tagList.map(({ parentId, title, isFixed, isLast}) => ({
       parentId,
       title, 
       isFixed,
+      isLast,
       isUsed: usedParentIdSet.has(parentId)
     })),
     isShowTagList: memo.settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
@@ -2014,11 +2029,14 @@ async function updateNestedFolders({ nestedRootId }) {
 
 async function sortChildren({ id, recursively = false }) {
   const nodeList = await browser.bookmarks.getChildren(id)
+  // console.log('nodeList', nodeList);
 
   const sortedList = nodeList
     .filter(({ url }) => !url)
     .map(({ id, index, title }) => ({ id, actualIndex: index, title }))
     .toSorted(({ title: a }, { title: b }) => a.localeCompare(b))
+
+  // console.log('sortedList', sortedList);
 
   // for (let index = 0; index < sortedList.length; index += 1) {
   //   await browser.bookmarks.move(sortedList[index].id, { index })
@@ -2035,37 +2053,50 @@ async function sortChildren({ id, recursively = false }) {
   let index = 0
   let actualContinueIndex
   while (index < sortedList.length) {
+    // console.log('state in', state, index, sortedList[index].actualIndex, mMove, sortedList[index].title);
+
     switch (state) {
       case STATE.SKIP_AFTER_START: {
+
         if (sortedList[index].actualIndex !== index) {
           await browser.bookmarks.move(sortedList[index].id, { index })
           state = STATE.AFTER_MOVE
           mMove += 1
+          // console.log('MOVE 1', sortedList[index].actualIndex, index, sortedList[index].title);
         }
         break
       }
       case STATE.AFTER_MOVE: {
-        const node = await browser.bookmarks.get(sortedList[index].id)
+        const [node] = await browser.bookmarks.get(sortedList[index].id)
 
         if (node.index === index) {
           state = STATE.SKIP_AFTER_MOVE
           actualContinueIndex = sortedList[index].actualIndex
+          // actualContinueIndex = node.index
+
+          // state = STATE.SKIP_AFTER_START
         } else {
           await browser.bookmarks.move(sortedList[index].id, { index })
           state = STATE.AFTER_MOVE
           mMove += 1
+          // console.log('MOVE 2', sortedList[index].actualIndex, index, sortedList[index].title);
         }
+
         break
       }
       case STATE.SKIP_AFTER_MOVE: {
-        if (sortedList[index].actualIndex === actualContinueIndex - 1) {
+
+        // if (sortedList[index].actualIndex === actualContinueIndex + 1) {
+        if (sortedList[index].actualIndex > actualContinueIndex) {
           state = STATE.SKIP_AFTER_MOVE
           actualContinueIndex = sortedList[index].actualIndex
         } else {
           await browser.bookmarks.move(sortedList[index].id, { index })
           state = STATE.AFTER_MOVE
           mMove += 1
+          // console.log('MOVE 3', sortedList[index].actualIndex, index, sortedList[index].title);
         }
+
         break
       }
     }
@@ -2135,23 +2166,8 @@ async function sortChildren({ id, recursively = false }) {
 // }
 
 async function flatBookmarks() {
-  //1) get information: 
-  //  folder has subfolders
-  //  level
-  // get last used suffix
-
-  //2) move bookmarks to flat folders
-  // from most deep
-
-  //3) sort
-
-
-  // console.log('nTotalFolder ', nTotalFolder)
-  // console.log('nTotalBookmark ', nTotalBookmark)
-
   const usedSuffix = await getMaxUsedSuffix()
   let freeSuffix = usedSuffix ? usedSuffix + 1 : 1;
-
 
   const nestedRootId = await getOrCreateNestedRootFolderId()
   const unclassifiedId = await getOrCreateUnclassifiedFolderId()
@@ -2159,13 +2175,12 @@ async function flatBookmarks() {
   const { toCopyFolderById } = await flatFolders({ nestedRootId, unclassifiedId, freeSuffix })
   await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
   await createNestedFolders({ toCopyFolderById, nestedRootId })
+  await memo.filterTagList()
 
   // TODO ?delete empty folders
 
   // TODO ?delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
   //await updateNestedFolders({ nestedRootId })
-
-  await memo.filterTagList()
 
   await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
   await sortChildren({ id: nestedRootId, recursively: true })
@@ -2573,7 +2588,8 @@ async function removeDoubleBookmark() {
         STORAGE_KEY.ADD_BOOKMARK_IS_ON,
         //STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
         STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
-        STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH
+        STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
+        STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
       ].map((key) => STORAGE_KEY_META[key].storageKey))
       const intersectSet = changesSet.intersection(settingSet)
 
