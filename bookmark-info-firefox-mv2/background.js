@@ -230,6 +230,10 @@ const STORAGE_KEY_META = {
     storageKey: 'START_TIME',
     storage: STORAGE_TYPE.SESSION,
   },
+  FORCE_FLAT_FOLDER_STRUCTURE: {
+    storageKey: 'FORCE_FLAT_FOLDER_STRUCTURE', 
+    default: false,
+  },
 }
 
 const STORAGE_KEY = Object.fromEntries(
@@ -438,32 +442,18 @@ async function getOrCreateFolderByTitleInRoot({ title, oldTitle }) {
   return newNode.id
 }
 
-function memoize({ fnGetValue, fnGetOrCreateValue }) {
-  let isGetValueWasGet = false
-  let getValue
-  let getOrCreateValue
+function memoize(fnGetValue) {
+  let isValueWasGet = false
+  let value
 
-  return {
-    async get () {
-      if (isGetValueWasGet) {
-        return getValue 
-      }
-  
-      isGetValueWasGet = true
+  return async function () {
+    if (isValueWasGet) {
+      return value 
+    }
 
-      return getValue = fnGetValue()
-    },
-    async getOrCreate () {
-      if (getOrCreateValue) {
-        return getOrCreateValue
-      }
-  
-      return getOrCreateValue = fnGetOrCreateValue().then((result) => {
-        isGetValueWasGet = false
+    isValueWasGet = true
 
-        return result
-      })
-    },
+    return value = fnGetValue()
   }
 }
 
@@ -473,14 +463,10 @@ const NESTED_ROOT_TITLE = 'zz-bookmark-info--nested'
 const UNCLASSIFIED_TITLE_OLD = 'unclassified'
 const UNCLASSIFIED_TITLE = 'zz-bookmark-info--unclassified'
 
-const {
-  get: getNestedRootFolderId,
-  getOrCreate: getOrCreateNestedRootFolderId
-} = memoize({
-  fnGetValue: async () => getFolderByTitleInRoot({ title: NESTED_ROOT_TITLE, oldTitle: NESTED_ROOT_TITLE_OLD }),
-  fnGetOrCreateValue: async () => getOrCreateFolderByTitleInRoot({ title: NESTED_ROOT_TITLE, oldTitle: NESTED_ROOT_TITLE_OLD })
-})
+const getOrCreateNestedRootFolderId = async () => getOrCreateFolderByTitleInRoot({ title: NESTED_ROOT_TITLE, oldTitle: NESTED_ROOT_TITLE_OLD })
 const getOrCreateUnclassifiedFolderId = async () => getOrCreateFolderByTitleInRoot({ title: UNCLASSIFIED_TITLE, oldTitle: UNCLASSIFIED_TITLE_OLD })
+
+const getNestedRootFolderId = memoize(async () => getFolderByTitleInRoot({ title: NESTED_ROOT_TITLE, oldTitle: NESTED_ROOT_TITLE_OLD }))
 const EMPTY_FOLDER_NAME_LIST = [
   'New folder',
   '[Folder Name]',
@@ -543,7 +529,7 @@ async function getRecentTagObj(nItems) {
   )
 }
 
-async function filterRecentTagObj(inObj = {}) {
+async function filterRecentTagObj(inObj = {}, isFlatStructure) {
   const idList = Object.keys(inObj)
 
   if (idList.length === 0) {
@@ -555,11 +541,14 @@ async function filterRecentTagObj(inObj = {}) {
     .filter(Boolean)
     .filter(({ title }) => !!title)
 
+  let filteredFolderList2 = filteredFolderList
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
-  const nestedRootFolderId = await getNestedRootFolderId()
-  const filteredFolderList2 = nestedRootFolderId
-    ? filteredFolderList.filter(({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId)
-    : filteredFolderList
+  if (isFlatStructure) {
+    const nestedRootFolderId = await getNestedRootFolderId()
+    filteredFolderList2 = filteredFolderList.filter(
+      ({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId
+    )
+  }
 
   return Object.fromEntries(
     filteredFolderList2.map(({ id, title }) => [
@@ -572,7 +561,7 @@ async function filterRecentTagObj(inObj = {}) {
   )
 }
 
-async function filterFixedTagObj(obj = {}) {
+async function filterFixedTagObj(obj = {}, isFlatStructure) {
   const idList = Object.keys(obj)
 
   if (idList.length === 0) {
@@ -584,11 +573,14 @@ async function filterFixedTagObj(obj = {}) {
     .filter(Boolean)
     .filter(({ title }) => !!title)
 
+  let filteredFolderList2 = filteredFolderList
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
-  const nestedRootFolderId = await getNestedRootFolderId()
-  const filteredFolderList2 = nestedRootFolderId
-    ? filteredFolderList.filter(({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId)
-    : filteredFolderList
+  if (isFlatStructure) {
+    const nestedRootFolderId = await getNestedRootFolderId()
+    filteredFolderList2 = filteredFolderList.filter(
+      ({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId
+    )
+  }
 
   return Object.fromEntries(
     filteredFolderList2.map(({ id, title }) => [id, title])
@@ -817,6 +809,7 @@ const memo = {
         STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
         STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
         STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
+        STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
       ]);
       logSettings('readSavedSettings')
       logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
@@ -920,11 +913,13 @@ const memo = {
 
       if (!savedObj[STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]) {
         const actualRecentTagObj = await getRecentTagObj(ADD_BOOKMARK_LIST_MAX)
+
+        const isFlatStructure = this._settings[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]
         this._recentTagObj = await filterRecentTagObj({
           ...savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP],
           ...actualRecentTagObj,
-        })
-        this._fixedTagObj = await filterFixedTagObj(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP])
+        }, isFlatStructure)
+        this._fixedTagObj = await filterFixedTagObj(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP], isFlatStructure)
 
         await setOptions({
           [STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]: true,
@@ -947,8 +942,9 @@ const memo = {
     }
   },
   async filterTagList() {
-    this._recentTagObj =  await filterRecentTagObj(this._recentTagObj)
-    this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj)
+    const isFlatStructure = this._settings[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]
+    this._recentTagObj =  await filterRecentTagObj(this._recentTagObj, isFlatStructure)
+    this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
     this._tagList = this.getTagList()
     setOptions({
       [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,
@@ -968,9 +964,13 @@ const memo = {
     }
 
     // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
-    const nestedRootFolderId = await getNestedRootFolderId()
-    if (nestedRootFolderId) {
-      if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID && newFolder.id !== nestedRootFolderId)) {
+    if (this._settings[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]) {
+      if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
+        return
+      }
+
+      const nestedRootFolderId = await getNestedRootFolderId()
+      if (nestedRootFolderId && newFolder.id === nestedRootFolderId) {
         return
       }
     }
@@ -2172,9 +2172,15 @@ async function flatBookmarks() {
   const nestedRootId = await getOrCreateNestedRootFolderId()
   const unclassifiedId = await getOrCreateUnclassifiedFolderId()
 
+  await setOptions({
+    [STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]: true
+  })
+  await memo.readSettings()
+
   const { toCopyFolderById } = await flatFolders({ nestedRootId, unclassifiedId, freeSuffix })
   await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
   await createNestedFolders({ toCopyFolderById, nestedRootId })
+
   await memo.filterTagList()
 
   // TODO ?delete empty folders
@@ -2580,6 +2586,7 @@ async function removeDoubleBookmark() {
     
     if (namespace === 'local') {
       const changesSet = new Set(Object.keys(changes))
+      // TODO? do we need invalidate setting for all this keys
       const settingSet = new Set([
         STORAGE_KEY.CLEAR_URL,
         STORAGE_KEY.SHOW_PATH_LAYERS,
@@ -2590,6 +2597,7 @@ async function removeDoubleBookmark() {
         STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
         STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
         STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
+        STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
       ].map((key) => STORAGE_KEY_META[key].storageKey))
       const intersectSet = changesSet.intersection(settingSet)
 

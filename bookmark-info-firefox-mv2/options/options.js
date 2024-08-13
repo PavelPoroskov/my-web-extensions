@@ -154,6 +154,7 @@ async function restoreOptions() {
     STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
     STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
     STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
+    STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
   ]);
 
   let optionId = STORAGE_KEY.CLEAR_URL;
@@ -223,6 +224,11 @@ async function restoreOptions() {
     await wait(50)
   });
 
+  optionId = STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.checked = settings[optionId];
+
   optionId = 'DELETE_DOUBLES';
   domId = `#${optionId}`
   element = document.querySelector(domId)
@@ -270,6 +276,12 @@ browser.runtime.onMessage.addListener(async (message) => {
       //  message has received, element is found
       //  may be debug mode
       value.textContent = text;
+
+      const optionId = STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE;
+      const domId = `#${optionId}`
+      const element = document.querySelector(domId)
+      element.checked = element.checked || !!message.success;
+    
       await wait(50)
 
       break

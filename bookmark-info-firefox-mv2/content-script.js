@@ -218,8 +218,8 @@ const log = SHOW_LOG ? console.log : () => {};
 .bkm-info--used-tag {
   color: gray;
 }
-.bkm-info--last-tag {
-  font-weight: bold;
+.bkm-info--last-tag:not(.bkm-info--used-tag) {
+  font-weight: 600;
 }
 `
   );
