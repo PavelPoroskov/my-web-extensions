@@ -155,6 +155,7 @@
 
     <fieldset>
       <article>
+
         <p>
           Irreversible operation. <br/>
           It will replace nested folders with first level folders. <br/>
@@ -167,11 +168,17 @@
         </p>
         <div style="display: flex">
           <div>
-            <button name="FLAT_BOOKMARKS_NAME" id="FLAT_BOOKMARKS">Flat bookmarks</button> 
+            <button name="FLAT_BOOKMARKS_NAME" id="FLAT_BOOKMARKS">Flat folder structure</button> 
           </div>
           <div style="flex: 1; padding-left: 2ch;">
             <output id="FLAT_BOOKMARKS_RESULT"></output>
           </div>
+        </div>
+        <div style="padding-top: 1ch;">
+          <label>
+            <input type="checkbox" id="FORCE_FLAT_FOLDER_STRUCTURE" disabled style="vertical-align: middle;"/>
+            Enforce flat folder structure.
+          </label>
         </div>
       </article>
       <article>

@@ -68,6 +68,10 @@ export const STORAGE_KEY_META = {
     storageKey: 'START_TIME',
     storage: STORAGE_TYPE.SESSION,
   },
+  FORCE_FLAT_FOLDER_STRUCTURE: {
+    storageKey: 'FORCE_FLAT_FOLDER_STRUCTURE', 
+    default: false,
+  },
 }
 
 export const STORAGE_KEY = Object.fromEntries(

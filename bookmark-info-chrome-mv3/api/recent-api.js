@@ -68,7 +68,7 @@ export async function getRecentTagObj(nItems) {
   )
 }
 
-export async function filterRecentTagObj(inObj = {}) {
+export async function filterRecentTagObj(inObj = {}, isFlatStructure) {
   const idList = Object.keys(inObj)
 
   if (idList.length === 0) {
@@ -80,11 +80,14 @@ export async function filterRecentTagObj(inObj = {}) {
     .filter(Boolean)
     .filter(({ title }) => !!title)
 
+  let filteredFolderList2 = filteredFolderList
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
-  const nestedRootFolderId = await getNestedRootFolderId()
-  const filteredFolderList2 = nestedRootFolderId
-    ? filteredFolderList.filter(({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId)
-    : filteredFolderList
+  if (isFlatStructure) {
+    const nestedRootFolderId = await getNestedRootFolderId()
+    filteredFolderList2 = filteredFolderList.filter(
+      ({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId
+    )
+  }
 
   return Object.fromEntries(
     filteredFolderList2.map(({ id, title }) => [
@@ -97,7 +100,7 @@ export async function filterRecentTagObj(inObj = {}) {
   )
 }
 
-export async function filterFixedTagObj(obj = {}) {
+export async function filterFixedTagObj(obj = {}, isFlatStructure) {
   const idList = Object.keys(obj)
 
   if (idList.length === 0) {
@@ -109,11 +112,14 @@ export async function filterFixedTagObj(obj = {}) {
     .filter(Boolean)
     .filter(({ title }) => !!title)
 
+  let filteredFolderList2 = filteredFolderList
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
-  const nestedRootFolderId = await getNestedRootFolderId()
-  const filteredFolderList2 = nestedRootFolderId
-    ? filteredFolderList.filter(({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId)
-    : filteredFolderList
+  if (isFlatStructure) {
+    const nestedRootFolderId = await getNestedRootFolderId()
+    filteredFolderList2 = filteredFolderList.filter(
+      ({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId
+    )
+  }
 
   return Object.fromEntries(
     filteredFolderList2.map(({ id, title }) => [id, title])

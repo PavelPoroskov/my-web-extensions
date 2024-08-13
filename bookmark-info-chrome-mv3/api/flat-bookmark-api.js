@@ -8,7 +8,12 @@ import {
   getOrCreateNestedRootFolderId,
   getOrCreateUnclassifiedFolderId
 } from './special-folder.api.js'
-
+import {
+  STORAGE_KEY,
+} from '../constant/index.js';
+import {
+  setOptions
+} from './storage-api.js'
 
 async function getMaxUsedSuffix() {
   function getFoldersFromTree(tree) {
@@ -536,9 +541,15 @@ export async function flatBookmarks() {
   const nestedRootId = await getOrCreateNestedRootFolderId()
   const unclassifiedId = await getOrCreateUnclassifiedFolderId()
 
+  await setOptions({
+    [STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]: true
+  })
+  await memo.readSettings()
+
   const { toCopyFolderById } = await flatFolders({ nestedRootId, unclassifiedId, freeSuffix })
   await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
   await createNestedFolders({ toCopyFolderById, nestedRootId })
+
   await memo.filterTagList()
 
   // TODO ?delete empty folders

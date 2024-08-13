@@ -52,32 +52,18 @@ async function getOrCreateFolderByTitleInRoot({ title, oldTitle }) {
   return newNode.id
 }
 
-function memoize({ fnGetValue, fnGetOrCreateValue }) {
-  let isGetValueWasGet = false
-  let getValue
-  let getOrCreateValue
+function memoize(fnGetValue) {
+  let isValueWasGet = false
+  let value
 
-  return {
-    async get () {
-      if (isGetValueWasGet) {
-        return getValue 
-      }
-  
-      isGetValueWasGet = true
+  return async function () {
+    if (isValueWasGet) {
+      return value 
+    }
 
-      return getValue = fnGetValue()
-    },
-    async getOrCreate () {
-      if (getOrCreateValue) {
-        return getOrCreateValue
-      }
-  
-      return getOrCreateValue = fnGetOrCreateValue().then((result) => {
-        isGetValueWasGet = false
+    isValueWasGet = true
 
-        return result
-      })
-    },
+    return value = fnGetValue()
   }
 }
 
@@ -87,11 +73,7 @@ const NESTED_ROOT_TITLE = 'zz-bookmark-info--nested'
 const UNCLASSIFIED_TITLE_OLD = 'unclassified'
 const UNCLASSIFIED_TITLE = 'zz-bookmark-info--unclassified'
 
-export const {
-  get: getNestedRootFolderId,
-  getOrCreate: getOrCreateNestedRootFolderId
-} = memoize({
-  fnGetValue: async () => getFolderByTitleInRoot({ title: NESTED_ROOT_TITLE, oldTitle: NESTED_ROOT_TITLE_OLD }),
-  fnGetOrCreateValue: async () => getOrCreateFolderByTitleInRoot({ title: NESTED_ROOT_TITLE, oldTitle: NESTED_ROOT_TITLE_OLD })
-})
+export const getOrCreateNestedRootFolderId = async () => getOrCreateFolderByTitleInRoot({ title: NESTED_ROOT_TITLE, oldTitle: NESTED_ROOT_TITLE_OLD })
 export const getOrCreateUnclassifiedFolderId = async () => getOrCreateFolderByTitleInRoot({ title: UNCLASSIFIED_TITLE, oldTitle: UNCLASSIFIED_TITLE_OLD })
+
+export const getNestedRootFolderId = memoize(async () => getFolderByTitleInRoot({ title: NESTED_ROOT_TITLE, oldTitle: NESTED_ROOT_TITLE_OLD }))

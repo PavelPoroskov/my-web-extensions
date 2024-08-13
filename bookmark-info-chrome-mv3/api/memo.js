@@ -57,6 +57,7 @@ export const memo = {
         STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
         STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
         STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
+        STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
       ]);
       logSettings('readSavedSettings')
       logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
@@ -160,11 +161,13 @@ export const memo = {
 
       if (!savedObj[STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]) {
         const actualRecentTagObj = await getRecentTagObj(ADD_BOOKMARK_LIST_MAX)
+
+        const isFlatStructure = this._settings[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]
         this._recentTagObj = await filterRecentTagObj({
           ...savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP],
           ...actualRecentTagObj,
-        })
-        this._fixedTagObj = await filterFixedTagObj(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP])
+        }, isFlatStructure)
+        this._fixedTagObj = await filterFixedTagObj(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP], isFlatStructure)
 
         await setOptions({
           [STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]: true,
@@ -187,8 +190,9 @@ export const memo = {
     }
   },
   async filterTagList() {
-    this._recentTagObj =  await filterRecentTagObj(this._recentTagObj)
-    this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj)
+    const isFlatStructure = this._settings[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]
+    this._recentTagObj =  await filterRecentTagObj(this._recentTagObj, isFlatStructure)
+    this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
     this._tagList = this.getTagList()
     setOptions({
       [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,
@@ -208,9 +212,13 @@ export const memo = {
     }
 
     // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
-    const nestedRootFolderId = await getNestedRootFolderId()
-    if (nestedRootFolderId) {
-      if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID && newFolder.id !== nestedRootFolderId)) {
+    if (this._settings[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]) {
+      if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
+        return
+      }
+
+      const nestedRootFolderId = await getNestedRootFolderId()
+      if (nestedRootFolderId && newFolder.id === nestedRootFolderId) {
         return
       }
     }

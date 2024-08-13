@@ -15,6 +15,7 @@ export const storageController = {
     
     if (namespace === 'local') {
       const changesSet = new Set(Object.keys(changes))
+      // TODO? do we need invalidate setting for all this keys
       const settingSet = new Set([
         STORAGE_KEY.CLEAR_URL,
         STORAGE_KEY.SHOW_PATH_LAYERS,
@@ -25,6 +26,7 @@ export const storageController = {
         STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
         STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
         STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
+        STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
       ].map((key) => STORAGE_KEY_META[key].storageKey))
       const intersectSet = changesSet.intersection(settingSet)
 
