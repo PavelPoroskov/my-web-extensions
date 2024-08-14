@@ -115,12 +115,12 @@ export const tabsController = {
         memo.isActiveTabBookmarkManager = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
       }
 
-      updateTab({
-        tabId, 
-        url: Tab.url, 
-        useCache: true,
-        debugCaller: 'tabs.onActivated(useCache: true)'
-      });
+      // updateTab({
+      //   tabId, 
+      //   url: Tab.url, 
+      //   useCache: true,
+      //   debugCaller: 'tabs.onActivated(useCache: true)'
+      // });
       updateTab({
         tabId, 
         url: Tab.url, 
