@@ -82,13 +82,17 @@ export const bookmarksController = {
 
     //   }
     // }
+    let node 
+    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] || parentId !== oldParentId) {
+      ([node] = await chrome.bookmarks.get(bookmarkId))
+    }
+    
     if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-      await memo.addRecentTag({ parentId });
+      await memo.addRecentTag(node);
     }
 
     // EPIC_ERROR if (parentId ==! oldParentId) {
     if (parentId !== oldParentId) {
-      const [node] = await chrome.bookmarks.get(bookmarkId)
       logDebug('bookmark.onMoved <-', node);
 
       if (!node.url) {

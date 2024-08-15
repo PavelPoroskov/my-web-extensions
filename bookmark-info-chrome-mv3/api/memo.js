@@ -203,7 +203,7 @@ export const memo = {
     let newFolderId
     let newFolder
 
-    if (bkmNode.id && !bkmNode.url) {
+    if (!bkmNode.url) {
       newFolderId = bkmNode.id
       newFolder = bkmNode
     } else {
