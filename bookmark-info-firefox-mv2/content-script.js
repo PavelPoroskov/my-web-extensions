@@ -257,6 +257,7 @@ const log = SHOW_LOG ? console.log : () => {};
   }
 
   let fullMessage = {};
+  let storedTagLength = 8;
 
   async function deleteBookmark(event) {
     log('deleteBookmark 00');
@@ -324,7 +325,6 @@ const log = SHOW_LOG ? console.log : () => {};
     }
   }
 
-  
   async function updateIsShowTagList() {
     log('updateIsShowTagList');
     const before = !!fullMessage.isShowTagList
@@ -375,17 +375,20 @@ const log = SHOW_LOG ? console.log : () => {};
       rootStyle.insertAdjacentElement('afterend', rootStyle2);     
       rootStyle2.insertAdjacentElement('afterend', rootDiv);    
     } else {
-      const rootStyle2 = document.getElementById(bkmInfoStyle2Id);
-      const textNodeStyle2 = document.createTextNode(
-        `.bkm-info--tag {
-          min-width: ${tagLength}ch;
-          max-width: ${tagLength}ch;
-        }`
-      );
-      rootStyle2.replaceChild(textNodeStyle2, rootStyle2.firstChild);
+      if (tagLength !== storedTagLength ) {
+        storedTagLength = tagLength
+
+        const rootStyle2 = document.getElementById(bkmInfoStyle2Id);
+        const textNodeStyle2 = document.createTextNode(
+          `.bkm-info--tag {
+            min-width: ${tagLength}ch;
+            max-width: ${tagLength}ch;
+          }`
+        );
+        rootStyle2.replaceChild(textNodeStyle2, rootStyle2.firstChild);
+      }
     }
 
-    
     const rawNodeList = rootDiv.childNodes;
     const beforeRawLength = rawNodeList.length;
 

@@ -211,7 +211,7 @@ const STORAGE_KEY_META = {
   },
   ADD_BOOKMARK_HIGHLIGHT_LAST: {
     storageKey: 'ADD_BOOKMARK_HIGHLIGHT_LAST', 
-    default: 3,
+    default: 5,
   },
   ADD_BOOKMARK_SESSION_STARTED: {
     storageKey: 'ADD_BOOKMARK_SESSION_STARTED',
@@ -796,28 +796,29 @@ const memo = {
   },
   _settings: {},
   async readSettings() {
-    if (!this._isSettingsActual) {
-      logSettings('readSavedSettings START')
+    logSettings('readSavedSettings START')
 
-      this._settings = await getOptions([
-        STORAGE_KEY.CLEAR_URL,
-        STORAGE_KEY.SHOW_PATH_LAYERS,
-        STORAGE_KEY.SHOW_PREVIOUS_VISIT,
-        STORAGE_KEY.SHOW_BOOKMARK_TITLE,
-        STORAGE_KEY.ADD_BOOKMARK_IS_ON,
-        STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
-        STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
-        STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
-        STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
-        STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
-      ]);
-      logSettings('readSavedSettings')
-      logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
+    this._settings = await getOptions([
+      STORAGE_KEY.CLEAR_URL,
+      STORAGE_KEY.SHOW_PATH_LAYERS,
+      STORAGE_KEY.SHOW_PREVIOUS_VISIT,
+      STORAGE_KEY.SHOW_BOOKMARK_TITLE,
+      STORAGE_KEY.ADD_BOOKMARK_IS_ON,
+      STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
+      STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
+      STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
+      STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
+      STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
+    ]);
+    logSettings('readSavedSettings')
+    logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
+  },
+  async initMemo() {
+    await this.readSettings()
 
-      await this.readTagList()
+    this._isSettingsActual = true
 
-      this._isSettingsActual = true
-    }
+    await this.readTagList()
   },
   get settings() {
     return { ...this._settings }
@@ -951,11 +952,15 @@ const memo = {
       [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
     })
   },
+  _isUpdateTagList: true,
+  async updateTagList(boolValue) {
+    this._isUpdateTagList = boolValue
+  },
   async addRecentTag(bkmNode) {
     let newFolderId
     let newFolder
 
-    if (bkmNode.id && !bkmNode.url) {
+    if (!bkmNode.url) {
       newFolderId = bkmNode.id
       newFolder = bkmNode
     } else {
@@ -1471,7 +1476,7 @@ async function updateTab({ tabId, url, useCache=false, debugCaller }) {
 
     await Promise.all([
       !memo.isProfileStartTimeMSActual && memo.readProfileStartTimeMS(),
-      !memo.isSettingsActual && memo.readSettings(),
+      !memo.isSettingsActual && memo.initMemo(),
     ])
 
     log(`${debugCaller} -> updateTab() useCache`, useCache);
@@ -1969,6 +1974,9 @@ async function createNestedFolders({ toCopyFolderById, nestedRootId }) {
   }
 }
 
+// delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
+//
+// eslint-disable-next-line no-unused-vars
 async function updateNestedFolders({ nestedRootId }) {
   const otherBookmarksChildrenList = await browser.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
   const flatFolderNameSet = new Set(
@@ -2048,7 +2056,7 @@ async function sortChildren({ id, recursively = false }) {
     SKIP_AFTER_MOVE: 'SKIP_AFTER_MOVE'
   }
 
-  let mMove = 0
+  let nMove = 0
   let state = STATE.SKIP_AFTER_START
   let index = 0
   let actualContinueIndex
@@ -2061,7 +2069,7 @@ async function sortChildren({ id, recursively = false }) {
         if (sortedList[index].actualIndex !== index) {
           await browser.bookmarks.move(sortedList[index].id, { index })
           state = STATE.AFTER_MOVE
-          mMove += 1
+          nMove += 1
           // console.log('MOVE 1', sortedList[index].actualIndex, index, sortedList[index].title);
         }
         break
@@ -2078,7 +2086,7 @@ async function sortChildren({ id, recursively = false }) {
         } else {
           await browser.bookmarks.move(sortedList[index].id, { index })
           state = STATE.AFTER_MOVE
-          mMove += 1
+          nMove += 1
           // console.log('MOVE 2', sortedList[index].actualIndex, index, sortedList[index].title);
         }
 
@@ -2093,7 +2101,7 @@ async function sortChildren({ id, recursively = false }) {
         } else {
           await browser.bookmarks.move(sortedList[index].id, { index })
           state = STATE.AFTER_MOVE
-          mMove += 1
+          nMove += 1
           // console.log('MOVE 3', sortedList[index].actualIndex, index, sortedList[index].title);
         }
 
@@ -2112,6 +2120,10 @@ async function sortChildren({ id, recursively = false }) {
         ({ id }) => sortChildren({ id })
       )
     )
+  }
+
+  return {
+    nMove
   }
 }
 
@@ -2166,30 +2178,42 @@ async function sortChildren({ id, recursively = false }) {
 // }
 
 async function flatBookmarks() {
-  const usedSuffix = await getMaxUsedSuffix()
-  let freeSuffix = usedSuffix ? usedSuffix + 1 : 1;
 
-  const nestedRootId = await getOrCreateNestedRootFolderId()
-  const unclassifiedId = await getOrCreateUnclassifiedFolderId()
+  memo.updateTagList(false)
 
+  try {
+    const usedSuffix = await getMaxUsedSuffix()
+    let freeSuffix = usedSuffix ? usedSuffix + 1 : 1;
+  
+    const nestedRootId = await getOrCreateNestedRootFolderId()
+    const unclassifiedId = await getOrCreateUnclassifiedFolderId()
+  
+    const { toCopyFolderById } = await flatFolders({ nestedRootId, unclassifiedId, freeSuffix })
+    await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
+    await createNestedFolders({ toCopyFolderById, nestedRootId })
+  
+    await memo.filterTagList()
+  
+    // TODO ?delete empty folders
+  
+    // TODO ?delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
+    //await updateNestedFolders({ nestedRootId })
+  
+    await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
+    await sortChildren({ id: nestedRootId, recursively: true })
+
+  } finally {
+    memo.updateTagList(true)
+  }
+}
+
+async function moveToFlatFolderStructure() {
   await setOptions({
     [STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]: true
   })
   await memo.readSettings()
 
-  const { toCopyFolderById } = await flatFolders({ nestedRootId, unclassifiedId, freeSuffix })
-  await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
-  await createNestedFolders({ toCopyFolderById, nestedRootId })
-
-  await memo.filterTagList()
-
-  // TODO ?delete empty folders
-
-  // TODO ?delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
-  //await updateNestedFolders({ nestedRootId })
-
-  await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
-  await sortChildren({ id: nestedRootId, recursively: true })
+  await flatBookmarks()
 }
 async function getDoubles() {
   const doubleList = []
@@ -2315,13 +2339,17 @@ async function removeDoubleBookmark() {
 
     //   }
     // }
+    let node 
+    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] || parentId !== oldParentId) {
+      ([node] = await browser.bookmarks.get(bookmarkId))
+    }
+    
     if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-      await memo.addRecentTag({ parentId });
+      await memo.addRecentTag(node);
     }
 
     // EPIC_ERROR if (parentId ==! oldParentId) {
     if (parentId !== oldParentId) {
-      const [node] = await browser.bookmarks.get(bookmarkId)
       logDebug('bookmark.onMoved <-', node);
 
       if (!node.url) {
@@ -2520,7 +2548,7 @@ async function removeDoubleBookmark() {
       let success
 
       try {
-        await flatBookmarks()
+        await moveToFlatFolderStructure()
         success = true
       } catch (e) {
         console.log('Error on flatting bookmarks', e)
@@ -2565,6 +2593,15 @@ async function removeDoubleBookmark() {
       useCache: true,
       debugCaller: 'runtime.onStartup'
     });
+
+
+    const savedObj = await getOptions([
+      STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
+    ]);
+
+    if (savedObj[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]) {
+      flatBookmarks()
+    }
   },
   async onInstalled () {
     logEvent('runtime.onInstalled');
@@ -2700,12 +2737,12 @@ async function removeDoubleBookmark() {
         memo.isActiveTabBookmarkManager = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
       }
 
-      updateTab({
-        tabId, 
-        url: Tab.url, 
-        useCache: true,
-        debugCaller: 'tabs.onActivated(useCache: true)'
-      });
+      // updateTab({
+      //   tabId, 
+      //   url: Tab.url, 
+      //   useCache: true,
+      //   debugCaller: 'tabs.onActivated(useCache: true)'
+      // });
       updateTab({
         tabId, 
         url: Tab.url, 
