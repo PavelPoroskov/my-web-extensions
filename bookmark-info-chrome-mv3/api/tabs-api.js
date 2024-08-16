@@ -81,7 +81,7 @@ export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
 
     await Promise.all([
       !memo.isProfileStartTimeMSActual && memo.readProfileStartTimeMS(),
-      !memo.isSettingsActual && memo.readSettings(),
+      !memo.isSettingsActual && memo.initMemo(),
     ])
 
     log(`${debugCaller} -> updateTab() useCache`, useCache);

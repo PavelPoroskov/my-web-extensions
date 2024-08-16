@@ -338,6 +338,9 @@ async function createNestedFolders({ toCopyFolderById, nestedRootId }) {
   }
 }
 
+// delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
+//
+// eslint-disable-next-line no-unused-vars
 async function updateNestedFolders({ nestedRootId }) {
   const otherBookmarksChildrenList = await chrome.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
   const flatFolderNameSet = new Set(
@@ -417,7 +420,7 @@ async function sortChildren({ id, recursively = false }) {
     SKIP_AFTER_MOVE: 'SKIP_AFTER_MOVE'
   }
 
-  let mMove = 0
+  let nMove = 0
   let state = STATE.SKIP_AFTER_START
   let index = 0
   let actualContinueIndex
@@ -430,7 +433,7 @@ async function sortChildren({ id, recursively = false }) {
         if (sortedList[index].actualIndex !== index) {
           await chrome.bookmarks.move(sortedList[index].id, { index })
           state = STATE.AFTER_MOVE
-          mMove += 1
+          nMove += 1
           // console.log('MOVE 1', sortedList[index].actualIndex, index, sortedList[index].title);
         }
         break
@@ -447,7 +450,7 @@ async function sortChildren({ id, recursively = false }) {
         } else {
           await chrome.bookmarks.move(sortedList[index].id, { index })
           state = STATE.AFTER_MOVE
-          mMove += 1
+          nMove += 1
           // console.log('MOVE 2', sortedList[index].actualIndex, index, sortedList[index].title);
         }
 
@@ -462,7 +465,7 @@ async function sortChildren({ id, recursively = false }) {
         } else {
           await chrome.bookmarks.move(sortedList[index].id, { index })
           state = STATE.AFTER_MOVE
-          mMove += 1
+          nMove += 1
           // console.log('MOVE 3', sortedList[index].actualIndex, index, sortedList[index].title);
         }
 
@@ -481,6 +484,10 @@ async function sortChildren({ id, recursively = false }) {
         ({ id }) => sortChildren({ id })
       )
     )
+  }
+
+  return {
+    nMove
   }
 }
 
@@ -535,28 +542,40 @@ async function sortChildren({ id, recursively = false }) {
 // }
 
 export async function flatBookmarks() {
-  const usedSuffix = await getMaxUsedSuffix()
-  let freeSuffix = usedSuffix ? usedSuffix + 1 : 1;
 
-  const nestedRootId = await getOrCreateNestedRootFolderId()
-  const unclassifiedId = await getOrCreateUnclassifiedFolderId()
+  memo.updateTagList(false)
 
+  try {
+    const usedSuffix = await getMaxUsedSuffix()
+    let freeSuffix = usedSuffix ? usedSuffix + 1 : 1;
+  
+    const nestedRootId = await getOrCreateNestedRootFolderId()
+    const unclassifiedId = await getOrCreateUnclassifiedFolderId()
+  
+    const { toCopyFolderById } = await flatFolders({ nestedRootId, unclassifiedId, freeSuffix })
+    await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
+    await createNestedFolders({ toCopyFolderById, nestedRootId })
+  
+    await memo.filterTagList()
+  
+    // TODO ?delete empty folders
+  
+    // TODO ?delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
+    //await updateNestedFolders({ nestedRootId })
+  
+    await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
+    await sortChildren({ id: nestedRootId, recursively: true })
+
+  } finally {
+    memo.updateTagList(true)
+  }
+}
+
+export async function moveToFlatFolderStructure() {
   await setOptions({
     [STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]: true
   })
   await memo.readSettings()
 
-  const { toCopyFolderById } = await flatFolders({ nestedRootId, unclassifiedId, freeSuffix })
-  await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
-  await createNestedFolders({ toCopyFolderById, nestedRootId })
-
-  await memo.filterTagList()
-
-  // TODO ?delete empty folders
-
-  // TODO ?delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
-  //await updateNestedFolders({ nestedRootId })
-
-  await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
-  await sortChildren({ id: nestedRootId, recursively: true })
+  await flatBookmarks()
 }

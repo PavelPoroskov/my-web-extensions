@@ -18,7 +18,7 @@ import {
   updateTab,
 } from '../api/tabs-api.js'
 import {
-  flatBookmarks,
+  moveToFlatFolderStructure,
 } from '../api/flat-bookmark-api.js'
 import {
   removeDoubleBookmark,
@@ -133,7 +133,7 @@ export async function onIncomingMessage (message, sender) {
       let success
 
       try {
-        await flatBookmarks()
+        await moveToFlatFolderStructure()
         success = true
       } catch (e) {
         console.log('Error on flatting bookmarks', e)

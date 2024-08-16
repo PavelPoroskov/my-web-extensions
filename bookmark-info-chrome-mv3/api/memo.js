@@ -44,28 +44,29 @@ export const memo = {
   },
   _settings: {},
   async readSettings() {
-    if (!this._isSettingsActual) {
-      logSettings('readSavedSettings START')
+    logSettings('readSavedSettings START')
 
-      this._settings = await getOptions([
-        STORAGE_KEY.CLEAR_URL,
-        STORAGE_KEY.SHOW_PATH_LAYERS,
-        STORAGE_KEY.SHOW_PREVIOUS_VISIT,
-        STORAGE_KEY.SHOW_BOOKMARK_TITLE,
-        STORAGE_KEY.ADD_BOOKMARK_IS_ON,
-        STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
-        STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
-        STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
-        STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
-        STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
-      ]);
-      logSettings('readSavedSettings')
-      logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
+    this._settings = await getOptions([
+      STORAGE_KEY.CLEAR_URL,
+      STORAGE_KEY.SHOW_PATH_LAYERS,
+      STORAGE_KEY.SHOW_PREVIOUS_VISIT,
+      STORAGE_KEY.SHOW_BOOKMARK_TITLE,
+      STORAGE_KEY.ADD_BOOKMARK_IS_ON,
+      STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
+      STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
+      STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
+      STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
+      STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
+    ]);
+    logSettings('readSavedSettings')
+    logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
+  },
+  async initMemo() {
+    await this.readSettings()
 
-      await this.readTagList()
+    this._isSettingsActual = true
 
-      this._isSettingsActual = true
-    }
+    await this.readTagList()
   },
   get settings() {
     return { ...this._settings }
@@ -198,6 +199,10 @@ export const memo = {
       [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,
       [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
     })
+  },
+  _isUpdateTagList: true,
+  async updateTagList(boolValue) {
+    this._isUpdateTagList = boolValue
   },
   async addRecentTag(bkmNode) {
     let newFolderId
