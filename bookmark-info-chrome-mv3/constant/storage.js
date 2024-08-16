@@ -49,7 +49,7 @@ export const STORAGE_KEY_META = {
   },
   ADD_BOOKMARK_HIGHLIGHT_LAST: {
     storageKey: 'ADD_BOOKMARK_HIGHLIGHT_LAST', 
-    default: 3,
+    default: 5,
   },
   ADD_BOOKMARK_SESSION_STARTED: {
     storageKey: 'ADD_BOOKMARK_SESSION_STARTED',
