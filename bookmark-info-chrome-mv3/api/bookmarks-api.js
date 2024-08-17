@@ -12,12 +12,6 @@ import {
   SOURCE,
 } from '../constant/index.js'
 
-export async function isHasBookmark(url) {
-  const bookmarks = await chrome.bookmarks.search({ url });
-
-  return bookmarks.length > 0;
-}
-
 export async function deleteBookmark(bkmId) {
   await chrome.bookmarks.remove(bkmId);
 }
