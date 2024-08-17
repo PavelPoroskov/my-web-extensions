@@ -200,11 +200,15 @@ export const memo = {
       [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
     })
   },
-  _isUpdateTagList: true,
-  async updateTagList(boolValue) {
-    this._isUpdateTagList = boolValue
+  _isTagListAvailable: true,
+  async blockTagList(boolValue) {
+    this._isTagListAvailable = !boolValue
   },
   async addRecentTag(bkmNode) {
+    if (!this._isTagListAvailable) {
+      return
+    }
+
     let newFolderId
     let newFolder
 

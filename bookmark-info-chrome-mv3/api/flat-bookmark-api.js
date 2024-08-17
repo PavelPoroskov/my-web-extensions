@@ -543,7 +543,7 @@ async function sortChildren({ id, recursively = false }) {
 
 export async function flatBookmarks() {
 
-  memo.updateTagList(false)
+  memo.blockTagList(true)
 
   try {
     const usedSuffix = await getMaxUsedSuffix()
@@ -556,8 +556,6 @@ export async function flatBookmarks() {
     await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
     await createNestedFolders({ toCopyFolderById, nestedRootId })
   
-    await memo.filterTagList()
-  
     // TODO ?delete empty folders
   
     // TODO ?delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
@@ -567,7 +565,7 @@ export async function flatBookmarks() {
     await sortChildren({ id: nestedRootId, recursively: true })
 
   } finally {
-    memo.updateTagList(true)
+    memo.blockTagList(false)
   }
 }
 
@@ -576,6 +574,7 @@ export async function moveToFlatFolderStructure() {
     [STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]: true
   })
   await memo.readSettings()
+  await memo.filterTagList()
 
   await flatBookmarks()
 }
