@@ -9,7 +9,7 @@ import {
 } from '../api/tabs-api.js'
 import {
   flatBookmarks,
-} from '../api/flat-bookmark-api.js'
+} from '../api/flat-structure-api.js'
 import {
   getOptions,
 } from '../api/storage-api.js'

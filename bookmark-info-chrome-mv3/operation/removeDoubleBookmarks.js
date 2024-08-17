@@ -1,4 +1,4 @@
-import { ExtraMap } from './module.js'
+import { ExtraMap } from '../api/module.js'
 
 async function getDoubles() {
   const doubleList = []
@@ -44,7 +44,7 @@ async function getDoubles() {
   return doubleList
 }
 
-export async function removeDoubleBookmark() {
+export async function removeDoubleBookmarks() {
   const doubleList = await getDoubles()
   // console.log('Double bookmarks:', doubleList.length)
 

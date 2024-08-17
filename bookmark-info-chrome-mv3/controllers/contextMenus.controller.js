@@ -1,22 +1,19 @@
-
-import {
-  logEvent,
-} from '../api/log-api.js'
 import {
   CONTEXT_MENU_ID,
 } from '../constant/index.js';
 import {
   closeDuplicateTabs,
-  closeBookmarkedTabs,
-} from '../api/tabs-list-api.js'
+} from '../operation/closeDuplicateTabs.js'
 import {
-  clearUrlInTab,
-  removeQueryParams,
-} from '../api/clean-url-api.js'
+  closeBookmarkedTabs,
+} from '../operation/closeBookmarkedTabs.js'
+import {
+  clearUrlInActiveTab,
+} from '../operation/clearUrlInActiveTab.js'
 
 export const contextMenusController = {
   async onClicked (OnClickData) {
-    logEvent('contextMenus.onClicked <-');
+    // logEvent('contextMenus.onClicked <-');
 
     switch (OnClickData.menuItemId) {
       case CONTEXT_MENU_ID.CLOSE_DUPLICATE: {
@@ -28,17 +25,7 @@ export const contextMenusController = {
         break;
       }
       case CONTEXT_MENU_ID.CLEAR_URL: {
-        const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-        const [activeTab] = tabs;
-
-        if (activeTab?.id && activeTab?.url) {
-          const cleanUrl = removeQueryParams(activeTab.url);
-
-          if (activeTab.url !== cleanUrl) {
-            await clearUrlInTab({ tabId: activeTab.id, cleanUrl })
-          }
-        }
-
+        clearUrlInActiveTab()
         break;
       }
     }

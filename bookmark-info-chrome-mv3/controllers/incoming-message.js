@@ -19,10 +19,10 @@ import {
 } from '../api/tabs-api.js'
 import {
   moveToFlatFolderStructure,
-} from '../api/flat-bookmark-api.js'
+} from '../operation/moveToFlatFolderStructure.js'
 import {
-  removeDoubleBookmark,
-} from '../api/remove-double.js'
+  removeDoubleBookmarks,
+} from '../operation/removeDoubleBookmarks.js'
 import {
   EXTENSION_COMMAND_ID,
   STORAGE_TYPE,
@@ -153,7 +153,7 @@ export async function onIncomingMessage (message, sender) {
       let nRemovedDoubles
 
       try {
-        ({ nRemovedDoubles } = await removeDoubleBookmark())
+        ({ nRemovedDoubles } = await removeDoubleBookmarks())
         success = true
       } catch (e) {
         console.log('Error on flatting bookmarks', e)
