@@ -952,11 +952,15 @@ const memo = {
       [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
     })
   },
-  _isUpdateTagList: true,
-  async updateTagList(boolValue) {
-    this._isUpdateTagList = boolValue
+  _isTagListAvailable: true,
+  async blockTagList(boolValue) {
+    this._isTagListAvailable = !boolValue
   },
   async addRecentTag(bkmNode) {
+    if (!this._isTagListAvailable) {
+      return
+    }
+
     let newFolderId
     let newFolder
 
@@ -1128,13 +1132,7 @@ const memo = {
 };
 
 logSettings('IMPORT END', 'memo.js', new Date().toISOString())
-async function isHasBookmark(url) {
-  const bookmarks = await browser.bookmarks.search({ url });
-
-  return bookmarks.length > 0;
-}
-
-async function deleteBookmark(bkmId) {
+async function deleteBookmark(bkmId) {
   await browser.bookmarks.remove(bkmId);
 }
 
@@ -1523,133 +1521,6 @@ async function updateActiveTab({ useCache=false, debugCaller } = {}) {
       debugCaller: `${debugCaller} -> updateActiveTab()`
     });
   }
-}
-async function getDuplicatesTabs(inTabList) {
-  const tabList = inTabList.toReversed();
-  const duplicateTabIdList = [];
-  const uniqUrls = new Map();
-  let activeTabId;
-  let newActiveTabId;
-
-  // do not change pinned tabs
-  tabList
-    .filter((Tab) => Tab.pinned)
-    .forEach((Tab) => {
-      const url = Tab.pendingUrl || Tab.url || '';
-      uniqUrls.set(url, Tab.id);
-    });
-
-  // priority for active tab
-  tabList
-    .filter((Tab) => !Tab.pinned && Tab.active)
-    .forEach((Tab) => {
-      activeTabId = Tab.id;
-      const url = Tab.pendingUrl || Tab.url || '';
-
-      if (uniqUrls.has(url)) {
-        newActiveTabId = uniqUrls.get(url);
-        duplicateTabIdList.push(Tab.id);
-      } else {
-        uniqUrls.set(url, Tab.id);
-      }
-    });
-
-  // other tabs
-  tabList
-    .filter((Tab) => !Tab.pinned && !Tab.active)
-    .forEach((Tab) => {
-      const url = Tab.pendingUrl || Tab.url || '';
-
-      if (uniqUrls.has(url)) {
-        duplicateTabIdList.push(Tab.id);
-      } else {
-        uniqUrls.set(url, Tab.id);
-      }
-    });
-
-  return {
-    duplicateTabIdList,
-    newActiveTabId,
-    activeTabId,
-  }
-}
-
-async function closeDuplicateTabs() {
-  const tabs = await browser.tabs.query({ lastFocusedWindow: true });
-  const tabsWithId = tabs.filter(({ id }) => id);
-  const {
-    duplicateTabIdList,
-    newActiveTabId,
-  } = await getDuplicatesTabs(tabsWithId);
-
-  await Promise.all([
-    newActiveTabId && browser.tabs.update(newActiveTabId, { active: true }),
-    duplicateTabIdList.length > 0 && browser.tabs.remove(duplicateTabIdList),
-  ])
-}
-
-async function getTabsWithBookmark(tabList) {
-  const tabIdAndUrlList = [];
-
-  tabList
-    .filter((Tab) => !Tab.pinned)
-    .forEach((Tab) => {
-      const url = Tab.pendingUrl || Tab.url;
-
-      if (url) {
-        tabIdAndUrlList.push({ tabId: Tab.id, url });
-      }
-    });
-
-  const uniqUrlList = Array.from(new Set(
-    tabIdAndUrlList.map(({ url }) => url)
-  ));
-
-  // firefox rejects browser.bookmarks.search({ url: 'about:preferences' })
-  const urlHasBookmarkList = (
-    await Promise.allSettled(uniqUrlList.map(
-      (url) => isHasBookmark(url).then((isHasBkm) => isHasBkm && url)
-    ))
-  )
-    .map(({ value }) => value)
-    .filter(Boolean);
-
-  const urlWithBookmarkSet = new Set(urlHasBookmarkList);
-
-  return {
-    tabWithBookmarkIdList: tabIdAndUrlList
-      .filter(({ url }) => urlWithBookmarkSet.has(url))
-      .map(({ tabId }) => tabId),
-  }
-}
-
-async function closeBookmarkedTabs() {
-  const tabs = await browser.tabs.query({ lastFocusedWindow: true });
-  const tabsWithId = tabs.filter(({ id }) => id);
-  
-  const {
-    duplicateTabIdList,
-    newActiveTabId,
-  } = await getDuplicatesTabs(tabsWithId);
-
-  const duplicateIdSet = new Set(duplicateTabIdList);
-  const {
-    tabWithBookmarkIdList,
-  } = await getTabsWithBookmark(
-    tabsWithId
-      .filter((Tab) => !duplicateIdSet.has(Tab.id))
-  );
-
-  const closeTabIdList = duplicateTabIdList.concat(tabWithBookmarkIdList);
-  if (closeTabIdList.length === tabs.length) {
-    // do not close all tabs. It will close window.
-    await browser.tabs.create({ index: 0 });
-  }
-
-  await Promise.all([
-    newActiveTabId && browser.tabs.update(newActiveTabId, { active: true }),
-    closeTabIdList.length > 0 && browser.tabs.remove(closeTabIdList),
-  ])
 }
 async function getMaxUsedSuffix() {
   function getFoldersFromTree(tree) {
@@ -2179,7 +2050,7 @@ async function sortChildren({ id, recursively = false }) {
 
 async function flatBookmarks() {
 
-  memo.updateTagList(false)
+  memo.blockTagList(true)
 
   try {
     const usedSuffix = await getMaxUsedSuffix()
@@ -2192,8 +2063,6 @@ async function flatBookmarks() {
     await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
     await createNestedFolders({ toCopyFolderById, nestedRootId })
   
-    await memo.filterTagList()
-  
     // TODO ?delete empty folders
   
     // TODO ?delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
@@ -2203,17 +2072,8 @@ async function flatBookmarks() {
     await sortChildren({ id: nestedRootId, recursively: true })
 
   } finally {
-    memo.updateTagList(true)
+    memo.blockTagList(false)
   }
-}
-
-async function moveToFlatFolderStructure() {
-  await setOptions({
-    [STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]: true
-  })
-  await memo.readSettings()
-
-  await flatBookmarks()
 }
 async function getDoubles() {
   const doubleList = []
@@ -2259,7 +2119,7 @@ async function moveToFlatFolderStructure() {
   return doubleList
 }
 
-async function removeDoubleBookmark() {
+async function removeDoubleBookmarks() {
   const doubleList = await getDoubles()
   // console.log('Double bookmarks:', doubleList.length)
 
@@ -2272,6 +2132,181 @@ async function removeDoubleBookmark() {
   return {
     nRemovedDoubles: doubleList.length
   }
+}
+async function clearUrlInActiveTab() {
+  const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+  const [activeTab] = tabs;
+
+  if (activeTab?.id && activeTab?.url) {
+    const cleanUrl = removeQueryParams(activeTab.url);
+
+    if (activeTab.url !== cleanUrl) {
+      await clearUrlInTab({ tabId: activeTab.id, cleanUrl })
+    }
+  }
+}
+async function isHasBookmark(url) {
+  const bookmarks = await browser.bookmarks.search({ url });
+
+  return bookmarks.length > 0;
+}
+
+async function getTabsWithBookmark(tabList) {
+  const tabIdAndUrlList = [];
+
+  tabList
+    .filter((Tab) => !Tab.pinned)
+    .forEach((Tab) => {
+      const url = Tab.pendingUrl || Tab.url;
+
+      if (url) {
+        tabIdAndUrlList.push({ tabId: Tab.id, url });
+      }
+    });
+
+  const uniqUrlList = Array.from(new Set(
+    tabIdAndUrlList.map(({ url }) => url)
+  ));
+
+  // firefox rejects browser.bookmarks.search({ url: 'about:preferences' })
+  const urlHasBookmarkList = (
+    await Promise.allSettled(uniqUrlList.map(
+      (url) => isHasBookmark(url).then((isHasBkm) => isHasBkm && url)
+    ))
+  )
+    .map(({ value }) => value)
+    .filter(Boolean);
+
+  const urlWithBookmarkSet = new Set(urlHasBookmarkList);
+  const tabWithBookmarkIdList = tabIdAndUrlList
+    .filter(({ url }) => urlWithBookmarkSet.has(url))
+    .map(({ tabId }) => tabId)
+
+  return {
+    tabWithBookmarkIdList,
+  }
+}
+
+async function closeBookmarkedTabs() {
+  const [activeTab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+
+  const tabs = await browser.tabs.query({ lastFocusedWindow: true });
+  const tabWithIdList = tabs.filter(({ id }) => id);
+
+  const {
+    tabWithBookmarkIdList: closeTabIdList,
+  } = await getTabsWithBookmark(tabWithIdList);
+
+  const closeTabIdSet = new Set(closeTabIdList)
+  let newActiveTabId
+
+  if (activeTab) {
+    const activeTabId = activeTab.id;
+
+    if (closeTabIdSet.has(activeTabId)) {
+
+      let leftIndex = activeTabId.index - 1
+      while (0 <= leftIndex) {
+        const testTab = tabWithIdList[leftIndex]
+        if (!closeTabIdSet.has(testTab.id)) {
+          newActiveTabId = testTab.id
+          break
+        }
+        leftIndex -= 1
+      }
+
+      if (!newActiveTabId) {
+        let rightIndex = activeTabId.index + 1
+        while (rightIndex < tabWithIdList.length) {
+          const testTab = tabWithIdList[rightIndex]
+          if (!closeTabIdSet.has(testTab.id)) {
+            newActiveTabId = testTab.id
+            break
+          }
+          leftIndex += 1
+        }
+      }
+    }
+  }
+
+  if (closeTabIdList.length === tabs.length) {
+    // do not close all tabs. It will close window.
+    await browser.tabs.create({ index: 0 });
+  }
+
+  await Promise.all([
+    newActiveTabId && browser.tabs.update(newActiveTabId, { active: true }),
+    closeTabIdList.length > 0 && browser.tabs.remove(closeTabIdList),
+  ])
+}
+async function getDuplicatesTabs(inTabList) {
+  const tabList = inTabList.toReversed();
+  const duplicateTabIdList = [];
+  const uniqUrls = new Map();
+  let newActiveTabId;
+
+  // do not change pinned tabs
+  tabList
+    .filter((Tab) => Tab.pinned)
+    .forEach((Tab) => {
+      const url = Tab.pendingUrl || Tab.url || '';
+      uniqUrls.set(url, Tab.id);
+    });
+
+  // priority for active tab
+  tabList
+    .filter((Tab) => !Tab.pinned && Tab.active)
+    .forEach((Tab) => {
+      const url = Tab.pendingUrl || Tab.url || '';
+
+      if (uniqUrls.has(url)) {
+        newActiveTabId = uniqUrls.get(url);
+        duplicateTabIdList.push(Tab.id);
+      } else {
+        uniqUrls.set(url, Tab.id);
+      }
+    });
+
+  // other tabs
+  tabList
+    .filter((Tab) => !Tab.pinned && !Tab.active)
+    .forEach((Tab) => {
+      const url = Tab.pendingUrl || Tab.url || '';
+
+      if (uniqUrls.has(url)) {
+        duplicateTabIdList.push(Tab.id);
+      } else {
+        uniqUrls.set(url, Tab.id);
+      }
+    });
+
+  return {
+    duplicateTabIdList,
+    newActiveTabId,
+  }
+}
+
+async function closeDuplicateTabs() {
+  const tabs = await browser.tabs.query({ lastFocusedWindow: true });
+  const tabsWithId = tabs.filter(({ id }) => id);
+  const {
+    duplicateTabIdList,
+    newActiveTabId,
+  } = await getDuplicatesTabs(tabsWithId);
+
+  await Promise.all([
+    newActiveTabId && browser.tabs.update(newActiveTabId, { active: true }),
+    duplicateTabIdList.length > 0 && browser.tabs.remove(duplicateTabIdList),
+  ])
+}
+async function moveToFlatFolderStructure() {
+  await setOptions({
+    [STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]: true
+  })
+  await memo.readSettings()
+  await memo.filterTagList()
+
+  await flatBookmarks()
 }
 const bookmarksController = {
   async onCreated(bookmarkId, node) {
@@ -2418,7 +2453,7 @@ async function removeDoubleBookmark() {
 }
 const contextMenusController = {
   async onClicked (OnClickData) {
-    logEvent('contextMenus.onClicked <-');
+    // logEvent('contextMenus.onClicked <-');
 
     switch (OnClickData.menuItemId) {
       case CONTEXT_MENU_ID.CLOSE_DUPLICATE: {
@@ -2430,17 +2465,7 @@ async function removeDoubleBookmark() {
         break;
       }
       case CONTEXT_MENU_ID.CLEAR_URL: {
-        const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
-        const [activeTab] = tabs;
-
-        if (activeTab?.id && activeTab?.url) {
-          const cleanUrl = removeQueryParams(activeTab.url);
-
-          if (activeTab.url !== cleanUrl) {
-            await clearUrlInTab({ tabId: activeTab.id, cleanUrl })
-          }
-        }
-
+        clearUrlInActiveTab()
         break;
       }
     }
@@ -2568,7 +2593,7 @@ async function removeDoubleBookmark() {
       let nRemovedDoubles
 
       try {
-        ({ nRemovedDoubles } = await removeDoubleBookmark())
+        ({ nRemovedDoubles } = await removeDoubleBookmarks())
         success = true
       } catch (e) {
         console.log('Error on flatting bookmarks', e)
