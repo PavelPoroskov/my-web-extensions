@@ -61,14 +61,16 @@ const log = SHOW_LOG ? console.log : () => {};
   font-family: sans-serif;
   font-weight: normal;
   user-select: none;
-  line-height: 1.2;
   max-height: 100vh;
   overflow-y: clip;
   text-align: left;
+  line-height: 1.2;
+  letter-spacing: normal;
 }
 .bkm-info--row {
   display: flex;
   position: relative;
+  line-height: inherit;
 }
 .bkm-info--row-left {
   flex: 1;
@@ -80,6 +82,7 @@ const log = SHOW_LOG ? console.log : () => {};
   position: relative;
   color: black;
   padding-right: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
+  line-height: inherit;
 }
 .bkm-info--btn {
   padding-left: 0.65ch;
@@ -92,6 +95,7 @@ const log = SHOW_LOG ? console.log : () => {};
   align-items: center;
   justify-items: center;
   display: none;
+  line-height: inherit;
 }
 .bkm-info--btn-letter {
   color: white;
@@ -144,6 +148,9 @@ const log = SHOW_LOG ? console.log : () => {};
     display:block;
   }
 }
+.bkm-info--bkm span {
+  line-height: inherit;
+}
 .bkm-info--bkm span:nth-child(even) {
   background-color: lightgray;
   display: inline-block;
@@ -172,6 +179,7 @@ const log = SHOW_LOG ? console.log : () => {};
   color: black;
   padding-right: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
   text-wrap: nowrap;
+  line-height: inherit;
 }
 .bkm-info--fixed {
   background-color: #40E0D0;
