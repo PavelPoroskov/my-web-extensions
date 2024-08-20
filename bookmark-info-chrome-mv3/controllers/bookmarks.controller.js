@@ -14,6 +14,8 @@ import {
 import {
   STORAGE_KEY,
   IS_BROWSER_CHROME,
+  // eslint-disable-next-line no-unused-vars
+  IS_BROWSER_FIREFOX,
 } from '../constant/index.js'
 import {
   tagList,
@@ -23,48 +25,46 @@ export const bookmarksController = {
   async onCreated(bookmarkId, node) {
     logEvent('bookmark.onCreated <-', node);
 
-    let fromTag
-    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-      ({ fromTag } = memo.createBkmInActiveDialog(node.id, node.parentId))
-      if (!fromTag) {
+    if (node.url) {
+      if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+        memo.createBkmInActiveDialog(node.id, node.parentId)
+        await tagList.addRecentTag(node)
+      }
+    } else {
+      if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
         await tagList.addRecentTag(node)
       }
     }
 
-    if (node.url) {
-      if (node.url === memo.activeTabUrl) {
-        // changes in active tab
-        await updateActiveTab({
-          debugCaller: 'bookmark.onCreated'
-        });
-      } else {
-        // changes in bookmark manager
-        getBookmarkInfoUni({ url: node.url });
-      }
-    }
-
-    if (fromTag) {
-      tagList.addRecentTag(node)
-    }
+    // changes in active tab
+    await updateActiveTab({
+      debugCaller: 'bookmark.onCreated'
+    });
+    // changes in bookmark manager
+    getBookmarkInfoUni({ url: node.url });
   },
   async onChanged(bookmarkId, changeInfo) {
     logEvent('bookmark.onChanged 00 <-', changeInfo);
 
-    memo.bkmFolderById.delete(bookmarkId);
+    const [node] = await chrome.bookmarks.get(bookmarkId)
 
+    // eslint-disable-next-line no-empty
+    if (node.url) {
+      
+    } else {
+      memo.bkmFolderById.delete(bookmarkId);
 
-    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && changeInfo.title) {
-      await memo.updateTag(bookmarkId, changeInfo.title)
+      if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && changeInfo.title) {
+        await tagList.updateTag(bookmarkId, changeInfo.title)
+      }
     }
+
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onChanged'
     });
-
-    const [node] = await chrome.bookmarks.get(bookmarkId)
-
     // changes in bookmark manager
-    getBookmarkInfoUni({ url: node.url });        
+    getBookmarkInfoUni({ url: node.url });   
   },
   async onMoved(bookmarkId, { oldIndex, index, oldParentId, parentId }) {
     logEvent('bookmark.onMoved <-', { oldIndex, index, oldParentId, parentId });
@@ -85,71 +85,63 @@ export const bookmarksController = {
 
     //   }
     // }
-    let node 
-    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] || parentId !== oldParentId) {
-      ([node] = await chrome.bookmarks.get(bookmarkId))
-    }
+    const [node] = await chrome.bookmarks.get(bookmarkId)
     
-    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-      await tagList.addRecentTag(node);
-    }
+    if (node.url) {
+      if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && parentId !== oldParentId) {
+        await tagList.addRecentTag(node);
 
-    // EPIC_ERROR if (parentId ==! oldParentId) {
-    if (parentId !== oldParentId) {
-      logDebug('bookmark.onMoved <-', node);
+        const isCreatedInActiveDialog = memo.isCreatedInActiveDialog(bookmarkId, oldParentId)
+        if (isCreatedInActiveDialog) {
+          logDebug('bookmark.onMoved 11');
+          memo.removeFromActiveDialog(oldParentId)
+        }
 
-      if (!node.url) {
-        memo.bkmFolderById.delete(bookmarkId);
-      }
-
-      const childrenList = await chrome.bookmarks.getChildren(parentId)
-      const lastIndex = childrenList.length - 1
-
-      // changes in active tab or in bookmark manager
-      if (index === lastIndex) {
-        if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-
-          if (memo.isCreatedInActiveDialog(bookmarkId, oldParentId)) {
-            logDebug('bookmark.onMoved 11');
-            memo.removeFromActiveDialog(oldParentId)
-          } else if (oldParentId && !!node.url && IS_BROWSER_CHROME && !memo.isActiveTabBookmarkManager) {
-            logDebug('bookmark.onMoved 22');
-            await Promise.all([
-              chrome.bookmarks.create({
-                parentId: oldParentId,
+        if (!isCreatedInActiveDialog) {
+          if (IS_BROWSER_CHROME) {
+            if (!memo.isActiveTabBookmarkManager) {
+              logDebug('bookmark.onMoved 22');
+              await Promise.all([
+                chrome.bookmarks.create({
+                  parentId: oldParentId,
+                  title: node.title,
+                  url: node.url
+                }),
+                chrome.bookmarks.remove(bookmarkId),
+              ])
+              await chrome.bookmarks.create({
+                parentId,
                 title: node.title,
                 url: node.url
-              }),
-              chrome.bookmarks.remove(bookmarkId),
-            ])
-            await chrome.bookmarks.create({
-              parentId,
-              title: node.title,
-              url: node.url
-            })
+              })
+            }
+          // } else if (IS_BROWSER_FIREFOX) {
+            
           }
-          logDebug('bookmark.onMoved 33');
         }
-  
-        await updateActiveTab({
-          debugCaller: 'bookmark.onMoved'
-        });
       }
-
-      // changes in bookmark manager
-      getBookmarkInfoUni({ url: node.url });
+    } else {
+      memo.bkmFolderById.delete(bookmarkId);
     }
 
+    await updateActiveTab({
+      debugCaller: 'bookmark.onMoved'
+    });
+    // changes in bookmark manager
+    getBookmarkInfoUni({ url: node.url })
   },
   async onRemoved(bookmarkId, { node }) {
     logEvent('bookmark.onRemoved <-');
-    memo.bkmFolderById.delete(bookmarkId);
 
-    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-      memo.removeFromActiveDialog(node.parentId)
-      
-      if (!node.url) {
-        await memo.removeTag(bookmarkId)
+    if (node.url) {
+      if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+        memo.removeFromActiveDialog(node.parentId)    
+      }
+    } else {
+      memo.bkmFolderById.delete(bookmarkId);
+
+      if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+        await tagList.removeTag(bookmarkId)
       }
     }
 
