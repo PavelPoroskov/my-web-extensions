@@ -3,18 +3,17 @@ import {
   STORAGE_KEY,
 } from '../constant/index.js';
 import {
-  setOptions
-} from '../api/storage-api.js'
-import {
   memo,
 } from '../api/memo.js'
+import {
+  tagList,
+} from '../api/tagList.js'
 
 export async function moveToFlatFolderStructure() {
-  await setOptions({
+  await memo.updateSettings({
     [STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]: true
   })
-  await memo.readSettings()
-  await memo.filterTagList()
+  await tagList.filterTagListForFlatFolderStructure()
 
   await flatBookmarks()
 }

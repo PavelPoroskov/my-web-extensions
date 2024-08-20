@@ -81,7 +81,9 @@ export async function onIncomingMessage (message, sender) {
     case EXTENSION_COMMAND_ID.SHOW_TAG_LIST: {
       logEvent('runtime.onMessage SHOW_RECENT_LIST');
 
-      await memo.updateShowTagList(message.value)
+      await memo.updateSettings({
+        [STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW]: message.value
+      })
       // updateActiveTab({
       //   debugCaller: 'runtime.onMessage SHOW_RECENT_LIST',
       //   useCache: true,

@@ -5,44 +5,38 @@ import {
   // logDebug,
 } from './log-api.js'
 import {
-  filterFixedTagObj,
-  filterRecentTagObj,
-  getRecentTagObj,
-  emptyFolderNameSet,
-} from './recent-api.js'
-import {
   getOptions, setOptions
 } from './storage-api.js'
 import {
-  OTHER_BOOKMARKS_FOLDER_ID,
-  getNestedRootFolderId
-} from './special-folder.api.js'
-import {
   STORAGE_KEY,
-  ADD_BOOKMARK_LIST_MAX
 } from '../constant/index.js';
+import { tagList } from './tagList.js';
 
 export const memo = {
+  previousTabId: '',
   activeTabId: '',
   activeTabUrl: '',
-  previousTabId: '',
   isActiveTabBookmarkManager: false,
-  // previousActiveTabId: '',
+
   cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
   cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
   bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
   // tabId -> bookmarkId
   tabMap: new Map(),
-  // isRemovingOnlyUncleanUrlBookmarkSet: new Set(),
 
+  // TODO use promise in cache for setting and profile-start-time
+  // cache[setting] = readSettings
+  // isSettingsActual = true
+  //
+  // await cache[settings]
   _isSettingsActual: false,
+  _settings: {},
   get isSettingsActual() {
     return this._isSettingsActual
   },
   invalidateSettings () {
     this._isSettingsActual = false
   },
-  _settings: {},
   async readSettings() {
     logSettings('readSavedSettings START')
 
@@ -61,21 +55,20 @@ export const memo = {
     logSettings('readSavedSettings')
     logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
   },
-  async initMemo() {
-    await this.readSettings()
-
+  async init() {
     this._isSettingsActual = true
-
-    await this.readTagList()
+    await this.readSettings()
+    await tagList.readFromStorage()
   },
   get settings() {
     return { ...this._settings }
   },
-  async updateShowTagList(value) {
-    this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW] = value
-    await setOptions({
-      [STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW]: value
+  async updateSettings(updateObj) {
+    Object.entries(updateObj).forEach(([ket, value]) => {
+      this._settings[ket] = value
     })
+    
+    await setOptions(updateObj)
   },
 
   _profileStartTimeMS: undefined,
@@ -111,236 +104,7 @@ export const memo = {
     }
   },
 
-  _recentTagObj: {},
-  _fixedTagObj: {},
-  _tagList: [],
-  get tagList() {
-    return this._tagList
-  },
-  getTagList() {
-    const recentTaLimit = Math.max(
-      this._settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT] - Object.keys(this._fixedTagObj).length,
-      0
-    )
-
-    const recentTagList = Object.entries(this._recentTagObj)
-      .filter(([parentId]) => !(parentId in this._fixedTagObj))
-      .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-      .sort((a,b) => -(a.dateAdded - b.dateAdded))
-      .slice(0, recentTaLimit)
-
-    const lastTagList = Object.entries(this._recentTagObj)
-      .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-      .sort((a,b) => -(a.dateAdded - b.dateAdded))
-      .slice(0, this._settings[STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST])
-    const lastTagSet = new Set(
-      lastTagList.map(({ parentId }) => parentId)
-    )
-    
-    const fullList = [].concat(
-      recentTagList
-        .map(({ parentId, title }) => ({ parentId, title, isFixed: false })),
-      Object.entries(this._fixedTagObj)
-        .map(([parentId, title]) => ({ parentId, title, isFixed: true }))
-    )
-      .map((item) => ({ ...item, isLast: lastTagSet.has(item.parentId) }))
-
-    return fullList
-      .filter(({ title }) => !!title)
-      .sort(({ title: a }, { title: b }) => a.localeCompare(b))
-  },
-  async readTagList() {
-    logSettings('readTagList 11')
-
-    if (this._settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-      logSettings('readTagList 22')
-      const savedObj = await getOptions([
-        STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED,
-        STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP,
-        STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP,
-      ]);
-
-      if (!savedObj[STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]) {
-        const actualRecentTagObj = await getRecentTagObj(ADD_BOOKMARK_LIST_MAX)
-
-        const isFlatStructure = this._settings[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]
-        this._recentTagObj = await filterRecentTagObj({
-          ...savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP],
-          ...actualRecentTagObj,
-        }, isFlatStructure)
-        this._fixedTagObj = await filterFixedTagObj(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP], isFlatStructure)
-
-        await setOptions({
-          [STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]: true,
-          [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
-        })
-      } else {
-        this._recentTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP] 
-        this._fixedTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]
-      }
-
-      logSettings('readTagList this._recentTagObj ', this._recentTagObj)
-      this._tagList = this.getTagList()
-      logSettings('readTagList this._tagList ', this._tagList)
-    } else {
-      logSettings('readTagList 44')
-
-      this._recentTagObj = {}
-      this._fixedTagObj = {}
-      this._tagList = []
-    }
-  },
-  async filterTagList() {
-    const isFlatStructure = this._settings[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]
-    this._recentTagObj =  await filterRecentTagObj(this._recentTagObj, isFlatStructure)
-    this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
-    this._tagList = this.getTagList()
-    setOptions({
-      [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,
-      [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
-    })
-  },
-  _isTagListAvailable: true,
-  async blockTagList(boolValue) {
-    this._isTagListAvailable = !boolValue
-  },
-  async addRecentTag(bkmNode) {
-    if (!this._isTagListAvailable) {
-      return
-    }
-
-    let newFolderId
-    let newFolder
-
-    if (!bkmNode.url) {
-      newFolderId = bkmNode.id
-      newFolder = bkmNode
-    } else {
-      newFolderId = bkmNode.parentId;
-      ([newFolder] = await chrome.bookmarks.get(newFolderId))
-    }
-
-    // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
-    if (this._settings[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]) {
-      if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
-        return
-      }
-
-      const nestedRootFolderId = await getNestedRootFolderId()
-      if (nestedRootFolderId && newFolder.id === nestedRootFolderId) {
-        return
-      }
-    }
-  
-    if (emptyFolderNameSet.has(newFolder.title)) {
-      return
-    }
-
-    const dateAdded = bkmNode.dateAdded || Date.now()
-
-    this._recentTagObj[newFolderId] = {
-      dateAdded,
-      title: newFolder.title
-    }
-
-    if (ADD_BOOKMARK_LIST_MAX + 10 < Object.keys(this._recentTagObj).length) {
-      const redundantIdList = Object.entries(this._recentTagObj)
-        .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-        .sort((a,b) => -(a.dateAdded - b.dateAdded))
-        .slice(ADD_BOOKMARK_LIST_MAX)
-        .map(({ parentId }) => parentId)
-
-        redundantIdList.forEach((id) => {
-          delete this._recentTagObj[id]
-        })
-    }
-
-    this._tagList = this.getTagList()
-    setOptions({
-      [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
-    })
-  },
-  async removeTag(id) {
-    const isInFixedList = id in this._fixedTagObj
-    let fixedTagUpdate
-
-    if (isInFixedList) {
-      delete this._fixedTagObj[id] 
-      fixedTagUpdate = {
-        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
-      }
-    }
-
-    const isInRecentList = id in this._recentTagObj
-    let recentTagUpdate
-
-    if (isInRecentList) {
-      delete this._recentTagObj[id]
-      recentTagUpdate = {
-        [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
-      }
-    }
-
-    if (isInFixedList || isInRecentList) {
-      this._tagList = this.getTagList()
-      await setOptions({
-        ...fixedTagUpdate,
-        ...recentTagUpdate,
-      })
-    }
-  },
-  async updateTag(id, title) {
-    const isInFixedList = id in this._fixedTagObj
-    let fixedTagUpdate
-
-    if (isInFixedList) {
-      this._fixedTagObj[id] = title
-      fixedTagUpdate = {
-        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
-      }
-    }
-
-    const isInRecentList = id in this._recentTagObj
-    let recentTagUpdate
-
-    if (isInRecentList) {
-      this._recentTagObj[id].title = title
-      recentTagUpdate = {
-        [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
-      }
-    }
-
-    if (isInFixedList || isInRecentList) {
-      this._tagList = this.getTagList()
-      await setOptions({
-        ...fixedTagUpdate,
-        ...recentTagUpdate,
-      })
-    }
-  },
-  async addFixedTag({ parentId, title }) {
-    if (!title || !parentId) {
-      return
-    }
-
-    if (!(parentId in this._fixedTagObj)) {
-      this._fixedTagObj[parentId] = title
-
-      this._tagList = this.getTagList()
-      await setOptions({
-        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
-      })
-    }
-  },
-  async removeFixedTag(id) {
-    delete this._fixedTagObj[id]
-
-    this._tagList = this.getTagList()
-    await setOptions({
-      [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
-    })
-  },
-
+  // TODO move activeDialog to separate class
   activeDialog: {},
   activeDialogTabId: undefined,
   activeDialogTabOnActivated (tabId) {
@@ -368,9 +132,6 @@ export const memo = {
     const result = this.activeDialog[parentId]?.bookmarkId === bookmarkId 
       && this.activeDialog[parentId]?.isFirst === true
       && this.activeDialog[parentId]?.fromTag !== true
-
-    // logDebug('isCreatedInActiveDialog 1', result)
-    // logDebug('isCreatedInActiveDialog 2', this.activeDialog[parentId])
 
     return result
   },

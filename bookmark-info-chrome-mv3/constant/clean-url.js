@@ -1,5 +1,4 @@
-// TODO remove duplication clearUrlTargetList in options/options.js
-//  can options.js get clearUrlTargetList using sendMessage?
+
 export const clearUrlTargetList = [
   // TODO if we clean url on open then we loose check-in, check-out dates
   //    need search bookmark for clean url

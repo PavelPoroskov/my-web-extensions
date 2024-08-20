@@ -22,6 +22,9 @@ import {
   memo,
 } from './memo.js'
 import {
+  tagList,
+} from './tagList.js'
+import {
   CONTENT_SCRIPT_COMMAND_ID,
   STORAGE_KEY,
 } from '../constant/index.js'
@@ -45,7 +48,8 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     showLayer: memo.settings[STORAGE_KEY.SHOW_PATH_LAYERS],
     isShowTitle: memo.settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
-    tagList: memo.tagList.map(({ parentId, title, isFixed, isLast}) => ({
+    // TODO send in different message
+    tagList: tagList.list.map(({ parentId, title, isFixed, isLast}) => ({
       parentId,
       title, 
       isFixed,
@@ -81,7 +85,7 @@ export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
 
     await Promise.all([
       !memo.isProfileStartTimeMSActual && memo.readProfileStartTimeMS(),
-      !memo.isSettingsActual && memo.initMemo(),
+      !memo.isSettingsActual && memo.init(),
     ])
 
     log(`${debugCaller} -> updateTab() useCache`, useCache);

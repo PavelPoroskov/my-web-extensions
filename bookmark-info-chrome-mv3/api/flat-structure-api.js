@@ -1,7 +1,7 @@
 import { ExtraMap } from './module.js'
 import {
-  memo,
-} from './memo.js'
+  tagList,
+} from './tagList.js'
 import {
   OTHER_BOOKMARKS_FOLDER_ID,
   BOOKMARKS_BAR_FOLDER_ID,
@@ -537,7 +537,7 @@ async function sortChildren({ id, recursively = false }) {
 
 export async function flatBookmarks() {
 
-  memo.blockTagList(true)
+  tagList.blockTagList(true)
 
   try {
     const usedSuffix = await getMaxUsedSuffix()
@@ -550,15 +550,15 @@ export async function flatBookmarks() {
     await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
     await createNestedFolders({ toCopyFolderById, nestedRootId })
   
-    // TODO ?delete empty folders
+    // TODO? delete empty folders
   
-    // TODO ?delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
+    // TODO? delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
     //await updateNestedFolders({ nestedRootId })
   
     await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
     await sortChildren({ id: nestedRootId, recursively: true })
 
   } finally {
-    memo.blockTagList(false)
+    tagList.blockTagList(false)
   }
 }

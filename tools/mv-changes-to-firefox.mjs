@@ -23,6 +23,7 @@ createFileForFirefox(
     'api/clean-url-api.js',
     'api/context-menu.js',
     'api/storage-api.js',
+    'api/tagList.js',
     'api/memo.js',
     'api/bookmarks-api.js',
     'api/history-api.js',

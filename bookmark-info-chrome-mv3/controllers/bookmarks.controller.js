@@ -15,6 +15,9 @@ import {
   STORAGE_KEY,
   IS_BROWSER_CHROME,
 } from '../constant/index.js'
+import {
+  tagList,
+} from '../api/tagList.js'
 
 export const bookmarksController = {
   async onCreated(bookmarkId, node) {
@@ -24,7 +27,7 @@ export const bookmarksController = {
     if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
       ({ fromTag } = memo.createBkmInActiveDialog(node.id, node.parentId))
       if (!fromTag) {
-        await memo.addRecentTag(node)
+        await tagList.addRecentTag(node)
       }
     }
 
@@ -41,7 +44,7 @@ export const bookmarksController = {
     }
 
     if (fromTag) {
-      memo.addRecentTag(node)
+      tagList.addRecentTag(node)
     }
   },
   async onChanged(bookmarkId, changeInfo) {
@@ -88,7 +91,7 @@ export const bookmarksController = {
     }
     
     if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-      await memo.addRecentTag(node);
+      await tagList.addRecentTag(node);
     }
 
     // EPIC_ERROR if (parentId ==! oldParentId) {
