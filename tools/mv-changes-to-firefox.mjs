@@ -29,6 +29,7 @@ createFileForFirefox(
     'api/history-api.js',
     'api/tabs-api.js',
     'api/flat-structure-api.js',
+    'api/activeDialog.js',
     'operation/removeDoubleBookmarks.js',
     'operation/clearUrlInActiveTab.js',
     'operation/closeBookmarkedTabs.js',

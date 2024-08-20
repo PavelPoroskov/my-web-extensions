@@ -20,6 +20,9 @@ import {
 import {
   tagList,
 } from '../api/tagList.js'
+import {
+  activeDialog,
+} from '../api/activeDialog.js'
 
 export const bookmarksController = {
   async onCreated(bookmarkId, node) {
@@ -27,7 +30,7 @@ export const bookmarksController = {
 
     if (node.url) {
       if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-        memo.createBkmInActiveDialog(node.id, node.parentId)
+        activeDialog.createBkmStandard(node.id, node.parentId)
         await tagList.addRecentTag(node)
       }
     } else {
@@ -91,10 +94,10 @@ export const bookmarksController = {
       if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && parentId !== oldParentId) {
         await tagList.addRecentTag(node);
 
-        const isCreatedInActiveDialog = memo.isCreatedInActiveDialog(bookmarkId, oldParentId)
+        const isCreatedInActiveDialog = activeDialog.isCreatedInActiveDialog(bookmarkId, oldParentId)
         if (isCreatedInActiveDialog) {
           logDebug('bookmark.onMoved 11');
-          memo.removeFromActiveDialog(oldParentId)
+          activeDialog.removeBkm(oldParentId)
         }
 
         if (!isCreatedInActiveDialog) {
@@ -135,7 +138,7 @@ export const bookmarksController = {
 
     if (node.url) {
       if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-        memo.removeFromActiveDialog(node.parentId)    
+        activeDialog.removeBkm(node.parentId)    
       }
     } else {
       memo.bkmFolderById.delete(bookmarkId);

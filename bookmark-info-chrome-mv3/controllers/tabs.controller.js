@@ -19,6 +19,9 @@ import {
   memo,
 } from '../api/memo.js'
 import {
+  activeDialog,
+} from '../api/activeDialog.js'
+import {
   updateTab,
 } from '../api/tabs-api.js'
 
@@ -99,7 +102,7 @@ export const tabsController = {
   },
   async onActivated({ tabId }) {
     logEvent('tabs.onActivated 00', tabId);
-    memo.activeDialogTabOnActivated(tabId)
+    activeDialog.onTabChanged(tabId)
 
     if (memo.activeTabId !== tabId) {
       memo.previousTabId = memo.activeTabId;

@@ -101,41 +101,6 @@ export const memo = {
       this._isProfileStartTimeMSActual = true
     }
   },
-
-  // TODO move activeDialog to separate class
-  activeDialog: {},
-  activeDialogTabId: undefined,
-  activeDialogTabOnActivated (tabId) {
-    if (tabId !== this.activeDialogTabId)  {
-      this.activeDialogTabId = tabId
-      this.activeDialog = {}
-    }
-  },
-  createBkmInActiveDialog (bookmarkId, parentId) {
-    const isFirst = Object.values(this.activeDialog).filter(({ bookmarkId }) => bookmarkId).length === 0;
-    this.activeDialog[parentId] = {
-      ...this.activeDialog[parentId],
-      bookmarkId,
-      isFirst,
-    }
-
-    return this.activeDialog[parentId]
-  },
-  createBkmInActiveDialogFromTag (parentId) {
-    this.activeDialog[parentId] = {
-      fromTag: true
-    }
-  },
-  isCreatedInActiveDialog(bookmarkId, parentId) {
-    const result = this.activeDialog[parentId]?.bookmarkId === bookmarkId 
-      && this.activeDialog[parentId]?.isFirst === true
-      && this.activeDialog[parentId]?.fromTag !== true
-
-    return result
-  },
-  removeFromActiveDialog(parentId) {
-    delete this.activeDialog[parentId]
-  }
 };
 
 logSettings('IMPORT END', 'memo.js', new Date().toISOString())

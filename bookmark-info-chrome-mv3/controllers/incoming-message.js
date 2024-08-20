@@ -7,6 +7,9 @@ import {
   memo,
 } from '../api/memo.js'
 import {
+  activeDialog,
+} from '../api/activeDialog.js'
+import {
   clearUrlInTab,
   removeQueryParamsIfTarget,
 } from '../api/clean-url-api.js'
@@ -62,7 +65,7 @@ export async function onIncomingMessage (message, sender) {
     }
     case EXTENSION_COMMAND_ID.ADD_BOOKMARK: {
       logEvent('runtime.onMessage addBookmark');
-      memo.createBkmInActiveDialogFromTag(message.parentId)
+      activeDialog.createBkmFromTag(message.parentId)
       await chrome.bookmarks.create({
         index: 0,
         parentId: message.parentId,
