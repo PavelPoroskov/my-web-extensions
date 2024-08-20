@@ -1,7 +1,7 @@
-import { ExtraMap } from './module.js'
+import { ExtraMap } from './structure/extraMap.js'
 import {
   tagList,
-} from './tagList.js'
+} from './structure/tagList.js'
 import {
   OTHER_BOOKMARKS_FOLDER_ID,
   BOOKMARKS_BAR_FOLDER_ID,

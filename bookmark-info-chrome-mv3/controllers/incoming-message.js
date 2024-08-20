@@ -8,7 +8,7 @@ import {
 } from '../api/memo.js'
 import {
   activeDialog,
-} from '../api/activeDialog.js'
+} from '../api/structure/activeDialog.js'
 import {
   clearUrlInTab,
   removeQueryParamsIfTarget,

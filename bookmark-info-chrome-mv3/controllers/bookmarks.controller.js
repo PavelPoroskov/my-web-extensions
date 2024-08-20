@@ -22,7 +22,7 @@ import {
 } from '../api/tagList.js'
 import {
   activeDialog,
-} from '../api/activeDialog.js'
+} from '../api/structure/activeDialog.js'
 
 export const bookmarksController = {
   async onCreated(bookmarkId, node) {

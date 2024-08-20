@@ -7,7 +7,7 @@ import {
 } from '../api/memo.js'
 import {
   tagList,
-} from '../api/tagList.js'
+} from '../api/structure/tagList.js'
 
 export async function moveToFlatFolderStructure() {
   await memo.updateSettings({

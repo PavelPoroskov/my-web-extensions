@@ -3,13 +3,13 @@ import { CacheWithLimit } from './cache.js'
 import {
   logSettings,
   // logDebug,
-} from './log-api.js'
+} from '../log-api.js'
 import {
   getOptions, setOptions
-} from './storage-api.js'
+} from '../storage-api.js'
 import {
   STORAGE_KEY,
-} from '../constant/index.js';
+} from '../../constant/index.js';
 import { tagList } from './tagList.js';
 
 export const memo = {
@@ -53,6 +53,7 @@ export const memo = {
     logSettings('readSavedSettings')
     logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
   },
+  // TODO move init to ...
   async init() {
     this._isSettingsActual = true
     await this.readSettings()

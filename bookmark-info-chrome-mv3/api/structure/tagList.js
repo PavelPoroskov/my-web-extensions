@@ -3,19 +3,19 @@ import {
   filterRecentTagObj,
   getRecentTagObj,
   emptyFolderNameSet,
-} from './recent-api.js'
+} from '../recent-api.js'
 import {
   OTHER_BOOKMARKS_FOLDER_ID,
   getNestedRootFolderId
-} from './special-folder.api.js'
+} from '../special-folder.api.js'
 import {
   STORAGE_KEY,
   ADD_BOOKMARK_LIST_MAX
-} from '../constant/index.js';
+} from '../../constant/index.js';
 import {
   getOptions,
   setOptions
-} from './storage-api.js'
+} from '../storage-api.js'
 
 class TagList {
   isTagListAvailable = true

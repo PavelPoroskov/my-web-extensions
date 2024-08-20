@@ -5,7 +5,7 @@ import {
 } from './log-api.js'
 import {
   promiseQueue,
-} from './promiseQueue.js'
+} from './structure/promiseQueue.js'
 import {
   isSupportedProtocol,
 } from './common-api.js'
@@ -23,7 +23,7 @@ import {
 } from './memo.js'
 import {
   tagList,
-} from './tagList.js'
+} from './structure/tagList.js'
 import {
   CONTENT_SCRIPT_COMMAND_ID,
   STORAGE_KEY,
