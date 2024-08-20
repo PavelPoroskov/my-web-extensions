@@ -3,13 +3,13 @@ import {
 } from '../constant/index.js';
 import {
   closeDuplicateTabs,
-} from '../operation/closeDuplicateTabs.js'
+} from '../api/command/closeDuplicateTabs.js'
 import {
   closeBookmarkedTabs,
-} from '../operation/closeBookmarkedTabs.js'
+} from '../api/command/closeBookmarkedTabs.js'
 import {
   clearUrlInActiveTab,
-} from '../operation/clearUrlInActiveTab.js'
+} from '../api/command/clearUrlInActiveTab.js'
 
 export const contextMenusController = {
   async onClicked (OnClickData) {

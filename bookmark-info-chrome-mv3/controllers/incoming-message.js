@@ -22,10 +22,10 @@ import {
 } from '../api/tabs-api.js'
 import {
   moveToFlatFolderStructure,
-} from '../operation/moveToFlatFolderStructure.js'
+} from '../api/command/moveToFlatFolderStructure.js'
 import {
   removeDoubleBookmarks,
-} from '../operation/removeDoubleBookmarks.js'
+} from '../api/command/removeDoubleBookmarks.js'
 import {
   EXTENSION_COMMAND_ID,
   STORAGE_TYPE,
