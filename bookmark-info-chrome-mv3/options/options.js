@@ -1,5 +1,6 @@
+
+// TODO-DOUBLE remove duplication in EXTENSION_COMMAND_ID: command-id.js and options.js
 const EXTENSION_COMMAND_ID = {
-  // TODO remove duplication this and in extension
   OPTIONS_ASKS_DATA: 'OPTIONS_ASKS_DATA',
   DATA_FOR_OPTIONS: 'DATA_FOR_OPTIONS',
   OPTIONS_ASKS_FLAT_BOOKMARKS: 'OPTIONS_ASKS_FLAT_BOOKMARKS',

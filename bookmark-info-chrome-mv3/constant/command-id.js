@@ -1,12 +1,12 @@
 export const EXTENSION_COMMAND_ID = {
-  // TODO remove duplication of EXTENSION_COMMAND_ID, CONTENT_SCRIPT_COMMAND_ID in content-script
+  // TODO remove duplication in EXTENSION_COMMAND_ID: command-id.js and content-scripts.js
   DELETE_BOOKMARK: 'DELETE_BOOKMARK',
   ADD_BOOKMARK: 'ADD_BOOKMARK',
   FIX_TAG: 'FIX_TAG',
   UNFIX_TAG: 'UNFIX_TAG',
   TAB_IS_READY: 'TAB_IS_READY',
   SHOW_TAG_LIST: 'SHOW_TAG_LIST',
-  // TODO remove duplication this and options
+  // TODO remove duplication in EXTENSION_COMMAND_ID: command-id.js and options.js
   OPTIONS_ASKS_DATA: 'OPTIONS_ASKS_DATA',
   DATA_FOR_OPTIONS: 'DATA_FOR_OPTIONS',
   OPTIONS_ASKS_FLAT_BOOKMARKS: 'OPTIONS_ASKS_FLAT_BOOKMARKS',
@@ -16,6 +16,7 @@ export const EXTENSION_COMMAND_ID = {
   OPTIONS_ASKS_SAVE: 'OPTIONS_ASKS_SAVE',
 }
 
+// TODO remove duplication in CONTENT_SCRIPT_COMMAND_ID: command-id.js and content-scripts.js
 export const CONTENT_SCRIPT_COMMAND_ID = {
   BOOKMARK_INFO: 'BOOKMARK_INFO',
   HISTORY_INFO: 'HISTORY_INFO',

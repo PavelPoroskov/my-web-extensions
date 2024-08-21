@@ -2,7 +2,7 @@ export const STORAGE_TYPE = {
   LOCAL: 'LOCAL',
   SESSION: 'SESSION',
 }
-
+// TODO remove duplication in SHOW_PREVIOUS_VISIT_OPTION: constant/storage.js and content-scripts.js
 export const SHOW_PREVIOUS_VISIT_OPTION = {
   NEVER: 0,
   ONLY_NO_BKM: 1,

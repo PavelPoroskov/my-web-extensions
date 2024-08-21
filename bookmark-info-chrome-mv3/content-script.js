@@ -10,6 +10,7 @@ const log = SHOW_LOG ? console.log : () => {};
   }
   window.hasRun = true;
 
+  // TODO-DOUBLE remove duplication in EXTENSION_COMMAND_ID: command-id.js and content-scripts.js
   const EXTENSION_COMMAND_ID = {
     DELETE_BOOKMARK: 'DELETE_BOOKMARK',
     ADD_BOOKMARK: 'ADD_BOOKMARK',
@@ -18,17 +19,20 @@ const log = SHOW_LOG ? console.log : () => {};
     TAB_IS_READY: 'TAB_IS_READY',
     SHOW_TAG_LIST: 'SHOW_TAG_LIST',
   }
+  // TODO-DOUBLE remove duplication in CONTENT_SCRIPT_COMMAND_ID: command-id.js and content-scripts.js
   const CONTENT_SCRIPT_COMMAND_ID = {
     BOOKMARK_INFO: 'BOOKMARK_INFO',
     HISTORY_INFO: 'HISTORY_INFO',
     CLEAR_URL: 'CLEAR_URL',
   }
 
+  // TODO-DOUBLE remove duplication in SHOW_PREVIOUS_VISIT_OPTION: constant/storage.js and content-scripts.js
   const SHOW_PREVIOUS_VISIT_OPTION = {
     NEVER: 0,
     ONLY_NO_BKM: 1,
     ALWAYS: 2,
   }
+  // TODO-DOUBLE remove duplication BROWSER in browser-specific.js and content-scripts.js
   const BROWSER_OPTIONS = {
     CHROME: 'CHROME',
     FIREFOX: 'FIREFOX',
