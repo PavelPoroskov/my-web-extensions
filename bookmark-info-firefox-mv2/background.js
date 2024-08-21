@@ -520,45 +520,6 @@ const memo = {
   bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
   // tabId -> bookmarkId
   tabMap: new Map(),
-
-  // TODO move profile start time
-  // TODO use promise in cache for profile-start-time
-  // cache[setting] = readSettings
-  // isSettingsActual = true
-  //
-  // await cache[settings]
-  _profileStartTimeMS: undefined,
-  get profileStartTimeMS() {
-    return this._profileStartTimeMS
-  },
-  _isProfileStartTimeMSActual: false,
-  get isProfileStartTimeMSActual() {
-    return this._isProfileStartTimeMSActual
-  },
-  async readProfileStartTimeMS() {
-    if (!this._isProfileStartTimeMSActual) {
-
-      const storedSession = await getOptions(STORAGE_KEY.START_TIME)
-      logSettings('storedSession', storedSession)
-
-      if (storedSession[STORAGE_KEY.START_TIME]) {
-        this._profileStartTimeMS = storedSession[STORAGE_KEY.START_TIME]
-      } else {
-        // I get start for service-worker now.
-        //    It is correct if this web-extension was installed in the previous browser session
-        // It is better get for window // min(window.startTime(performance.timeOrigin)) OR min(tab(performance.timeOrigin))
-        //  tab with minimal tabId
-        this._profileStartTimeMS = performance.timeOrigin
-        await setOptions({
-          [STORAGE_KEY.START_TIME]: this._profileStartTimeMS
-        })
-
-      }
-
-      logSettings('profileStartTimeMS', new Date(this._profileStartTimeMS).toISOString())
-      this._isProfileStartTimeMSActual = true
-    }
-  },
 };
 
 logSettings('IMPORT END', 'memo.js', new Date().toISOString())
@@ -615,6 +576,59 @@ logSettings('IMPORT END', 'memo.js', new Date().toISOString())
 }
 
 const extensionSettings = new ExtensionSettings()
+class BrowserStartTime {
+  _isActual = false
+  startTime
+  promise
+  fnResolve
+  fnReject
+
+  isActual() {
+    return this._isActual
+  }
+  async getStartTime() {
+    const storedSession = await getOptions(STORAGE_KEY.START_TIME)
+    logSettings('storedSession', storedSession)
+
+    let result
+
+    if (storedSession[STORAGE_KEY.START_TIME]) {
+      result = storedSession[STORAGE_KEY.START_TIME]
+    } else {
+      // I get start for service-worker now.
+      //    It is correct if this web-extension was installed in the previous browser session
+      // It is better get for window // min(window.startTime(performance.timeOrigin)) OR min(tab(performance.timeOrigin))
+      //  tab with minimal tabId
+      result = performance.timeOrigin
+      await setOptions({
+        [STORAGE_KEY.START_TIME]: this._profileStartTimeMS
+      })
+    }
+
+    return result
+  }
+  async init() {
+    this._isActual = true
+
+    this.promise = new Promise((fnResolve, fnReject) => {
+      this.fnResolve = fnResolve;
+      this.fnReject = fnReject;
+    });
+
+    this.startTime = await this.getStartTime()
+      .then(this.fnResolve)
+      .then(this.fnReject)
+
+    logSettings('profileStartTimeMS', new Date(this.startTime).toISOString())
+  }
+  async get() {
+    await this.promise
+
+    return this.startTime
+  }
+}
+
+const browserStartTime = new BrowserStartTime()
 const supportedProtocols = ["https:", "http:"];
 
 function isSupportedProtocol(urlString) {
@@ -1351,8 +1365,9 @@ async function getVisitListForUrl(url) {
     newToOldList = visitList
     
     const mostNewVisitMS = newToOldList[0]?.visitTime
+    const startTime = await browserStartTime.get()
 
-    if (mostNewVisitMS && mostNewVisitMS > memo.profileStartTimeMS) {
+    if (mostNewVisitMS && mostNewVisitMS > startTime) {
       previousList = newToOldList.slice(1)
     } else {
       previousList = newToOldList
@@ -1440,7 +1455,12 @@ async function getHistoryInfo({ url, useCache=false }) {
   };
 }
 async function initExtension() {
-  await tagList.readFromStorage()
+  // await tagList.readFromStorage()
+
+  await Promise.all([
+    !browserStartTime.isActual() && browserStartTime.init(),
+    !extensionSettings.isActual() && extensionSettings.restoreFromStorage().then(() => tagList.readFromStorage()),
+  ])
 }
 async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
   const settings = await extensionSettings.get()
@@ -1462,7 +1482,7 @@ async function getHistoryInfo({ url, useCache=false }) {
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     showLayer: settings[STORAGE_KEY.SHOW_PATH_LAYERS],
     isShowTitle: settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
-    // TODO send in different message
+    // TODO-NEXT send in different message
     tagList: tagList.list.map(({ parentId, title, isFixed, isLast}) => ({
       parentId,
       title, 
@@ -1498,10 +1518,7 @@ async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
 async function updateTab({ tabId, url, useCache=false, debugCaller }) {
   if (url && isSupportedProtocol(url)) {
 
-    await Promise.all([
-      !memo.isProfileStartTimeMSActual && memo.readProfileStartTimeMS(),
-      !extensionSettings.isActual() && extensionSettings.restoreFromStorage().then(initExtension),
-    ])
+    await initExtension()
 
     log(`${debugCaller} -> updateTab() useCache`, useCache);
     promiseQueue.add({
@@ -2865,3 +2882,4 @@ browser.runtime.onInstalled.addListener(runtimeController.onInstalled);
 browser.runtime.onMessage.addListener(runtimeController.onMessage);
 
 // console.log('IMPORT END', 'bkm-info-sw.js')
+initExtension()
