@@ -3,7 +3,7 @@ import {
   CONTEXT_MENU_ID,
 } from '../constant/index.js'
 
-// TODO did can we not create menu on evert time
+// MAYBE did can we not create menu on evert time
 export async function createContextMenu() {
   await chrome.contextMenus.removeAll();
 
@@ -17,12 +17,12 @@ export async function createContextMenu() {
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'clear url',
   });
-  // TODO? bookmark and close all tabs (tabs without bookmarks and tabs with bookmarks)
+  // MAYBE? bookmark and close all tabs (tabs without bookmarks and tabs with bookmarks)
   //   copy bookmarked tabs
   chrome.contextMenus.create({
     id: CONTEXT_MENU_ID.CLOSE_BOOKMARKED,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'close bookmarked tabs',
   });
-  // TODO? bookmark and close tabs (tabs without bookmarks)
+  // MAYBE? bookmark and close tabs (tabs without bookmarks)
 }

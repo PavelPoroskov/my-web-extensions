@@ -26,8 +26,6 @@ import {
 } from '../api/tabs-api.js'
 import {
   EXTENSION_COMMAND_ID,
-  STORAGE_TYPE,
-  STORAGE_KEY_META,
   STORAGE_KEY,
   clearUrlTargetList,
 } from '../constant/index.js'
@@ -111,13 +109,19 @@ export async function onIncomingMessage (message, sender) {
     case EXTENSION_COMMAND_ID.OPTIONS_ASKS_DATA: {
       logEvent('runtime.onMessage OPTIONS_ASKS_DATA');
 
+      const settings = await extensionSettings.get();
       chrome.runtime.sendMessage({
         command: EXTENSION_COMMAND_ID.DATA_FOR_OPTIONS,
         clearUrlTargetList,
-        STORAGE_TYPE,
-        STORAGE_KEY_META,
         STORAGE_KEY,
+        settings,
       });
+
+      break
+    }
+    case EXTENSION_COMMAND_ID.OPTIONS_ASKS_SAVE: {
+      logEvent('runtime.onMessage OPTIONS_ASKS_SAVE');
+      await extensionSettings.update(message.updateObj)
 
       break
     }

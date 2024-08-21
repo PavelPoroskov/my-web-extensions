@@ -36,7 +36,7 @@ export const runtimeController = {
     ]);
 
     if (savedObj[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]) {
-      flatBookmarks()
+      await flatBookmarks()
     }
   },
   async onInstalled () {

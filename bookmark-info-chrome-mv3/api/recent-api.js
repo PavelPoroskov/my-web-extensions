@@ -3,7 +3,8 @@ import {
 } from './log-api.js'
 import {
   OTHER_BOOKMARKS_FOLDER_ID,
-  getNestedRootFolderId
+  getNestedRootFolderId,
+  getUnclassifiedFolderId,
 } from './special-folder.api.js'
 
 export const isDescriptiveTitle = (title) => !(title.startsWith('New folder') || title.startsWith('[Folder Name]')) 
@@ -63,11 +64,9 @@ export async function getRecentTagObj(nItems) {
   )
 }
 
-export async function filterRecentTagObj(inObj = {}, isFlatStructure) {
-  const idList = Object.keys(inObj)
-
+async function filterFolders(idList, isFlatStructure) {
   if (idList.length === 0) {
-    return {}
+    return []
   }
 
   const folderList = await chrome.bookmarks.get(idList)
@@ -78,41 +77,37 @@ export async function filterRecentTagObj(inObj = {}, isFlatStructure) {
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {
     const nestedRootFolderId = await getNestedRootFolderId()
-    filteredFolderList = filteredFolderList.filter(
-      ({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId
-    )
+    const unclassifiedFolderId = await getUnclassifiedFolderId()
+    const specialFolderSet = new Set([nestedRootFolderId, unclassifiedFolderId])
+
+    filteredFolderList = filteredFolderList
+      .filter(
+        ({ parentId }) => parentId === OTHER_BOOKMARKS_FOLDER_ID
+      )
+      .filter(
+        ({ id }) => !specialFolderSet.has(id)
+      )
   }
+
+  return filteredFolderList
+}
+
+export async function filterRecentTagObj(obj = {}, isFlatStructure) {
+  const filteredFolderList = await filterFolders(Object.keys(obj), isFlatStructure)
 
   return Object.fromEntries(
     filteredFolderList.map(({ id, title }) => [
       id, 
       {
         title, 
-        dateAdded: inObj[id].dateAdded,
+        dateAdded: obj[id].dateAdded,
       }
     ])
   )
 }
 
 export async function filterFixedTagObj(obj = {}, isFlatStructure) {
-  const idList = Object.keys(obj)
-
-  if (idList.length === 0) {
-    return {}
-  }
-
-  const folderList = await chrome.bookmarks.get(idList)
-  let filteredFolderList = folderList
-    .filter(Boolean)
-    .filter(({ title }) => !!title)
-
-  // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
-  if (isFlatStructure) {
-    const nestedRootFolderId = await getNestedRootFolderId()
-    filteredFolderList = filteredFolderList.filter(
-      ({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId
-    )
-  }
+  const filteredFolderList = await filterFolders(Object.keys(obj), isFlatStructure)
 
   return Object.fromEntries(
     filteredFolderList.map(({ id, title }) => [id, title])

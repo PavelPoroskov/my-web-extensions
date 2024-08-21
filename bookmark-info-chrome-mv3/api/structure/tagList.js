@@ -6,7 +6,8 @@ import {
 } from '../recent-api.js'
 import {
   OTHER_BOOKMARKS_FOLDER_ID,
-  getNestedRootFolderId
+  getNestedRootFolderId,
+  getUnclassifiedFolderId,
 } from '../special-folder.api.js'
 import {
   STORAGE_KEY,
@@ -16,37 +17,38 @@ import {
   getOptions,
   setOptions
 } from '../storage-api.js'
+import {
+  extensionSettings,
+} from './extensionSettings.js'
 
 class TagList {
   isTagListAvailable = true
   _recentTagObj = {}
   _fixedTagObj = {}
   _tagList = []
-  get list() {
-    return this._tagList
-  }
   LIST_LIMIT
   FORCE_FLAT_FOLDER_STRUCTURE
   HIGHLIGHT_LAST
 
+  get list() {
+    return this._tagList
+  }
+
   async readFromStorage() {
+    const settings = await extensionSettings.get()
     const savedObj = await getOptions([
       STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP,
-      STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
-      STORAGE_KEY.ADD_BOOKMARK_IS_ON,
-      STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
       STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP,
       STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED,
-      STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
     ]);
 
-    if (!savedObj[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+    if (!settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
       return
     }
 
-    this.LIST_LIMIT = savedObj[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT]
-    this.FORCE_FLAT_FOLDER_STRUCTURE = savedObj[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]
-    this.HIGHLIGHT_LAST = savedObj[STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST]
+    this.LIST_LIMIT = settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT]
+    this.FORCE_FLAT_FOLDER_STRUCTURE = settings[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]
+    this.HIGHLIGHT_LAST = settings[STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST]
     // console.log('TagList.readFromStorage _fixedTagObj')
     // console.log(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP])
 
@@ -55,7 +57,7 @@ class TagList {
       this._recentTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP] 
       this._fixedTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]
     } else {
-      const isFlatStructure = savedObj[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]
+      const isFlatStructure = this.FORCE_FLAT_FOLDER_STRUCTURE
       const actualRecentTagObj = await getRecentTagObj(ADD_BOOKMARK_LIST_MAX)
       this._recentTagObj = await filterRecentTagObj({
         ...savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP],
@@ -130,7 +132,11 @@ class TagList {
       }
 
       const nestedRootFolderId = await getNestedRootFolderId()
+      const unclassifiedFolderId = await getUnclassifiedFolderId()
       if (nestedRootFolderId && newFolder.id === nestedRootFolderId) {
+        return
+      }
+      if (unclassifiedFolderId && newFolder.id === unclassifiedFolderId) {
         return
       }
     }
@@ -246,10 +252,10 @@ class TagList {
 
   async filterTagListForFlatFolderStructure() {
     const isFlatStructure = true
-    console.log('filterTagListForFlatFolderStructure ', this._fixedTagObj)
+    // console.log('filterTagListForFlatFolderStructure ', this._fixedTagObj)
     this._recentTagObj =  await filterRecentTagObj(this._recentTagObj, isFlatStructure)
     this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
-    console.log('filterTagListForFlatFolderStructure, after filter', this._fixedTagObj)
+    // console.log('filterTagListForFlatFolderStructure, after filter', this._fixedTagObj)
     this._tagList = this.refillList()
     await setOptions({
       [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,

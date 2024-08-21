@@ -34,18 +34,21 @@ const log = SHOW_LOG ? console.log : () => {};
     FIREFOX: 'FIREFOX',
   }
   const BROWSER_SPECIFIC_OPTIONS = {
-    [BROWSER_OPTIONS.CHROME]: {
-      DEL_BTN_RIGHT_PADDING: '0.5ch',
-      LABEL_RIGHT_PADDING: '0.3ch',
+    DEL_BTN_RIGHT_PADDING: {
+      [BROWSER_OPTIONS.CHROME]: '0.5ch',
+      [BROWSER_OPTIONS.FIREFOX]: '1ch'
     },
-    [BROWSER_OPTIONS.FIREFOX]: {
-      DEL_BTN_RIGHT_PADDING: '1ch',
-      LABEL_RIGHT_PADDING: '0.6ch',
-    },
+    LABEL_RIGHT_PADDING: {
+      [BROWSER_OPTIONS.CHROME]: '0.3ch',
+      [BROWSER_OPTIONS.FIREFOX]: '0.6ch'
+    }
   }
   const BROWSER = BROWSER_OPTIONS.CHROME;
-  const BROWSER_SPECIFIC = BROWSER_SPECIFIC_OPTIONS[BROWSER];
-    
+  const BROWSER_SPECIFIC = Object.fromEntries(
+    Object.entries(BROWSER_SPECIFIC_OPTIONS)
+      .map(([option, obj]) => [option, obj[BROWSER]])
+  );
+  
   const bkmInfoRootId = 'bkm-info--root';
   const bkmInfoStyle2Id = 'bkm-info--style2';
 

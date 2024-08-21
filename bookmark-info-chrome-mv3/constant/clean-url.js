@@ -1,6 +1,6 @@
 
 export const clearUrlTargetList = [
-  // TODO if we clean url on open then we loose check-in, check-out dates
+  // TODO-NEXT if we clean url on open then we loose check-in, check-out dates
   //    need search bookmark for clean url
   //    strategy01: clean url on open
   //    strategy02: clean url on save

@@ -77,3 +77,4 @@ export const getOrCreateNestedRootFolderId = async () => getOrCreateFolderByTitl
 export const getOrCreateUnclassifiedFolderId = async () => getOrCreateFolderByTitleInRoot({ title: UNCLASSIFIED_TITLE, oldTitle: UNCLASSIFIED_TITLE_OLD })
 
 export const getNestedRootFolderId = memoize(async () => getFolderByTitleInRoot({ title: NESTED_ROOT_TITLE, oldTitle: NESTED_ROOT_TITLE_OLD }))
+export const getUnclassifiedFolderId = memoize(async () => getFolderByTitleInRoot({ title: UNCLASSIFIED_TITLE, oldTitle: UNCLASSIFIED_TITLE_OLD }))
