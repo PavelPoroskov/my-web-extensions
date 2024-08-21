@@ -11,6 +11,7 @@ import {
   removeQueryParamsIfTarget,
 } from './clean-url-api.js';
 import {
+  browserStartTime,
   extensionSettings,
   memo
 } from './structure/index.js';
@@ -85,8 +86,9 @@ async function getVisitListForUrl(url) {
     newToOldList = visitList
     
     const mostNewVisitMS = newToOldList[0]?.visitTime
+    const startTime = await browserStartTime.get()
 
-    if (mostNewVisitMS && mostNewVisitMS > memo.profileStartTimeMS) {
+    if (mostNewVisitMS && mostNewVisitMS > startTime) {
       previousList = newToOldList.slice(1)
     } else {
       previousList = newToOldList

@@ -1,4 +1,6 @@
 // console.log('IMPORTING', 'bkm-info-sw.js')
+import { initExtension } from './api/init-extension.js'
+
 import { storageController } from './controllers/storage.controller.js';
 import { bookmarksController } from './controllers/bookmarks.controller.js';
 import { tabsController } from './controllers/tabs.controller.js';
@@ -30,3 +32,4 @@ chrome.runtime.onInstalled.addListener(runtimeController.onInstalled);
 chrome.runtime.onMessage.addListener(runtimeController.onMessage);
 
 // console.log('IMPORT END', 'bkm-info-sw.js')
+initExtension()

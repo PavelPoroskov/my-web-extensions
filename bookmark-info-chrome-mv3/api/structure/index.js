@@ -1,4 +1,5 @@
 export * from './activeDialog.js'
+export * from './browserStartTime'
 export * from './cache.js'
 export * from './extensionSettings.js'
 export * from './extraMap.js'

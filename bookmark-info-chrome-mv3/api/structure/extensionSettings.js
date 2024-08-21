@@ -1,6 +1,12 @@
 import {
+  logSettings,
+} from '../log-api.js'
+import {
   getOptions, setOptions
 } from '../storage-api.js'
+import {
+  STORAGE_KEY,
+} from '../../constant/index.js';
 
 class ExtensionSettings {
   _isActual = false
