@@ -1,7 +1,7 @@
 import {
   clearUrlInTab,
   removeQueryParams,
-} from '../api/clean-url-api.js'
+} from '../clean-url-api.js'
 
 export async function clearUrlInActiveTab() {
   const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });

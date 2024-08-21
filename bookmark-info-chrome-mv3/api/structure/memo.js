@@ -10,7 +10,6 @@ import {
 import {
   STORAGE_KEY,
 } from '../../constant/index.js';
-import { tagList } from './tagList.js';
 
 export const memo = {
   previousTabId: '',

@@ -1,4 +1,5 @@
 // TODO remove duplication setOptions(), getOptions() in options/options.js
+//  TODO send command setOptions, getOptions Options -> Extensions
 //  ?import script in options.html
 //  <script src="options.js"> type="module"
 

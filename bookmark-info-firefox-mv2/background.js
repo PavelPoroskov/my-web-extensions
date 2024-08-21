@@ -9,50 +9,6 @@ const LOG_CONFIG = {
   SHOW_DEBUG: false,
   SHOW_SETTINGS: false,
 }
-const makeLogWithTime = () => {
-  let startTime;
-  let prevLogTime;
-
-  return function () {
-    if (!startTime) {
-      startTime = Date.now();
-      prevLogTime = startTime;
-    }
-
-    const newLogTime = Date.now();
-    // const dif = (newLogTime - prevLogTime)/1000;
-    const dif = (newLogTime - prevLogTime);
-    prevLogTime = newLogTime;
-  
-    const ar = Array.from(arguments);
-    ar.unshift(`+${dif}`);
-    console.log(...ar);
-  }
-}
-
-const logWithTime = makeLogWithTime();
-
-const makeLogWithPrefix = (prefix = '') => {
-  return function () {  
-    const ar = Array.from(arguments);
-
-    if (prefix) {
-      ar.unshift(prefix);
-    }
-
-    logWithTime(...ar);
-  }
-}
-
-const log = LOG_CONFIG.SHOW_LOG ? makeLogWithPrefix() : () => { };
-const logCache = LOG_CONFIG.SHOW_LOG_CACHE ? logWithTime : () => { };
-const logSendEvent = LOG_CONFIG.SHOW_LOG_EVENT_OUT ? makeLogWithPrefix('SEND =>') : () => { };
-const logEvent = LOG_CONFIG.SHOW_LOG_EVENT_IN ? makeLogWithPrefix('EVENT <=') : () => { };
-const logIgnore = LOG_CONFIG.SHOW_LOG_IGNORE ? makeLogWithPrefix('IGNORE') : () => { };
-const logOptimization = LOG_CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OPTIMIZATION') : () => { };
-const logPromiseQueue = LOG_CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
-const logDebug = LOG_CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
-const logSettings = LOG_CONFIG.SHOW_SETTINGS ? makeLogWithPrefix('SETTINGS') : () => { };
 const BROWSER_OPTIONS = {
   CHROME: 'CHROME',
   FIREFOX: 'FIREFOX',
@@ -240,81 +196,50 @@ const STORAGE_KEY = Object.fromEntries(
 
 const ADD_BOOKMARK_LIST_MAX = 50
 
-class ExtraMap extends Map {
-  sum(key, addValue) {
-    super.set(key, (super.get(key) || 0) + addValue)
-  }
-  update(key, updateObj) {
-    super.set(key, {
-      ...super.get(key),
-      ...updateObj,
-    })
-  }
-  concat(key, inItem) {
-    const item = inItem === undefined ? [] : inItem
-    // item -- single item or array
-    const ar = super.get(key) || []
-    super.set(key, ar.concat(item))
-  }
-}
-class CacheWithLimit {
-  constructor ({ name='cache', size = 100 }) {
-    this.cache = new Map();
-    this.LIMIT = size;
-    this.name = name;
-  }
-  removeStale () {
-    if (this.LIMIT < this.cache.size) {
-      let deleteCount = this.cache.size - this.LIMIT;
-      const keyToDelete = [];
-      
-      // Map.key() returns keys in insertion order
-      for (const key of this.cache.keys()) {
-        keyToDelete.push(key);
-        deleteCount -= 1;
-        if (deleteCount <= 0) {
-          break;
-        }
-      }
-  
-      for (const key of keyToDelete) {
-        this.cache.delete(key);
-      }
+const makeLogWithTime = () => {
+  let startTime;
+  let prevLogTime;
+
+  return function () {
+    if (!startTime) {
+      startTime = Date.now();
+      prevLogTime = startTime;
     }
-  }
 
-  add (key,value) {
-    this.cache.set(key, value);
-    logCache(`   ${this.name}.add: ${key}`, value);
-    
-    this.removeStale();
-  }
+    const newLogTime = Date.now();
+    // const dif = (newLogTime - prevLogTime)/1000;
+    const dif = (newLogTime - prevLogTime);
+    prevLogTime = newLogTime;
   
-  get(key) {
-    const value = this.cache.get(key);
-    logCache(`   ${this.name}.get: ${key}`, value);
-  
-    return value;
-  }
-
-  delete(key) {
-    this.cache.delete(key);
-    logCache(`   ${this.name}.delete: ${key}`);
-  }
-  
-  clear() {
-    this.cache.clear();
-    logCache(`   ${this.name}.clear()`);
-  }
-
-  has(key) {
-    return this.cache.has(key);
-  }
-
-  print() {
-    logCache(this.cache);
+    const ar = Array.from(arguments);
+    ar.unshift(`+${dif}`);
+    console.log(...ar);
   }
 }
+
+const logWithTime = makeLogWithTime();
+
+const makeLogWithPrefix = (prefix = '') => {
+  return function () {  
+    const ar = Array.from(arguments);
+
+    if (prefix) {
+      ar.unshift(prefix);
+    }
+
+    logWithTime(...ar);
+  }
+}
+
+const log = LOG_CONFIG.SHOW_LOG ? makeLogWithPrefix() : () => { };
+const logCache = LOG_CONFIG.SHOW_LOG_CACHE ? logWithTime : () => { };
+const logSendEvent = LOG_CONFIG.SHOW_LOG_EVENT_OUT ? makeLogWithPrefix('SEND =>') : () => { };
+const logEvent = LOG_CONFIG.SHOW_LOG_EVENT_IN ? makeLogWithPrefix('EVENT <=') : () => { };
+const logIgnore = LOG_CONFIG.SHOW_LOG_IGNORE ? makeLogWithPrefix('IGNORE') : () => { };
+const logOptimization = LOG_CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OPTIMIZATION') : () => { };
+const logPromiseQueue = LOG_CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
+const logDebug = LOG_CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
+const logSettings = LOG_CONFIG.SHOW_SETTINGS ? makeLogWithPrefix('SETTINGS') : () => { };
 class PromiseQueue {
   constructor () {
     this.promise = {};
@@ -378,6 +303,318 @@ const ADD_BOOKMARK_LIST_MAX = 50
 }
 
 const promiseQueue = new PromiseQueue();
+class ExtraMap extends Map {
+  sum(key, addValue) {
+    super.set(key, (super.get(key) || 0) + addValue)
+  }
+  update(key, updateObj) {
+    super.set(key, {
+      ...super.get(key),
+      ...updateObj,
+    })
+  }
+  concat(key, inItem) {
+    const item = inItem === undefined ? [] : inItem
+    // item -- single item or array
+    const ar = super.get(key) || []
+    super.set(key, ar.concat(item))
+  }
+}
+class ActiveDialog {
+  data = {}
+  activeDialogTabId
+  
+  onTabChanged(tabId) {
+    if (tabId !== this.activeDialogTabId)  {
+      this.activeDialogTabId = tabId
+      this.data = {}
+    }
+  }
+  createBkmStandard (bookmarkId, parentId) {
+    const isFirst = Object.values(this.data).filter(({ bookmarkId }) => bookmarkId).length === 0;
+    this.data[parentId] = {
+      ...this.data[parentId],
+      bookmarkId,
+      isFirst,
+    }
+
+    return this.data[parentId]
+  }
+  createBkmFromTag (parentId) {
+    this.data[parentId] = {
+      fromTag: true
+    }
+  }
+  isCreatedInActiveDialog(bookmarkId, parentId) {
+    const result = this.data[parentId]?.bookmarkId === bookmarkId 
+      && this.data[parentId]?.isFirst === true
+      && this.data[parentId]?.fromTag !== true
+
+    return result
+  }
+  removeBkm(parentId) {
+    delete this.data[parentId]
+  }
+}
+
+const activeDialog = new ActiveDialog()
+class CacheWithLimit {
+  constructor ({ name='cache', size = 100 }) {
+    this.cache = new Map();
+    this.LIMIT = size;
+    this.name = name;
+  }
+  removeStale () {
+    if (this.LIMIT < this.cache.size) {
+      let deleteCount = this.cache.size - this.LIMIT;
+      const keyToDelete = [];
+      
+      // Map.key() returns keys in insertion order
+      for (const key of this.cache.keys()) {
+        keyToDelete.push(key);
+        deleteCount -= 1;
+        if (deleteCount <= 0) {
+          break;
+        }
+      }
+  
+      for (const key of keyToDelete) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
+  add (key,value) {
+    this.cache.set(key, value);
+    logCache(`   ${this.name}.add: ${key}`, value);
+    
+    this.removeStale();
+  }
+  
+  get(key) {
+    const value = this.cache.get(key);
+    logCache(`   ${this.name}.get: ${key}`, value);
+  
+    return value;
+  }
+
+  delete(key) {
+    this.cache.delete(key);
+    logCache(`   ${this.name}.delete: ${key}`);
+  }
+  
+  clear() {
+    this.cache.clear();
+    logCache(`   ${this.name}.clear()`);
+  }
+
+  has(key) {
+    return this.cache.has(key);
+  }
+
+  print() {
+    logCache(this.cache);
+  }
+}
+async function setOptions(obj) {
+  const entryList = Object.entries(obj)
+    .map(([key, value]) => ({
+      key, 
+      storage: STORAGE_KEY_META[key].storage || STORAGE_TYPE.LOCAL,
+      value,
+    }))
+
+  
+  const localList = entryList
+    .filter((item) => item.storage === STORAGE_TYPE.LOCAL)
+  const localObj = Object.fromEntries(
+    localList.map(({ key, value }) => [STORAGE_KEY_META[key].storageKey, value])
+  )
+
+  const sessionList = entryList
+    .filter((item) => item.storage === STORAGE_TYPE.SESSION)
+  const sessionObj = Object.fromEntries(
+    sessionList.map(({ key, value }) => [STORAGE_KEY_META[key].storageKey, value])
+  )
+
+  logDebug('setOptions localObj', localObj)
+  logDebug('setOptions sessionObj', sessionObj)
+  await Promise.all([
+    localList.length > 0 && browser.storage.local.set(localObj),
+    sessionList.length > 0 && browser.storage.session.set(sessionObj),
+  ])
+}
+
+async function getOptions(keyList) {
+  const inKeyList = Array.isArray(keyList) ? keyList : [keyList]
+
+  const entryList = inKeyList
+    .map((key) => ({
+      key, 
+      storage: STORAGE_KEY_META[key].storage || STORAGE_TYPE.LOCAL,
+    }))
+
+  const localList = entryList
+    .filter((item) => item.storage === STORAGE_TYPE.LOCAL)
+    .map(({ key }) => key)
+
+  const sessionList = entryList
+    .filter((item) => item.storage === STORAGE_TYPE.SESSION)
+    .map(({ key }) => key)
+
+  const [
+    localStoredObj,
+    sessionStoredObj,
+  ] = await Promise.all([
+    localList.length > 0 
+      ? browser.storage.local.get(
+        localList.map((key) => STORAGE_KEY_META[key].storageKey)
+      )
+      : {},
+    sessionList.length > 0 
+      ? browser.storage.session.get(
+        sessionList.map((key) => STORAGE_KEY_META[key].storageKey)
+      ) 
+      : {},
+  ])
+
+  const localObj = Object.fromEntries(
+    localList.map((key) => {
+      const storageKey = STORAGE_KEY_META[key].storageKey
+
+      return [
+        key,
+        localStoredObj[storageKey] !== undefined 
+          ? localStoredObj[storageKey] 
+          : STORAGE_KEY_META[key].default
+      ]
+    })
+  )
+  const sessionObj = Object.fromEntries(
+    sessionList.map((key) => {
+      const storageKey = STORAGE_KEY_META[key].storageKey
+
+      return [
+        key,
+        sessionStoredObj[storageKey] !== undefined 
+          ? sessionStoredObj[storageKey] 
+          : STORAGE_KEY_META[key].default
+      ]
+    })
+  )
+
+  return {
+    ...localObj,
+    ...sessionObj,
+  }
+}
+// console.log('IMPORTING', 'memo.js')
+const memo = {
+  previousTabId: '',
+  activeTabId: '',
+  activeTabUrl: '',
+  isActiveTabBookmarkManager: false,
+
+  cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
+  cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
+  bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
+  // tabId -> bookmarkId
+  tabMap: new Map(),
+
+  // TODO move profile start time
+  // TODO use promise in cache for profile-start-time
+  // cache[setting] = readSettings
+  // isSettingsActual = true
+  //
+  // await cache[settings]
+  _profileStartTimeMS: undefined,
+  get profileStartTimeMS() {
+    return this._profileStartTimeMS
+  },
+  _isProfileStartTimeMSActual: false,
+  get isProfileStartTimeMSActual() {
+    return this._isProfileStartTimeMSActual
+  },
+  async readProfileStartTimeMS() {
+    if (!this._isProfileStartTimeMSActual) {
+
+      const storedSession = await getOptions(STORAGE_KEY.START_TIME)
+      logSettings('storedSession', storedSession)
+
+      if (storedSession[STORAGE_KEY.START_TIME]) {
+        this._profileStartTimeMS = storedSession[STORAGE_KEY.START_TIME]
+      } else {
+        // I get start for service-worker now.
+        //    It is correct if this web-extension was installed in the previous browser session
+        // It is better get for window // min(window.startTime(performance.timeOrigin)) OR min(tab(performance.timeOrigin))
+        //  tab with minimal tabId
+        this._profileStartTimeMS = performance.timeOrigin
+        await setOptions({
+          [STORAGE_KEY.START_TIME]: this._profileStartTimeMS
+        })
+
+      }
+
+      logSettings('profileStartTimeMS', new Date(this._profileStartTimeMS).toISOString())
+      this._isProfileStartTimeMSActual = true
+    }
+  },
+};
+
+logSettings('IMPORT END', 'memo.js', new Date().toISOString())
+class ExtensionSettings {
+  _isActual = false
+  _settings = {}
+  promise
+  fnResolve
+  fnReject
+
+  isActual() {
+    return this._isActual
+  }
+  async get() {
+    await this.promise
+
+    return { ...this._settings }
+  }
+  invalidate () {
+    this._isActual = false
+  }
+  async restoreFromStorage() {
+    logSettings('readSavedSettings START')
+    this._isActual = true
+
+    this.promise = new Promise((fnResolve, fnReject) => {
+      this.fnResolve = fnResolve;
+      this.fnReject = fnReject;
+    });
+
+    this._settings = await getOptions([
+      STORAGE_KEY.ADD_BOOKMARK_IS_ON,
+      STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
+      STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
+      STORAGE_KEY.CLEAR_URL,
+      STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
+      STORAGE_KEY.SHOW_BOOKMARK_TITLE,
+      STORAGE_KEY.SHOW_PATH_LAYERS,
+      STORAGE_KEY.SHOW_PREVIOUS_VISIT,
+    ])
+      .then(this.fnResolve)
+      .catch(this.fnReject);
+    logSettings('readSavedSettings')
+    logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
+  }
+
+  async update(updateObj) {
+    Object.entries(updateObj).forEach(([ket, value]) => {
+      this._settings[ket] = value
+    })
+    
+    await setOptions(updateObj)
+  }
+}
+
+const extensionSettings = new ExtensionSettings()
 const supportedProtocols = ["https:", "http:"];
 
 function isSupportedProtocol(urlString) {
@@ -584,193 +821,6 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
     filteredFolderList2.map(({ id, title }) => [id, title])
   )
 }
-const targetMap = new Map(
-  clearUrlTargetList.map(({ hostname, paths }) => [hostname, paths])
-)
-
-const getHostBase = (str) => str.split('.').slice(-2).join('.')
-
-const removeQueryParamsIfTarget = (url) => {
-  let cleanUrl = url
-  let isPattern = false
-
-  try {
-    const oLink = new URL(url);
-    const { hostname, pathname } = oLink;
-    const targetPathList = targetMap.get(getHostBase(hostname))
-
-    if (targetPathList && targetPathList.some((targetPath) => pathname.startsWith(targetPath))) {
-      isPattern = true
-      oLink.search = ''
-
-      cleanUrl = oLink.toString();  
-    }
-  
-  /* eslint-disable no-unused-vars */
-  // eslint-disable-next-line no-empty
-  } catch (_e) {
-    
-  }
-  /* eslint-enable no-unused-vars */
-
-  return {
-    cleanUrl,
-    isPattern,
-  }
-}
-
-const removeQueryParams = (link) => {
-  try {
-    const oLink = new URL(link);
-    oLink.search = ''
-  
-    return oLink.toString();  
-  // eslint-disable-next-line no-unused-vars
-  } catch (e) {
-    return link
-  }
-}
-
-// let testStr = "https://www.linkedin.com/jobs/view/3920634940/?alternateChannel=search&refId=dvaqme%2FfxHehSAa5o4nVnA%3D%3D&trackingId=8%2FZKaGcTAInuTTH4NyKDoA%3D%3D"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
-
-// testStr = "https://www.youtube.com/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
-
-// testStr = "https://youtube.com/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
-
-// testStr = "https://youtu.be/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
-//
-// https://career.proxify.io/apply?uuid=566c933b-432e-64e0-b317-dd4390d6a74e&step=AdditionalInformation
-
-async function clearUrlInTab({ tabId, cleanUrl }) {
-  const msg = {
-    command: CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL,
-    cleanUrl,
-  }
-  logSendEvent('clearUrlInTab()', tabId, msg)
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logIgnore('clearUrlInTab()', err)
-    })
-}
-// TODO did can we not create menu on evert time
-async function createContextMenu() {
-  await browser.menus.removeAll();
-
-  browser.menus.create({
-    id: CONTEXT_MENU_ID.CLOSE_DUPLICATE,
-    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'close duplicate tabs',
-  });  
-  browser.menus.create({
-    id: CONTEXT_MENU_ID.CLEAR_URL,
-    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'clear url',
-  });
-  // TODO? bookmark and close all tabs (tabs without bookmarks and tabs with bookmarks)
-  //   copy bookmarked tabs
-  browser.menus.create({
-    id: CONTEXT_MENU_ID.CLOSE_BOOKMARKED,
-    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'close bookmarked tabs',
-  });
-  // TODO? bookmark and close tabs (tabs without bookmarks)
-}
-async function setOptions(obj) {
-  const entryList = Object.entries(obj)
-    .map(([key, value]) => ({
-      key, 
-      storage: STORAGE_KEY_META[key].storage || STORAGE_TYPE.LOCAL,
-      value,
-    }))
-
-  
-  const localList = entryList
-    .filter((item) => item.storage === STORAGE_TYPE.LOCAL)
-  const localObj = Object.fromEntries(
-    localList.map(({ key, value }) => [STORAGE_KEY_META[key].storageKey, value])
-  )
-
-  const sessionList = entryList
-    .filter((item) => item.storage === STORAGE_TYPE.SESSION)
-  const sessionObj = Object.fromEntries(
-    sessionList.map(({ key, value }) => [STORAGE_KEY_META[key].storageKey, value])
-  )
-
-  logDebug('setOptions localObj', localObj)
-  logDebug('setOptions sessionObj', sessionObj)
-  await Promise.all([
-    localList.length > 0 && browser.storage.local.set(localObj),
-    sessionList.length > 0 && browser.storage.session.set(sessionObj),
-  ])
-}
-
-async function getOptions(keyList) {
-  const inKeyList = Array.isArray(keyList) ? keyList : [keyList]
-
-  const entryList = inKeyList
-    .map((key) => ({
-      key, 
-      storage: STORAGE_KEY_META[key].storage || STORAGE_TYPE.LOCAL,
-    }))
-
-  const localList = entryList
-    .filter((item) => item.storage === STORAGE_TYPE.LOCAL)
-    .map(({ key }) => key)
-
-  const sessionList = entryList
-    .filter((item) => item.storage === STORAGE_TYPE.SESSION)
-    .map(({ key }) => key)
-
-  const [
-    localStoredObj,
-    sessionStoredObj,
-  ] = await Promise.all([
-    localList.length > 0 
-      ? browser.storage.local.get(
-        localList.map((key) => STORAGE_KEY_META[key].storageKey)
-      )
-      : {},
-    sessionList.length > 0 
-      ? browser.storage.session.get(
-        sessionList.map((key) => STORAGE_KEY_META[key].storageKey)
-      ) 
-      : {},
-  ])
-
-  const localObj = Object.fromEntries(
-    localList.map((key) => {
-      const storageKey = STORAGE_KEY_META[key].storageKey
-
-      return [
-        key,
-        localStoredObj[storageKey] !== undefined 
-          ? localStoredObj[storageKey] 
-          : STORAGE_KEY_META[key].default
-      ]
-    })
-  )
-  const sessionObj = Object.fromEntries(
-    sessionList.map((key) => {
-      const storageKey = STORAGE_KEY_META[key].storageKey
-
-      return [
-        key,
-        sessionStoredObj[storageKey] !== undefined 
-          ? sessionStoredObj[storageKey] 
-          : STORAGE_KEY_META[key].default
-      ]
-    })
-  )
-
-  return {
-    ...localObj,
-    ...sessionObj,
-  }
-}
 class TagList {
   isTagListAvailable = true
   _recentTagObj = {}
@@ -785,13 +835,13 @@ async function getOptions(keyList) {
 
   async readFromStorage() {
     const savedObj = await getOptions([
-      STORAGE_KEY.ADD_BOOKMARK_IS_ON,
-      STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
-      STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
-      STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED,
-      STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP,
       STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP,
       STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
+      STORAGE_KEY.ADD_BOOKMARK_IS_ON,
+      STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
+      STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP,
+      STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED,
+      STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
     ]);
 
     if (!savedObj[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
@@ -1008,141 +1058,103 @@ async function getOptions(keyList) {
 }
 
 const tagList = new TagList()
-// console.log('IMPORTING', 'memo.js')
-const memo = {
-  previousTabId: '',
-  activeTabId: '',
-  activeTabUrl: '',
-  isActiveTabBookmarkManager: false,
 
-  cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
-  cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
-  bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
-  // tabId -> bookmarkId
-  tabMap: new Map(),
+const targetMap = new Map(
+  clearUrlTargetList.map(({ hostname, paths }) => [hostname, paths])
+)
 
-  // TODO use promise in cache for setting and profile-start-time
-  // cache[setting] = readSettings
-  // isSettingsActual = true
-  //
-  // await cache[settings]
-  _isSettingsActual: false,
-  _settings: {},
-  get isSettingsActual() {
-    return this._isSettingsActual
-  },
-  invalidateSettings () {
-    this._isSettingsActual = false
-  },
-  async readSettings() {
-    logSettings('readSavedSettings START')
+const getHostBase = (str) => str.split('.').slice(-2).join('.')
 
-    this._settings = await getOptions([
-      STORAGE_KEY.CLEAR_URL,
-      STORAGE_KEY.SHOW_PATH_LAYERS,
-      STORAGE_KEY.SHOW_PREVIOUS_VISIT,
-      STORAGE_KEY.SHOW_BOOKMARK_TITLE,
-      STORAGE_KEY.ADD_BOOKMARK_IS_ON,
-      STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
-      STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
-      STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
-      STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
-      STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
-    ]);
-    logSettings('readSavedSettings')
-    logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
-  },
-  async init() {
-    this._isSettingsActual = true
-    await this.readSettings()
-    await tagList.readFromStorage()
-  },
-  get settings() {
-    return { ...this._settings }
-  },
-  async updateSettings(updateObj) {
-    Object.entries(updateObj).forEach(([ket, value]) => {
-      this._settings[ket] = value
-    })
+const removeQueryParamsIfTarget = (url) => {
+  let cleanUrl = url
+  let isPattern = false
+
+  try {
+    const oLink = new URL(url);
+    const { hostname, pathname } = oLink;
+    const targetPathList = targetMap.get(getHostBase(hostname))
+
+    if (targetPathList && targetPathList.some((targetPath) => pathname.startsWith(targetPath))) {
+      isPattern = true
+      oLink.search = ''
+
+      cleanUrl = oLink.toString();  
+    }
+  
+  /* eslint-disable no-unused-vars */
+  // eslint-disable-next-line no-empty
+  } catch (_e) {
     
-    await setOptions(updateObj)
-  },
-
-  _profileStartTimeMS: undefined,
-  get profileStartTimeMS() {
-    return this._profileStartTimeMS
-  },
-  _isProfileStartTimeMSActual: false,
-  get isProfileStartTimeMSActual() {
-    return this._isProfileStartTimeMSActual
-  },
-  async readProfileStartTimeMS() {
-    if (!this._isProfileStartTimeMSActual) {
-
-      const storedSession = await getOptions(STORAGE_KEY.START_TIME)
-      logSettings('storedSession', storedSession)
-
-      if (storedSession[STORAGE_KEY.START_TIME]) {
-        this._profileStartTimeMS = storedSession[STORAGE_KEY.START_TIME]
-      } else {
-        // I get start for service-worker now.
-        //    It is correct if this web-extension was installed in the previous browser session
-        // It is better get for window // min(window.startTime(performance.timeOrigin)) OR min(tab(performance.timeOrigin))
-        //  tab with minimal tabId
-        this._profileStartTimeMS = performance.timeOrigin
-        await setOptions({
-          [STORAGE_KEY.START_TIME]: this._profileStartTimeMS
-        })
-
-      }
-
-      logSettings('profileStartTimeMS', new Date(this._profileStartTimeMS).toISOString())
-      this._isProfileStartTimeMSActual = true
-    }
-  },
-
-  // TODO move activeDialog to separate class
-  activeDialog: {},
-  activeDialogTabId: undefined,
-  activeDialogTabOnActivated (tabId) {
-    if (tabId !== this.activeDialogTabId)  {
-      this.activeDialogTabId = tabId
-      this.activeDialog = {}
-    }
-  },
-  createBkmInActiveDialog (bookmarkId, parentId) {
-    const isFirst = Object.values(this.activeDialog).filter(({ bookmarkId }) => bookmarkId).length === 0;
-    this.activeDialog[parentId] = {
-      ...this.activeDialog[parentId],
-      bookmarkId,
-      isFirst,
-    }
-
-    return this.activeDialog[parentId]
-  },
-  createBkmInActiveDialogFromTag (parentId) {
-    this.activeDialog[parentId] = {
-      fromTag: true
-    }
-  },
-  isCreatedInActiveDialog(bookmarkId, parentId) {
-    const result = this.activeDialog[parentId]?.bookmarkId === bookmarkId 
-      && this.activeDialog[parentId]?.isFirst === true
-      && this.activeDialog[parentId]?.fromTag !== true
-
-    return result
-  },
-  removeFromActiveDialog(parentId) {
-    delete this.activeDialog[parentId]
   }
-};
+  /* eslint-enable no-unused-vars */
 
-logSettings('IMPORT END', 'memo.js', new Date().toISOString())
-async function deleteBookmark(bkmId) {
-  await browser.bookmarks.remove(bkmId);
+  return {
+    cleanUrl,
+    isPattern,
+  }
 }
 
-async function deleteUncleanUrlBookmarkForTab(tabId) {
+const removeQueryParams = (link) => {
+  try {
+    const oLink = new URL(link);
+    oLink.search = ''
+  
+    return oLink.toString();  
+  // eslint-disable-next-line no-unused-vars
+  } catch (e) {
+    return link
+  }
+}
+
+// let testStr = "https://www.linkedin.com/jobs/view/3920634940/?alternateChannel=search&refId=dvaqme%2FfxHehSAa5o4nVnA%3D%3D&trackingId=8%2FZKaGcTAInuTTH4NyKDoA%3D%3D"
+// console.log('test ', removeQueryParamsIfTarget(testStr))
+
+// testStr = "https://www.youtube.com/watch?v=YuJ6SasIS_E&t=356s"
+// console.log('test ', removeQueryParamsIfTarget(testStr))
+
+// testStr = "https://youtube.com/watch?v=YuJ6SasIS_E&t=356s"
+// console.log('test ', removeQueryParamsIfTarget(testStr))
+
+// testStr = "https://youtu.be/watch?v=YuJ6SasIS_E&t=356s"
+// console.log('test ', removeQueryParamsIfTarget(testStr))
+//
+// https://career.proxify.io/apply?uuid=566c933b-432e-64e0-b317-dd4390d6a74e&step=AdditionalInformation
+
+async function clearUrlInTab({ tabId, cleanUrl }) {
+  const msg = {
+    command: CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL,
+    cleanUrl,
+  }
+  logSendEvent('clearUrlInTab()', tabId, msg)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logIgnore('clearUrlInTab()', err)
+    })
+}
+// TODO did can we not create menu on evert time
+async function createContextMenu() {
+  await browser.menus.removeAll();
+
+  browser.menus.create({
+    id: CONTEXT_MENU_ID.CLOSE_DUPLICATE,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'close duplicate tabs',
+  });  
+  browser.menus.create({
+    id: CONTEXT_MENU_ID.CLEAR_URL,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'clear url',
+  });
+  // TODO? bookmark and close all tabs (tabs without bookmarks and tabs with bookmarks)
+  //   copy bookmarked tabs
+  browser.menus.create({
+    id: CONTEXT_MENU_ID.CLOSE_BOOKMARKED,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'close bookmarked tabs',
+  });
+  // TODO? bookmark and close tabs (tabs without bookmarks)
+}
+async function deleteUncleanUrlBookmarkForTab(tabId) {
   log('deleteUncleanUrlBookmarkForTab 00 tabId', tabId)
   if (!tabId) {
     return
@@ -1368,9 +1380,10 @@ async function getVisitListForUrlList(urlList) {
 }
 
 async function getPreviousVisitList(url) {
+  const settings = await extensionSettings.get()
   let rootUrl
 
-  if (memo.settings[STORAGE_KEY.CLEAR_URL]) {
+  if (settings[STORAGE_KEY.CLEAR_URL]) {
     const { cleanUrl, isPattern } = removeQueryParamsIfTarget(url)
 
     if (isPattern) {
@@ -1392,7 +1405,8 @@ async function getPreviousVisitList(url) {
 }
 
 async function getHistoryInfo({ url, useCache=false }) {
-  const showPreviousVisit = memo.settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT]
+  const settings = await extensionSettings.get()
+  const showPreviousVisit = settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT]
   
   if (!(showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS || showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM)) {
     return {
@@ -1425,10 +1439,14 @@ async function getHistoryInfo({ url, useCache=false }) {
     source,
   };
 }
+async function initExtension() {
+  await tagList.readFromStorage()
+}
 async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
+  const settings = await extensionSettings.get()
   let actualUrl = url
 
-  if (memo.settings[STORAGE_KEY.CLEAR_URL]) {
+  if (settings[STORAGE_KEY.CLEAR_URL]) {
     const { cleanUrl } = removeQueryParamsIfTarget(url)
 
     if (url !== cleanUrl) {
@@ -1442,8 +1460,8 @@ async function getHistoryInfo({ url, useCache=false }) {
   const message = {
     command: CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO,
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
-    showLayer: memo.settings[STORAGE_KEY.SHOW_PATH_LAYERS],
-    isShowTitle: memo.settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
+    showLayer: settings[STORAGE_KEY.SHOW_PATH_LAYERS],
+    isShowTitle: settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
     // TODO send in different message
     tagList: tagList.list.map(({ parentId, title, isFixed, isLast}) => ({
       parentId,
@@ -1452,8 +1470,8 @@ async function getHistoryInfo({ url, useCache=false }) {
       isLast,
       isUsed: usedParentIdSet.has(parentId)
     })),
-    isShowTagList: memo.settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
-    tagLength: memo.settings[STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH],
+    isShowTagList: settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
+    tagLength: settings[STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH],
   }
   logSendEvent('updateBookmarksForTabTask()', tabId, message);
   await browser.tabs.sendMessage(tabId, message)
@@ -1461,13 +1479,14 @@ async function getHistoryInfo({ url, useCache=false }) {
   return bookmarkInfo
 }
 async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
+  const settings = await extensionSettings.get()
   log('updateVisitsForTabTask(', tabId, useCache, url);
 
   const visitInfo = await getHistoryInfo({ url, useCache })
 
   const message = {
     command: CONTENT_SCRIPT_COMMAND_ID.HISTORY_INFO,
-    showPreviousVisit: memo.settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT],
+    showPreviousVisit: settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT],
     visitList: visitInfo.visitList,
   }
   logSendEvent('updateVisitsForTabTask()', tabId, message);
@@ -1481,7 +1500,7 @@ async function updateTab({ tabId, url, useCache=false, debugCaller }) {
 
     await Promise.all([
       !memo.isProfileStartTimeMSActual && memo.readProfileStartTimeMS(),
-      !memo.isSettingsActual && memo.init(),
+      !extensionSettings.isActual() && extensionSettings.restoreFromStorage().then(initExtension),
     ])
 
     log(`${debugCaller} -> updateTab() useCache`, useCache);
@@ -2082,63 +2101,13 @@ async function flatBookmarks() {
     tagList.blockTagList(false)
   }
 }
-async function getDoubles() {
-  const doubleList = []
-
-  async function traverseNodeList(nodeList) {
-    const urlToIdMap = new ExtraMap()
-    nodeList
-      .filter(({ url }) => !!url)
-      .forEach(({ id, url, title }) => {
-        urlToIdMap.concat(url, { id, title })
-      })
-
-    for (const idList of urlToIdMap.values()) {
-      if (idList.length > 1) {
-        const titleToIdMap = new ExtraMap()
-
-        idList.forEach(({ id, title }) => {
-          titleToIdMap.concat(title, id)
-        })
-
-        for (const idList of titleToIdMap.values()) {
-          if (idList.length > 1) {
-            idList
-              .slice(1)
-              .forEach(
-                (id) => doubleList.push(id)
-              )
-          }
-        }
-      }
-    }
-
-    nodeList
-      .filter(({ url }) => !url)
-      .map(
-        (node) => traverseNodeList(node.children)
-      )
-  }
-
-  const nodeList = await browser.bookmarks.getTree()
-  traverseNodeList(nodeList)
-
-  return doubleList
-}
-
-async function removeDoubleBookmarks() {
-  const doubleList = await getDoubles()
-  // console.log('Double bookmarks:', doubleList.length)
-
-  await Promise.all(
-    doubleList.map(
-      (id) => browser.bookmarks.remove(id)
-    )
-  )
-
-  return {
-    nRemovedDoubles: doubleList.length
-  }
+async function addBookmark({ url, title, parentId }) {
+  await browser.bookmarks.create({
+    index: 0,
+    parentId,
+    title,
+    url
+  })
 }
 async function clearUrlInActiveTab() {
   const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
@@ -2306,64 +2275,146 @@ async function closeDuplicateTabs() {
     duplicateTabIdList.length > 0 && browser.tabs.remove(duplicateTabIdList),
   ])
 }
+async function deleteBookmark(bkmId) {
+  await browser.bookmarks.remove(bkmId);
+}
+async function fixTag({ parentId, title }) {
+  await tagList.addFixedTag({
+    parentId,
+    title,
+  })
+}
 async function moveToFlatFolderStructure() {
-  await memo.updateSettings({
+  await extensionSettings.update({
     [STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]: true
   })
   await tagList.filterTagListForFlatFolderStructure()
 
   await flatBookmarks()
 }
-const bookmarksController = {
+async function getDoubles() {
+  const doubleList = []
+
+  async function traverseNodeList(nodeList) {
+    const urlToIdMap = new ExtraMap()
+    nodeList
+      .filter(({ url }) => !!url)
+      .forEach(({ id, url, title }) => {
+        urlToIdMap.concat(url, { id, title })
+      })
+
+    for (const idList of urlToIdMap.values()) {
+      if (idList.length > 1) {
+        const titleToIdMap = new ExtraMap()
+
+        idList.forEach(({ id, title }) => {
+          titleToIdMap.concat(title, id)
+        })
+
+        for (const idList of titleToIdMap.values()) {
+          if (idList.length > 1) {
+            idList
+              .slice(1)
+              .forEach(
+                (id) => doubleList.push(id)
+              )
+          }
+        }
+      }
+    }
+
+    nodeList
+      .filter(({ url }) => !url)
+      .map(
+        (node) => traverseNodeList(node.children)
+      )
+  }
+
+  const nodeList = await browser.bookmarks.getTree()
+  traverseNodeList(nodeList)
+
+  return doubleList
+}
+
+async function removeDoubleBookmarks() {
+  const doubleList = await getDoubles()
+  // console.log('Double bookmarks:', doubleList.length)
+
+  await Promise.all(
+    doubleList.map(
+      (id) => browser.bookmarks.remove(id)
+    )
+  )
+
+  return {
+    nRemovedDoubles: doubleList.length
+  }
+}
+async function switchShowRecentList(isShow) {
+  await extensionSettings.update({
+    [STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW]: isShow
+  })
+}
+async function unfixTag(parentId) {
+  await tagList.removeFixedTag(parentId)
+}
+
+import {
+  STORAGE_KEY,
+  IS_BROWSER_CHROME,
+  // eslint-disable-next-line no-unused-vars
+  IS_BROWSER_FIREFOX,
+} from '../constant/index.js'
+const bookmarksController = {
   async onCreated(bookmarkId, node) {
     logEvent('bookmark.onCreated <-', node);
+    const settings = await extensionSettings.get()
 
-    let fromTag
-    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-      ({ fromTag } = memo.createBkmInActiveDialog(node.id, node.parentId))
-      if (!fromTag) {
+    if (node.url) {
+      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+        activeDialog.createBkmStandard(node.id, node.parentId)
+        await tagList.addRecentTag(node)
+      }
+    } else {
+      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
         await tagList.addRecentTag(node)
       }
     }
 
-    if (node.url) {
-      if (node.url === memo.activeTabUrl) {
-        // changes in active tab
-        await updateActiveTab({
-          debugCaller: 'bookmark.onCreated'
-        });
-      } else {
-        // changes in bookmark manager
-        getBookmarkInfoUni({ url: node.url });
-      }
-    }
-
-    if (fromTag) {
-      tagList.addRecentTag(node)
-    }
+    // changes in active tab
+    await updateActiveTab({
+      debugCaller: 'bookmark.onCreated'
+    });
+    // changes in bookmark manager
+    getBookmarkInfoUni({ url: node.url });
   },
   async onChanged(bookmarkId, changeInfo) {
     logEvent('bookmark.onChanged 00 <-', changeInfo);
+    const settings = await extensionSettings.get()
 
-    memo.bkmFolderById.delete(bookmarkId);
+    const [node] = await browser.bookmarks.get(bookmarkId)
 
+    // eslint-disable-next-line no-empty
+    if (node.url) {
+      
+    } else {
+      memo.bkmFolderById.delete(bookmarkId);
 
-    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && changeInfo.title) {
-      await memo.updateTag(bookmarkId, changeInfo.title)
+      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && changeInfo.title) {
+        await tagList.updateTag(bookmarkId, changeInfo.title)
+      }
     }
+
     // changes in active tab
     await updateActiveTab({
       debugCaller: 'bookmark.onChanged'
     });
-
-    const [node] = await browser.bookmarks.get(bookmarkId)
-
     // changes in bookmark manager
-    getBookmarkInfoUni({ url: node.url });        
+    getBookmarkInfoUni({ url: node.url });   
   },
   async onMoved(bookmarkId, { oldIndex, index, oldParentId, parentId }) {
     logEvent('bookmark.onMoved <-', { oldIndex, index, oldParentId, parentId });
-    
+    const settings = await extensionSettings.get()
     // switch (true) {
     //   // in bookmark manager. no changes for this extension
     //   case parentId === oldParentId: {
@@ -2380,71 +2431,64 @@ async function closeDuplicateTabs() {
 
     //   }
     // }
-    let node 
-    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] || parentId !== oldParentId) {
-      ([node] = await browser.bookmarks.get(bookmarkId))
-    }
+    const [node] = await browser.bookmarks.get(bookmarkId)
     
-    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-      await tagList.addRecentTag(node);
-    }
+    if (node.url) {
+      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && parentId !== oldParentId) {
+        await tagList.addRecentTag(node);
 
-    // EPIC_ERROR if (parentId ==! oldParentId) {
-    if (parentId !== oldParentId) {
-      logDebug('bookmark.onMoved <-', node);
+        const isCreatedInActiveDialog = activeDialog.isCreatedInActiveDialog(bookmarkId, oldParentId)
+        if (isCreatedInActiveDialog) {
+          logDebug('bookmark.onMoved 11');
+          activeDialog.removeBkm(oldParentId)
+        }
 
-      if (!node.url) {
-        memo.bkmFolderById.delete(bookmarkId);
-      }
-
-      const childrenList = await browser.bookmarks.getChildren(parentId)
-      const lastIndex = childrenList.length - 1
-
-      // changes in active tab or in bookmark manager
-      if (index === lastIndex) {
-        if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-
-          if (memo.isCreatedInActiveDialog(bookmarkId, oldParentId)) {
-            logDebug('bookmark.onMoved 11');
-            memo.removeFromActiveDialog(oldParentId)
-          } else if (oldParentId && !!node.url && IS_BROWSER_CHROME && !memo.isActiveTabBookmarkManager) {
-            logDebug('bookmark.onMoved 22');
-            await Promise.all([
-              browser.bookmarks.create({
-                parentId: oldParentId,
+        if (!isCreatedInActiveDialog) {
+          if (IS_BROWSER_CHROME) {
+            if (!memo.isActiveTabBookmarkManager) {
+              logDebug('bookmark.onMoved 22');
+              await Promise.all([
+                browser.bookmarks.create({
+                  parentId: oldParentId,
+                  title: node.title,
+                  url: node.url
+                }),
+                browser.bookmarks.remove(bookmarkId),
+              ])
+              await browser.bookmarks.create({
+                parentId,
                 title: node.title,
                 url: node.url
-              }),
-              browser.bookmarks.remove(bookmarkId),
-            ])
-            await browser.bookmarks.create({
-              parentId,
-              title: node.title,
-              url: node.url
-            })
+              })
+            }
+          // } else if (IS_BROWSER_FIREFOX) {
+            
           }
-          logDebug('bookmark.onMoved 33');
         }
-  
-        await updateActiveTab({
-          debugCaller: 'bookmark.onMoved'
-        });
       }
-
-      // changes in bookmark manager
-      getBookmarkInfoUni({ url: node.url });
+    } else {
+      memo.bkmFolderById.delete(bookmarkId);
     }
 
+    await updateActiveTab({
+      debugCaller: 'bookmark.onMoved'
+    });
+    // changes in bookmark manager
+    getBookmarkInfoUni({ url: node.url })
   },
   async onRemoved(bookmarkId, { node }) {
     logEvent('bookmark.onRemoved <-');
-    memo.bkmFolderById.delete(bookmarkId);
+    const settings = await extensionSettings.get()
 
-    if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-      memo.removeFromActiveDialog(node.parentId)
-      
-      if (!node.url) {
-        await memo.removeTag(bookmarkId)
+    if (node.url) {
+      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+        activeDialog.removeBkm(node.parentId)    
+      }
+    } else {
+      memo.bkmFolderById.delete(bookmarkId);
+
+      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+        await tagList.removeTag(bookmarkId)
       }
     }
 
@@ -2485,10 +2529,11 @@ async function closeDuplicateTabs() {
       logEvent('runtime.onMessage contentScriptReady', tabId);
 
       if (tabId) {
+        const settings = await extensionSettings.get()
         const url = message.url
         let cleanUrl
 
-        if (memo.settings[STORAGE_KEY.CLEAR_URL]) {
+        if (settings[STORAGE_KEY.CLEAR_URL]) {
           ({ cleanUrl } = removeQueryParamsIfTarget(url));
           
           if (url !== cleanUrl) {
@@ -2508,12 +2553,11 @@ async function closeDuplicateTabs() {
     }
     case EXTENSION_COMMAND_ID.ADD_BOOKMARK: {
       logEvent('runtime.onMessage addBookmark');
-      memo.createBkmInActiveDialogFromTag(message.parentId)
-      await browser.bookmarks.create({
-        index: 0,
-        parentId: message.parentId,
+      activeDialog.createBkmFromTag(message.parentId)
+      await addBookmark({
+        url: message.url,
         title: message.title,
-        url: message.url
+        parentId: message.parentId,
       })
 
       break
@@ -2526,22 +2570,14 @@ async function closeDuplicateTabs() {
     }
     case EXTENSION_COMMAND_ID.SHOW_TAG_LIST: {
       logEvent('runtime.onMessage SHOW_RECENT_LIST');
-
-      await memo.updateSettings({
-        [STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW]: message.value
-      })
-      // updateActiveTab({
-      //   debugCaller: 'runtime.onMessage SHOW_RECENT_LIST',
-      //   useCache: true,
-      // });
+      await switchShowRecentList(message.value)
 
       break
     }
     case EXTENSION_COMMAND_ID.FIX_TAG: {
       logEvent('runtime.onMessage fixTag');
-
-      await memo.addFixedTag({
-        parentId: message.parentId,
+      await fixTag({
+        parentId: message.parentId, 
         title: message.title,
       })
       updateActiveTab({
@@ -2553,10 +2589,9 @@ async function closeDuplicateTabs() {
     }
     case EXTENSION_COMMAND_ID.UNFIX_TAG: {
       logEvent('runtime.onMessage unfixTag');
-
-      await memo.removeFixedTag(message.parentId)
+      await unfixTag(message.parentId)
       updateActiveTab({
-        debugCaller: 'runtime.onMessage unfixTag',
+        debugCaller: 'runtime.onMessage fixTag',
         useCache: true,
       });
 
@@ -2658,23 +2693,23 @@ async function closeDuplicateTabs() {
       const changesSet = new Set(Object.keys(changes))
       // TODO? do we need invalidate setting for all this keys
       const settingSet = new Set([
+        STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
+        STORAGE_KEY.ADD_BOOKMARK_IS_ON,
+        STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
+        // STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
+        STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
         STORAGE_KEY.CLEAR_URL,
+        STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
+        STORAGE_KEY.SHOW_BOOKMARK_TITLE,
         STORAGE_KEY.SHOW_PATH_LAYERS,
         STORAGE_KEY.SHOW_PREVIOUS_VISIT,
-        STORAGE_KEY.SHOW_BOOKMARK_TITLE,
-        STORAGE_KEY.ADD_BOOKMARK_IS_ON,
-        //STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
-        STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
-        STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
-        STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
-        STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
       ].map((key) => STORAGE_KEY_META[key].storageKey))
       const intersectSet = changesSet.intersection(settingSet)
 
       if (intersectSet.size > 0) {
         logEvent('storage.onChanged', namespace, changes);
 
-        memo.invalidateSettings()
+        extensionSettings.invalidate()
 
         if (changesSet.has(STORAGE_KEY.SHOW_PREVIOUS_VISIT)) {
           memo.cacheUrlToVisitList.clear()
@@ -2707,8 +2742,9 @@ async function closeDuplicateTabs() {
           const url = changeInfo.url
           logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, url);
           let cleanUrl
+          const settings = await extensionSettings.get()
 
-          if (memo.settings[STORAGE_KEY.CLEAR_UR]) {
+          if (settings[STORAGE_KEY.CLEAR_UR]) {
             ({ cleanUrl } = removeQueryParamsIfTarget(url));
             
             if (url !== cleanUrl) {
@@ -2754,7 +2790,7 @@ async function closeDuplicateTabs() {
   },
   async onActivated({ tabId }) {
     logEvent('tabs.onActivated 00', tabId);
-    memo.activeDialogTabOnActivated(tabId)
+    activeDialog.onTabChanged(tabId)
 
     if (memo.activeTabId !== tabId) {
       memo.previousTabId = memo.activeTabId;

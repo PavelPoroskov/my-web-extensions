@@ -6,7 +6,6 @@ import {
 createFileForFirefox(
   [
     'constant/log-config.js',
-    'api/log-api.js',
     'constant/browser-specific.js',
     'constant/clean-url.js',
     'constant/command-id.js',
@@ -14,24 +13,29 @@ createFileForFirefox(
     'constant/optimization-cache.js',
     'constant/storage.js',
     'constant/index.js',
-    'api/structure/cache.js',
-    'api/structure/memo.js',
+    
+      'api/log-api.js',
     'api/structure/promiseQueue.js',
     'api/structure/extraMap.js',
-    'api/structure/tagList.js',
     'api/structure/activeDialog.js',
+    'api/structure/cache.js',
+      'api/storage-api.js',
+    'api/structure/memo.js',
     'api/structure/extensionSettings.js',
-    'api/structure/index.js',
+    
     'api/common-api.js',
     'api/special-folder.api.js',
     'api/recent-api.js',
+      'api/structure/tagList.js',
+      'api/structure/index.js',
     'api/clean-url-api.js',
     'api/context-menu.js',
-    'api/storage-api.js',
     'api/bookmarks-api.js',
     'api/history-api.js',
+    'api/init-extension.js',
     'api/tabs-api.js',
     'api/flat-structure-api.js',
+
     'api/command/addBookmark.js',
     'api/command/clearUrlInActiveTab.js',
     'api/command/closeBookmarkedTabs.js',
@@ -43,6 +47,7 @@ createFileForFirefox(
     'api/command/switchShowRecentList.js',
     'api/command/unfixTag.js',
     'api/command/index.js',
+
     'controllers/bookmarks.controller.js',
     'controllers/contextMenus.controller.js',
     'controllers/incoming-message.js',
@@ -50,6 +55,7 @@ createFileForFirefox(
     'controllers/storage.controller.js',
     'controllers/tabs.controller.js',
     'controllers/windows.controller.js',
+
     'bkm-info-sw.js',
   ],
   'background.js',
