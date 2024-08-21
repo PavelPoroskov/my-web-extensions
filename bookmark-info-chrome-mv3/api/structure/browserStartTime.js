@@ -47,9 +47,13 @@ class BrowserStartTime {
       this.fnReject = fnReject;
     });
 
-    this.startTime = await this.getStartTime()
-      .then(this.fnResolve)
-      .then(this.fnReject)
+    await this.getStartTime()
+      .then((result) => {
+        this.startTime = result
+
+        this.fnResolve()
+      })
+      .catch(this.fnReject)
 
     logSettings('profileStartTimeMS', new Date(this.startTime).toISOString())
   }

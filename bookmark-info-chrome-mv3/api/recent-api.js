@@ -71,21 +71,20 @@ export async function filterRecentTagObj(inObj = {}, isFlatStructure) {
   }
 
   const folderList = await chrome.bookmarks.get(idList)
-  const filteredFolderList = folderList
+  let filteredFolderList = folderList
     .filter(Boolean)
     .filter(({ title }) => !!title)
 
-  let filteredFolderList2 = filteredFolderList
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {
     const nestedRootFolderId = await getNestedRootFolderId()
-    filteredFolderList2 = filteredFolderList.filter(
+    filteredFolderList = filteredFolderList.filter(
       ({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId
     )
   }
 
   return Object.fromEntries(
-    filteredFolderList2.map(({ id, title }) => [
+    filteredFolderList.map(({ id, title }) => [
       id, 
       {
         title, 
@@ -103,20 +102,19 @@ export async function filterFixedTagObj(obj = {}, isFlatStructure) {
   }
 
   const folderList = await chrome.bookmarks.get(idList)
-  const filteredFolderList = folderList
+  let filteredFolderList = folderList
     .filter(Boolean)
     .filter(({ title }) => !!title)
 
-  let filteredFolderList2 = filteredFolderList
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {
     const nestedRootFolderId = await getNestedRootFolderId()
-    filteredFolderList2 = filteredFolderList.filter(
+    filteredFolderList = filteredFolderList.filter(
       ({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId
     )
   }
 
   return Object.fromEntries(
-    filteredFolderList2.map(({ id, title }) => [id, title])
+    filteredFolderList.map(({ id, title }) => [id, title])
   )
 }

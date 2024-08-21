@@ -550,7 +550,7 @@ logSettings('IMPORT END', 'memo.js', new Date().toISOString())
       this.fnReject = fnReject;
     });
 
-    this._settings = await getOptions([
+    await getOptions([
       STORAGE_KEY.ADD_BOOKMARK_IS_ON,
       STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
       STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
@@ -560,7 +560,10 @@ logSettings('IMPORT END', 'memo.js', new Date().toISOString())
       STORAGE_KEY.SHOW_PATH_LAYERS,
       STORAGE_KEY.SHOW_PREVIOUS_VISIT,
     ])
-      .then(this.fnResolve)
+      .then((result) => {
+        this._settings = result
+        this.fnResolve()
+      })
       .catch(this.fnReject);
     logSettings('readSavedSettings')
     logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
@@ -615,9 +618,13 @@ const extensionSettings = new ExtensionSettings()
       this.fnReject = fnReject;
     });
 
-    this.startTime = await this.getStartTime()
-      .then(this.fnResolve)
-      .then(this.fnReject)
+    await this.getStartTime()
+      .then((result) => {
+        this.startTime = result
+
+        this.fnResolve()
+      })
+      .catch(this.fnReject)
 
     logSettings('profileStartTimeMS', new Date(this.startTime).toISOString())
   }
@@ -716,12 +723,7 @@ const getOrCreateNestedRootFolderId = async () => getOrCreateFolderByTitleInRoot
 const getOrCreateUnclassifiedFolderId = async () => getOrCreateFolderByTitleInRoot({ title: UNCLASSIFIED_TITLE, oldTitle: UNCLASSIFIED_TITLE_OLD })
 
 const getNestedRootFolderId = memoize(async () => getFolderByTitleInRoot({ title: NESTED_ROOT_TITLE, oldTitle: NESTED_ROOT_TITLE_OLD }))
-const EMPTY_FOLDER_NAME_LIST = [
-  'New folder',
-  '[Folder Name]',
-]
-
-const emptyFolderNameSet = new Set(EMPTY_FOLDER_NAME_LIST)
+const isDescriptiveTitle = (title) => !(title.startsWith('New folder') || title.startsWith('[Folder Name]')) 
 
 async function getRecentList(nItems) {
   log('getRecentTagObj() 00', nItems)
@@ -760,7 +762,7 @@ async function getRecentList(nItems) {
 
   return Object.entries(folderByIdMap)
     .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-    .filter(({ title }) => !emptyFolderNameSet.has(title))
+    .filter(({ title }) => isDescriptiveTitle(title))
     .sort((a,b) => -(a.dateAdded - b.dateAdded))
 }
 
@@ -786,21 +788,20 @@ async function filterRecentTagObj(inObj = {}, isFlatStructure) {
   }
 
   const folderList = await browser.bookmarks.get(idList)
-  const filteredFolderList = folderList
+  let filteredFolderList = folderList
     .filter(Boolean)
     .filter(({ title }) => !!title)
 
-  let filteredFolderList2 = filteredFolderList
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {
     const nestedRootFolderId = await getNestedRootFolderId()
-    filteredFolderList2 = filteredFolderList.filter(
+    filteredFolderList = filteredFolderList.filter(
       ({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId
     )
   }
 
   return Object.fromEntries(
-    filteredFolderList2.map(({ id, title }) => [
+    filteredFolderList.map(({ id, title }) => [
       id, 
       {
         title, 
@@ -818,21 +819,20 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
   }
 
   const folderList = await browser.bookmarks.get(idList)
-  const filteredFolderList = folderList
+  let filteredFolderList = folderList
     .filter(Boolean)
     .filter(({ title }) => !!title)
 
-  let filteredFolderList2 = filteredFolderList
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {
     const nestedRootFolderId = await getNestedRootFolderId()
-    filteredFolderList2 = filteredFolderList.filter(
+    filteredFolderList = filteredFolderList.filter(
       ({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId
     )
   }
 
   return Object.fromEntries(
-    filteredFolderList2.map(({ id, title }) => [id, title])
+    filteredFolderList.map(({ id, title }) => [id, title])
   )
 }
 class TagList {
@@ -865,6 +865,8 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
     this.LIST_LIMIT = savedObj[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT]
     this.FORCE_FLAT_FOLDER_STRUCTURE = savedObj[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]
     this.HIGHLIGHT_LAST = savedObj[STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST]
+    // console.log('TagList.readFromStorage _fixedTagObj')
+    // console.log(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP])
 
     if (savedObj[STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]) {
 
@@ -878,7 +880,8 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
         ...actualRecentTagObj,
       }, isFlatStructure)
       this._fixedTagObj = await filterFixedTagObj(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP], isFlatStructure)
-
+      // console.log('TagList.readFromStorage after filtering _fixedTagObj')
+      // console.log(this._fixedTagObj)
       await setOptions({
         [STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]: true,
         [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
@@ -950,7 +953,7 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
       }
     }
   
-    if (emptyFolderNameSet.has(newFolder.title)) {
+    if (!isDescriptiveTitle(newFolder.title)) {
       return
     }
 
@@ -1061,8 +1064,10 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
 
   async filterTagListForFlatFolderStructure() {
     const isFlatStructure = true
+    console.log('filterTagListForFlatFolderStructure ', this._fixedTagObj)
     this._recentTagObj =  await filterRecentTagObj(this._recentTagObj, isFlatStructure)
     this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
+    console.log('filterTagListForFlatFolderStructure, after filter', this._fixedTagObj)
     this._tagList = this.refillList()
     await setOptions({
       [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,
@@ -2106,9 +2111,9 @@ async function flatBookmarks() {
     await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
     await createNestedFolders({ toCopyFolderById, nestedRootId })
   
-    // TODO? delete empty folders
+    // MAYBE? delete empty folders
   
-    // TODO? delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
+    // MAYBE? delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
     //await updateNestedFolders({ nestedRootId })
   
     await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
@@ -2376,13 +2381,7 @@ async function removeDoubleBookmarks() {
   await tagList.removeFixedTag(parentId)
 }
 
-import {
-  STORAGE_KEY,
-  IS_BROWSER_CHROME,
-  // eslint-disable-next-line no-unused-vars
-  IS_BROWSER_FIREFOX,
-} from '../constant/index.js'
-const bookmarksController = {
+const bookmarksController = {
   async onCreated(bookmarkId, node) {
     logEvent('bookmark.onCreated <-', node);
     const settings = await extensionSettings.get()

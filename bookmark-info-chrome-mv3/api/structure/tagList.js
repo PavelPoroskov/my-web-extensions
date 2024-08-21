@@ -47,6 +47,8 @@ class TagList {
     this.LIST_LIMIT = savedObj[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT]
     this.FORCE_FLAT_FOLDER_STRUCTURE = savedObj[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]
     this.HIGHLIGHT_LAST = savedObj[STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST]
+    // console.log('TagList.readFromStorage _fixedTagObj')
+    // console.log(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP])
 
     if (savedObj[STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]) {
 
@@ -60,7 +62,8 @@ class TagList {
         ...actualRecentTagObj,
       }, isFlatStructure)
       this._fixedTagObj = await filterFixedTagObj(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP], isFlatStructure)
-
+      // console.log('TagList.readFromStorage after filtering _fixedTagObj')
+      // console.log(this._fixedTagObj)
       await setOptions({
         [STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]: true,
         [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
@@ -243,8 +246,10 @@ class TagList {
 
   async filterTagListForFlatFolderStructure() {
     const isFlatStructure = true
+    console.log('filterTagListForFlatFolderStructure ', this._fixedTagObj)
     this._recentTagObj =  await filterRecentTagObj(this._recentTagObj, isFlatStructure)
     this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
+    console.log('filterTagListForFlatFolderStructure, after filter', this._fixedTagObj)
     this._tagList = this.refillList()
     await setOptions({
       [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,

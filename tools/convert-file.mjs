@@ -10,7 +10,7 @@ export const convertFileContent = (inStr) => {
   const usedDependencies = [];
   result = result.replaceAll(
     // eslint-disable-next-line
-    /(?:import|export)\s+[{\s\w,\*\/}]*from\s+\'(?<dependency>[^\']+)\'[;]*\s*/g,
+    /(?:import|export)\s+[{\s\w,\*\/\-}]*from\s+\'(?<dependency>[^\']+)\'[;]*\s*/g,
     function (_, dependency) {
       // console.log('Replace', arguments[0], '##');
       // console.log('Replace', arguments);

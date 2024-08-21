@@ -35,7 +35,7 @@ class ExtensionSettings {
       this.fnReject = fnReject;
     });
 
-    this._settings = await getOptions([
+    await getOptions([
       STORAGE_KEY.ADD_BOOKMARK_IS_ON,
       STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
       STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
@@ -45,7 +45,10 @@ class ExtensionSettings {
       STORAGE_KEY.SHOW_PATH_LAYERS,
       STORAGE_KEY.SHOW_PREVIOUS_VISIT,
     ])
-      .then(this.fnResolve)
+      .then((result) => {
+        this._settings = result
+        this.fnResolve()
+      })
       .catch(this.fnReject);
     logSettings('readSavedSettings')
     logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
