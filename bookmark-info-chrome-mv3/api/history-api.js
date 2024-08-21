@@ -11,8 +11,9 @@ import {
   removeQueryParamsIfTarget,
 } from './clean-url-api.js';
 import {
-  memo,
-} from './memo.js';
+  extensionSettings,
+  memo
+} from './structure/index.js';
 
 const dayMS = 86400000;
 const hourMS = 3600000;
@@ -113,9 +114,10 @@ async function getVisitListForUrlList(urlList) {
 }
 
 async function getPreviousVisitList(url) {
+  const settings = await extensionSettings.get()
   let rootUrl
 
-  if (memo.settings[STORAGE_KEY.CLEAR_URL]) {
+  if (settings[STORAGE_KEY.CLEAR_URL]) {
     const { cleanUrl, isPattern } = removeQueryParamsIfTarget(url)
 
     if (isPattern) {
@@ -137,7 +139,8 @@ async function getPreviousVisitList(url) {
 }
 
 export async function getHistoryInfo({ url, useCache=false }) {
-  const showPreviousVisit = memo.settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT]
+  const settings = await extensionSettings.get()
+  const showPreviousVisit = settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT]
   
   if (!(showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS || showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM)) {
     return {

@@ -2,14 +2,10 @@ import {
   CONTEXT_MENU_ID,
 } from '../constant/index.js';
 import {
-  closeDuplicateTabs,
-} from '../api/command/closeDuplicateTabs.js'
-import {
-  closeBookmarkedTabs,
-} from '../api/command/closeBookmarkedTabs.js'
-import {
   clearUrlInActiveTab,
-} from '../api/command/clearUrlInActiveTab.js'
+  closeBookmarkedTabs,
+  closeDuplicateTabs,
+} from '../api/command/index.js'
 
 export const contextMenusController = {
   async onClicked (OnClickData) {

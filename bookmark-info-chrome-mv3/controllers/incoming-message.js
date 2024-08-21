@@ -4,28 +4,26 @@ import {
   logEvent,
 } from '../api/log-api.js'
 import {
-  memo,
-} from '../api/memo.js'
-import {
   activeDialog,
-} from '../api/structure/activeDialog.js'
+  extensionSettings,
+} from '../api/structure/index.js'
 import {
   clearUrlInTab,
   removeQueryParamsIfTarget,
 } from '../api/clean-url-api.js'
 import {
+  addBookmark,
   deleteBookmark,
-} from '../api/bookmarks-api.js'
+  fixTag,
+  moveToFlatFolderStructure,
+  removeDoubleBookmarks,
+  switchShowRecentList,
+  unfixTag,
+} from '../api/command/index.js'
 import {
   updateActiveTab,
   updateTab,
 } from '../api/tabs-api.js'
-import {
-  moveToFlatFolderStructure,
-} from '../api/command/moveToFlatFolderStructure.js'
-import {
-  removeDoubleBookmarks,
-} from '../api/command/removeDoubleBookmarks.js'
 import {
   EXTENSION_COMMAND_ID,
   STORAGE_TYPE,
@@ -42,10 +40,11 @@ export async function onIncomingMessage (message, sender) {
       logEvent('runtime.onMessage contentScriptReady', tabId);
 
       if (tabId) {
+        const settings = await extensionSettings.get()
         const url = message.url
         let cleanUrl
 
-        if (memo.settings[STORAGE_KEY.CLEAR_URL]) {
+        if (settings[STORAGE_KEY.CLEAR_URL]) {
           ({ cleanUrl } = removeQueryParamsIfTarget(url));
           
           if (url !== cleanUrl) {
@@ -66,11 +65,10 @@ export async function onIncomingMessage (message, sender) {
     case EXTENSION_COMMAND_ID.ADD_BOOKMARK: {
       logEvent('runtime.onMessage addBookmark');
       activeDialog.createBkmFromTag(message.parentId)
-      await chrome.bookmarks.create({
-        index: 0,
-        parentId: message.parentId,
+      await addBookmark({
+        url: message.url,
         title: message.title,
-        url: message.url
+        parentId: message.parentId,
       })
 
       break
@@ -83,22 +81,14 @@ export async function onIncomingMessage (message, sender) {
     }
     case EXTENSION_COMMAND_ID.SHOW_TAG_LIST: {
       logEvent('runtime.onMessage SHOW_RECENT_LIST');
-
-      await memo.updateSettings({
-        [STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW]: message.value
-      })
-      // updateActiveTab({
-      //   debugCaller: 'runtime.onMessage SHOW_RECENT_LIST',
-      //   useCache: true,
-      // });
+      await switchShowRecentList(message.value)
 
       break
     }
     case EXTENSION_COMMAND_ID.FIX_TAG: {
       logEvent('runtime.onMessage fixTag');
-
-      await memo.addFixedTag({
-        parentId: message.parentId,
+      await fixTag({
+        parentId: message.parentId, 
         title: message.title,
       })
       updateActiveTab({
@@ -110,10 +100,9 @@ export async function onIncomingMessage (message, sender) {
     }
     case EXTENSION_COMMAND_ID.UNFIX_TAG: {
       logEvent('runtime.onMessage unfixTag');
-
-      await memo.removeFixedTag(message.parentId)
+      await unfixTag(message.parentId)
       updateActiveTab({
-        debugCaller: 'runtime.onMessage unfixTag',
+        debugCaller: 'runtime.onMessage fixTag',
         useCache: true,
       });
 

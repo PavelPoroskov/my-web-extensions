@@ -4,9 +4,6 @@ import {
   logSendEvent,
 } from './log-api.js'
 import {
-  promiseQueue,
-} from './structure/promiseQueue.js'
-import {
   isSupportedProtocol,
 } from './common-api.js'
 import {
@@ -19,20 +16,22 @@ import {
   removeQueryParamsIfTarget,
 } from './clean-url-api.js'
 import {
+  extensionSettings,
   memo,
-} from './memo.js'
-import {
+  promiseQueue,
   tagList,
-} from './structure/tagList.js'
+} from './structure/index.js'
 import {
   CONTENT_SCRIPT_COMMAND_ID,
   STORAGE_KEY,
 } from '../constant/index.js'
+import { initExtension } from './init-extension.js'
 
 async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
+  const settings = await extensionSettings.get()
   let actualUrl = url
 
-  if (memo.settings[STORAGE_KEY.CLEAR_URL]) {
+  if (settings[STORAGE_KEY.CLEAR_URL]) {
     const { cleanUrl } = removeQueryParamsIfTarget(url)
 
     if (url !== cleanUrl) {
@@ -46,8 +45,8 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
   const message = {
     command: CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO,
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
-    showLayer: memo.settings[STORAGE_KEY.SHOW_PATH_LAYERS],
-    isShowTitle: memo.settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
+    showLayer: settings[STORAGE_KEY.SHOW_PATH_LAYERS],
+    isShowTitle: settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
     // TODO send in different message
     tagList: tagList.list.map(({ parentId, title, isFixed, isLast}) => ({
       parentId,
@@ -56,8 +55,8 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
       isLast,
       isUsed: usedParentIdSet.has(parentId)
     })),
-    isShowTagList: memo.settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
-    tagLength: memo.settings[STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH],
+    isShowTagList: settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
+    tagLength: settings[STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH],
   }
   logSendEvent('updateBookmarksForTabTask()', tabId, message);
   await chrome.tabs.sendMessage(tabId, message)
@@ -65,13 +64,14 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
   return bookmarkInfo
 }
 async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
+  const settings = await extensionSettings.get()
   log('updateVisitsForTabTask(', tabId, useCache, url);
 
   const visitInfo = await getHistoryInfo({ url, useCache })
 
   const message = {
     command: CONTENT_SCRIPT_COMMAND_ID.HISTORY_INFO,
-    showPreviousVisit: memo.settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT],
+    showPreviousVisit: settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT],
     visitList: visitInfo.visitList,
   }
   logSendEvent('updateVisitsForTabTask()', tabId, message);
@@ -85,7 +85,7 @@ export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
 
     await Promise.all([
       !memo.isProfileStartTimeMSActual && memo.readProfileStartTimeMS(),
-      !memo.isSettingsActual && memo.init(),
+      !extensionSettings.isActual() && extensionSettings.restoreFromStorage().then(initExtension),
     ])
 
     log(`${debugCaller} -> updateTab() useCache`, useCache);

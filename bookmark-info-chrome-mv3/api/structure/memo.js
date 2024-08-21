@@ -24,52 +24,12 @@ export const memo = {
   // tabId -> bookmarkId
   tabMap: new Map(),
 
-  // TODO use promise in cache for setting and profile-start-time
+  // TODO move profile start time
+  // TODO use promise in cache for profile-start-time
   // cache[setting] = readSettings
   // isSettingsActual = true
   //
   // await cache[settings]
-  _isSettingsActual: false,
-  _settings: {},
-  get isSettingsActual() {
-    return this._isSettingsActual
-  },
-  invalidateSettings () {
-    this._isSettingsActual = false
-  },
-  async readSettings() {
-    logSettings('readSavedSettings START')
-
-    this._settings = await getOptions([
-      STORAGE_KEY.CLEAR_URL,
-      STORAGE_KEY.SHOW_PATH_LAYERS,
-      STORAGE_KEY.SHOW_PREVIOUS_VISIT,
-      STORAGE_KEY.SHOW_BOOKMARK_TITLE,
-      STORAGE_KEY.ADD_BOOKMARK_IS_ON,
-      STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
-      STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
-      STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
-    ]);
-    logSettings('readSavedSettings')
-    logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
-  },
-  // TODO move init to ...
-  async init() {
-    this._isSettingsActual = true
-    await this.readSettings()
-    await tagList.readFromStorage()
-  },
-  get settings() {
-    return { ...this._settings }
-  },
-  async updateSettings(updateObj) {
-    Object.entries(updateObj).forEach(([ket, value]) => {
-      this._settings[ket] = value
-    })
-    
-    await setOptions(updateObj)
-  },
-
   _profileStartTimeMS: undefined,
   get profileStartTimeMS() {
     return this._profileStartTimeMS

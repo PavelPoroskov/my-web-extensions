@@ -2,9 +2,7 @@ import {
   logEvent,
   logDebug,
 } from '../api/log-api.js'
-import {
-  memo,
-} from '../api/memo.js'
+
 import {
   getBookmarkInfoUni,
 } from '../api/bookmarks-api.js'
@@ -18,23 +16,24 @@ import {
   IS_BROWSER_FIREFOX,
 } from '../constant/index.js'
 import {
-  tagList,
-} from '../api/tagList.js'
-import {
   activeDialog,
-} from '../api/structure/activeDialog.js'
+  extensionSettings,
+  memo,
+  tagList,
+} from '../api/structure/index.js'
 
 export const bookmarksController = {
   async onCreated(bookmarkId, node) {
     logEvent('bookmark.onCreated <-', node);
+    const settings = await extensionSettings.get()
 
     if (node.url) {
-      if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
         activeDialog.createBkmStandard(node.id, node.parentId)
         await tagList.addRecentTag(node)
       }
     } else {
-      if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
         await tagList.addRecentTag(node)
       }
     }
@@ -48,6 +47,7 @@ export const bookmarksController = {
   },
   async onChanged(bookmarkId, changeInfo) {
     logEvent('bookmark.onChanged 00 <-', changeInfo);
+    const settings = await extensionSettings.get()
 
     const [node] = await chrome.bookmarks.get(bookmarkId)
 
@@ -57,7 +57,7 @@ export const bookmarksController = {
     } else {
       memo.bkmFolderById.delete(bookmarkId);
 
-      if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && changeInfo.title) {
+      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && changeInfo.title) {
         await tagList.updateTag(bookmarkId, changeInfo.title)
       }
     }
@@ -71,7 +71,7 @@ export const bookmarksController = {
   },
   async onMoved(bookmarkId, { oldIndex, index, oldParentId, parentId }) {
     logEvent('bookmark.onMoved <-', { oldIndex, index, oldParentId, parentId });
-    
+    const settings = await extensionSettings.get()
     // switch (true) {
     //   // in bookmark manager. no changes for this extension
     //   case parentId === oldParentId: {
@@ -91,7 +91,7 @@ export const bookmarksController = {
     const [node] = await chrome.bookmarks.get(bookmarkId)
     
     if (node.url) {
-      if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && parentId !== oldParentId) {
+      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && parentId !== oldParentId) {
         await tagList.addRecentTag(node);
 
         const isCreatedInActiveDialog = activeDialog.isCreatedInActiveDialog(bookmarkId, oldParentId)
@@ -135,15 +135,16 @@ export const bookmarksController = {
   },
   async onRemoved(bookmarkId, { node }) {
     logEvent('bookmark.onRemoved <-');
+    const settings = await extensionSettings.get()
 
     if (node.url) {
-      if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
         activeDialog.removeBkm(node.parentId)    
       }
     } else {
       memo.bkmFolderById.delete(bookmarkId);
 
-      if (memo.settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
         await tagList.removeTag(bookmarkId)
       }
     }

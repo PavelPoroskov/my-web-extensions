@@ -16,11 +16,10 @@ import {
   getHistoryInfo,
 } from '../api/history-api.js'
 import {
-  memo,
-} from '../api/memo.js'
-import {
   activeDialog,
-} from '../api/structure/activeDialog.js'
+  extensionSettings,
+  memo,
+} from '../api/structure/index.js'
 import {
   updateTab,
 } from '../api/tabs-api.js'
@@ -55,8 +54,9 @@ export const tabsController = {
           const url = changeInfo.url
           logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, url);
           let cleanUrl
+          const settings = await extensionSettings.get()
 
-          if (memo.settings[STORAGE_KEY.CLEAR_UR]) {
+          if (settings[STORAGE_KEY.CLEAR_UR]) {
             ({ cleanUrl } = removeQueryParamsIfTarget(url));
             
             if (url !== cleanUrl) {

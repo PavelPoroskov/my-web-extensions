@@ -4,17 +4,13 @@ import {
 } from './log-api.js'
 import {
   memo,
-} from './memo.js'
+} from './structure/index.js'
 import {
   isSupportedProtocol,
 } from './common-api.js'
 import {
   SOURCE,
 } from '../constant/index.js'
-
-export async function deleteBookmark(bkmId) {
-  await chrome.bookmarks.remove(bkmId);
-}
 
 export async function deleteUncleanUrlBookmarkForTab(tabId) {
   log('deleteUncleanUrlBookmarkForTab 00 tabId', tabId)
