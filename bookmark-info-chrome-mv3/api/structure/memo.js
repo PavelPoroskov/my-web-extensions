@@ -23,8 +23,8 @@ export const memo = {
   // tabId -> bookmarkId
   tabMap: new Map(),
 
-  // TODO move profile start time
-  // TODO use promise in cache for profile-start-time
+  // TODO-NEXT move profile start time
+  // TODO-NEXT use promise in cache for profile-start-time
   // cache[setting] = readSettings
   // isSettingsActual = true
   //

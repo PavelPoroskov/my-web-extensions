@@ -47,7 +47,7 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     showLayer: settings[STORAGE_KEY.SHOW_PATH_LAYERS],
     isShowTitle: settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
-    // TODO send in different message
+    // TODO-NEXT send in different message
     tagList: tagList.list.map(({ parentId, title, isFixed, isLast}) => ({
       parentId,
       title, 
