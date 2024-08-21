@@ -6,12 +6,7 @@ import {
   getNestedRootFolderId
 } from './special-folder.api.js'
 
-const EMPTY_FOLDER_NAME_LIST = [
-  'New folder',
-  '[Folder Name]',
-]
-
-export const emptyFolderNameSet = new Set(EMPTY_FOLDER_NAME_LIST)
+export const isDescriptiveTitle = (title) => !(title.startsWith('New folder') || title.startsWith('[Folder Name]')) 
 
 async function getRecentList(nItems) {
   log('getRecentTagObj() 00', nItems)
@@ -50,7 +45,7 @@ async function getRecentList(nItems) {
 
   return Object.entries(folderByIdMap)
     .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-    .filter(({ title }) => !emptyFolderNameSet.has(title))
+    .filter(({ title }) => isDescriptiveTitle(title))
     .sort((a,b) => -(a.dateAdded - b.dateAdded))
 }
 

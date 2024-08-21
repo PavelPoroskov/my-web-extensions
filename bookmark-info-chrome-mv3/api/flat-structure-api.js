@@ -550,9 +550,9 @@ export async function flatBookmarks() {
     await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
     await createNestedFolders({ toCopyFolderById, nestedRootId })
   
-    // TODO? delete empty folders
+    // MAYBE? delete empty folders
   
-    // TODO? delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
+    // MAYBE? delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
     //await updateNestedFolders({ nestedRootId })
   
     await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })

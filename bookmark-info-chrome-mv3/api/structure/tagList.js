@@ -2,7 +2,7 @@ import {
   filterFixedTagObj,
   filterRecentTagObj,
   getRecentTagObj,
-  emptyFolderNameSet,
+  isDescriptiveTitle,
 } from '../recent-api.js'
 import {
   OTHER_BOOKMARKS_FOLDER_ID,
@@ -132,7 +132,7 @@ class TagList {
       }
     }
   
-    if (emptyFolderNameSet.has(newFolder.title)) {
+    if (!isDescriptiveTitle(newFolder.title)) {
       return
     }
 
