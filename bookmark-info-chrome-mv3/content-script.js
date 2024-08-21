@@ -23,6 +23,7 @@ const log = SHOW_LOG ? console.log : () => {};
   const CONTENT_SCRIPT_COMMAND_ID = {
     BOOKMARK_INFO: 'BOOKMARK_INFO',
     HISTORY_INFO: 'HISTORY_INFO',
+    TAGS_INFO: 'TAGS_INFO',
     CLEAR_URL: 'CLEAR_URL',
   }
 
@@ -358,11 +359,19 @@ const log = SHOW_LOG ? console.log : () => {};
     const visitList = input.visitList || []
     const showPreviousVisit = input.showPreviousVisit || SHOW_PREVIOUS_VISIT_OPTION.NEVER
     const isShowTitle = input.isShowTitle || false
-    const tagList = input.tagList || []
+    const inTagList = input.tagList || []
     const isShowTagList = input.isShowTagList || false
     const tagLength = input.tagLength || 8
     
     log('showBookmarkInfo 00');
+    const usedParentIdSet = new Set(bookmarkInfoList.map(({ parentId }) => parentId))
+    const tagList = inTagList.map(({ parentId, title, isFixed, isLast}) => ({
+      parentId,
+      title, 
+      isFixed,
+      isLast,
+      isUsed: usedParentIdSet.has(parentId)
+    }))
 
     let rootDiv = document.getElementById(bkmInfoRootId);
 
@@ -632,6 +641,13 @@ const log = SHOW_LOG ? console.log : () => {};
     switch (message.command) {
       case CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO: {
         log('content-script: ', message.bookmarkInfoList);
+
+        fullMessage = { ...fullMessage, ...message }
+        showBookmarkInfo(fullMessage);
+        break
+      }
+      case CONTENT_SCRIPT_COMMAND_ID.TAGS_INFO: {
+        log('content-script: ', message.tags);
 
         fullMessage = { ...fullMessage, ...message }
         showBookmarkInfo(fullMessage);

@@ -40,28 +40,32 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
   } 
 
   const bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
-  const usedParentIdSet = new Set(bookmarkInfo.bookmarkInfoList.map(({ parentId }) => parentId))
 
   const message = {
     command: CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO,
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     showLayer: settings[STORAGE_KEY.SHOW_PATH_LAYERS],
     isShowTitle: settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
-    // TODO-NEXT send in different message
-    tagList: tagList.list.map(({ parentId, title, isFixed, isLast}) => ({
-      parentId,
-      title, 
-      isFixed,
-      isLast,
-      isUsed: usedParentIdSet.has(parentId)
-    })),
-    isShowTagList: settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
-    tagLength: settings[STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH],
   }
   logSendEvent('updateBookmarksForTabTask()', tabId, message);
   await chrome.tabs.sendMessage(tabId, message)
   
   return bookmarkInfo
+}
+async function updateTagsForTab({ tabId }) {
+  const settings = await extensionSettings.get()
+
+  const message = {
+    command: CONTENT_SCRIPT_COMMAND_ID.TAGS_INFO,
+    tagList: tagList.list,
+    isShowTagList: settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
+    tagLength: settings[STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH],
+  }
+  logSendEvent('updateTagsForTabTask()', tabId, message);
+  await chrome.tabs.sendMessage(tabId, message)
+    // .catch((er) => {
+    //   console.log('Failed to send tagInfo to tab', tabId, ' Ignoring ', er)
+    // })
 }
 async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
   const settings = await extensionSettings.get()
@@ -104,6 +108,7 @@ export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
         useCache
       },
     });
+    await updateTagsForTab({ tabId });
   }
 }
 

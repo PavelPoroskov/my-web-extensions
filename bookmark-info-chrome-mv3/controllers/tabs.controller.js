@@ -9,7 +9,7 @@ import {
   removeQueryParamsIfTarget,
 } from '../api/clean-url-api.js'
 import {
-  deleteUncleanUrlBookmarkForTab,
+  // deleteUncleanUrlBookmarkForTab,
   getBookmarkInfoUni,
 } from '../api/bookmarks-api.js'
 import {
@@ -134,9 +134,9 @@ export const tabsController = {
       logIgnore('tabs.onActivated. IGNORING. tab was deleted', er);
     }
 
-    deleteUncleanUrlBookmarkForTab(memo.previousTabId)
+    // deleteUncleanUrlBookmarkForTab(memo.previousTabId)
   },
-  async onRemoved(tabId) {
-    deleteUncleanUrlBookmarkForTab(tabId)
-  }
+  // async onRemoved(tabId) {
+  //   deleteUncleanUrlBookmarkForTab(tabId)
+  // }
 }

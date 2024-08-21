@@ -1,6 +1,5 @@
 import {
   logOptimization,
-  log,
 } from './log-api.js'
 import {
   memo,
@@ -12,21 +11,21 @@ import {
   SOURCE,
 } from '../constant/index.js'
 
-export async function deleteUncleanUrlBookmarkForTab(tabId) {
-  log('deleteUncleanUrlBookmarkForTab 00 tabId', tabId)
-  if (!tabId) {
-    return
-  }
+// export async function deleteUncleanUrlBookmarkForTab(tabId) {
+//   log('deleteUncleanUrlBookmarkForTab 00 tabId', tabId)
+//   if (!tabId) {
+//     return
+//   }
 
-  const tabData = memo.tabMap.get(tabId)
-  log('deleteUncleanUrlBookmarkForTab 11 tabData', tabData)
+//   const tabData = memo.tabMap.get(tabId)
+//   log('deleteUncleanUrlBookmarkForTab 11 tabData', tabData)
 
-  if (tabData?.bookmarkId) {
-    log('deleteUncleanUrlBookmarkForTab 22')
-    await chrome.bookmarks.remove(tabData.bookmarkId)
-    memo.tabMap.delete(tabId)
-  }
-}
+//   if (tabData?.bookmarkId) {
+//     log('deleteUncleanUrlBookmarkForTab 22')
+//     await chrome.bookmarks.remove(tabData.bookmarkId)
+//     memo.tabMap.delete(tabId)
+//   }
+// }
 
 const getParentIdList = (bookmarkList) => {
   const parentIdList = bookmarkList
