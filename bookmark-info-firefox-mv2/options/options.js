@@ -1,99 +1,21 @@
-// TODO remove duplication setOptions(), getOptions() in options/options.js
-//  TODO send command setOptions, getOptions Options -> Extensions
-//  ?import script in options.html
-//  <script src="options.js"> type="module"
-
+// TODO-DOUBLE remove duplication in EXTENSION_COMMAND_ID: command-id.js and options.js
+const EXTENSION_COMMAND_ID = {
+  OPTIONS_ASKS_DATA: 'OPTIONS_ASKS_DATA',
+  DATA_FOR_OPTIONS: 'DATA_FOR_OPTIONS',
+  OPTIONS_ASKS_FLAT_BOOKMARKS: 'OPTIONS_ASKS_FLAT_BOOKMARKS',
+  FLAT_BOOKMARKS_RESULT: 'FLAT_BOOKMARKS_RESULT',
+  OPTIONS_ASKS_DELETE_DOUBLES: 'OPTIONS_ASKS_DELETE_DOUBLES',
+  DELETE_DOUBLES_RESULT: 'DELETE_DOUBLES_RESULT',
+  OPTIONS_ASKS_SAVE: 'OPTIONS_ASKS_SAVE',
+}
 
 const wait = ms => new Promise(res => setTimeout(res, ms));
 
-async function setOptions(obj) {
-  const entryList = Object.entries(obj)
-    .map(([key, value]) => ({
-      key, 
-      storage: STORAGE_KEY_META[key].storage || STORAGE_TYPE.LOCAL,
-      value,
-    }))
-
-  const localList = entryList
-    .filter((item) => item.storage === STORAGE_TYPE.LOCAL)
-  const localObj = Object.fromEntries(
-    localList.map(({ key, value }) => [STORAGE_KEY_META[key].storageKey, value])
-  )
-
-  const sessionList = entryList
-    .filter((item) => item.storage === STORAGE_TYPE.SESSION)
-  const sessionObj = Object.fromEntries(
-    sessionList.map(({ key, value }) => [STORAGE_KEY_META[key].storageKey, value])
-  )
-
-  await Promise.all([
-    localList.length > 0 && browser.storage.local.set(localObj),
-    sessionList.length > 0 && browser.storage.session.set(sessionObj),
-  ])
-}
-
-async function getOptions(keyList) {
-  const inKeyList = Array.isArray(keyList) ? keyList : [keyList]
-
-  const entryList = inKeyList
-    .map((key) => ({
-      key, 
-      storage: STORAGE_KEY_META[key].storage || STORAGE_TYPE.LOCAL,
-    }))
-
-  const localList = entryList
-    .filter((item) => item.storage === STORAGE_TYPE.LOCAL)
-    .map(({ key }) => key)
-
-  const sessionList = entryList
-    .filter((item) => item.storage === STORAGE_TYPE.SESSION)
-    .map(({ key }) => key)
-
-  const [
-    localStoredObj,
-    sessionStoredObj,
-  ] = await Promise.all([
-    localList.length > 0 
-      ? browser.storage.local.get(
-        localList.map((key) => STORAGE_KEY_META[key].storageKey)
-      )
-      : {},
-    sessionList.length > 0 
-      ? browser.storage.session.get(
-        sessionList.map((key) => STORAGE_KEY_META[key].storageKey)
-      ) 
-      : {},
-  ])
-
-  const localObj = Object.fromEntries(
-    localList.map((key) => {
-      const storageKey = STORAGE_KEY_META[key].storageKey
-
-      return [
-        key,
-        localStoredObj[storageKey] !== undefined 
-          ? localStoredObj[storageKey] 
-          : STORAGE_KEY_META[key].default
-      ]
-    })
-  )
-  const sessionObj = Object.fromEntries(
-    sessionList.map((key) => {
-      const storageKey = STORAGE_KEY_META[key].storageKey
-
-      return [
-        key,
-        sessionStoredObj[storageKey] !== undefined 
-          ? sessionStoredObj[storageKey] 
-          : STORAGE_KEY_META[key].default
-      ]
-    })
-  )
-
-  return {
-    ...localObj,
-    ...sessionObj,
-  }
+async function delegateSaveOptions(updateObj) {
+  await browser.runtime.sendMessage({
+    command: EXTENSION_COMMAND_ID.OPTIONS_ASKS_SAVE,
+    updateObj,
+  });
 }
 
 function formatTargetList (clearUrlTargetList) { 
@@ -109,7 +31,7 @@ function makeSaveCheckboxHandler(optionId) {
     const element = document.querySelector(`#${optionId}`)
   
     if (element) {
-      await setOptions({
+      await delegateSaveOptions({
         [optionId]: element.checked
       })  
     }
@@ -123,7 +45,7 @@ function makeSaveInputHandler(optionId) {
     const element = document.querySelector(`#${optionId}`)
   
     if (element) {
-      await setOptions({
+      await delegateSaveOptions({
         [optionId]: +element.value
       })  
     }
@@ -137,27 +59,14 @@ function makeSaveSelectHandler(optionId) {
     const element = document.querySelector(`#${optionId}`)
   
     if (element) {
-      await setOptions({
+      await delegateSaveOptions({
         [optionId]: +element.value
       })  
     }
   }
 }
 
-async function restoreOptions() {
-
-  const settings = await getOptions([
-    STORAGE_KEY.CLEAR_URL,
-    STORAGE_KEY.SHOW_BOOKMARK_TITLE,
-    STORAGE_KEY.SHOW_PATH_LAYERS,
-    STORAGE_KEY.SHOW_PREVIOUS_VISIT,
-    STORAGE_KEY.ADD_BOOKMARK_IS_ON,
-    STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
-    STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
-    STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
-    STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
-  ]);
-
+function restoreOptions(settings) {
   let optionId = STORAGE_KEY.CLEAR_URL;
   let domId = `#${optionId}`
   let element = document.querySelector(domId)
@@ -216,7 +125,7 @@ async function restoreOptions() {
   element = document.querySelector(domId)
   element.addEventListener('click', async () => {
     await browser.runtime.sendMessage({
-      command: 'OPTIONS_ASKS_FLAT_BOOKMARKS',
+      command: EXTENSION_COMMAND_ID.OPTIONS_ASKS_FLAT_BOOKMARKS,
     });
     const text = 'Operation started'
     const value = document.querySelector('#FLAT_BOOKMARKS_RESULT');
@@ -235,7 +144,7 @@ async function restoreOptions() {
   element = document.querySelector(domId)
   element.addEventListener('click', async () => {
     await browser.runtime.sendMessage({
-      command: 'OPTIONS_ASKS_DELETE_DOUBLES',
+      command: EXTENSION_COMMAND_ID.OPTIONS_ASKS_DELETE_DOUBLES,
     });
     const text = 'Operation started'
     const value = document.querySelector('#DELETE_DOUBLES_RESULT');
@@ -252,22 +161,19 @@ async function restoreOptions() {
 }
 
 let clearUrlTargetList
-let STORAGE_TYPE
-let STORAGE_KEY_META
 let STORAGE_KEY
 
 browser.runtime.onMessage.addListener(async (message) => {
+  console.log('onMessage', message)
   switch (message?.command) {
-    case 'DATA_FOR_OPTIONS': {
+    case EXTENSION_COMMAND_ID.DATA_FOR_OPTIONS: {
       // console.log('option in DATA_FOR_OPTIONS')
       clearUrlTargetList = message.clearUrlTargetList
-      STORAGE_TYPE = message.STORAGE_TYPE
-      STORAGE_KEY_META = message.STORAGE_KEY_META
       STORAGE_KEY = message.STORAGE_KEY
-      restoreOptions()
+      restoreOptions(message.settings)
       break
     }
-    case 'FLAT_BOOKMARKS_RESULT': {
+    case EXTENSION_COMMAND_ID.FLAT_BOOKMARKS_RESULT: {
       // console.log('option in FLAT_BOOKMARKS_RESULT', message.success)
       const text = message.success 
         ? 'Operation completed successfully'
@@ -287,7 +193,7 @@ browser.runtime.onMessage.addListener(async (message) => {
 
       break
     }
-    case 'DELETE_DOUBLES_RESULT': {
+    case EXTENSION_COMMAND_ID.DELETE_DOUBLES_RESULT: {
       const text = message.success 
         ? `Operation completed successfully. Deleted ${message.nRemovedDoubles}`
         : 'Operation failed'
@@ -302,6 +208,6 @@ browser.runtime.onMessage.addListener(async (message) => {
 //document.addEventListener('DOMContentLoaded', restoreOptions);
 document.addEventListener('DOMContentLoaded', async () => {
   await browser.runtime.sendMessage({
-    command: 'OPTIONS_ASKS_DATA',
+    command: EXTENSION_COMMAND_ID.OPTIONS_ASKS_DATA,
   });
 });

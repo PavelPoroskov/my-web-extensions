@@ -19,29 +19,18 @@ const BROWSER_SPECIFIC_OPTIONS = {
     [BROWSER_OPTIONS.CHROME]: ['all'],
     [BROWSER_OPTIONS.FIREFOX]: ['all','tab']
   },
-  // TODO remove duplication for DEL_BTN_RIGHT_PADDING, LABEL_RIGHT_PADDING in context-script
-  // ? can context script import file.js
-  // OR insert to context-script on build
-  DEL_BTN_RIGHT_PADDING: {
-    [BROWSER_OPTIONS.CHROME]: '0.5ch',
-    [BROWSER_OPTIONS.FIREFOX]: '1ch'
-  },
-  LABEL_RIGHT_PADDING: {
-    [BROWSER_OPTIONS.CHROME]: '0.3ch',
-    [BROWSER_OPTIONS.FIREFOX]: '0.6ch'
-  }
 }
-
+// TODO remove duplication BROWSER in browser-specific.js and content-scripts.js
 const BROWSER = BROWSER_OPTIONS.FIREFOX;
-
 const IS_BROWSER_CHROME = BROWSER === BROWSER_OPTIONS.CHROME;
 const IS_BROWSER_FIREFOX = BROWSER === BROWSER_OPTIONS.FIREFOX;
+
 const BROWSER_SPECIFIC = Object.fromEntries(
   Object.entries(BROWSER_SPECIFIC_OPTIONS)
     .map(([option, obj]) => [option, obj[BROWSER]])
 );
 const clearUrlTargetList = [
-  // TODO if we clean url on open then we loose check-in, check-out dates
+  // TODO-NEXT if we clean url on open then we loose check-in, check-out dates
   //    need search bookmark for clean url
   //    strategy01: clean url on open
   //    strategy02: clean url on save
@@ -81,25 +70,29 @@ const BROWSER_SPECIFIC = Object.fromEntries(
     ] 
   },
 ]
-// TODO remove duplication of EXTENSION_COMMAND_ID, CONTENT_SCRIPT_COMMAND_ID in content-script
-const EXTENSION_COMMAND_ID = {
+const EXTENSION_COMMAND_ID = {
+  // TODO remove duplication in EXTENSION_COMMAND_ID: command-id.js and content-scripts.js
   DELETE_BOOKMARK: 'DELETE_BOOKMARK',
   ADD_BOOKMARK: 'ADD_BOOKMARK',
   FIX_TAG: 'FIX_TAG',
   UNFIX_TAG: 'UNFIX_TAG',
   TAB_IS_READY: 'TAB_IS_READY',
   SHOW_TAG_LIST: 'SHOW_TAG_LIST',
+  // TODO remove duplication in EXTENSION_COMMAND_ID: command-id.js and options.js
   OPTIONS_ASKS_DATA: 'OPTIONS_ASKS_DATA',
   DATA_FOR_OPTIONS: 'DATA_FOR_OPTIONS',
   OPTIONS_ASKS_FLAT_BOOKMARKS: 'OPTIONS_ASKS_FLAT_BOOKMARKS',
   FLAT_BOOKMARKS_RESULT: 'FLAT_BOOKMARKS_RESULT',
   OPTIONS_ASKS_DELETE_DOUBLES: 'OPTIONS_ASKS_DELETE_DOUBLES',
   DELETE_DOUBLES_RESULT: 'DELETE_DOUBLES_RESULT',
+  OPTIONS_ASKS_SAVE: 'OPTIONS_ASKS_SAVE',
 }
 
+// TODO remove duplication in CONTENT_SCRIPT_COMMAND_ID: command-id.js and content-scripts.js
 const CONTENT_SCRIPT_COMMAND_ID = {
   BOOKMARK_INFO: 'BOOKMARK_INFO',
   HISTORY_INFO: 'HISTORY_INFO',
+  TAGS_INFO: 'TAGS_INFO',
   CLEAR_URL: 'CLEAR_URL',
 }
 const BASE_ID = 'BKM_INF';
@@ -118,7 +111,7 @@ const CONTEXT_MENU_ID = {
   LOCAL: 'LOCAL',
   SESSION: 'SESSION',
 }
-
+// TODO remove duplication in SHOW_PREVIOUS_VISIT_OPTION: constant/storage.js and content-scripts.js
 const SHOW_PREVIOUS_VISIT_OPTION = {
   NEVER: 0,
   ONLY_NO_BKM: 1,
@@ -551,7 +544,9 @@ logSettings('IMPORT END', 'memo.js', new Date().toISOString())
     });
 
     await getOptions([
+      STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
       STORAGE_KEY.ADD_BOOKMARK_IS_ON,
+      STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
       STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
       STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
       STORAGE_KEY.CLEAR_URL,
@@ -723,6 +718,7 @@ const getOrCreateNestedRootFolderId = async () => getOrCreateFolderByTitleInRoot
 const getOrCreateUnclassifiedFolderId = async () => getOrCreateFolderByTitleInRoot({ title: UNCLASSIFIED_TITLE, oldTitle: UNCLASSIFIED_TITLE_OLD })
 
 const getNestedRootFolderId = memoize(async () => getFolderByTitleInRoot({ title: NESTED_ROOT_TITLE, oldTitle: NESTED_ROOT_TITLE_OLD }))
+const getUnclassifiedFolderId = memoize(async () => getFolderByTitleInRoot({ title: UNCLASSIFIED_TITLE, oldTitle: UNCLASSIFIED_TITLE_OLD }))
 const isDescriptiveTitle = (title) => !(title.startsWith('New folder') || title.startsWith('[Folder Name]')) 
 
 async function getRecentList(nItems) {
@@ -780,11 +776,9 @@ async function getRecentTagObj(nItems) {
   )
 }
 
-async function filterRecentTagObj(inObj = {}, isFlatStructure) {
-  const idList = Object.keys(inObj)
-
+async function filterFolders(idList, isFlatStructure) {
   if (idList.length === 0) {
-    return {}
+    return []
   }
 
   const folderList = await browser.bookmarks.get(idList)
@@ -795,41 +789,37 @@ async function filterRecentTagObj(inObj = {}, isFlatStructure) {
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {
     const nestedRootFolderId = await getNestedRootFolderId()
-    filteredFolderList = filteredFolderList.filter(
-      ({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId
-    )
+    const unclassifiedFolderId = await getUnclassifiedFolderId()
+    const specialFolderSet = new Set([nestedRootFolderId, unclassifiedFolderId])
+
+    filteredFolderList = filteredFolderList
+      .filter(
+        ({ parentId }) => parentId === OTHER_BOOKMARKS_FOLDER_ID
+      )
+      .filter(
+        ({ id }) => !specialFolderSet.has(id)
+      )
   }
+
+  return filteredFolderList
+}
+
+async function filterRecentTagObj(obj = {}, isFlatStructure) {
+  const filteredFolderList = await filterFolders(Object.keys(obj), isFlatStructure)
 
   return Object.fromEntries(
     filteredFolderList.map(({ id, title }) => [
       id, 
       {
         title, 
-        dateAdded: inObj[id].dateAdded,
+        dateAdded: obj[id].dateAdded,
       }
     ])
   )
 }
 
 async function filterFixedTagObj(obj = {}, isFlatStructure) {
-  const idList = Object.keys(obj)
-
-  if (idList.length === 0) {
-    return {}
-  }
-
-  const folderList = await browser.bookmarks.get(idList)
-  let filteredFolderList = folderList
-    .filter(Boolean)
-    .filter(({ title }) => !!title)
-
-  // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
-  if (isFlatStructure) {
-    const nestedRootFolderId = await getNestedRootFolderId()
-    filteredFolderList = filteredFolderList.filter(
-      ({ parentId, id }) => parentId === OTHER_BOOKMARKS_FOLDER_ID && id !== nestedRootFolderId
-    )
-  }
+  const filteredFolderList = await filterFolders(Object.keys(obj), isFlatStructure)
 
   return Object.fromEntries(
     filteredFolderList.map(({ id, title }) => [id, title])
@@ -840,31 +830,29 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
   _recentTagObj = {}
   _fixedTagObj = {}
   _tagList = []
-  get list() {
-    return this._tagList
-  }
   LIST_LIMIT
   FORCE_FLAT_FOLDER_STRUCTURE
   HIGHLIGHT_LAST
 
+  get list() {
+    return this._tagList
+  }
+
   async readFromStorage() {
+    const settings = await extensionSettings.get()
     const savedObj = await getOptions([
       STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP,
-      STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
-      STORAGE_KEY.ADD_BOOKMARK_IS_ON,
-      STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
       STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP,
       STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED,
-      STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
     ]);
 
-    if (!savedObj[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+    if (!settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
       return
     }
 
-    this.LIST_LIMIT = savedObj[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT]
-    this.FORCE_FLAT_FOLDER_STRUCTURE = savedObj[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]
-    this.HIGHLIGHT_LAST = savedObj[STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST]
+    this.LIST_LIMIT = settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT]
+    this.FORCE_FLAT_FOLDER_STRUCTURE = settings[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]
+    this.HIGHLIGHT_LAST = settings[STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST]
     // console.log('TagList.readFromStorage _fixedTagObj')
     // console.log(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP])
 
@@ -873,7 +861,7 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
       this._recentTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP] 
       this._fixedTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]
     } else {
-      const isFlatStructure = savedObj[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]
+      const isFlatStructure = this.FORCE_FLAT_FOLDER_STRUCTURE
       const actualRecentTagObj = await getRecentTagObj(ADD_BOOKMARK_LIST_MAX)
       this._recentTagObj = await filterRecentTagObj({
         ...savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP],
@@ -948,7 +936,11 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
       }
 
       const nestedRootFolderId = await getNestedRootFolderId()
+      const unclassifiedFolderId = await getUnclassifiedFolderId()
       if (nestedRootFolderId && newFolder.id === nestedRootFolderId) {
+        return
+      }
+      if (unclassifiedFolderId && newFolder.id === unclassifiedFolderId) {
         return
       }
     }
@@ -1064,10 +1056,10 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
 
   async filterTagListForFlatFolderStructure() {
     const isFlatStructure = true
-    console.log('filterTagListForFlatFolderStructure ', this._fixedTagObj)
+    // console.log('filterTagListForFlatFolderStructure ', this._fixedTagObj)
     this._recentTagObj =  await filterRecentTagObj(this._recentTagObj, isFlatStructure)
     this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
-    console.log('filterTagListForFlatFolderStructure, after filter', this._fixedTagObj)
+    // console.log('filterTagListForFlatFolderStructure, after filter', this._fixedTagObj)
     this._tagList = this.refillList()
     await setOptions({
       [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,
@@ -1150,7 +1142,7 @@ async function clearUrlInTab({ tabId, cleanUrl }) {
       logIgnore('clearUrlInTab()', err)
     })
 }
-// TODO did can we not create menu on evert time
+// MAYBE did can we not create menu on evert time
 async function createContextMenu() {
   await browser.menus.removeAll();
 
@@ -1164,30 +1156,30 @@ async function createContextMenu() {
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'clear url',
   });
-  // TODO? bookmark and close all tabs (tabs without bookmarks and tabs with bookmarks)
+  // MAYBE? bookmark and close all tabs (tabs without bookmarks and tabs with bookmarks)
   //   copy bookmarked tabs
   browser.menus.create({
     id: CONTEXT_MENU_ID.CLOSE_BOOKMARKED,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'close bookmarked tabs',
   });
-  // TODO? bookmark and close tabs (tabs without bookmarks)
+  // MAYBE? bookmark and close tabs (tabs without bookmarks)
 }
-async function deleteUncleanUrlBookmarkForTab(tabId) {
-  log('deleteUncleanUrlBookmarkForTab 00 tabId', tabId)
-  if (!tabId) {
-    return
-  }
+// async function deleteUncleanUrlBookmarkForTab(tabId) {
+//   log('deleteUncleanUrlBookmarkForTab 00 tabId', tabId)
+//   if (!tabId) {
+//     return
+//   }
 
-  const tabData = memo.tabMap.get(tabId)
-  log('deleteUncleanUrlBookmarkForTab 11 tabData', tabData)
+//   const tabData = memo.tabMap.get(tabId)
+//   log('deleteUncleanUrlBookmarkForTab 11 tabData', tabData)
 
-  if (tabData?.bookmarkId) {
-    log('deleteUncleanUrlBookmarkForTab 22')
-    await browser.bookmarks.remove(tabData.bookmarkId)
-    memo.tabMap.delete(tabId)
-  }
-}
+//   if (tabData?.bookmarkId) {
+//     log('deleteUncleanUrlBookmarkForTab 22')
+//     await browser.bookmarks.remove(tabData.bookmarkId)
+//     memo.tabMap.delete(tabId)
+//   }
+// }
 
 const getParentIdList = (bookmarkList) => {
   const parentIdList = bookmarkList
@@ -1480,28 +1472,32 @@ async function getHistoryInfo({ url, useCache=false }) {
   } 
 
   const bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
-  const usedParentIdSet = new Set(bookmarkInfo.bookmarkInfoList.map(({ parentId }) => parentId))
 
   const message = {
     command: CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO,
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     showLayer: settings[STORAGE_KEY.SHOW_PATH_LAYERS],
     isShowTitle: settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
-    // TODO-NEXT send in different message
-    tagList: tagList.list.map(({ parentId, title, isFixed, isLast}) => ({
-      parentId,
-      title, 
-      isFixed,
-      isLast,
-      isUsed: usedParentIdSet.has(parentId)
-    })),
-    isShowTagList: settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
-    tagLength: settings[STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH],
   }
   logSendEvent('updateBookmarksForTabTask()', tabId, message);
   await browser.tabs.sendMessage(tabId, message)
   
   return bookmarkInfo
+}
+async function updateTagsForTab({ tabId }) {
+  const settings = await extensionSettings.get()
+
+  const message = {
+    command: CONTENT_SCRIPT_COMMAND_ID.TAGS_INFO,
+    tagList: tagList.list,
+    isShowTagList: settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
+    tagLength: settings[STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH],
+  }
+  logSendEvent('updateTagsForTabTask()', tabId, message);
+  await browser.tabs.sendMessage(tabId, message)
+    // .catch((er) => {
+    //   console.log('Failed to send tagInfo to tab', tabId, ' Ignoring ', er)
+    // })
 }
 async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
   const settings = await extensionSettings.get()
@@ -1544,6 +1540,7 @@ async function updateTab({ tabId, url, useCache=false, debugCaller }) {
         useCache
       },
     });
+    await updateTagsForTab({ tabId });
   }
 }
 
@@ -2616,13 +2613,19 @@ async function removeDoubleBookmarks() {
     case EXTENSION_COMMAND_ID.OPTIONS_ASKS_DATA: {
       logEvent('runtime.onMessage OPTIONS_ASKS_DATA');
 
+      const settings = await extensionSettings.get();
       browser.runtime.sendMessage({
         command: EXTENSION_COMMAND_ID.DATA_FOR_OPTIONS,
         clearUrlTargetList,
-        STORAGE_TYPE,
-        STORAGE_KEY_META,
         STORAGE_KEY,
+        settings,
       });
+
+      break
+    }
+    case EXTENSION_COMMAND_ID.OPTIONS_ASKS_SAVE: {
+      logEvent('runtime.onMessage OPTIONS_ASKS_SAVE');
+      await extensionSettings.update(message.updateObj)
 
       break
     }
@@ -2684,7 +2687,7 @@ async function removeDoubleBookmarks() {
     ]);
 
     if (savedObj[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]) {
-      flatBookmarks()
+      await flatBookmarks()
     }
   },
   async onInstalled () {
@@ -2709,16 +2712,20 @@ async function removeDoubleBookmarks() {
       const changesSet = new Set(Object.keys(changes))
       // TODO? do we need invalidate setting for all this keys
       const settingSet = new Set([
+        // STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP, // taglist
         STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
         STORAGE_KEY.ADD_BOOKMARK_IS_ON,
         STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
-        // STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
+        // STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW, // session, taglist
+        // STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP, // taglist
+        // STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED, // session, taglist
         STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
         STORAGE_KEY.CLEAR_URL,
         STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
         STORAGE_KEY.SHOW_BOOKMARK_TITLE,
         STORAGE_KEY.SHOW_PATH_LAYERS,
         STORAGE_KEY.SHOW_PREVIOUS_VISIT,
+        // STORAGE_KEY.START_TIME, // session, browser start time
       ].map((key) => STORAGE_KEY_META[key].storageKey))
       const intersectSet = changesSet.intersection(settingSet)
 
@@ -2838,10 +2845,11 @@ async function removeDoubleBookmarks() {
       logIgnore('tabs.onActivated. IGNORING. tab was deleted', er);
     }
 
-    deleteUncleanUrlBookmarkForTab(memo.previousTabId)
+    // deleteUncleanUrlBookmarkForTab(memo.previousTabId)
   },
+  // eslint-disable-next-line no-unused-vars
   async onRemoved(tabId) {
-    deleteUncleanUrlBookmarkForTab(tabId)
+    // deleteUncleanUrlBookmarkForTab(tabId)
   }
 }
 const windowsController = {

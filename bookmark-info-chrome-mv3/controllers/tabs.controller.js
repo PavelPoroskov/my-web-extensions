@@ -136,7 +136,8 @@ export const tabsController = {
 
     // deleteUncleanUrlBookmarkForTab(memo.previousTabId)
   },
-  // async onRemoved(tabId) {
-  //   deleteUncleanUrlBookmarkForTab(tabId)
-  // }
+  // eslint-disable-next-line no-unused-vars
+  async onRemoved(tabId) {
+    // deleteUncleanUrlBookmarkForTab(tabId)
+  }
 }

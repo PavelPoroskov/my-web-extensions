@@ -10,6 +10,7 @@ const log = SHOW_LOG ? console.log : () => {};
   }
   window.hasRun = true;
 
+  // TODO-DOUBLE remove duplication in EXTENSION_COMMAND_ID: command-id.js and content-scripts.js
   const EXTENSION_COMMAND_ID = {
     DELETE_BOOKMARK: 'DELETE_BOOKMARK',
     ADD_BOOKMARK: 'ADD_BOOKMARK',
@@ -18,34 +19,41 @@ const log = SHOW_LOG ? console.log : () => {};
     TAB_IS_READY: 'TAB_IS_READY',
     SHOW_TAG_LIST: 'SHOW_TAG_LIST',
   }
+  // TODO-DOUBLE remove duplication in CONTENT_SCRIPT_COMMAND_ID: command-id.js and content-scripts.js
   const CONTENT_SCRIPT_COMMAND_ID = {
     BOOKMARK_INFO: 'BOOKMARK_INFO',
     HISTORY_INFO: 'HISTORY_INFO',
+    TAGS_INFO: 'TAGS_INFO',
     CLEAR_URL: 'CLEAR_URL',
   }
 
+  // TODO-DOUBLE remove duplication in SHOW_PREVIOUS_VISIT_OPTION: constant/storage.js and content-scripts.js
   const SHOW_PREVIOUS_VISIT_OPTION = {
     NEVER: 0,
     ONLY_NO_BKM: 1,
     ALWAYS: 2,
   }
+  // TODO-DOUBLE remove duplication BROWSER in browser-specific.js and content-scripts.js
   const BROWSER_OPTIONS = {
     CHROME: 'CHROME',
     FIREFOX: 'FIREFOX',
   }
   const BROWSER_SPECIFIC_OPTIONS = {
-    [BROWSER_OPTIONS.CHROME]: {
-      DEL_BTN_RIGHT_PADDING: '0.5ch',
-      LABEL_RIGHT_PADDING: '0.3ch',
+    DEL_BTN_RIGHT_PADDING: {
+      [BROWSER_OPTIONS.CHROME]: '0.5ch',
+      [BROWSER_OPTIONS.FIREFOX]: '1ch'
     },
-    [BROWSER_OPTIONS.FIREFOX]: {
-      DEL_BTN_RIGHT_PADDING: '1ch',
-      LABEL_RIGHT_PADDING: '0.6ch',
-    },
+    LABEL_RIGHT_PADDING: {
+      [BROWSER_OPTIONS.CHROME]: '0.3ch',
+      [BROWSER_OPTIONS.FIREFOX]: '0.6ch'
+    }
   }
   const BROWSER = BROWSER_OPTIONS.FIREFOX;
-  const BROWSER_SPECIFIC = BROWSER_SPECIFIC_OPTIONS[BROWSER];
-    
+  const BROWSER_SPECIFIC = Object.fromEntries(
+    Object.entries(BROWSER_SPECIFIC_OPTIONS)
+      .map(([option, obj]) => [option, obj[BROWSER]])
+  );
+  
   const bkmInfoRootId = 'bkm-info--root';
   const bkmInfoStyle2Id = 'bkm-info--style2';
 
@@ -351,11 +359,19 @@ const log = SHOW_LOG ? console.log : () => {};
     const visitList = input.visitList || []
     const showPreviousVisit = input.showPreviousVisit || SHOW_PREVIOUS_VISIT_OPTION.NEVER
     const isShowTitle = input.isShowTitle || false
-    const tagList = input.tagList || []
+    const inTagList = input.tagList || []
     const isShowTagList = input.isShowTagList || false
     const tagLength = input.tagLength || 8
     
     log('showBookmarkInfo 00');
+    const usedParentIdSet = new Set(bookmarkInfoList.map(({ parentId }) => parentId))
+    const tagList = inTagList.map(({ parentId, title, isFixed, isLast}) => ({
+      parentId,
+      title, 
+      isFixed,
+      isLast,
+      isUsed: usedParentIdSet.has(parentId)
+    }))
 
     let rootDiv = document.getElementById(bkmInfoRootId);
 
@@ -625,6 +641,13 @@ const log = SHOW_LOG ? console.log : () => {};
     switch (message.command) {
       case CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO: {
         log('content-script: ', message.bookmarkInfoList);
+
+        fullMessage = { ...fullMessage, ...message }
+        showBookmarkInfo(fullMessage);
+        break
+      }
+      case CONTENT_SCRIPT_COMMAND_ID.TAGS_INFO: {
+        log('content-script: ', message.tags);
 
         fullMessage = { ...fullMessage, ...message }
         showBookmarkInfo(fullMessage);
