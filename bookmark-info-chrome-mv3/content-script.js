@@ -272,7 +272,6 @@ const log = SHOW_LOG ? console.log : () => {};
     return result
   }
 
-  let fullMessage = {};
   let storedTagLength = 8;
 
   async function deleteBookmark(event) {
@@ -292,6 +291,7 @@ const log = SHOW_LOG ? console.log : () => {};
     const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
 
     if (parentId) {
+      const fullMessage = showInHtmlSingleTaskQueue.getState()
       const isExist = fullMessage.bookmarkInfoList.some((item) => item.parentId === parentId)
 
       if (!isExist) {
@@ -310,6 +310,7 @@ const log = SHOW_LOG ? console.log : () => {};
     const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
 
     if (parentId) {
+      const fullMessage = showInHtmlSingleTaskQueue.getState()
       const recentTag = fullMessage.tagList.find((item) => item.parentId === parentId)
       await chrome.runtime.sendMessage({
         command: EXTENSION_COMMAND_ID.FIX_TAG,
@@ -341,12 +342,64 @@ const log = SHOW_LOG ? console.log : () => {};
     }
   }
 
+
+  class TaskQueue {
+    fullState = {}
+    updateList = []
+    fnTask
+
+    promise = Promise.resolve(0)
+    fnResolve
+    fnReject
+
+    constructor(fnTask) {
+      this.fnTask = fnTask
+    }
+    async continueQueue() {
+      // console.log('continueQueue 00')
+      await this.promise.catch()
+
+      // console.log('continueQueue 11')
+      this.promise = new Promise((fnResolve, fnReject) => {
+        this.fnResolve = fnResolve;
+        this.fnReject = fnReject;
+      });
+
+      let sumUpdate = {}
+      let step = this.updateList.shift()
+      while (step) {
+        sumUpdate = { ...sumUpdate, ...step }
+        step = this.updateList.shift()
+      }
+      // console.log('continueQueue 66 sumUpdate', sumUpdate)
+      if (Object.keys(sumUpdate).length > 0) {
+        this.fullState = { ...this.fullState, ...sumUpdate }
+        // console.log('continueQueue 77 ')
+        this.fnTask(this.fullState)
+      }
+
+      // console.log('continueQueue 88')
+      this.fnResolve()
+      // console.log('continueQueue 99')
+    }
+    addUpdate(update) {
+      this.updateList.push(update)
+
+      this.continueQueue()
+    }
+    getState() {
+      return { ...this.fullState }
+    }
+  }
+
+  const showInHtmlSingleTaskQueue = new TaskQueue(showBookmarkInfo)
+
   async function updateIsShowTagList() {
     log('updateIsShowTagList');
+    const fullMessage = showInHtmlSingleTaskQueue.getState()
     const before = !!fullMessage.isShowTagList
-    fullMessage.isShowTagList = !before
-    showBookmarkInfo(fullMessage);
 
+    showInHtmlSingleTaskQueue.addUpdate({ isShowTagList: !before })
     await chrome.runtime.sendMessage({
       command: EXTENSION_COMMAND_ID.SHOW_TAG_LIST,
       value: !before,
@@ -639,25 +692,10 @@ const log = SHOW_LOG ? console.log : () => {};
   chrome.runtime.onMessage.addListener((message) => {
     log('chrome.runtime.onMessage: ', message);
     switch (message.command) {
-      case CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO: {
-        log('content-script: ', message.bookmarkInfoList);
-
-        fullMessage = { ...fullMessage, ...message }
-        showBookmarkInfo(fullMessage);
-        break
-      }
-      case CONTENT_SCRIPT_COMMAND_ID.TAGS_INFO: {
-        log('content-script: ', message.tags);
-
-        fullMessage = { ...fullMessage, ...message }
-        showBookmarkInfo(fullMessage);
-        break
-      }
+      case CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO: 
+      case CONTENT_SCRIPT_COMMAND_ID.TAGS_INFO: 
       case CONTENT_SCRIPT_COMMAND_ID.HISTORY_INFO: {
-        log('content-script: ', message.visitList);
-
-        fullMessage = { ...fullMessage, ...message }
-        showBookmarkInfo(fullMessage);
+        showInHtmlSingleTaskQueue.addUpdate(message)
         break
       }
       case CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL: {
