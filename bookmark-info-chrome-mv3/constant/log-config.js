@@ -6,6 +6,6 @@ export const LOG_CONFIG = {
   SHOW_LOG_OPTIMIZATION: false,
   SHOW_LOG_QUEUE: false,
   SHOW_LOG: false,
-  SHOW_DEBUG: false,
+  SHOW_DEBUG: true,
   SHOW_SETTINGS: false,
 }

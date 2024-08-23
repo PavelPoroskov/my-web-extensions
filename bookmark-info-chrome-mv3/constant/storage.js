@@ -26,10 +26,6 @@ export const STORAGE_KEY_META = {
     storageKey: 'SHOW_BOOKMARK_TITLE',
     default: false,
   },
-  // SHOW_PROFILE: {
-  //   storageKey: 'SHOW_PROFILE', 
-  //   default: false,
-  // },
   ADD_BOOKMARK_IS_ON: {
     storageKey: 'ADD_BOOKMARK',
     default: true,
@@ -70,6 +66,10 @@ export const STORAGE_KEY_META = {
   },
   FORCE_FLAT_FOLDER_STRUCTURE: {
     storageKey: 'FORCE_FLAT_FOLDER_STRUCTURE', 
+    default: false,
+  },
+  SET_START_SEARCH_POSITION: {
+    storageKey: 'SET_START_SEARCH_POSITION', 
     default: false,
   },
 }

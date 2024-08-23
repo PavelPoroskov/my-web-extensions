@@ -8,6 +8,9 @@ import {
   isSupportedProtocol,
 } from './common-api.js'
 import {
+  isTempBookmarkNode,
+} from './reposition-api.js'
+import {
   SOURCE,
 } from '../constant/index.js'
 
@@ -89,7 +92,8 @@ async function addBookmarkParentInfo(bookmarkList, bookmarkByIdMap) {
 }
 
 async function getBookmarkInfo(url) {
-  const bookmarkList = await chrome.bookmarks.search({ url });
+  const bookmarkList = (await chrome.bookmarks.search({ url }))
+    .filter((node) => !isTempBookmarkNode(node));
 
   if (bookmarkList.length == 0) {
     return [];

@@ -121,7 +121,7 @@ export async function onIncomingMessage (message, sender) {
     }
     case EXTENSION_COMMAND_ID.OPTIONS_ASKS_SAVE: {
       logEvent('runtime.onMessage OPTIONS_ASKS_SAVE');
-      await extensionSettings.update(message.updateObj)
+      await extensionSettings.save(message.updateObj)
 
       break
     }

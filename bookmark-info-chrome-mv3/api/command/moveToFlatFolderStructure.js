@@ -8,7 +8,7 @@ import {
 } from '../structure/index.js'
 
 export async function moveToFlatFolderStructure() {
-  await extensionSettings.update({
+  await extensionSettings.save({
     [STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]: true
   })
   await tagList.filterTagListForFlatFolderStructure()

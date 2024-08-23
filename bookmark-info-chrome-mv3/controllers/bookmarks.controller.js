@@ -1,35 +1,39 @@
 import {
-  logEvent,
-  logDebug,
-} from '../api/log-api.js'
-
-import {
   getBookmarkInfoUni,
 } from '../api/bookmarks-api.js'
 import {
-  updateActiveTab,
-} from '../api/tabs-api.js'
+  logDebug,
+} from '../api/log-api.js'
 import {
-  STORAGE_KEY,
-  IS_BROWSER_CHROME,
-  // eslint-disable-next-line no-unused-vars
-  IS_BROWSER_FIREFOX,
-} from '../constant/index.js'
+  clearTempBookmarkTitle,
+  isTempBookmarkNode,
+  // repositionLastBookmarkOnCreated,
+} from '../api/reposition-api.js'
 import {
   activeDialog,
   extensionSettings,
   memo,
   tagList,
 } from '../api/structure/index.js'
+import {
+  updateActiveTab,
+} from '../api/tabs-api.js'
+import {
+  IS_BROWSER_CHROME,
+  STORAGE_KEY
+} from '../constant/index.js'
 
 export const bookmarksController = {
   async onCreated(bookmarkId, node) {
-    logEvent('bookmark.onCreated <-', node);
+    logDebug('bookmark.onCreated <-', node);
     const settings = await extensionSettings.get()
 
     if (node.url) {
+      if (isTempBookmarkNode(node)) {
+        return
+      }
+      activeDialog.createBkmStandard(node.id, node.parentId)
       if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-        activeDialog.createBkmStandard(node.id, node.parentId)
         await tagList.addRecentTag(node)
       }
     } else {
@@ -44,9 +48,15 @@ export const bookmarksController = {
     });
     // changes in bookmark manager
     getBookmarkInfoUni({ url: node.url });
+
+    // if (node.url && urlToBkmList.get(url).length > 0) {
+    //   if (settings[STORAGE_KEY.SET_START_SEARCH_POSITION]) {
+    //     await repositionLastBookmarkOnCreated(node)
+    //   }
+    // }
   },
   async onChanged(bookmarkId, changeInfo) {
-    logEvent('bookmark.onChanged 00 <-', changeInfo);
+    logDebug('bookmark.onChanged 00 <-', bookmarkId, changeInfo);
     const settings = await extensionSettings.get()
 
     const [node] = await chrome.bookmarks.get(bookmarkId)
@@ -68,9 +78,15 @@ export const bookmarksController = {
     });
     // changes in bookmark manager
     getBookmarkInfoUni({ url: node.url });   
+
+    // if (node.url) {
+    //   if (settings[STORAGE_KEY.SET_START_SEARCH_POSITION]) {
+    //     await repositionLastBookmarkOnCreated(node)
+    //   }
+    // }
   },
   async onMoved(bookmarkId, { oldIndex, index, oldParentId, parentId }) {
-    logEvent('bookmark.onMoved <-', { oldIndex, index, oldParentId, parentId });
+    logDebug('bookmark.onMoved <-', { oldIndex, index, oldParentId, parentId });
     const settings = await extensionSettings.get()
     // switch (true) {
     //   // in bookmark manager. no changes for this extension
@@ -91,35 +107,43 @@ export const bookmarksController = {
     const [node] = await chrome.bookmarks.get(bookmarkId)
     
     if (node.url) {
-      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && parentId !== oldParentId) {
-        await tagList.addRecentTag(node);
-
+      if (parentId !== oldParentId) {
         const isCreatedInActiveDialog = activeDialog.isCreatedInActiveDialog(bookmarkId, oldParentId)
         if (isCreatedInActiveDialog) {
-          logDebug('bookmark.onMoved 11');
+          // logDebug('bookmark.onMoved 11');
           activeDialog.removeBkm(oldParentId)
         }
 
-        if (!isCreatedInActiveDialog) {
-          if (IS_BROWSER_CHROME) {
-            if (!memo.isActiveTabBookmarkManager) {
-              logDebug('bookmark.onMoved 22');
-              await Promise.all([
-                chrome.bookmarks.create({
-                  parentId: oldParentId,
-                  title: node.title,
-                  url: node.url
-                }),
-                chrome.bookmarks.remove(bookmarkId),
-              ])
-              await chrome.bookmarks.create({
-                parentId,
-                title: node.title,
-                url: node.url
-              })
+        if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+          await tagList.addRecentTag(node);
+
+          if (!isCreatedInActiveDialog) {
+            if (IS_BROWSER_CHROME) {
+              if (!memo.isActiveTabBookmarkManager) {
+                if (isTempBookmarkNode({ parentId: oldParentId, title: node.title, url: node.url })) {
+                  await chrome.bookmarks.update(node.id, {
+                    title: clearTempBookmarkTitle(node.title),
+                  })
+                } else {
+                  logDebug('bookmark.onMoved 22');
+                  await Promise.all([
+                    chrome.bookmarks.create({
+                      parentId: oldParentId,
+                      title: node.title,
+                      url: node.url
+                    }),
+                    chrome.bookmarks.remove(bookmarkId),
+                  ])
+                  await chrome.bookmarks.create({
+                    parentId,
+                    title: node.title,
+                    url: node.url
+                  })
+                }
+              }
+            // } else if (IS_BROWSER_FIREFOX) {
+              
             }
-          // } else if (IS_BROWSER_FIREFOX) {
-            
           }
         }
       }
@@ -132,18 +156,26 @@ export const bookmarksController = {
     });
     // changes in bookmark manager
     getBookmarkInfoUni({ url: node.url })
+
+    // if (node.url) {
+    //   if (settings[STORAGE_KEY.SET_START_SEARCH_POSITION]) {
+    //     await repositionLastBookmarkOnCreated(node)
+    //   }
+    // }
   },
   async onRemoved(bookmarkId, { node }) {
-    logEvent('bookmark.onRemoved <-');
-    const settings = await extensionSettings.get()
+    logDebug('bookmark.onRemoved <-');
 
     if (node.url) {
-      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-        activeDialog.removeBkm(node.parentId)    
+      if (isTempBookmarkNode(node)) {
+        return
       }
+
+      activeDialog.removeBkm(node.parentId)   
     } else {
       memo.bkmFolderById.delete(bookmarkId);
-
+      const settings = await extensionSettings.get()
+      
       if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
         await tagList.removeTag(bookmarkId)
       }

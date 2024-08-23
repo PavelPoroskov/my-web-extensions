@@ -2,7 +2,6 @@
 import { CacheWithLimit } from './cache.js'
 import {
   logSettings,
-  // logDebug,
 } from '../log-api.js'
 
 export const memo = {
@@ -16,6 +15,8 @@ export const memo = {
   bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
   // tabId -> bookmarkId
   tabMap: new Map(),
+  urlToTempBkmIdMap: new Map(),
+  tabIdToUrlMap: new Map(),
 };
 
 logSettings('IMPORT END', 'memo.js', new Date().toISOString())

@@ -159,6 +159,12 @@ function restoreOptions(settings) {
   element = document.querySelector(domId)
   element.value = settings[optionId];
   element.addEventListener('input', makeSaveInputHandler(optionId) );
+
+  optionId = STORAGE_KEY.SET_START_SEARCH_POSITION;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.checked = settings[optionId];
+  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 }
 
 let clearUrlTargetList

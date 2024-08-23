@@ -43,6 +43,7 @@ class ExtensionSettings {
       STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
       STORAGE_KEY.CLEAR_URL,
       STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
+      STORAGE_KEY.SET_START_SEARCH_POSITION,
       STORAGE_KEY.SHOW_BOOKMARK_TITLE,
       STORAGE_KEY.SHOW_PATH_LAYERS,
       STORAGE_KEY.SHOW_PREVIOUS_VISIT,
@@ -55,11 +56,13 @@ class ExtensionSettings {
     logSettings('readSavedSettings')
     logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
   }
-
-  async update(updateObj) {
+  actualize(updateObj) {
     Object.entries(updateObj).forEach(([ket, value]) => {
       this._settings[ket] = value
     })
+  }
+  async save(updateObj) {
+    this.actualize(updateObj)
     
     await setOptions(updateObj)
   }

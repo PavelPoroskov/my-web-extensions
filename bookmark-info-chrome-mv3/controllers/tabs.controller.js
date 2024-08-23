@@ -1,20 +1,25 @@
 
 import {
-  logDebug,
-  logEvent,
-  logIgnore,
-} from '../api/log-api.js'
+  // deleteUncleanUrlBookmarkForTab,
+  getBookmarkInfoUni,
+} from '../api/bookmarks-api.js'
 import {
   clearUrlInTab,
   removeQueryParamsIfTarget,
 } from '../api/clean-url-api.js'
 import {
-  // deleteUncleanUrlBookmarkForTab,
-  getBookmarkInfoUni,
-} from '../api/bookmarks-api.js'
-import {
   getHistoryInfo,
 } from '../api/history-api.js'
+import {
+  logEvent,
+  logIgnore,
+} from '../api/log-api.js'
+import {
+  clearTempBkmForTab,
+  clearTempBkmForUrl,
+  clearTempBkmOnClose,
+  repositionLastBookmarkOnTabActivated,
+} from '../api/reposition-api.js'
 import {
   activeDialog,
   extensionSettings,
@@ -33,6 +38,7 @@ import {
 export const tabsController = {
   onCreated({ pendingUrl: url, index, id }) {
     logEvent('tabs.onCreated', index, id, url);
+    memo.tabIdToUrlMap.set(id, url)
     // We do not have current visit in history on tabs.onCreated(). Only after tabs.onUpdated(status = loading)
     getBookmarkInfoUni({
       url,
@@ -46,6 +52,15 @@ export const tabsController = {
       if (memo.activeTabId && tabId === memo.activeTabId) {
         memo.activeTabUrl = changeInfo.url
       }
+      const prevUrl = memo.tabIdToUrlMap.get(tabId)
+      const newUrl = changeInfo.url
+      if (newUrl !== prevUrl) {
+        memo.tabIdToUrlMap.set(tabId, changeInfo.url)
+        if (prevUrl) {
+          clearTempBkmForUrl(prevUrl)
+        }
+      }
+      
     }
 
     switch (changeInfo?.status) {
@@ -113,23 +128,31 @@ export const tabsController = {
       const Tab = await chrome.tabs.get(tabId);
 
       if (Tab) {
-        logDebug('tabs.onActivated 11', Tab.index, tabId, Tab.url);
+        // logDebug('tabs.onActivated 11', Tab.index, tabId, Tab.url);
         memo.activeTabUrl = Tab.url
         memo.isActiveTabBookmarkManager = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
+        memo.tabIdToUrlMap.set(tabId, Tab.url)
       }
 
-      // updateTab({
-      //   tabId, 
-      //   url: Tab.url, 
-      //   useCache: true,
-      //   debugCaller: 'tabs.onActivated(useCache: true)'
-      // });
+      updateTab({
+        tabId, 
+        url: Tab.url, 
+        useCache: true,
+        debugCaller: 'tabs.onActivated(useCache: true)'
+      });
       updateTab({
         tabId, 
         url: Tab.url, 
         useCache: false,
         debugCaller: 'tabs.onActivated(useCache: false)'
       });
+
+      if (Tab?.url) {
+        const settings = await extensionSettings.get()
+        if (settings[STORAGE_KEY.SET_START_SEARCH_POSITION]) {
+          await repositionLastBookmarkOnTabActivated(Tab)
+        }
+      }
     } catch (er) {
       logIgnore('tabs.onActivated. IGNORING. tab was deleted', er);
     }
@@ -137,7 +160,12 @@ export const tabsController = {
     // deleteUncleanUrlBookmarkForTab(memo.previousTabId)
   },
   // eslint-disable-next-line no-unused-vars
-  async onRemoved(tabId) {
+  async onRemoved(tabId, { isWindowClosing }) {
     // deleteUncleanUrlBookmarkForTab(tabId)
+    clearTempBkmForTab(tabId)
+
+    if (isWindowClosing) {
+      clearTempBkmOnClose()
+    }
   }
 }
