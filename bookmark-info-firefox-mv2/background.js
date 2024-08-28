@@ -1495,9 +1495,10 @@ async function updateTagsForTab({ tabId }) {
   }
   logSendEvent('updateTagsForTabTask()', tabId, message);
   await browser.tabs.sendMessage(tabId, message)
-    // .catch((er) => {
-    //   console.log('Failed to send tagInfo to tab', tabId, ' Ignoring ', er)
-    // })
+    // eslint-disable-next-line no-unused-vars
+    .catch((er) => {
+      // console.log('Failed to send tagInfo to tab', tabId, ' Ignoring ', er)
+    })
 }
 async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
   const settings = await extensionSettings.get()

@@ -79,6 +79,7 @@ const log = SHOW_LOG ? console.log : () => {};
   display: flex;
   position: relative;
   line-height: inherit;
+  font-family: inherit;
 }
 .bkm-info--row-left {
   flex: 1;
@@ -91,6 +92,7 @@ const log = SHOW_LOG ? console.log : () => {};
   color: black;
   padding-right: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
   line-height: inherit;
+  font-family: inherit;
 }
 .bkm-info--btn {
   padding-left: 0.65ch;
@@ -104,11 +106,13 @@ const log = SHOW_LOG ? console.log : () => {};
   justify-items: center;
   display: none;
   line-height: inherit;
+  font-family: inherit;
 }
 .bkm-info--btn-letter {
   color: white;
   font-size: 10px;
   line-height: 1;
+  font-family: inherit;
 }
 .bkm-info--btn:active {
   transform: translateY(0.1ch);
@@ -158,6 +162,7 @@ const log = SHOW_LOG ? console.log : () => {};
 }
 .bkm-info--bkm span {
   line-height: inherit;
+  font-family: inherit;
 }
 .bkm-info--bkm span:nth-child(even) {
   background-color: lightgray;
@@ -188,6 +193,7 @@ const log = SHOW_LOG ? console.log : () => {};
   padding-right: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
   text-wrap: nowrap;
   line-height: inherit;
+  font-family: inherit;
 }
 .bkm-info--fixed {
   background-color: #40E0D0;
@@ -272,7 +278,6 @@ const log = SHOW_LOG ? console.log : () => {};
     return result
   }
 
-  let fullMessage = {};
   let storedTagLength = 8;
 
   async function deleteBookmark(event) {
@@ -292,6 +297,7 @@ const log = SHOW_LOG ? console.log : () => {};
     const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
 
     if (parentId) {
+      const fullMessage = showInHtmlSingleTaskQueue.getState()
       const isExist = fullMessage.bookmarkInfoList.some((item) => item.parentId === parentId)
 
       if (!isExist) {
@@ -310,6 +316,7 @@ const log = SHOW_LOG ? console.log : () => {};
     const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
 
     if (parentId) {
+      const fullMessage = showInHtmlSingleTaskQueue.getState()
       const recentTag = fullMessage.tagList.find((item) => item.parentId === parentId)
       await browser.runtime.sendMessage({
         command: EXTENSION_COMMAND_ID.FIX_TAG,
@@ -341,12 +348,64 @@ const log = SHOW_LOG ? console.log : () => {};
     }
   }
 
+
+  class TaskQueue {
+    fullState = {}
+    updateList = []
+    fnTask
+
+    promise = Promise.resolve(0)
+    fnResolve
+    fnReject
+
+    constructor(fnTask) {
+      this.fnTask = fnTask
+    }
+    async continueQueue() {
+      // console.log('continueQueue 00')
+      await this.promise.catch()
+
+      // console.log('continueQueue 11')
+      this.promise = new Promise((fnResolve, fnReject) => {
+        this.fnResolve = fnResolve;
+        this.fnReject = fnReject;
+      });
+
+      let sumUpdate = {}
+      let step = this.updateList.shift()
+      while (step) {
+        sumUpdate = { ...sumUpdate, ...step }
+        step = this.updateList.shift()
+      }
+      // console.log('continueQueue 66 sumUpdate', sumUpdate)
+      if (Object.keys(sumUpdate).length > 0) {
+        this.fullState = { ...this.fullState, ...sumUpdate }
+        // console.log('continueQueue 77 ')
+        this.fnTask(this.fullState)
+      }
+
+      // console.log('continueQueue 88')
+      this.fnResolve()
+      // console.log('continueQueue 99')
+    }
+    addUpdate(update) {
+      this.updateList.push(update)
+
+      this.continueQueue()
+    }
+    getState() {
+      return { ...this.fullState }
+    }
+  }
+
+  const showInHtmlSingleTaskQueue = new TaskQueue(showBookmarkInfo)
+
   async function updateIsShowTagList() {
     log('updateIsShowTagList');
+    const fullMessage = showInHtmlSingleTaskQueue.getState()
     const before = !!fullMessage.isShowTagList
-    fullMessage.isShowTagList = !before
-    showBookmarkInfo(fullMessage);
 
+    showInHtmlSingleTaskQueue.addUpdate({ isShowTagList: !before })
     await browser.runtime.sendMessage({
       command: EXTENSION_COMMAND_ID.SHOW_TAG_LIST,
       value: !before,
@@ -639,25 +698,10 @@ const log = SHOW_LOG ? console.log : () => {};
   browser.runtime.onMessage.addListener((message) => {
     log('browser.runtime.onMessage: ', message);
     switch (message.command) {
-      case CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO: {
-        log('content-script: ', message.bookmarkInfoList);
-
-        fullMessage = { ...fullMessage, ...message }
-        showBookmarkInfo(fullMessage);
-        break
-      }
-      case CONTENT_SCRIPT_COMMAND_ID.TAGS_INFO: {
-        log('content-script: ', message.tags);
-
-        fullMessage = { ...fullMessage, ...message }
-        showBookmarkInfo(fullMessage);
-        break
-      }
+      case CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO: 
+      case CONTENT_SCRIPT_COMMAND_ID.TAGS_INFO: 
       case CONTENT_SCRIPT_COMMAND_ID.HISTORY_INFO: {
-        log('content-script: ', message.visitList);
-
-        fullMessage = { ...fullMessage, ...message }
-        showBookmarkInfo(fullMessage);
+        showInHtmlSingleTaskQueue.addUpdate(message)
         break
       }
       case CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL: {
