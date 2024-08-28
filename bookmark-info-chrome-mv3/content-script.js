@@ -79,6 +79,7 @@ const log = SHOW_LOG ? console.log : () => {};
   display: flex;
   position: relative;
   line-height: inherit;
+  font-family: inherit;
 }
 .bkm-info--row-left {
   flex: 1;
@@ -91,6 +92,7 @@ const log = SHOW_LOG ? console.log : () => {};
   color: black;
   padding-right: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
   line-height: inherit;
+  font-family: inherit;
 }
 .bkm-info--btn {
   padding-left: 0.65ch;
@@ -104,11 +106,13 @@ const log = SHOW_LOG ? console.log : () => {};
   justify-items: center;
   display: none;
   line-height: inherit;
+  font-family: inherit;
 }
 .bkm-info--btn-letter {
   color: white;
   font-size: 10px;
   line-height: 1;
+  font-family: inherit;
 }
 .bkm-info--btn:active {
   transform: translateY(0.1ch);
@@ -158,6 +162,7 @@ const log = SHOW_LOG ? console.log : () => {};
 }
 .bkm-info--bkm span {
   line-height: inherit;
+  font-family: inherit;
 }
 .bkm-info--bkm span:nth-child(even) {
   background-color: lightgray;
@@ -188,6 +193,7 @@ const log = SHOW_LOG ? console.log : () => {};
   padding-right: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
   text-wrap: nowrap;
   line-height: inherit;
+  font-family: inherit;
 }
 .bkm-info--fixed {
   background-color: #40E0D0;
