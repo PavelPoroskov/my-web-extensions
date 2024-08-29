@@ -12,17 +12,16 @@ export const clearUrlTargetList = [
   //   ] 
   // },
   {
-    hostname: 'linkedin.com',  
-    paths: [
-      '/jobs/view/',
-      '/posts/'
-    ] 
-  },
-  {
     hostname: 'djinni.co',
     paths: [
       '/my/profile/',
       '/jobs/',
+    ] 
+  },
+  {
+    hostname: 'frontendmasters.com',
+    paths: [
+      '/courses/',
     ] 
   },
   {
@@ -31,6 +30,13 @@ export const clearUrlTargetList = [
       '/title/',
       '/list/',
       '/imdbpicks/',
+    ] 
+  },
+  {
+    hostname: 'linkedin.com',  
+    paths: [
+      '/jobs/view/',
+      '/posts/'
     ] 
   },
   {
