@@ -1,25 +1,18 @@
 # bookmark-info
-Browser extension
+The extension improves the browser's capabilities for working with bookmarks.
+The user can view, add, delete bookmarks without opening the standard bookmark dialog.
 
 ## What it does
 
-The Bookmarks Info extension shows previous visit and folder of a bookmark for the current URL.
-The “Bookmark Information” extension allows a user to add a bookmark from recent bookmark list. Recent bookmark list can be up to 40 items
-
-The “Bookmark Information” extension allows a user to distinguish a new page from an already visited one. 
-This increases your productivity when you need to view many pages.
-
-1) The extension clears query params from url on opening for defined sites.
-2) The extension shows the previous visit to the current URL if it is not the first visit.
-3) Extension shows the bookmark folder for the current URL in the top right corner of a page.
-4) User can see full path of bookmark on hover cursor over label.
-5) User can delete bookmark by clicking Del button on the label.
-6) User can hide bookmark labels by clicking on label.
-7) User can add bookmark from recent bookmarks.
-8) Command "close duplicate tabs" in page context menu.
-9) Command "close bookmarked tabs" in page context menu.
-10) Command "clear url" in page context menu. The command removes query parameters from url.
-
+* The user can add a bookmark from the list of recent bookmarks, which contains 40 items. The standard list of recent bookmarks contains only 5 items.
+* The extension shows selected bookmark for active url in the top right corner of a page.
+* User can delete bookmark by clicking Del button on the label.
+* User can hide bookmark labels by clicking on label.
+* The extension clears url from query params on opening for defined sites.
+* Command "close duplicate tabs" in page context menu.
+* Command "clear url" in page context menu. The command removes query parameters from url.
+* The extension shows the previous visit to the current URL if it is not the first visit.
+* The extension allows you to quickly switch to a flat folder structure. The flat folder structure allows you to quickly find the desired folder since all folders are on the first level and sorted
 
 ## Install  
 For Chrome/Chromium  
