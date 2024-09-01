@@ -49,9 +49,11 @@ const log = SHOW_LOG ? console.log : () => {};
   );
   
   const bkmInfoRootId = 'bkm-info--root';
+  const bkmInfoStyle1Id = 'bkm-info--style1';
   const bkmInfoStyle2Id = 'bkm-info--style2';
 
-  const STYLE_ELEMENT = (
+  function getStyleText({ tagLength }) {
+    return (
 `
 #${bkmInfoRootId} {
   position: fixed;
@@ -68,15 +70,21 @@ const log = SHOW_LOG ? console.log : () => {};
   text-align: left;
   line-height: 1.2;
   letter-spacing: normal;
+  width: ${tagLength}ch;
 }
 .bkm-info--row {
   display: flex;
   position: relative;
   line-height: inherit;
   font-family: inherit;
+  justify-content: flex-end;
 }
-.bkm-info--row-left {
-  flex: 1;
+.bkm-info--label-container {
+  display: flex;
+  position: relative;
+  line-height: inherit;
+  font-family: inherit;
+  justify-content: flex-end;
 }
 .bkm-info--label {
   padding-left: 0.7ch;
@@ -87,6 +95,8 @@ const log = SHOW_LOG ? console.log : () => {};
   padding-right: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
   line-height: inherit;
   font-family: inherit;
+  width: fit-content;
+  text-wrap: nowrap;
 }
 .bkm-info--btn {
   padding-left: 0.65ch;
@@ -178,6 +188,8 @@ const log = SHOW_LOG ? console.log : () => {};
   padding-left: 0.5ch;
   color: black;
   background: lavender;
+  width: fit-content;
+  text-wrap: nowrap;
 }
 
 .bkm-info--tag {
@@ -238,7 +250,8 @@ const log = SHOW_LOG ? console.log : () => {};
   font-weight: 600;
 }
 `
-  );
+    )
+  };
   
   const dayMS = 86400000;
   const hourMS = 3600000;
@@ -430,7 +443,8 @@ const log = SHOW_LOG ? console.log : () => {};
     if (!rootDiv) {
       log('showBookmarkInfo 22 2');
       const rootStyle = document.createElement('style');
-      const textNodeStyle = document.createTextNode(STYLE_ELEMENT);
+      rootStyle.setAttribute('id', bkmInfoStyle1Id);
+      const textNodeStyle = document.createTextNode(getStyleText({ tagLength }));
       rootStyle.appendChild(textNodeStyle);
 
       rootDiv = document.createElement('div');
@@ -453,6 +467,10 @@ const log = SHOW_LOG ? console.log : () => {};
     } else {
       if (tagLength !== storedTagLength ) {
         storedTagLength = tagLength
+
+        const rootStyle1 = document.getElementById(bkmInfoStyle1Id);
+        const textNodeStyle1 = document.createTextNode(getStyleText({ tagLength }));
+        rootStyle1.replaceChild(textNodeStyle1, rootStyle1.firstChild);
 
         const rootStyle2 = document.getElementById(bkmInfoStyle2Id);
         const textNodeStyle2 = document.createTextNode(
@@ -506,11 +524,8 @@ const log = SHOW_LOG ? console.log : () => {};
     }
 
     drawList.forEach(({ type, value, bkmIndex }, index) => {
-      const divRow = document.createElement('div');
-      divRow.classList.add('bkm-info--row');
-      const divL = document.createElement('div');
-      divL.classList.add('bkm-info--row-left');
-      divRow.appendChild(divL);
+      const divLabelContainer = document.createElement('div');
+      divLabelContainer.classList.add('bkm-info--label-container');
 
       switch (type) {
         case 'bookmark': {
@@ -559,8 +574,8 @@ const log = SHOW_LOG ? console.log : () => {};
           divDelBtn.appendChild(divDelBtnLetter);
           divDelBtn.addEventListener('click', deleteBookmark);
     
-          divRow.appendChild(divLabel);
-          divRow.appendChild(divDelBtn);
+          divLabelContainer.appendChild(divLabel);
+          divLabelContainer.appendChild(divDelBtn);
   
           break
         }
@@ -571,7 +586,7 @@ const log = SHOW_LOG ? console.log : () => {};
           const textNode = document.createTextNode(`${value}`);
           divLabel.appendChild(textNode);
   
-          divRow.appendChild(divLabel);
+          divLabelContainer.appendChild(divLabel);
   
           break
         }
@@ -581,7 +596,7 @@ const log = SHOW_LOG ? console.log : () => {};
           divLabel.addEventListener('click', updateIsShowTagList);
           const textNode = document.createTextNode( isShowTagList ? '▴ hide' : '▾ add' );
           divLabel.appendChild(textNode);
-          divRow.appendChild(divLabel);
+          divLabelContainer.appendChild(divLabel);
 
           break
         }
@@ -616,8 +631,8 @@ const log = SHOW_LOG ? console.log : () => {};
           divDelBtnLetter.appendChild(textNodeDel);
           divDelBtn.appendChild(divDelBtnLetter);    
 
-          divRow.appendChild(divDelBtn);
-          divRow.appendChild(divLabel);
+          divLabelContainer.appendChild(divDelBtn);
+          divLabelContainer.appendChild(divLabel);
 
           break
         }
@@ -653,8 +668,8 @@ const log = SHOW_LOG ? console.log : () => {};
           
           divDelBtn.appendChild(divDelBtnLetter);    
 
-          divRow.appendChild(divDelBtn);
-          divRow.appendChild(divLabel);
+          divLabelContainer.appendChild(divDelBtn);
+          divLabelContainer.appendChild(divLabel);
 
           break
         }
@@ -665,12 +680,16 @@ const log = SHOW_LOG ? console.log : () => {};
           const textNode = document.createTextNode(`${value} :title`);
           divLabel.appendChild(textNode);
   
-          divRow.appendChild(divLabel);
+          divLabelContainer.appendChild(divLabel);
   
           break
         }
       }
       
+      const divRow = document.createElement('div');
+      divRow.classList.add('bkm-info--row');
+      divRow.appendChild(divLabelContainer);
+
       if (index < beforeRawLength) {
         rootDiv.replaceChild(divRow, rawNodeList[index]);
       } else {
