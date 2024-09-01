@@ -53,6 +53,7 @@ function makeSaveInputHandler(optionId) {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 function makeSaveSelectHandler(optionId) {
   return async function saveSelectHandler(event) {
     event.preventDefault();
@@ -94,8 +95,8 @@ function restoreOptions(settings) {
   optionId = STORAGE_KEY.SHOW_PREVIOUS_VISIT;
   domId = `#${optionId}`
   element = document.querySelector(domId)
-  element.value = settings[optionId];
-  element.addEventListener('change', makeSaveSelectHandler(optionId) );
+  element.checked = settings[optionId];
+  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 
   optionId = STORAGE_KEY.ADD_BOOKMARK_IS_ON;
   domId = `#${optionId}`

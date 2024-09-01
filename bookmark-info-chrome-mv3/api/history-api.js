@@ -1,19 +1,13 @@
 import {
   IS_BROWSER_FIREFOX,
-  SHOW_PREVIOUS_VISIT_OPTION,
-  SOURCE,
   STORAGE_KEY,
 } from '../constant/index.js';
-import {
-  logOptimization,
-} from './log-api.js';
 import {
   removeQueryParamsIfTarget,
 } from './clean-url-api.js';
 import {
   browserStartTime,
   extensionSettings,
-  memo
 } from './structure/index.js';
 
 const dayMS = 86400000;
@@ -140,38 +134,29 @@ async function getPreviousVisitList(url) {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 export async function getHistoryInfo({ url, useCache=false }) {
-  const settings = await extensionSettings.get()
-  const showPreviousVisit = settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT]
-  
-  if (!(showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS || showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM)) {
-    return {
-      visitList: [],
-      source: SOURCE.ACTUAL,
-    }
-  }
-
   let visitList;
-  let source;
+  // let source;
 
-  if (useCache) {
-    visitList = memo.cacheUrlToVisitList.get(url);
+  // if (useCache) {
+  //   visitList = memo.cacheUrlToVisitList.get(url);
     
-    if (visitList) {
-      source = SOURCE.CACHE;
-      logOptimization(' getHistoryInfoUni: from cache bookmarkInfo')
-    }
-  } 
+  //   if (visitList) {
+  //     source = SOURCE.CACHE;
+  //     logOptimization(' getHistoryInfoUni: from cache bookmarkInfo')
+  //   }
+  // } 
   
-  if (!visitList) {
+  // if (!visitList) {
     const allVisitList = await getPreviousVisitList(url);
     visitList = filterTimeList(allVisitList)
-    source = SOURCE.ACTUAL;
-    memo.cacheUrlToVisitList.add(url, visitList);
-  }
+    // source = SOURCE.ACTUAL;
+    // memo.cacheUrlToVisitList.add(url, visitList);
+  // }
 
   return {
     visitList,
-    source,
+    // source,
   };
 }

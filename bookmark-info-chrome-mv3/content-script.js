@@ -27,12 +27,6 @@ const log = SHOW_LOG ? console.log : () => {};
     CLEAR_URL: 'CLEAR_URL',
   }
 
-  // TODO-DOUBLE remove duplication in SHOW_PREVIOUS_VISIT_OPTION: constant/storage.js and content-scripts.js
-  const SHOW_PREVIOUS_VISIT_OPTION = {
-    NEVER: 0,
-    ONLY_NO_BKM: 1,
-    ALWAYS: 2,
-  }
   // TODO-DOUBLE remove duplication BROWSER in browser-specific.js and content-scripts.js
   const BROWSER_OPTIONS = {
     CHROME: 'CHROME',
@@ -416,7 +410,6 @@ const log = SHOW_LOG ? console.log : () => {};
     const bookmarkInfoList = input.bookmarkInfoList || []
     const showLayer = input.showLayer || 1
     const visitList = input.visitList || []
-    const showPreviousVisit = input.showPreviousVisit || SHOW_PREVIOUS_VISIT_OPTION.NEVER
     const isShowTitle = input.isShowTitle || false
     const inTagList = input.tagList || []
     const isShowTagList = input.isShowTagList || false
@@ -490,10 +483,7 @@ const log = SHOW_LOG ? console.log : () => {};
       drawList.push({ type: 'bookmark', value, bkmIndex: index })
     })
 
-    const isShowPreviousVisit = showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS 
-      || (showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM && bookmarkInfoList.length === 0)
-
-    if (isShowPreviousVisit && visitList.length > 0) {
+    if (visitList.length > 0) {
       const prevVisit = visitList
         .toReversed()
         .map((i) => formatPrevVisit(i))

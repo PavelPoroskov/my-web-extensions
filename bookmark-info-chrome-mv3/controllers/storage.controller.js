@@ -7,7 +7,6 @@ import {
 } from '../constant/index.js'
 import {
   extensionSettings,
-  memo,
 } from '../api/structure/index.js'
 
 export const storageController = {
@@ -40,9 +39,9 @@ export const storageController = {
 
         extensionSettings.invalidate()
 
-        if (changesSet.has(STORAGE_KEY.SHOW_PREVIOUS_VISIT)) {
-          memo.cacheUrlToVisitList.clear()
-        }
+        // if (changesSet.has(STORAGE_KEY.SHOW_PREVIOUS_VISIT)) {
+        //   memo.cacheUrlToVisitList.clear()
+        // }
       }
     }
   },

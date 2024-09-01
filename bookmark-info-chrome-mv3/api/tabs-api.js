@@ -69,26 +69,24 @@ async function updateTagsForTab({ tabId }) {
     })
 }
 async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
-  const settings = await extensionSettings.get()
   log('updateVisitsForTabTask(', tabId, useCache, url);
 
   const visitInfo = await getHistoryInfo({ url, useCache })
 
   const message = {
     command: CONTENT_SCRIPT_COMMAND_ID.HISTORY_INFO,
-    showPreviousVisit: settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT],
     visitList: visitInfo.visitList,
   }
   logSendEvent('updateVisitsForTabTask()', tabId, message);
   
   return chrome.tabs.sendMessage(tabId, message)
-    .then(() => visitInfo);
 }
 
 export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
   if (url && isSupportedProtocol(url)) {
 
     await initExtension()
+    const settings = await extensionSettings.get()
 
     log(`${debugCaller} -> updateTab() useCache`, useCache);
     promiseQueue.add({
@@ -100,15 +98,15 @@ export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
         useCache
       },
     });
-    promiseQueue.add({
-      key: `${tabId}-visits`,
-      fn: updateVisitsForTabTask,
-      options: {
+
+    if (settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT]) {
+      updateVisitsForTabTask({
         tabId,
         url,
         useCache
-      },
-    });
+      })
+    }
+
     await updateTagsForTab({ tabId });
   }
 }
