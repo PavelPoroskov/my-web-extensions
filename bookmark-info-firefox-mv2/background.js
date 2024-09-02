@@ -42,17 +42,16 @@ const BROWSER_SPECIFIC = Object.fromEntries(
   //   ] 
   // },
   {
-    hostname: 'linkedin.com',  
-    paths: [
-      '/jobs/view/',
-      '/posts/'
-    ] 
-  },
-  {
     hostname: 'djinni.co',
     paths: [
       '/my/profile/',
       '/jobs/',
+    ] 
+  },
+  {
+    hostname: 'frontendmasters.com',
+    paths: [
+      '/courses/',
     ] 
   },
   {
@@ -61,6 +60,13 @@ const BROWSER_SPECIFIC = Object.fromEntries(
       '/title/',
       '/list/',
       '/imdbpicks/',
+    ] 
+  },
+  {
+    hostname: 'linkedin.com',  
+    paths: [
+      '/jobs/view/',
+      '/posts/'
     ] 
   },
   {
@@ -111,12 +117,6 @@ const CONTEXT_MENU_ID = {
   LOCAL: 'LOCAL',
   SESSION: 'SESSION',
 }
-// TODO remove duplication in SHOW_PREVIOUS_VISIT_OPTION: constant/storage.js and content-scripts.js
-const SHOW_PREVIOUS_VISIT_OPTION = {
-  NEVER: 0,
-  ONLY_NO_BKM: 1,
-  ALWAYS: 2,
-}
 
 const STORAGE_KEY_META = {
   CLEAR_URL: {
@@ -129,7 +129,7 @@ const STORAGE_KEY_META = {
   },
   SHOW_PREVIOUS_VISIT: {
     storageKey: 'SHOW_PREVIOUS_VISIT',
-    default: SHOW_PREVIOUS_VISIT_OPTION.ALWAYS,
+    default: false,
   },
   SHOW_BOOKMARK_TITLE: {
     storageKey: 'SHOW_BOOKMARK_TITLE',
@@ -509,7 +509,7 @@ const memo = {
   isActiveTabBookmarkManager: false,
 
   cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
-  cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
+  // cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
   bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
   // tabId -> bookmarkId
   tabMap: new Map(),
@@ -1416,39 +1416,30 @@ async function getPreviousVisitList(url) {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 async function getHistoryInfo({ url, useCache=false }) {
-  const settings = await extensionSettings.get()
-  const showPreviousVisit = settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT]
-  
-  if (!(showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ALWAYS || showPreviousVisit === SHOW_PREVIOUS_VISIT_OPTION.ONLY_NO_BKM)) {
-    return {
-      visitList: [],
-      source: SOURCE.ACTUAL,
-    }
-  }
-
   let visitList;
-  let source;
+  // let source;
 
-  if (useCache) {
-    visitList = memo.cacheUrlToVisitList.get(url);
+  // if (useCache) {
+  //   visitList = memo.cacheUrlToVisitList.get(url);
     
-    if (visitList) {
-      source = SOURCE.CACHE;
-      logOptimization(' getHistoryInfoUni: from cache bookmarkInfo')
-    }
-  } 
+  //   if (visitList) {
+  //     source = SOURCE.CACHE;
+  //     logOptimization(' getHistoryInfoUni: from cache bookmarkInfo')
+  //   }
+  // } 
   
-  if (!visitList) {
+  // if (!visitList) {
     const allVisitList = await getPreviousVisitList(url);
     visitList = filterTimeList(allVisitList)
-    source = SOURCE.ACTUAL;
-    memo.cacheUrlToVisitList.add(url, visitList);
-  }
+    // source = SOURCE.ACTUAL;
+    // memo.cacheUrlToVisitList.add(url, visitList);
+  // }
 
   return {
     visitList,
-    source,
+    // source,
   };
 }
 async function initExtension() {
@@ -1501,26 +1492,24 @@ async function updateTagsForTab({ tabId }) {
     })
 }
 async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
-  const settings = await extensionSettings.get()
   log('updateVisitsForTabTask(', tabId, useCache, url);
 
   const visitInfo = await getHistoryInfo({ url, useCache })
 
   const message = {
     command: CONTENT_SCRIPT_COMMAND_ID.HISTORY_INFO,
-    showPreviousVisit: settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT],
     visitList: visitInfo.visitList,
   }
   logSendEvent('updateVisitsForTabTask()', tabId, message);
   
   return browser.tabs.sendMessage(tabId, message)
-    .then(() => visitInfo);
 }
 
 async function updateTab({ tabId, url, useCache=false, debugCaller }) {
   if (url && isSupportedProtocol(url)) {
 
     await initExtension()
+    const settings = await extensionSettings.get()
 
     log(`${debugCaller} -> updateTab() useCache`, useCache);
     promiseQueue.add({
@@ -1532,15 +1521,15 @@ async function updateTab({ tabId, url, useCache=false, debugCaller }) {
         useCache
       },
     });
-    promiseQueue.add({
-      key: `${tabId}-visits`,
-      fn: updateVisitsForTabTask,
-      options: {
+
+    if (settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT]) {
+      updateVisitsForTabTask({
         tabId,
         url,
         useCache
-      },
-    });
+      })
+    }
+
     await updateTagsForTab({ tabId });
   }
 }
@@ -2735,9 +2724,9 @@ async function removeDoubleBookmarks() {
 
         extensionSettings.invalidate()
 
-        if (changesSet.has(STORAGE_KEY.SHOW_PREVIOUS_VISIT)) {
-          memo.cacheUrlToVisitList.clear()
-        }
+        // if (changesSet.has(STORAGE_KEY.SHOW_PREVIOUS_VISIT)) {
+        //   memo.cacheUrlToVisitList.clear()
+        // }
       }
     }
   },
