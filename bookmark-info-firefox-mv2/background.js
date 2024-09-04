@@ -646,40 +646,9 @@ function isSupportedProtocol(urlString) {
 const BOOKMARKS_BAR_FOLDER_ID = IS_BROWSER_FIREFOX ? 'toolbar_____' : '1'
 const OTHER_BOOKMARKS_FOLDER_ID = IS_BROWSER_FIREFOX ? 'unfiled_____' : '2'
 
-async function getFolderByTitleInRoot({ title, oldTitle }) {
+async function getOrCreateFolderByTitleInRoot(title) {
   const nodeList = await browser.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
-
-  const foundOldItem = nodeList.find((node) => !node.url && node.title === oldTitle)
   const foundItem = nodeList.find((node) => !node.url && node.title === title)
-
-  if (foundOldItem && !foundItem) {
-    await browser.bookmarks.update(
-      foundOldItem.id,
-      { title }
-    )
-
-    return foundOldItem.id
-  }
-
-  if (foundItem) {
-    return foundItem.id
-  }
-}
-
-async function getOrCreateFolderByTitleInRoot({ title, oldTitle }) {
-  const nodeList = await browser.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
-
-  const foundOldItem = nodeList.find((node) => !node.url && node.title === oldTitle)
-  const foundItem = nodeList.find((node) => !node.url && node.title === title)
-
-  if (foundOldItem && !foundItem) {
-    await browser.bookmarks.update(
-      foundOldItem.id,
-      { title }
-    )
-
-    return foundOldItem.id
-  }
 
   if (foundItem) {
     return foundItem.id
@@ -691,6 +660,15 @@ async function getOrCreateFolderByTitleInRoot({ title, oldTitle }) {
   })
 
   return newNode.id
+}
+
+async function getFolderByTitleInRoot(title) {
+  const nodeList = await browser.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
+  const foundItem = nodeList.find((node) => !node.url && node.title === title)
+
+  if (foundItem) {
+    return foundItem.id
+  }
 }
 
 function memoize(fnGetValue) {
@@ -708,20 +686,20 @@ function memoize(fnGetValue) {
   }
 }
 
-const NESTED_ROOT_TITLE_OLD = 'yy-bookmark-info--nested'
+// const NESTED_ROOT_TITLE_OLD = 'yy-bookmark-info--nested'
 const NESTED_ROOT_TITLE = 'zz-bookmark-info--nested'
 
-const UNCLASSIFIED_TITLE_OLD = 'unclassified'
+// const UNCLASSIFIED_TITLE_OLD = 'unclassified'
 const UNCLASSIFIED_TITLE = 'zz-bookmark-info--unclassified'
 
-const getOrCreateNestedRootFolderId = async () => getOrCreateFolderByTitleInRoot({ title: NESTED_ROOT_TITLE, oldTitle: NESTED_ROOT_TITLE_OLD })
-const getOrCreateUnclassifiedFolderId = async () => getOrCreateFolderByTitleInRoot({ title: UNCLASSIFIED_TITLE, oldTitle: UNCLASSIFIED_TITLE_OLD })
+const getOrCreateNestedRootFolderId = async () => getOrCreateFolderByTitleInRoot(NESTED_ROOT_TITLE)
+const getOrCreateUnclassifiedFolderId = async () => getOrCreateFolderByTitleInRoot(UNCLASSIFIED_TITLE)
 
-const getNestedRootFolderId = memoize(async () => getFolderByTitleInRoot({ title: NESTED_ROOT_TITLE, oldTitle: NESTED_ROOT_TITLE_OLD }))
-const getUnclassifiedFolderId = memoize(async () => getFolderByTitleInRoot({ title: UNCLASSIFIED_TITLE, oldTitle: UNCLASSIFIED_TITLE_OLD }))
-const isDescriptiveTitle = (title) => !(title.startsWith('New folder') || title.startsWith('[Folder Name]')) 
+const getNestedRootFolderId = memoize(async () => getFolderByTitleInRoot(NESTED_ROOT_TITLE))
+const getUnclassifiedFolderId = memoize(async () => getFolderByTitleInRoot(UNCLASSIFIED_TITLE))
 
-async function getRecentList(nItems) {
+const isDescriptiveTitle = (title) => !(title.startsWith('New folder') || title.startsWith('[Folder Name]') || title.startsWith('New Folder')) 
+async function getRecentList(nItems) {
   log('getRecentTagObj() 00', nItems)
   const list = await browser.bookmarks.getRecent(nItems);
 
@@ -785,6 +763,7 @@ async function filterFolders(idList, isFlatStructure) {
   let filteredFolderList = folderList
     .filter(Boolean)
     .filter(({ title }) => !!title)
+    .filter(({ title }) => isDescriptiveTitle(title))
 
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {
@@ -2083,6 +2062,33 @@ async function sortChildren({ id, recursively = false }) {
 //   }
 // }
 
+async function moveContent(fromFolderId, toFolderId) {
+  const nodeList = await browser.bookmarks.getChildren(fromFolderId)
+  
+  await Promise.all(nodeList.map(
+    ({ id }) => browser.bookmarks.move(id, { parentId: toFolderId }))
+  )
+}
+
+async function moveNotDescriptiveFolderToUnclassified({ unclassifiedId }) {
+  const nodeList = await browser.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
+  const folderList = nodeList
+    .filter(({ url }) => !url)
+    .filter(({ title }) => !isDescriptiveTitle(title))
+
+  // await Promise.all(folderList.map(
+  //   ({ id }) => moveContent(id, unclassifiedId)
+  // ))
+  await folderList.reduce(
+    (promiseChain, folderNode) => promiseChain.then(() => moveContent(folderNode.id, unclassifiedId)),
+    Promise.resolve(),
+  );
+
+  await Promise.all(folderList.map(
+    ({ id }) => browser.bookmarks.remove(id)
+  ))
+}
+
 async function flatBookmarks() {
 
   tagList.blockTagList(true)
@@ -2097,6 +2103,7 @@ async function flatBookmarks() {
     const { toCopyFolderById } = await flatFolders({ nestedRootId, unclassifiedId, freeSuffix })
     await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
     await createNestedFolders({ toCopyFolderById, nestedRootId })
+    await moveNotDescriptiveFolderToUnclassified({ unclassifiedId })
   
     // MAYBE? delete empty folders
   

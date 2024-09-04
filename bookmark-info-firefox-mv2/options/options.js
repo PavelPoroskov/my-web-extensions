@@ -165,7 +165,7 @@ let clearUrlTargetList
 let STORAGE_KEY
 
 browser.runtime.onMessage.addListener(async (message) => {
-  console.log('onMessage', message)
+  // console.log('onMessage', message)
   switch (message?.command) {
     case EXTENSION_COMMAND_ID.DATA_FOR_OPTIONS: {
       // console.log('option in DATA_FOR_OPTIONS')
