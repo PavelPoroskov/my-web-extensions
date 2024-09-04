@@ -6,7 +6,8 @@ import {
   OTHER_BOOKMARKS_FOLDER_ID,
   BOOKMARKS_BAR_FOLDER_ID,
   getOrCreateNestedRootFolderId,
-  getOrCreateUnclassifiedFolderId
+  getOrCreateUnclassifiedFolderId,
+  isDescriptiveTitle,
 } from './special-folder.api.js'
 
 async function getMaxUsedSuffix() {
@@ -535,6 +536,33 @@ async function sortChildren({ id, recursively = false }) {
 //   }
 // }
 
+async function moveContent(fromFolderId, toFolderId) {
+  const nodeList = await chrome.bookmarks.getChildren(fromFolderId)
+  
+  await Promise.all(nodeList.map(
+    ({ id }) => chrome.bookmarks.move(id, { parentId: toFolderId }))
+  )
+}
+
+async function moveNotDescriptiveFolderToUnclassified({ unclassifiedId }) {
+  const nodeList = await chrome.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
+  const folderList = nodeList
+    .filter(({ url }) => !url)
+    .filter(({ title }) => !isDescriptiveTitle(title))
+
+  // await Promise.all(folderList.map(
+  //   ({ id }) => moveContent(id, unclassifiedId)
+  // ))
+  await folderList.reduce(
+    (promiseChain, folderNode) => promiseChain.then(() => moveContent(folderNode.id, unclassifiedId)),
+    Promise.resolve(),
+  );
+
+  await Promise.all(folderList.map(
+    ({ id }) => chrome.bookmarks.remove(id)
+  ))
+}
+
 export async function flatBookmarks() {
 
   tagList.blockTagList(true)
@@ -549,6 +577,7 @@ export async function flatBookmarks() {
     const { toCopyFolderById } = await flatFolders({ nestedRootId, unclassifiedId, freeSuffix })
     await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
     await createNestedFolders({ toCopyFolderById, nestedRootId })
+    await moveNotDescriptiveFolderToUnclassified({ unclassifiedId })
   
     // MAYBE? delete empty folders
   

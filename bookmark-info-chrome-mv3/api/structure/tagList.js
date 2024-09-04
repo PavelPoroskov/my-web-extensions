@@ -2,12 +2,12 @@ import {
   filterFixedTagObj,
   filterRecentTagObj,
   getRecentTagObj,
-  isDescriptiveTitle,
 } from '../recent-api.js'
 import {
   OTHER_BOOKMARKS_FOLDER_ID,
   getNestedRootFolderId,
   getUnclassifiedFolderId,
+  isDescriptiveTitle,
 } from '../special-folder.api.js'
 import {
   STORAGE_KEY,

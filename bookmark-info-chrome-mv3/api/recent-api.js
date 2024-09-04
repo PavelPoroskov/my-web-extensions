@@ -5,9 +5,8 @@ import {
   OTHER_BOOKMARKS_FOLDER_ID,
   getNestedRootFolderId,
   getUnclassifiedFolderId,
+  isDescriptiveTitle,
 } from './special-folder.api.js'
-
-export const isDescriptiveTitle = (title) => !(title.startsWith('New folder') || title.startsWith('[Folder Name]')) 
 
 async function getRecentList(nItems) {
   log('getRecentTagObj() 00', nItems)
@@ -73,6 +72,7 @@ async function filterFolders(idList, isFlatStructure) {
   let filteredFolderList = folderList
     .filter(Boolean)
     .filter(({ title }) => !!title)
+    .filter(({ title }) => isDescriptiveTitle(title))
 
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {
