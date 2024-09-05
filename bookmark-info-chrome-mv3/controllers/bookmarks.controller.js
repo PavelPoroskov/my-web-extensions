@@ -58,7 +58,8 @@ export const bookmarksController = {
       memo.bkmFolderById.delete(bookmarkId);
 
       if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && changeInfo.title) {
-        await tagList.updateTag(bookmarkId, changeInfo.title)
+        // await tagList.updateTag(bookmarkId, changeInfo.title)
+        await tagList.addRecentTag(node)
       }
     }
 
