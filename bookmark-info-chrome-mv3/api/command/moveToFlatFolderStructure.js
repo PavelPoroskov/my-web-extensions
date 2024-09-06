@@ -9,9 +9,10 @@ import {
 
 export async function moveToFlatFolderStructure() {
   await extensionSettings.update({
-    [STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]: true
+    [STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]: true,
   })
-  await tagList.filterTagListForFlatFolderStructure()
+  // await tagList.filterTagListForFlatFolderStructure()
 
   await flatBookmarks()
+  await tagList.readFromStorage()
 }

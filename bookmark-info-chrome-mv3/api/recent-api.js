@@ -9,7 +9,7 @@ import {
 } from './special-folder.api.js'
 
 async function getRecentList(nItems) {
-  log('getRecentTagObj() 00', nItems)
+  log('getRecentList() 00', nItems)
   const list = await chrome.bookmarks.getRecent(nItems);
 
   const folderList = list
