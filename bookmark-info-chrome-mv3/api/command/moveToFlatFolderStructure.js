@@ -14,5 +14,5 @@ export async function moveToFlatFolderStructure() {
   // await tagList.filterTagListForFlatFolderStructure()
 
   await flatBookmarks()
-  await tagList.readFromStorage()
+  await tagList.filterTagListForFlatFolderStructure()
 }

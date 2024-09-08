@@ -41,22 +41,19 @@ class TagList {
       return
     }
 
-    const savedObj = await getOptions([
-      STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP,
-      STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP,
-      STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED,
-    ]);
-
     this.LIST_LIMIT = settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT]
     this.FORCE_FLAT_FOLDER_STRUCTURE = settings[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]
     this.HIGHLIGHT_LAST = settings[STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST]
 
+    const savedObj = await getOptions([
+      STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED,
+      STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP,
+      STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP,
+    ]);
+
     let actualRecentTagObj = {}
     if (!savedObj[STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]) {
       actualRecentTagObj = await getRecentTagObj(ADD_BOOKMARK_LIST_MAX)
-      await setOptions({
-        [STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]: true,
-      })
     }
 
     this._recentTagObj = {
@@ -65,14 +62,37 @@ class TagList {
     }
     this._fixedTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]
 
-    const isFlatStructure = this.FORCE_FLAT_FOLDER_STRUCTURE
-    this._recentTagObj = await filterRecentTagObj(this._recentTagObj, isFlatStructure)
-    this._fixedTagObj = await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
-    await setOptions({
-      [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
-    })
+    if (!savedObj[STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]) {
+      const isFlatStructure = this.FORCE_FLAT_FOLDER_STRUCTURE
+      this._recentTagObj = await filterRecentTagObj(this._recentTagObj, isFlatStructure)
+      this._fixedTagObj = await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
+      await setOptions({
+        [STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]: true,
+        [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
+        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,
+      })
+    }
 
     this._tagList = this.refillList()
+  }
+  async filterTagListForFlatFolderStructure() {
+    const savedObj = await getOptions([
+      STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP,
+      STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP,
+    ]);
+    this._recentTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]
+    this._fixedTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]
+
+    const isFlatStructure = true
+    // console.log('filterTagListForFlatFolderStructure ', this._fixedTagObj)
+    this._recentTagObj =  await filterRecentTagObj(this._recentTagObj, isFlatStructure)
+    this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
+    // console.log('filterTagListForFlatFolderStructure, after filter', this._fixedTagObj)
+    this._tagList = this.refillList()
+    await setOptions({
+      [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
+      [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,
+    })
   }
   refillList() {
     const recentTaLimit = Math.max(
@@ -249,19 +269,6 @@ class TagList {
       [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
     })
   }
-
-  // async filterTagListForFlatFolderStructure() {
-  //   const isFlatStructure = true
-  //   // console.log('filterTagListForFlatFolderStructure ', this._fixedTagObj)
-  //   this._recentTagObj =  await filterRecentTagObj(this._recentTagObj, isFlatStructure)
-  //   this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
-  //   // console.log('filterTagListForFlatFolderStructure, after filter', this._fixedTagObj)
-  //   this._tagList = this.refillList()
-  //   await setOptions({
-  //     [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,
-  //     [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
-  //   })
-  // }
 }
 
 export const tagList = new TagList()
