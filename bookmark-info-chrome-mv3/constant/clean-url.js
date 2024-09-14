@@ -30,6 +30,7 @@ export const clearUrlTargetList = [
       '/title/',
       '/list/',
       '/imdbpicks/',
+      '/interest/',
     ] 
   },
   {
