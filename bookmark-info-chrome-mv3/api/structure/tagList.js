@@ -4,7 +4,7 @@ import {
   getRecentTagObj,
 } from '../recent-api.js'
 import {
-  OTHER_BOOKMARKS_FOLDER_ID,
+  // OTHER_BOOKMARKS_FOLDER_ID,
   getNestedRootFolderId,
   getUnclassifiedFolderId,
   isDescriptiveTitle,
@@ -147,9 +147,9 @@ class TagList {
 
     // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
     if (this.FORCE_FLAT_FOLDER_STRUCTURE) {
-      if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
-        return
-      }
+      // if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
+      //   return
+      // }
 
       const nestedRootFolderId = await getNestedRootFolderId()
       const unclassifiedFolderId = await getUnclassifiedFolderId()
