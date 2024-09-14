@@ -129,20 +129,10 @@ class TagList {
   async blockTagList(boolValue) {
     this.isTagListAvailable = !boolValue
   }
-  async addRecentTag(bkmNode) {
+
+  async addRecentTagFromFolder(folderNode) {
     if (!this.isTagListAvailable) {
       return
-    }
-
-    let newFolderId
-    let newFolder
-
-    if (!bkmNode.url) {
-      newFolderId = bkmNode.id
-      newFolder = bkmNode
-    } else {
-      newFolderId = bkmNode.parentId;
-      ([newFolder] = await chrome.bookmarks.get(newFolderId))
     }
 
     // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
@@ -153,23 +143,21 @@ class TagList {
 
       const nestedRootFolderId = await getNestedRootFolderId()
       const unclassifiedFolderId = await getUnclassifiedFolderId()
-      if (nestedRootFolderId && newFolder.id === nestedRootFolderId) {
+      if (nestedRootFolderId && folderNode.id === nestedRootFolderId) {
         return
       }
-      if (unclassifiedFolderId && newFolder.id === unclassifiedFolderId) {
+      if (unclassifiedFolderId && folderNode.id === unclassifiedFolderId) {
         return
       }
     }
   
-    if (!isDescriptiveTitle(newFolder.title)) {
+    if (!isDescriptiveTitle(folderNode.title)) {
       return
     }
 
-    const dateAdded = bkmNode.dateAdded || Date.now()
-
-    this._recentTagObj[newFolderId] = {
-      dateAdded,
-      title: newFolder.title
+    this._recentTagObj[folderNode.id] = {
+      dateAdded: Date.now(),
+      title: folderNode.title
     }
 
     if (ADD_BOOKMARK_LIST_MAX + 10 < Object.keys(this._recentTagObj).length) {
@@ -188,6 +176,18 @@ class TagList {
     setOptions({
       [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
     })
+  }
+  async addRecentTagFromBkm(bkmNode) {
+    if (!this.isTagListAvailable) {
+      return
+    }
+
+    const parentId = bkmNode?.parentId
+
+    if (parentId) {
+      const [folderNode] = await chrome.bookmarks.get(parentId)
+      await this.addRecentTagFromFolder(folderNode)
+    }
   }
   async removeTag(id) {
     const isInFixedList = id in this._fixedTagObj

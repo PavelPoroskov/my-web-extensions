@@ -30,11 +30,11 @@ export const bookmarksController = {
     if (node.url) {
       if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
         activeDialog.createBkmStandard(node.id, node.parentId)
-        await tagList.addRecentTag(node)
+        await tagList.addRecentTagFromBkm(node)
       }
     } else {
       if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-        await tagList.addRecentTag(node)
+        await tagList.addRecentTagFromFolder(node)
       }
     }
 
@@ -59,7 +59,7 @@ export const bookmarksController = {
 
       if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && changeInfo.title) {
         // await tagList.updateTag(bookmarkId, changeInfo.title)
-        await tagList.addRecentTag(node)
+        await tagList.addRecentTagFromFolder(node)
       }
     }
 
@@ -93,7 +93,7 @@ export const bookmarksController = {
     
     if (node.url) {
       if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && parentId !== oldParentId) {
-        await tagList.addRecentTag(node);
+        await tagList.addRecentTagFromBkm(node);
 
         const isCreatedInActiveDialog = activeDialog.isCreatedInActiveDialog(bookmarkId, oldParentId)
         if (isCreatedInActiveDialog) {

@@ -13,6 +13,7 @@ import {
 } from '../api/clean-url-api.js'
 import {
   addBookmark,
+  addRecentTagFromView,
   deleteBookmark,
   fixTag,
   moveToFlatFolderStructure,
@@ -102,6 +103,16 @@ export async function onIncomingMessage (message, sender) {
       updateActiveTab({
         debugCaller: 'runtime.onMessage fixTag',
         useCache: true,
+      });
+
+      break
+    }
+    case EXTENSION_COMMAND_ID.ADD_RECENT_TAG: {
+      logEvent('runtime.onMessage ADD_RECENT_TAG');
+      await addRecentTagFromView(message.bookmarkId)
+      updateActiveTab({
+        debugCaller: 'runtime.onMessage ADD_RECENT_TAG',
+        // useCache: true,
       });
 
       break
