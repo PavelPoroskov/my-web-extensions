@@ -18,6 +18,7 @@ const log = SHOW_LOG ? console.log : () => {};
     UNFIX_TAG: 'UNFIX_TAG',
     TAB_IS_READY: 'TAB_IS_READY',
     SHOW_TAG_LIST: 'SHOW_TAG_LIST',
+    ADD_RECENT_TAG: 'ADD_RECENT_TAG',
   }
   // TODO-DOUBLE remove duplication in CONTENT_SCRIPT_COMMAND_ID: command-id.js and content-scripts.js
   const CONTENT_SCRIPT_COMMAND_ID = {
@@ -345,7 +346,6 @@ const log = SHOW_LOG ? console.log : () => {};
   }
 
   async function hideBookmarks() {
-    log('hideBookmarks 00');
     const rootDiv = document.getElementById(bkmInfoRootId);
 
     if (rootDiv) {
@@ -355,6 +355,18 @@ const log = SHOW_LOG ? console.log : () => {};
     }
   }
 
+  async function onBookmarkLabelClick(event) {
+    const bkmid = event?.target?.dataset?.bkmid
+
+    if (bkmid) {
+      await browser.runtime.sendMessage({
+        command: EXTENSION_COMMAND_ID.ADD_RECENT_TAG,
+        bookmarkId: bkmid,
+      });
+    } else {
+      hideBookmarks()
+    }
+  }
 
   class TaskQueue {
     fullState = {}
@@ -551,7 +563,7 @@ const log = SHOW_LOG ? console.log : () => {};
             divLabel.appendChild(span);
           })
     
-          divLabel.addEventListener('click', hideBookmarks);
+          divLabel.addEventListener('click', onBookmarkLabelClick);
           // TODO sanitize: remove ",<,>
           // const sanitizedFullPath = fullPath
           //   .replaceAll('"', '&quot;')
@@ -561,6 +573,7 @@ const log = SHOW_LOG ? console.log : () => {};
           //
           // Symbols ( " > < ) don't break html and displayed as text.
           divLabel.setAttribute('data-restpath', restPath);
+          divLabel.setAttribute('data-bkmid', id);
     
           const divDelBtn = document.createElement('div');
           divDelBtn.setAttribute('data-bkmid', id);

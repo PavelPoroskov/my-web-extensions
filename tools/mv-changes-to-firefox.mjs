@@ -38,6 +38,7 @@ createFileForFirefox(
     'api/flat-structure-api.js',
 
     'api/command/addBookmark.js',
+    'api/command/addRecentTagFromView.js',
     'api/command/clearUrlInActiveTab.js',
     'api/command/closeBookmarkedTabs.js',
     'api/command/closeDuplicateTabs.js',

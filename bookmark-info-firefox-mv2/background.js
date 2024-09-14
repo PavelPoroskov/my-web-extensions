@@ -84,6 +84,7 @@ const BROWSER_SPECIFIC = Object.fromEntries(
   UNFIX_TAG: 'UNFIX_TAG',
   TAB_IS_READY: 'TAB_IS_READY',
   SHOW_TAG_LIST: 'SHOW_TAG_LIST',
+  ADD_RECENT_TAG: 'ADD_RECENT_TAG',
   // TODO remove duplication in EXTENSION_COMMAND_ID: command-id.js and options.js
   OPTIONS_ASKS_DATA: 'OPTIONS_ASKS_DATA',
   DATA_FOR_OPTIONS: 'DATA_FOR_OPTIONS',
@@ -700,7 +701,7 @@ const getUnclassifiedFolderId = memoize(async () => getFolderByTitleInRoot(UNCLA
 
 const isDescriptiveTitle = (title) => !(title.startsWith('New folder') || title.startsWith('[Folder Name]') || title.startsWith('New Folder')) 
 async function getRecentList(nItems) {
-  log('getRecentTagObj() 00', nItems)
+  log('getRecentList() 00', nItems)
   const list = await browser.bookmarks.getRecent(nItems);
 
   const folderList = list
@@ -819,11 +820,6 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
 
   async readFromStorage() {
     const settings = await extensionSettings.get()
-    const savedObj = await getOptions([
-      STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP,
-      STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP,
-      STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED,
-    ]);
 
     if (!settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
       return
@@ -832,30 +828,55 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
     this.LIST_LIMIT = settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT]
     this.FORCE_FLAT_FOLDER_STRUCTURE = settings[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]
     this.HIGHLIGHT_LAST = settings[STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST]
-    // console.log('TagList.readFromStorage _fixedTagObj')
-    // console.log(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP])
 
-    if (savedObj[STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]) {
+    const savedObj = await getOptions([
+      STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED,
+      STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP,
+      STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP,
+    ]);
 
-      this._recentTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP] 
-      this._fixedTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]
-    } else {
+    let actualRecentTagObj = {}
+    if (!savedObj[STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]) {
+      actualRecentTagObj = await getRecentTagObj(ADD_BOOKMARK_LIST_MAX)
+    }
+
+    this._recentTagObj = {
+      ...savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP],
+      ...actualRecentTagObj,
+    }
+    this._fixedTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]
+
+    if (!savedObj[STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]) {
       const isFlatStructure = this.FORCE_FLAT_FOLDER_STRUCTURE
-      const actualRecentTagObj = await getRecentTagObj(ADD_BOOKMARK_LIST_MAX)
-      this._recentTagObj = await filterRecentTagObj({
-        ...savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP],
-        ...actualRecentTagObj,
-      }, isFlatStructure)
-      this._fixedTagObj = await filterFixedTagObj(savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP], isFlatStructure)
-      // console.log('TagList.readFromStorage after filtering _fixedTagObj')
-      // console.log(this._fixedTagObj)
+      this._recentTagObj = await filterRecentTagObj(this._recentTagObj, isFlatStructure)
+      this._fixedTagObj = await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
       await setOptions({
         [STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]: true,
         [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
+        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,
       })
     }
 
     this._tagList = this.refillList()
+  }
+  async filterTagListForFlatFolderStructure() {
+    const savedObj = await getOptions([
+      STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP,
+      STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP,
+    ]);
+    this._recentTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]
+    this._fixedTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]
+
+    const isFlatStructure = true
+    // console.log('filterTagListForFlatFolderStructure ', this._fixedTagObj)
+    this._recentTagObj =  await filterRecentTagObj(this._recentTagObj, isFlatStructure)
+    this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
+    // console.log('filterTagListForFlatFolderStructure, after filter', this._fixedTagObj)
+    this._tagList = this.refillList()
+    await setOptions({
+      [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
+      [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,
+    })
   }
   refillList() {
     const recentTaLimit = Math.max(
@@ -892,47 +913,35 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
   async blockTagList(boolValue) {
     this.isTagListAvailable = !boolValue
   }
-  async addRecentTag(bkmNode) {
+
+  async addRecentTagFromFolder(folderNode) {
     if (!this.isTagListAvailable) {
       return
     }
 
-    let newFolderId
-    let newFolder
-
-    if (!bkmNode.url) {
-      newFolderId = bkmNode.id
-      newFolder = bkmNode
-    } else {
-      newFolderId = bkmNode.parentId;
-      ([newFolder] = await browser.bookmarks.get(newFolderId))
-    }
-
     // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
     if (this.FORCE_FLAT_FOLDER_STRUCTURE) {
-      if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
-        return
-      }
+      // if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
+      //   return
+      // }
 
       const nestedRootFolderId = await getNestedRootFolderId()
       const unclassifiedFolderId = await getUnclassifiedFolderId()
-      if (nestedRootFolderId && newFolder.id === nestedRootFolderId) {
+      if (nestedRootFolderId && folderNode.id === nestedRootFolderId) {
         return
       }
-      if (unclassifiedFolderId && newFolder.id === unclassifiedFolderId) {
+      if (unclassifiedFolderId && folderNode.id === unclassifiedFolderId) {
         return
       }
     }
   
-    if (!isDescriptiveTitle(newFolder.title)) {
+    if (!isDescriptiveTitle(folderNode.title)) {
       return
     }
 
-    const dateAdded = bkmNode.dateAdded || Date.now()
-
-    this._recentTagObj[newFolderId] = {
-      dateAdded,
-      title: newFolder.title
+    this._recentTagObj[folderNode.id] = {
+      dateAdded: Date.now(),
+      title: folderNode.title
     }
 
     if (ADD_BOOKMARK_LIST_MAX + 10 < Object.keys(this._recentTagObj).length) {
@@ -951,6 +960,18 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
     setOptions({
       [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
     })
+  }
+  async addRecentTagFromBkm(bkmNode) {
+    if (!this.isTagListAvailable) {
+      return
+    }
+
+    const parentId = bkmNode?.parentId
+
+    if (parentId) {
+      const [folderNode] = await browser.bookmarks.get(parentId)
+      await this.addRecentTagFromFolder(folderNode)
+    }
   }
   async removeTag(id) {
     const isInFixedList = id in this._fixedTagObj
@@ -1030,19 +1051,6 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
     this._tagList = this.refillList()
     await setOptions({
       [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
-    })
-  }
-
-  async filterTagListForFlatFolderStructure() {
-    const isFlatStructure = true
-    // console.log('filterTagListForFlatFolderStructure ', this._fixedTagObj)
-    this._recentTagObj =  await filterRecentTagObj(this._recentTagObj, isFlatStructure)
-    this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
-    // console.log('filterTagListForFlatFolderStructure, after filter', this._fixedTagObj)
-    this._tagList = this.refillList()
-    await setOptions({
-      [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,
-      [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
     })
   }
 }
@@ -2125,6 +2133,10 @@ async function flatBookmarks() {
     url
   })
 }
+async function addRecentTagFromView(bookmarkId) {
+  const [bkmNode] = await browser.bookmarks.get(bookmarkId)
+  await tagList.addRecentTagFromBkm(bkmNode)
+}
 async function clearUrlInActiveTab() {
   const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
   const [activeTab] = tabs;
@@ -2302,11 +2314,12 @@ async function closeDuplicateTabs() {
 }
 async function moveToFlatFolderStructure() {
   await extensionSettings.update({
-    [STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]: true
+    [STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]: true,
   })
-  await tagList.filterTagListForFlatFolderStructure()
+  // await tagList.filterTagListForFlatFolderStructure()
 
   await flatBookmarks()
+  await tagList.filterTagListForFlatFolderStructure()
 }
 async function getDoubles() {
   const doubleList = []
@@ -2383,11 +2396,11 @@ async function removeDoubleBookmarks() {
     if (node.url) {
       if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
         activeDialog.createBkmStandard(node.id, node.parentId)
-        await tagList.addRecentTag(node)
+        await tagList.addRecentTagFromBkm(node)
       }
     } else {
       if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-        await tagList.addRecentTag(node)
+        await tagList.addRecentTagFromFolder(node)
       }
     }
 
@@ -2411,7 +2424,8 @@ async function removeDoubleBookmarks() {
       memo.bkmFolderById.delete(bookmarkId);
 
       if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && changeInfo.title) {
-        await tagList.updateTag(bookmarkId, changeInfo.title)
+        // await tagList.updateTag(bookmarkId, changeInfo.title)
+        await tagList.addRecentTagFromFolder(node)
       }
     }
 
@@ -2445,7 +2459,7 @@ async function removeDoubleBookmarks() {
     
     if (node.url) {
       if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && parentId !== oldParentId) {
-        await tagList.addRecentTag(node);
+        await tagList.addRecentTagFromBkm(node);
 
         const isCreatedInActiveDialog = activeDialog.isCreatedInActiveDialog(bookmarkId, oldParentId)
         if (isCreatedInActiveDialog) {
@@ -2603,6 +2617,16 @@ async function removeDoubleBookmarks() {
       updateActiveTab({
         debugCaller: 'runtime.onMessage fixTag',
         useCache: true,
+      });
+
+      break
+    }
+    case EXTENSION_COMMAND_ID.ADD_RECENT_TAG: {
+      logEvent('runtime.onMessage ADD_RECENT_TAG');
+      await addRecentTagFromView(message.bookmarkId)
+      updateActiveTab({
+        debugCaller: 'runtime.onMessage ADD_RECENT_TAG',
+        // useCache: true,
       });
 
       break
