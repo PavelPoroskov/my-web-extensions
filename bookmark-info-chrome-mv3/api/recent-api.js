@@ -5,7 +5,7 @@ import {
   OTHER_BOOKMARKS_FOLDER_ID,
   getNestedRootFolderId,
   getUnclassifiedFolderId,
-  isDescriptiveTitle,
+  isDescriptiveFolderTitle,
 } from './special-folder.api.js'
 
 async function getRecentList(nItems) {
@@ -45,7 +45,7 @@ async function getRecentList(nItems) {
 
   return Object.entries(folderByIdMap)
     .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-    .filter(({ title }) => isDescriptiveTitle(title))
+    .filter(({ title }) => isDescriptiveFolderTitle(title))
     .sort((a,b) => -(a.dateAdded - b.dateAdded))
 }
 
@@ -72,7 +72,7 @@ async function filterFolders(idList, isFlatStructure) {
   let filteredFolderList = folderList
     .filter(Boolean)
     .filter(({ title }) => !!title)
-    .filter(({ title }) => isDescriptiveTitle(title))
+    .filter(({ title }) => isDescriptiveFolderTitle(title))
 
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {

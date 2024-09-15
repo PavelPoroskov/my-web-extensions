@@ -57,4 +57,9 @@ export const getOrCreateUnclassifiedFolderId = async () => getOrCreateFolderByTi
 export const getNestedRootFolderId = memoize(async () => getFolderByTitleInRoot(NESTED_ROOT_TITLE))
 export const getUnclassifiedFolderId = memoize(async () => getFolderByTitleInRoot(UNCLASSIFIED_TITLE))
 
-export const isDescriptiveTitle = (title) => !(title.startsWith('New folder') || title.startsWith('[Folder Name]') || title.startsWith('New Folder')) 
+export const isDescriptiveFolderTitle = (title) => !!title 
+  && !(
+    title.startsWith('New folder') 
+    || title.startsWith('[Folder Name]') 
+    || title.startsWith('New Folder')
+  ) 

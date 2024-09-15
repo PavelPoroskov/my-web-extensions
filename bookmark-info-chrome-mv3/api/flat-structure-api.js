@@ -7,7 +7,7 @@ import {
   BOOKMARKS_BAR_FOLDER_ID,
   getOrCreateNestedRootFolderId,
   getOrCreateUnclassifiedFolderId,
-  isDescriptiveTitle,
+  isDescriptiveFolderTitle,
 } from './special-folder.api.js'
 
 async function getMaxUsedSuffix() {
@@ -548,7 +548,7 @@ async function moveNotDescriptiveFolderToUnclassified({ unclassifiedId }) {
   const nodeList = await chrome.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
   const folderList = nodeList
     .filter(({ url }) => !url)
-    .filter(({ title }) => !isDescriptiveTitle(title))
+    .filter(({ title }) => !isDescriptiveFolderTitle(title))
 
   // await Promise.all(folderList.map(
   //   ({ id }) => moveContent(id, unclassifiedId)

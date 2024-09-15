@@ -7,7 +7,7 @@ import {
   // OTHER_BOOKMARKS_FOLDER_ID,
   getNestedRootFolderId,
   getUnclassifiedFolderId,
-  isDescriptiveTitle,
+  isDescriptiveFolderTitle,
 } from '../special-folder.api.js'
 import {
   STORAGE_KEY,
@@ -151,7 +151,7 @@ class TagList {
       }
     }
   
-    if (!isDescriptiveTitle(folderNode.title)) {
+    if (!isDescriptiveFolderTitle(folderNode.title)) {
       return
     }
 
