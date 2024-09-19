@@ -62,4 +62,5 @@ export const isDescriptiveFolderTitle = (title) => !!title
     title.startsWith('New folder') 
     || title.startsWith('[Folder Name]') 
     || title.startsWith('New Folder')
+    || title.startsWith('(to title)')
   ) 
