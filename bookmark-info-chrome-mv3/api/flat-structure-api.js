@@ -585,6 +585,8 @@ export async function flatBookmarks() {
     //await updateNestedFolders({ nestedRootId })
   
     await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
+    // sort second time. my sorting algorithm has issue Not all item sorted for first pass
+    await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
     await sortChildren({ id: nestedRootId, recursively: true })
 
   } finally {
