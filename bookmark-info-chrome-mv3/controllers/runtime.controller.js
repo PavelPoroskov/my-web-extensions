@@ -19,17 +19,18 @@ import {
 import {
   onIncomingMessage,
 } from './incoming-message.js'
+import { initExtension } from '../api/init-extension.js'
 
 export const runtimeController = {
   async onStartup() {
     logEvent('runtime.onStartup');
     // is only firefox use it?
     createContextMenu()
+    await initExtension()
     updateActiveTab({
       useCache: true,
       debugCaller: 'runtime.onStartup'
     });
-
 
     const savedObj = await getOptions([
       STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
@@ -42,6 +43,7 @@ export const runtimeController = {
   async onInstalled () {
     logEvent('runtime.onInstalled');
     createContextMenu()
+    await initExtension()
     updateActiveTab({
       useCache: true,
       debugCaller: 'runtime.onInstalled'
