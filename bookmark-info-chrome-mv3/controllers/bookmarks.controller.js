@@ -21,6 +21,9 @@ import {
   memo,
   tagList,
 } from '../api/structure/index.js'
+import {
+  getUnclassifiedFolderId,
+} from '../api/special-folder.api.js'
 
 export const bookmarksController = {
   async onCreated(bookmarkId, node) {
@@ -103,7 +106,8 @@ export const bookmarksController = {
 
         if (!isCreatedInActiveDialog) {
           if (IS_BROWSER_CHROME) {
-            if (!memo.isActiveTabBookmarkManager) {
+            const unclassifiedFolderId = await getUnclassifiedFolderId()
+            if (!memo.isActiveTabBookmarkManager && parentId != unclassifiedFolderId) {
               logDebug('bookmark.onMoved 22');
               await Promise.all([
                 chrome.bookmarks.create({

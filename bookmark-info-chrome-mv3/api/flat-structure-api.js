@@ -538,9 +538,10 @@ async function sortChildren({ id, recursively = false }) {
 
 async function moveContent(fromFolderId, toFolderId) {
   const nodeList = await chrome.bookmarks.getChildren(fromFolderId)
+  const reversedNodeList = nodeList.toReversed()
   
-  await Promise.all(nodeList.map(
-    ({ id }) => chrome.bookmarks.move(id, { parentId: toFolderId }))
+  await Promise.all(reversedNodeList.map(
+    ({ id }) => chrome.bookmarks.move(id, { parentId: toFolderId, index: 0 }))
   )
 }
 
@@ -564,7 +565,6 @@ async function moveNotDescriptiveFolderToUnclassified({ unclassifiedId }) {
 }
 
 export async function flatBookmarks() {
-
   tagList.blockTagList(true)
 
   try {
