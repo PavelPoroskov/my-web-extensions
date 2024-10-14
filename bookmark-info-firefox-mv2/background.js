@@ -60,6 +60,7 @@ const BROWSER_SPECIFIC = Object.fromEntries(
       '/title/',
       '/list/',
       '/imdbpicks/',
+      '/interest/',
     ] 
   },
   {
@@ -699,7 +700,13 @@ const getOrCreateUnclassifiedFolderId = async () => getOrCreateFolderByTitleInRo
 const getNestedRootFolderId = memoize(async () => getFolderByTitleInRoot(NESTED_ROOT_TITLE))
 const getUnclassifiedFolderId = memoize(async () => getFolderByTitleInRoot(UNCLASSIFIED_TITLE))
 
-const isDescriptiveTitle = (title) => !(title.startsWith('New folder') || title.startsWith('[Folder Name]') || title.startsWith('New Folder')) 
+const isDescriptiveFolderTitle = (title) => !!title 
+  && !(
+    title.startsWith('New folder') 
+    || title.startsWith('[Folder Name]') 
+    || title.startsWith('New Folder')
+    || title.startsWith('(to title)')
+  ) 
 async function getRecentList(nItems) {
   log('getRecentList() 00', nItems)
   const list = await browser.bookmarks.getRecent(nItems);
@@ -737,7 +744,7 @@ const isDescriptiveTitle = (title) => !(title.startsWith('New folder') || title.
 
   return Object.entries(folderByIdMap)
     .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-    .filter(({ title }) => isDescriptiveTitle(title))
+    .filter(({ title }) => isDescriptiveFolderTitle(title))
     .sort((a,b) => -(a.dateAdded - b.dateAdded))
 }
 
@@ -764,7 +771,7 @@ async function filterFolders(idList, isFlatStructure) {
   let filteredFolderList = folderList
     .filter(Boolean)
     .filter(({ title }) => !!title)
-    .filter(({ title }) => isDescriptiveTitle(title))
+    .filter(({ title }) => isDescriptiveFolderTitle(title))
 
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {
@@ -814,8 +821,19 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
   FORCE_FLAT_FOLDER_STRUCTURE
   HIGHLIGHT_LAST
 
+  changeCount = 0
+  changeProcessedCount = -1
+
   get list() {
+    if (this.changeProcessedCount !== this.changeCount) {
+      this.changeProcessedCount = this.changeCount
+      this._tagList = this.refillList()
+    }
+
     return this._tagList
+  }
+  markUpdates() {
+    this.changeCount += 1
   }
 
   async readFromStorage() {
@@ -857,7 +875,7 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
       })
     }
 
-    this._tagList = this.refillList()
+    this.markUpdates()
   }
   async filterTagListForFlatFolderStructure() {
     const savedObj = await getOptions([
@@ -872,7 +890,8 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
     this._recentTagObj =  await filterRecentTagObj(this._recentTagObj, isFlatStructure)
     this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
     // console.log('filterTagListForFlatFolderStructure, after filter', this._fixedTagObj)
-    this._tagList = this.refillList()
+    this.markUpdates()
+
     await setOptions({
       [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
       [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,
@@ -902,7 +921,12 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
       recentTagList
         .map(({ parentId, title }) => ({ parentId, title, isFixed: false })),
       Object.entries(this._fixedTagObj)
-        .map(([parentId, title]) => ({ parentId, title, isFixed: true }))
+        .map(([parentId, title]) => ({
+          parentId,
+          // title: this._recentTagObj[parentId]?.title || title,
+          title,
+          isFixed: true,
+        }))
     )
       .map((item) => ({ ...item, isLast: lastTagSet.has(item.parentId) }))
 
@@ -935,13 +959,21 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
       }
     }
   
-    if (!isDescriptiveTitle(folderNode.title)) {
+    if (!isDescriptiveFolderTitle(folderNode.title)) {
       return
     }
 
     this._recentTagObj[folderNode.id] = {
       dateAdded: Date.now(),
       title: folderNode.title
+    }
+
+    let fixedTagUpdate
+    if (folderNode.id in this._fixedTagObj) {
+      this._fixedTagObj[folderNode.id] = folderNode.title
+      fixedTagUpdate = {
+        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
+      }
     }
 
     if (ADD_BOOKMARK_LIST_MAX + 10 < Object.keys(this._recentTagObj).length) {
@@ -956,9 +988,10 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
         })
     }
 
-    this._tagList = this.refillList()
+    this.markUpdates()
     setOptions({
-      [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
+      [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
+      ...fixedTagUpdate,
     })
   }
   async addRecentTagFromBkm(bkmNode) {
@@ -995,42 +1028,42 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
     }
 
     if (isInFixedList || isInRecentList) {
-      this._tagList = this.refillList()
+      this.markUpdates()
       await setOptions({
         ...fixedTagUpdate,
         ...recentTagUpdate,
       })
     }
   }
-  async updateTag(id, title) {
-    const isInFixedList = id in this._fixedTagObj
-    let fixedTagUpdate
+  // async updateTag(id, title) {
+  //   const isInFixedList = id in this._fixedTagObj
+  //   let fixedTagUpdate
 
-    if (isInFixedList) {
-      this._fixedTagObj[id] = title
-      fixedTagUpdate = {
-        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
-      }
-    }
+  //   if (isInFixedList) {
+  //     this._fixedTagObj[id] = title
+  //     fixedTagUpdate = {
+  //       [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
+  //     }
+  //   }
 
-    const isInRecentList = id in this._recentTagObj
-    let recentTagUpdate
+  //   const isInRecentList = id in this._recentTagObj
+  //   let recentTagUpdate
 
-    if (isInRecentList) {
-      this._recentTagObj[id].title = title
-      recentTagUpdate = {
-        [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
-      }
-    }
+  //   if (isInRecentList) {
+  //     this._recentTagObj[id].title = title
+  //     recentTagUpdate = {
+  //       [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
+  //     }
+  //   }
 
-    if (isInFixedList || isInRecentList) {
-      this._tagList = this.refillList()
-      await setOptions({
-        ...fixedTagUpdate,
-        ...recentTagUpdate,
-      })
-    }
-  }
+  //   if (isInFixedList || isInRecentList) {
+  //     this.markUpdates()
+  //     await setOptions({
+  //       ...fixedTagUpdate,
+  //       ...recentTagUpdate,
+  //     })
+  //   }
+  // }
   async addFixedTag({ parentId, title }) {
     if (!title || !parentId) {
       return
@@ -1039,7 +1072,7 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
     if (!(parentId in this._fixedTagObj)) {
       this._fixedTagObj[parentId] = title
 
-      this._tagList = this.refillList()
+      this.markUpdates()
       await setOptions({
         [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
       })
@@ -1048,7 +1081,7 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
   async removeFixedTag(id) {
     delete this._fixedTagObj[id]
 
-    this._tagList = this.refillList()
+    this.markUpdates()
     await setOptions({
       [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
     })
@@ -2072,9 +2105,10 @@ async function sortChildren({ id, recursively = false }) {
 
 async function moveContent(fromFolderId, toFolderId) {
   const nodeList = await browser.bookmarks.getChildren(fromFolderId)
+  const reversedNodeList = nodeList.toReversed()
   
-  await Promise.all(nodeList.map(
-    ({ id }) => browser.bookmarks.move(id, { parentId: toFolderId }))
+  await Promise.all(reversedNodeList.map(
+    ({ id }) => browser.bookmarks.move(id, { parentId: toFolderId, index: 0 }))
   )
 }
 
@@ -2082,7 +2116,7 @@ async function moveNotDescriptiveFolderToUnclassified({ unclassifiedId }) {
   const nodeList = await browser.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
   const folderList = nodeList
     .filter(({ url }) => !url)
-    .filter(({ title }) => !isDescriptiveTitle(title))
+    .filter(({ title }) => !isDescriptiveFolderTitle(title))
 
   // await Promise.all(folderList.map(
   //   ({ id }) => moveContent(id, unclassifiedId)
@@ -2098,7 +2132,6 @@ async function moveNotDescriptiveFolderToUnclassified({ unclassifiedId }) {
 }
 
 async function flatBookmarks() {
-
   tagList.blockTagList(true)
 
   try {
@@ -2118,6 +2151,8 @@ async function flatBookmarks() {
     // MAYBE? delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
     //await updateNestedFolders({ nestedRootId })
   
+    await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
+    // sort second time. my sorting algorithm has issue Not all item sorted for first pass
     await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
     await sortChildren({ id: nestedRootId, recursively: true })
 
@@ -2469,7 +2504,8 @@ async function removeDoubleBookmarks() {
 
         if (!isCreatedInActiveDialog) {
           if (IS_BROWSER_CHROME) {
-            if (!memo.isActiveTabBookmarkManager) {
+            const unclassifiedFolderId = await getUnclassifiedFolderId()
+            if (!memo.isActiveTabBookmarkManager && parentId != unclassifiedFolderId) {
               logDebug('bookmark.onMoved 22');
               await Promise.all([
                 browser.bookmarks.create({
@@ -2697,11 +2733,11 @@ async function removeDoubleBookmarks() {
     logEvent('runtime.onStartup');
     // is only firefox use it?
     createContextMenu()
+    await initExtension()
     updateActiveTab({
       useCache: true,
       debugCaller: 'runtime.onStartup'
     });
-
 
     const savedObj = await getOptions([
       STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
@@ -2714,6 +2750,7 @@ async function removeDoubleBookmarks() {
   async onInstalled () {
     logEvent('runtime.onInstalled');
     createContextMenu()
+    await initExtension()
     updateActiveTab({
       useCache: true,
       debugCaller: 'runtime.onInstalled'
@@ -2886,8 +2923,7 @@ async function removeDoubleBookmarks() {
     }
   },
 };
-// console.log('IMPORTING', 'bkm-info-sw.js')
-browser.storage.onChanged.addListener(storageController.onChanged);
+browser.storage.onChanged.addListener(storageController.onChanged);
 
 browser.bookmarks.onCreated.addListener(bookmarksController.onCreated);
 browser.bookmarks.onMoved.addListener(bookmarksController.onMoved);
@@ -2908,6 +2944,3 @@ browser.menus.onClicked.addListener(contextMenusController.onClicked);
 browser.runtime.onStartup.addListener(runtimeController.onStartup)
 browser.runtime.onInstalled.addListener(runtimeController.onInstalled);
 browser.runtime.onMessage.addListener(runtimeController.onMessage);
-
-// console.log('IMPORT END', 'bkm-info-sw.js')
-initExtension()
