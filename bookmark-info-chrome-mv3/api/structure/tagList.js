@@ -30,8 +30,19 @@ class TagList {
   FORCE_FLAT_FOLDER_STRUCTURE
   HIGHLIGHT_LAST
 
+  changeCount = 0
+  changeProcessedCount = -1
+
   get list() {
+    if (this.changeProcessedCount !== this.changeCount) {
+      this.changeProcessedCount = this.changeCount
+      this._tagList = this.refillList()
+    }
+
     return this._tagList
+  }
+  markUpdates() {
+    this.changeCount += 1
   }
 
   async readFromStorage() {
@@ -73,7 +84,7 @@ class TagList {
       })
     }
 
-    this._tagList = this.refillList()
+    this.markUpdates()
   }
   async filterTagListForFlatFolderStructure() {
     const savedObj = await getOptions([
@@ -88,7 +99,8 @@ class TagList {
     this._recentTagObj =  await filterRecentTagObj(this._recentTagObj, isFlatStructure)
     this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
     // console.log('filterTagListForFlatFolderStructure, after filter', this._fixedTagObj)
-    this._tagList = this.refillList()
+    this.markUpdates()
+
     await setOptions({
       [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
       [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,
@@ -118,7 +130,12 @@ class TagList {
       recentTagList
         .map(({ parentId, title }) => ({ parentId, title, isFixed: false })),
       Object.entries(this._fixedTagObj)
-        .map(([parentId, title]) => ({ parentId, title, isFixed: true }))
+        .map(([parentId, title]) => ({
+          parentId,
+          // title: this._recentTagObj[parentId]?.title || title,
+          title,
+          isFixed: true,
+        }))
     )
       .map((item) => ({ ...item, isLast: lastTagSet.has(item.parentId) }))
 
@@ -160,6 +177,14 @@ class TagList {
       title: folderNode.title
     }
 
+    let fixedTagUpdate
+    if (folderNode.id in this._fixedTagObj) {
+      this._fixedTagObj[folderNode.id] = folderNode.title
+      fixedTagUpdate = {
+        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
+      }
+    }
+
     if (ADD_BOOKMARK_LIST_MAX + 10 < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
         .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
@@ -172,9 +197,10 @@ class TagList {
         })
     }
 
-    this._tagList = this.refillList()
+    this.markUpdates()
     setOptions({
-      [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
+      [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
+      ...fixedTagUpdate,
     })
   }
   async addRecentTagFromBkm(bkmNode) {
@@ -211,42 +237,42 @@ class TagList {
     }
 
     if (isInFixedList || isInRecentList) {
-      this._tagList = this.refillList()
+      this.markUpdates()
       await setOptions({
         ...fixedTagUpdate,
         ...recentTagUpdate,
       })
     }
   }
-  async updateTag(id, title) {
-    const isInFixedList = id in this._fixedTagObj
-    let fixedTagUpdate
+  // async updateTag(id, title) {
+  //   const isInFixedList = id in this._fixedTagObj
+  //   let fixedTagUpdate
 
-    if (isInFixedList) {
-      this._fixedTagObj[id] = title
-      fixedTagUpdate = {
-        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
-      }
-    }
+  //   if (isInFixedList) {
+  //     this._fixedTagObj[id] = title
+  //     fixedTagUpdate = {
+  //       [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
+  //     }
+  //   }
 
-    const isInRecentList = id in this._recentTagObj
-    let recentTagUpdate
+  //   const isInRecentList = id in this._recentTagObj
+  //   let recentTagUpdate
 
-    if (isInRecentList) {
-      this._recentTagObj[id].title = title
-      recentTagUpdate = {
-        [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
-      }
-    }
+  //   if (isInRecentList) {
+  //     this._recentTagObj[id].title = title
+  //     recentTagUpdate = {
+  //       [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
+  //     }
+  //   }
 
-    if (isInFixedList || isInRecentList) {
-      this._tagList = this.refillList()
-      await setOptions({
-        ...fixedTagUpdate,
-        ...recentTagUpdate,
-      })
-    }
-  }
+  //   if (isInFixedList || isInRecentList) {
+  //     this.markUpdates()
+  //     await setOptions({
+  //       ...fixedTagUpdate,
+  //       ...recentTagUpdate,
+  //     })
+  //   }
+  // }
   async addFixedTag({ parentId, title }) {
     if (!title || !parentId) {
       return
@@ -255,7 +281,7 @@ class TagList {
     if (!(parentId in this._fixedTagObj)) {
       this._fixedTagObj[parentId] = title
 
-      this._tagList = this.refillList()
+      this.markUpdates()
       await setOptions({
         [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
       })
@@ -264,7 +290,7 @@ class TagList {
   async removeFixedTag(id) {
     delete this._fixedTagObj[id]
 
-    this._tagList = this.refillList()
+    this.markUpdates()
     await setOptions({
       [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
     })
