@@ -3,6 +3,7 @@ import {
 } from './log-api.js'
 import {
   OTHER_BOOKMARKS_FOLDER_ID,
+  BOOKMARKS_BAR_FOLDER_ID,
   getNestedRootFolderId,
   getUnclassifiedFolderId,
   isDescriptiveFolderTitle,
@@ -82,7 +83,7 @@ async function filterFolders(idList, isFlatStructure) {
 
     filteredFolderList = filteredFolderList
       .filter(
-        ({ parentId }) => parentId === OTHER_BOOKMARKS_FOLDER_ID
+        ({ parentId }) => parentId === OTHER_BOOKMARKS_FOLDER_ID || parentId === BOOKMARKS_BAR_FOLDER_ID
       )
       .filter(
         ({ id }) => !specialFolderSet.has(id)
