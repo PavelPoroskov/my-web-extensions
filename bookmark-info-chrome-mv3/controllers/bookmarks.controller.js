@@ -12,7 +12,6 @@ import {
 import {
   STORAGE_KEY,
   IS_BROWSER_CHROME,
-  // eslint-disable-next-line no-unused-vars
   IS_BROWSER_FIREFOX,
 } from '../constant/index.js'
 import {
@@ -105,26 +104,35 @@ export const bookmarksController = {
         }
 
         if (!isCreatedInActiveDialog) {
+          let isReplaceMoveToCreate = false
+
           if (IS_BROWSER_CHROME) {
-            const unclassifiedFolderId = await getUnclassifiedFolderId()
-            if (!memo.isActiveTabBookmarkManager && parentId != unclassifiedFolderId) {
-              logDebug('bookmark.onMoved 22');
-              await Promise.all([
-                chrome.bookmarks.create({
-                  parentId: oldParentId,
-                  title: node.title,
-                  url: node.url
-                }),
-                chrome.bookmarks.remove(bookmarkId),
-              ])
-              await chrome.bookmarks.create({
-                parentId,
+            isReplaceMoveToCreate = !memo.isActiveTabBookmarkManager
+          } else if (IS_BROWSER_FIREFOX) {
+            const childrenList = await chrome.bookmarks.getChildren(parentId)
+            const lastIndex = childrenList.length - 1
+
+            isReplaceMoveToCreate = index == lastIndex && settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW] 
+          }
+
+          const unclassifiedFolderId = await getUnclassifiedFolderId()
+          isReplaceMoveToCreate = isReplaceMoveToCreate && parentId !== unclassifiedFolderId
+
+          if (isReplaceMoveToCreate) {
+            logDebug('bookmark.onMoved 22');
+            await Promise.all([
+              chrome.bookmarks.create({
+                parentId: oldParentId,
                 title: node.title,
                 url: node.url
-              })
-            }
-          // } else if (IS_BROWSER_FIREFOX) {
-            
+              }),
+              chrome.bookmarks.remove(bookmarkId),
+            ])
+            await chrome.bookmarks.create({
+              parentId,
+              title: node.title,
+              url: node.url
+            })
           }
         }
       }
