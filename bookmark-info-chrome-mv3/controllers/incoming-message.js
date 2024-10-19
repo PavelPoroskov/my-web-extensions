@@ -1,13 +1,6 @@
 
 
 import {
-  logEvent,
-} from '../api/log-api.js'
-import {
-  activeDialog,
-  extensionSettings,
-} from '../api/structure/index.js'
-import {
   clearUrlInTab,
   removeQueryParamsIfTarget,
 } from '../api/clean-url-api.js'
@@ -17,10 +10,19 @@ import {
   deleteBookmark,
   fixTag,
   moveToFlatFolderStructure,
-  removeDoubleBookmarks,
   switchShowRecentList,
   unfixTag,
 } from '../api/command/index.js'
+import {
+  logEvent,
+} from '../api/log-api.js'
+import {
+  removeDoubleBookmarks,
+} from '../api/removeDoubleBookmarks.api.js'
+import {
+  activeDialog,
+  extensionSettings,
+} from '../api/structure/index.js'
 import {
   updateActiveTab,
   updateTab,

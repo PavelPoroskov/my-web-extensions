@@ -1,14 +1,17 @@
 import {
-  ExtraMap,
-  tagList,
-} from './structure/index.js'
+  removeDoubleBookmarks,
+} from './removeDoubleBookmarks.api.js';
 import {
-  OTHER_BOOKMARKS_FOLDER_ID,
   BOOKMARKS_BAR_FOLDER_ID,
   getOrCreateNestedRootFolderId,
   getOrCreateUnclassifiedFolderId,
   isDescriptiveFolderTitle,
-} from './special-folder.api.js'
+  OTHER_BOOKMARKS_FOLDER_ID,
+} from './special-folder.api.js';
+import {
+  ExtraMap,
+  tagList,
+} from './structure/index.js';
 
 async function getMaxUsedSuffix() {
   function getFoldersFromTree(tree) {
@@ -578,7 +581,8 @@ export async function flatBookmarks() {
     await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
     await createNestedFolders({ toCopyFolderById, nestedRootId })
     await moveNotDescriptiveFolderToUnclassified({ unclassifiedId })
-  
+    await removeDoubleBookmarks()
+
     // MAYBE? delete empty folders
   
     // MAYBE? delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
@@ -588,7 +592,6 @@ export async function flatBookmarks() {
     // sort second time. my sorting algorithm has issue Not all item sorted for first pass
     await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
     await sortChildren({ id: nestedRootId, recursively: true })
-
   } finally {
     tagList.blockTagList(false)
   }
