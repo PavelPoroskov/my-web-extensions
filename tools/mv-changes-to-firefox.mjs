@@ -35,6 +35,7 @@ createFileForFirefox(
     'api/history-api.js',
     'api/init-extension.js',
     'api/tabs-api.js',
+    'api/removeDoubleBookmarks.api.js',
     'api/flat-structure-api.js',
 
     'api/command/addBookmark.js',
@@ -45,7 +46,6 @@ createFileForFirefox(
     'api/command/deleteBookmark.js',
     'api/command/fixTag.js',
     'api/command/moveToFlatFolderStructure.js',
-    'api/command/removeDoubleBookmarks.js',
     'api/command/switchShowRecentList.js',
     'api/command/unfixTag.js',
     'api/command/index.js',

@@ -781,7 +781,7 @@ async function filterFolders(idList, isFlatStructure) {
 
     filteredFolderList = filteredFolderList
       .filter(
-        ({ parentId }) => parentId === OTHER_BOOKMARKS_FOLDER_ID
+        ({ parentId }) => parentId === OTHER_BOOKMARKS_FOLDER_ID || parentId === BOOKMARKS_BAR_FOLDER_ID
       )
       .filter(
         ({ id }) => !specialFolderSet.has(id)
@@ -1577,6 +1577,64 @@ async function updateActiveTab({ useCache=false, debugCaller } = {}) {
     });
   }
 }
+async function getDoubles() {
+  const doubleList = []
+
+  async function traverseNodeList(nodeList) {
+    const urlToIdMap = new ExtraMap()
+    nodeList
+      .filter(({ url }) => !!url)
+      .forEach(({ id, url, title }) => {
+        urlToIdMap.concat(url, { id, title })
+      })
+
+    for (const idList of urlToIdMap.values()) {
+      if (idList.length > 1) {
+        const titleToIdMap = new ExtraMap()
+
+        idList.forEach(({ id, title }) => {
+          titleToIdMap.concat(title, id)
+        })
+
+        for (const idList of titleToIdMap.values()) {
+          if (idList.length > 1) {
+            idList
+              .slice(1)
+              .forEach(
+                (id) => doubleList.push(id)
+              )
+          }
+        }
+      }
+    }
+
+    nodeList
+      .filter(({ url }) => !url)
+      .map(
+        (node) => traverseNodeList(node.children)
+      )
+  }
+
+  const nodeList = await browser.bookmarks.getTree()
+  traverseNodeList(nodeList)
+
+  return doubleList
+}
+
+async function removeDoubleBookmarks() {
+  const doubleList = await getDoubles()
+  // console.log('Double bookmarks:', doubleList.length)
+
+  await Promise.all(
+    doubleList.map(
+      (id) => browser.bookmarks.remove(id)
+    )
+  )
+
+  return {
+    nRemovedDoubles: doubleList.length
+  }
+}
 async function getMaxUsedSuffix() {
   function getFoldersFromTree(tree) {
     const folderById = {};
@@ -1641,15 +1699,48 @@ async function updateActiveTab({ useCache=false, debugCaller } = {}) {
 
   return maxUsedSuffix
 }
+function isStartWithTODO(str) {
+  return !!str && str.slice(0, 4).toLowerCase() === 'todo'
+}
 
-async function flatFolders({ nestedRootId, unclassifiedId, freeSuffix }) {
-  const bookmarksBarChildrenList = await browser.bookmarks.getChildren(BOOKMARKS_BAR_FOLDER_ID)
+async function flatBarFolder({ isMoveTodoToBarFolder }) {
+  const childrenList = await browser.bookmarks.getChildren(BOOKMARKS_BAR_FOLDER_ID)
+  const folderList = childrenList
+    .filter(({ url }) => !url)
+
+  let moveList = []
+
+  if (isMoveTodoToBarFolder) {
+    const notMoveList = []
+    folderList.forEach((node) => {
+      if (isStartWithTODO(node.title)) {
+        notMoveList.push(node)
+      } else {
+        moveList.push(node)
+      }
+    })
+
+    const childrenListList = await Promise.all(
+      notMoveList.map(
+        (node) => browser.bookmarks.getChildren(node.id)
+      )
+    )
+    const subFolderList = childrenListList.flat().filter(({ url }) => !url)
+    subFolderList.forEach((node) => {
+      moveList.push(node)
+    })
+  } else {
+    moveList = folderList
+  }
+
   await Promise.all(
-    bookmarksBarChildrenList
-      .filter(({ url }) => !url)
-      .map((node) => browser.bookmarks.move(node.id, { parentId: OTHER_BOOKMARKS_FOLDER_ID }))
+    moveList.map(
+      (node) => browser.bookmarks.move(node.id, { parentId: OTHER_BOOKMARKS_FOLDER_ID })
+    )
   ) 
+}
 
+async function flatOtherFolder({ nestedRootId, unclassifiedId, freeSuffix }) {
   const notFlatFolderList = []
   const flatFolderList = []
   const rootBookmarkList = []
@@ -2141,21 +2232,39 @@ async function flatBookmarks() {
     const nestedRootId = await getOrCreateNestedRootFolderId()
     const unclassifiedId = await getOrCreateUnclassifiedFolderId()
   
-    const { toCopyFolderById } = await flatFolders({ nestedRootId, unclassifiedId, freeSuffix })
+    const isMoveTodoToBarFolder = true
+    await flatBarFolder({ isMoveTodoToBarFolder })
+    const { toCopyFolderById } = await flatOtherFolder({ nestedRootId, unclassifiedId, freeSuffix })
     await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
+
     await createNestedFolders({ toCopyFolderById, nestedRootId })
     await moveNotDescriptiveFolderToUnclassified({ unclassifiedId })
-  
+    await removeDoubleBookmarks()
+
     // MAYBE? delete empty folders
-  
-    // MAYBE? delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
-    //await updateNestedFolders({ nestedRootId })
-  
+    if (isMoveTodoToBarFolder) {
+      const childrenList = await browser.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
+      const moveList = childrenList
+        .filter(({ url }) => !url)
+        .filter(({ title }) => isStartWithTODO(title))
+
+      await Promise.all(
+        moveList.map(
+          (node) => browser.bookmarks.move(node.id, { parentId: BOOKMARKS_BAR_FOLDER_ID })
+        )
+      ) 
+      await sortChildren({ id: BOOKMARKS_BAR_FOLDER_ID })
+      // TODO merge folders with the same name: case insensitive, in barfolder
+    }
+
     await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
     // sort second time. my sorting algorithm has issue Not all item sorted for first pass
     await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
-    await sortChildren({ id: nestedRootId, recursively: true })
+    // TODO merge folders with the same name: case insensitive, in otherfolder
 
+    // MAYBE? delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
+    //await updateNestedFolders({ nestedRootId })
+    await sortChildren({ id: nestedRootId, recursively: true })
   } finally {
     tagList.blockTagList(false)
   }
@@ -2355,64 +2464,6 @@ async function closeDuplicateTabs() {
 
   await flatBookmarks()
   await tagList.filterTagListForFlatFolderStructure()
-}
-async function getDoubles() {
-  const doubleList = []
-
-  async function traverseNodeList(nodeList) {
-    const urlToIdMap = new ExtraMap()
-    nodeList
-      .filter(({ url }) => !!url)
-      .forEach(({ id, url, title }) => {
-        urlToIdMap.concat(url, { id, title })
-      })
-
-    for (const idList of urlToIdMap.values()) {
-      if (idList.length > 1) {
-        const titleToIdMap = new ExtraMap()
-
-        idList.forEach(({ id, title }) => {
-          titleToIdMap.concat(title, id)
-        })
-
-        for (const idList of titleToIdMap.values()) {
-          if (idList.length > 1) {
-            idList
-              .slice(1)
-              .forEach(
-                (id) => doubleList.push(id)
-              )
-          }
-        }
-      }
-    }
-
-    nodeList
-      .filter(({ url }) => !url)
-      .map(
-        (node) => traverseNodeList(node.children)
-      )
-  }
-
-  const nodeList = await browser.bookmarks.getTree()
-  traverseNodeList(nodeList)
-
-  return doubleList
-}
-
-async function removeDoubleBookmarks() {
-  const doubleList = await getDoubles()
-  // console.log('Double bookmarks:', doubleList.length)
-
-  await Promise.all(
-    doubleList.map(
-      (id) => browser.bookmarks.remove(id)
-    )
-  )
-
-  return {
-    nRemovedDoubles: doubleList.length
-  }
 }
 async function switchShowRecentList(isShow) {
   await extensionSettings.update({
