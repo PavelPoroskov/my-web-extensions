@@ -2503,26 +2503,35 @@ async function removeDoubleBookmarks() {
         }
 
         if (!isCreatedInActiveDialog) {
+          let isReplaceMoveToCreate = false
+
           if (IS_BROWSER_CHROME) {
-            const unclassifiedFolderId = await getUnclassifiedFolderId()
-            if (!memo.isActiveTabBookmarkManager && parentId != unclassifiedFolderId) {
-              logDebug('bookmark.onMoved 22');
-              await Promise.all([
-                browser.bookmarks.create({
-                  parentId: oldParentId,
-                  title: node.title,
-                  url: node.url
-                }),
-                browser.bookmarks.remove(bookmarkId),
-              ])
-              await browser.bookmarks.create({
-                parentId,
+            isReplaceMoveToCreate = !memo.isActiveTabBookmarkManager
+          } else if (IS_BROWSER_FIREFOX) {
+            const childrenList = await browser.bookmarks.getChildren(parentId)
+            const lastIndex = childrenList.length - 1
+
+            isReplaceMoveToCreate = index == lastIndex && settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW] 
+          }
+
+          const unclassifiedFolderId = await getUnclassifiedFolderId()
+          isReplaceMoveToCreate = isReplaceMoveToCreate && parentId !== unclassifiedFolderId
+
+          if (isReplaceMoveToCreate) {
+            logDebug('bookmark.onMoved 22');
+            await Promise.all([
+              browser.bookmarks.create({
+                parentId: oldParentId,
                 title: node.title,
                 url: node.url
-              })
-            }
-          // } else if (IS_BROWSER_FIREFOX) {
-            
+              }),
+              browser.bookmarks.remove(bookmarkId),
+            ])
+            await browser.bookmarks.create({
+              parentId,
+              title: node.title,
+              url: node.url
+            })
           }
         }
       }
