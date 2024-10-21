@@ -1,6 +1,5 @@
 import {
   log,
-  logEvent,
   logSendEvent,
 } from './log-api.js'
 import {
@@ -18,7 +17,7 @@ import {
 import {
   extensionSettings,
   memo,
-  promiseQueue,
+  debounceQueue,
   tagList,
 } from './structure/index.js'
 import {
@@ -28,6 +27,7 @@ import {
 import { initExtension } from './init-extension.js'
 
 async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
+  log(' updateBookmarksForTabTask() 00', tabId, url, useCache)
   const settings = await extensionSettings.get()
   let actualUrl = url
 
@@ -49,8 +49,6 @@ async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
   }
   logSendEvent('updateBookmarksForTabTask()', tabId, message);
   await chrome.tabs.sendMessage(tabId, message)
-  
-  return bookmarkInfo
 }
 async function updateTagsForTab({ tabId }) {
   const settings = await extensionSettings.get()
@@ -89,8 +87,8 @@ export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
     const settings = await extensionSettings.get()
 
     log(`${debugCaller} -> updateTab() useCache`, useCache);
-    promiseQueue.add({
-      key: `${tabId}-bkm`,
+    debounceQueue.run({
+      key: `${tabId}`,
       fn: updateBookmarksForTabTask,
       options: {
         tabId,
@@ -112,7 +110,7 @@ export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
 }
 
 export async function updateActiveTab({ useCache=false, debugCaller } = {}) {
-  logEvent(' updateActiveTab() 00')
+  log(' updateActiveTab() 00')
 
   if (!memo.activeTabId) {
     const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });

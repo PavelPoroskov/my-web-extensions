@@ -235,69 +235,51 @@ const logOptimization = LOG_CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OP
 const logPromiseQueue = LOG_CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
 const logDebug = LOG_CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
 const logSettings = LOG_CONFIG.SHOW_SETTINGS ? makeLogWithPrefix('SETTINGS') : () => { };
-class PromiseQueue {
-  constructor () {
-    this.promise = {};
-    this.tasks = {};
-  }
+function debounce(func, timeout = 300){
+  let timer;
 
-  async continueQueue(key, prevResult) {
-    // console.log('this.tasks[key]', this.tasks[key]);
-    const task = this.tasks[key]?.shift()
-
-    if (task) {
-      const isActual = prevResult?.taskName === task.taskName  
-        && prevResult?.url === task.options.url
-        && prevResult?.source === SOURCE.ACTUAL;
-      logPromiseQueue('task', task);
-      logPromiseQueue('prevResult', prevResult);
-      logPromiseQueue('isActual', isActual);
-
-      if (!isActual) {
-        logPromiseQueue(' PromiseQueue: exec task', key, task.options);
-        return task.fn(task.options)
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(
+      () => {
+        logPromiseQueue(' PromiseQueue: execute task', args[0])
+        func.apply(this, args)
           .catch((er) => {
-            logIgnore(' IGNORING error: PromiseQueue', er);
-            return this.continueQueue(key);
-          })
-          .then((result) => (
-            this.continueQueue(
-              key,
-              {
-                ...result,
-                taskName: task.taskName,
-                url: task.options.url,
-              }
-            )
-          ));
-      } else {
-        logPromiseQueue(' PromiseQueue: exec task, skip : source actual', key, task.options);
-        return this.continueQueue(key, prevResult);
-      }
-    } else {
-      logPromiseQueue(' PromiseQueue: finish', key)
-      delete this.tasks[key];
-      delete this.promise[key];
+            logPromiseQueue(' IGNORING error: PromiseQueue', er);
+          });
+      },
+      timeout,
+    );
+  };
+}
 
-      return prevResult;
-    }
+class DebounceQueue {
+  constructor () {
+    this.tasks = {};
+    this.callTime = {};
   }
 
-  add ({ key, fn, options }) {
-    const taskName = fn.name;
-
+  run({ key, fn, options }) {
     if (!this.tasks[key]) {
-      logPromiseQueue(' PromiseQueue: start', key, options)
-      this.tasks[key] = [{ fn, options, taskName }]
-      this.promise[key] = this.continueQueue(key);
+      logPromiseQueue(' PromiseQueue: first call', key, options)
+      this.tasks[key] = debounce(fn, 30)
     } else {
-      logPromiseQueue(' PromiseQueue: add task', key, options)
-      this.tasks[key].push({ fn, options, taskName })
+      logPromiseQueue(' PromiseQueue: second call', key, options)
     }
+    this.tasks[key](options);
+    this.callTime[key] = Date.now();
+
+    const expireLimit = Date.now() - 60000;
+    Object.entries(this.callTime)
+      .filter(([, callTimeItem]) => callTimeItem < expireLimit)
+      .forEach(([key]) => {
+        delete this.callTime[key]
+        delete this.tasks[key]
+      })
   }
 }
 
-const promiseQueue = new PromiseQueue();
+const debounceQueue = new DebounceQueue();
 class ExtraMap extends Map {
   sum(key, addValue) {
     super.set(key, (super.get(key) || 0) + addValue)
@@ -315,44 +297,6 @@ const promiseQueue = new PromiseQueue();
     super.set(key, ar.concat(item))
   }
 }
-class ActiveDialog {
-  data = {}
-  activeDialogTabId
-  
-  onTabChanged(tabId) {
-    if (tabId !== this.activeDialogTabId)  {
-      this.activeDialogTabId = tabId
-      this.data = {}
-    }
-  }
-  createBkmStandard (bookmarkId, parentId) {
-    const isFirst = Object.values(this.data).filter(({ bookmarkId }) => bookmarkId).length === 0;
-    this.data[parentId] = {
-      ...this.data[parentId],
-      bookmarkId,
-      isFirst,
-    }
-
-    return this.data[parentId]
-  }
-  createBkmFromTag (parentId) {
-    this.data[parentId] = {
-      fromTag: true
-    }
-  }
-  isCreatedInActiveDialog(bookmarkId, parentId) {
-    const result = this.data[parentId]?.bookmarkId === bookmarkId 
-      && this.data[parentId]?.isFirst === true
-      && this.data[parentId]?.fromTag !== true
-
-    return result
-  }
-  removeBkm(parentId) {
-    delete this.data[parentId]
-  }
-}
-
-const activeDialog = new ActiveDialog()
 class CacheWithLimit {
   constructor ({ name='cache', size = 100 }) {
     this.cache = new Map();
@@ -1471,6 +1415,7 @@ async function getHistoryInfo({ url, useCache=false }) {
   ])
 }
 async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
+  log(' updateBookmarksForTabTask() 00', tabId, url, useCache)
   const settings = await extensionSettings.get()
   let actualUrl = url
 
@@ -1492,8 +1437,6 @@ async function getHistoryInfo({ url, useCache=false }) {
   }
   logSendEvent('updateBookmarksForTabTask()', tabId, message);
   await browser.tabs.sendMessage(tabId, message)
-  
-  return bookmarkInfo
 }
 async function updateTagsForTab({ tabId }) {
   const settings = await extensionSettings.get()
@@ -1532,8 +1475,8 @@ async function updateTab({ tabId, url, useCache=false, debugCaller }) {
     const settings = await extensionSettings.get()
 
     log(`${debugCaller} -> updateTab() useCache`, useCache);
-    promiseQueue.add({
-      key: `${tabId}-bkm`,
+    debounceQueue.run({
+      key: `${tabId}`,
       fn: updateBookmarksForTabTask,
       options: {
         tabId,
@@ -1555,7 +1498,7 @@ async function updateTab({ tabId, url, useCache=false, debugCaller }) {
 }
 
 async function updateActiveTab({ useCache=false, debugCaller } = {}) {
-  logEvent(' updateActiveTab() 00')
+  log(' updateActiveTab() 00')
 
   if (!memo.activeTabId) {
     const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
@@ -2476,12 +2419,11 @@ async function closeDuplicateTabs() {
 
 const bookmarksController = {
   async onCreated(bookmarkId, node) {
-    logEvent('bookmark.onCreated <-', node);
+    log('bookmark.onCreated <-', node);
     const settings = await extensionSettings.get()
 
     if (node.url) {
       if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-        activeDialog.createBkmStandard(node.id, node.parentId)
         await tagList.addRecentTagFromBkm(node)
       }
     } else {
@@ -2498,7 +2440,7 @@ async function closeDuplicateTabs() {
     getBookmarkInfoUni({ url: node.url });
   },
   async onChanged(bookmarkId, changeInfo) {
-    logEvent('bookmark.onChanged 00 <-', changeInfo);
+    log('bookmark.onChanged 00 <-', changeInfo);
     const settings = await extensionSettings.get()
 
     const [node] = await browser.bookmarks.get(bookmarkId)
@@ -2523,7 +2465,7 @@ async function closeDuplicateTabs() {
     getBookmarkInfoUni({ url: node.url });   
   },
   async onMoved(bookmarkId, { oldIndex, index, oldParentId, parentId }) {
-    logEvent('bookmark.onMoved <-', { oldIndex, index, oldParentId, parentId });
+    log('bookmark.onMoved <-', { oldIndex, index, oldParentId, parentId });
     const settings = await extensionSettings.get()
     // switch (true) {
     //   // in bookmark manager. no changes for this extension
@@ -2547,43 +2489,38 @@ async function closeDuplicateTabs() {
       if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && parentId !== oldParentId) {
         await tagList.addRecentTagFromBkm(node);
 
-        const isCreatedInActiveDialog = activeDialog.isCreatedInActiveDialog(bookmarkId, oldParentId)
-        if (isCreatedInActiveDialog) {
-          logDebug('bookmark.onMoved 11');
-          activeDialog.removeBkm(oldParentId)
+        let isReplaceMoveToCreate = false
+
+        if (IS_BROWSER_CHROME) {
+          isReplaceMoveToCreate = !memo.isActiveTabBookmarkManager
+        } else if (IS_BROWSER_FIREFOX) {
+          const childrenList = await browser.bookmarks.getChildren(parentId)
+          const lastIndex = childrenList.length - 1
+
+          // isReplaceMoveToCreate = index == lastIndex && settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW] 
+          isReplaceMoveToCreate = index == lastIndex
         }
 
-        if (!isCreatedInActiveDialog) {
-          let isReplaceMoveToCreate = false
+        const unclassifiedFolderId = await getUnclassifiedFolderId()
+        isReplaceMoveToCreate = isReplaceMoveToCreate && parentId !== unclassifiedFolderId
 
-          if (IS_BROWSER_CHROME) {
-            isReplaceMoveToCreate = !memo.isActiveTabBookmarkManager
-          } else if (IS_BROWSER_FIREFOX) {
-            const childrenList = await browser.bookmarks.getChildren(parentId)
-            const lastIndex = childrenList.length - 1
+        if (isReplaceMoveToCreate) {
+          log('bookmark.onMoved 22');
 
-            isReplaceMoveToCreate = index == lastIndex && settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW] 
-          }
+          const { url, title } = node
+          await browser.bookmarks.remove(bookmarkId)
+          await browser.bookmarks.create({
+            parentId: oldParentId,
+            title,
+            url
+          })
+          await browser.bookmarks.create({
+            parentId,
+            title,
+            url
+          })
 
-          const unclassifiedFolderId = await getUnclassifiedFolderId()
-          isReplaceMoveToCreate = isReplaceMoveToCreate && parentId !== unclassifiedFolderId
-
-          if (isReplaceMoveToCreate) {
-            logDebug('bookmark.onMoved 22');
-            await Promise.all([
-              browser.bookmarks.create({
-                parentId: oldParentId,
-                title: node.title,
-                url: node.url
-              }),
-              browser.bookmarks.remove(bookmarkId),
-            ])
-            await browser.bookmarks.create({
-              parentId,
-              title: node.title,
-              url: node.url
-            })
-          }
+          return
         }
       }
     } else {
@@ -2597,14 +2534,10 @@ async function closeDuplicateTabs() {
     getBookmarkInfoUni({ url: node.url })
   },
   async onRemoved(bookmarkId, { node }) {
-    logEvent('bookmark.onRemoved <-');
+    log('bookmark.onRemoved <-');
     const settings = await extensionSettings.get()
 
-    if (node.url) {
-      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
-        activeDialog.removeBkm(node.parentId)    
-      }
-    } else {
+    if (!node.url) {
       memo.bkmFolderById.delete(bookmarkId);
 
       if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
@@ -2673,7 +2606,6 @@ async function closeDuplicateTabs() {
     }
     case EXTENSION_COMMAND_ID.ADD_BOOKMARK: {
       logEvent('runtime.onMessage addBookmark');
-      activeDialog.createBkmFromTag(message.parentId)
       await addBookmark({
         url: message.url,
         title: message.title,
@@ -2931,7 +2863,6 @@ async function closeDuplicateTabs() {
   },
   async onActivated({ tabId }) {
     logEvent('tabs.onActivated 00', tabId);
-    activeDialog.onTabChanged(tabId)
 
     if (memo.activeTabId !== tabId) {
       memo.previousTabId = memo.activeTabId;

@@ -20,7 +20,6 @@ import {
   removeDoubleBookmarks,
 } from '../api/removeDoubleBookmarks.api.js'
 import {
-  activeDialog,
   extensionSettings,
 } from '../api/structure/index.js'
 import {
@@ -65,7 +64,6 @@ export async function onIncomingMessage (message, sender) {
     }
     case EXTENSION_COMMAND_ID.ADD_BOOKMARK: {
       logEvent('runtime.onMessage addBookmark');
-      activeDialog.createBkmFromTag(message.parentId)
       await addBookmark({
         url: message.url,
         title: message.title,

@@ -16,7 +16,6 @@ import {
   getHistoryInfo,
 } from '../api/history-api.js'
 import {
-  activeDialog,
   extensionSettings,
   memo,
 } from '../api/structure/index.js'
@@ -102,7 +101,6 @@ export const tabsController = {
   },
   async onActivated({ tabId }) {
     logEvent('tabs.onActivated 00', tabId);
-    activeDialog.onTabChanged(tabId)
 
     if (memo.activeTabId !== tabId) {
       memo.previousTabId = memo.activeTabId;
