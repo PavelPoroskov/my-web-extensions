@@ -35,7 +35,7 @@ export const STORAGE_KEY_META = {
   },
   ADD_BOOKMARK_LIST_LIMIT: {
     storageKey: 'ADD_BOOKMARK_LIST_LIMIT', 
-    default: 30,
+    default: 35,
   },
   ADD_BOOKMARK_TAG_LENGTH: {
     storageKey: 'ADD_BOOKMARK_TAG_LENGTH', 
