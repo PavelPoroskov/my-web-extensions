@@ -32,7 +32,7 @@ async function mergeSubFolder(parentId) {
     const notUniqList = Object.entries(nameSet).filter(([, nodeList]) => nodeList.length > 1)
     const taskList = []
     for (const [, nodeList] of notUniqList) {
-        const sortedList = nodeList.toSorted((a, b) => a.title.localeCompare(b.title))
+        const sortedList = nodeList.toSorted((a, b) => b.title.localeCompare(a.title))
         const [firstNode, ...restNodeList] = sortedList
 
         for (const fromNode of restNodeList) {

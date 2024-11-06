@@ -1520,6 +1520,180 @@ async function updateActiveTab({ useCache=false, debugCaller } = {}) {
     });
   }
 }
+async function moveContent(fromFolderId, toFolderId) {
+    const nodeList = await browser.bookmarks.getChildren(fromFolderId)
+    
+    await Promise.all(nodeList.map(
+      ({ id }) => browser.bookmarks.move(id, { parentId: toFolderId }))
+    )
+}
+
+async function mergeSubFolder(parentId) {
+    const nodeList = await browser.bookmarks.getChildren(parentId)
+  
+    const filteredNodeList = nodeList
+      .filter(({ url }) => !url)
+
+    const nameSet = {}
+
+    for (const node of filteredNodeList) {
+        const name = node.title.toLowerCase().trim()
+
+        if (!nameSet[name]) {
+            nameSet[name] = [node]
+        } else {
+            nameSet[name].push(node)
+        }
+    }
+
+    const notUniqList = Object.entries(nameSet).filter(([, nodeList]) => nodeList.length > 1)
+    const taskList = []
+    for (const [, nodeList] of notUniqList) {
+        const sortedList = nodeList.toSorted((a, b) => b.title.localeCompare(a.title))
+        const [firstNode, ...restNodeList] = sortedList
+
+        for (const fromNode of restNodeList) {
+            taskList.push({ fromNode, toNode: firstNode })
+        }
+    }
+
+    await taskList.reduce(
+        (promiseChain, { fromNode, toNode }) => promiseChain.then(() => moveContent(fromNode.id, toNode.id)),
+        Promise.resolve(),
+    );
+    
+    await Promise.all(taskList.map(
+        ({ fromNode }) => browser.bookmarks.remove(fromNode.id)
+    ))
+}
+
+async function mergeFolders() {
+    await mergeSubFolder(BOOKMARKS_BAR_FOLDER_ID)
+    await mergeSubFolder(OTHER_BOOKMARKS_FOLDER_ID)
+}
+async function moveContent(fromFolderId, toFolderId) {
+    const nodeList = await browser.bookmarks.getChildren(fromFolderId)
+    const reversedNodeList = nodeList.toReversed()
+    
+    await Promise.all(reversedNodeList.map(
+      ({ id }) => browser.bookmarks.move(id, { parentId: toFolderId, index: 0 }))
+    )
+  }
+  
+async function moveNotDescriptiveFoldersToUnclassified() {
+    const unclassifiedId = await getUnclassifiedFolderId()
+
+    const nodeList = await browser.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
+    const folderList = nodeList
+      .filter(({ url }) => !url)
+      .filter(({ title }) => !isDescriptiveFolderTitle(title))
+  
+    // await Promise.all(folderList.map(
+    //   ({ id }) => moveContent(id, unclassifiedId)
+    // ))
+    await folderList.reduce(
+      (promiseChain, folderNode) => promiseChain.then(() => moveContent(folderNode.id, unclassifiedId)),
+      Promise.resolve(),
+    );
+  
+    await Promise.all(folderList.map(
+      ({ id }) => browser.bookmarks.remove(id)
+    ))
+}
+// eslint-disable-next-line no-unused-vars
+async function sortChildFolders(parentId) {
+    const nodeList = await browser.bookmarks.getChildren(parentId)
+  
+    const sortedNodeList = nodeList
+      .filter(({ url }) => !url)
+      .toSorted(({ title: a }, { title: b }) => a.toLowerCase().localeCompare(b.toLowerCase()))
+
+    async function placeFolder({ id, index }) {
+        const [node] = await browser.bookmarks.get(id)
+
+        if (node.index != index) {
+            await browser.bookmarks.move(id, { index })
+        }
+    }
+
+    await sortedNodeList.reduce(
+        (promiseChain, node, index) => promiseChain.then(() => placeFolder({ id: node.id, index })),
+        Promise.resolve(),
+    );
+}
+
+async function sortChildFoldersOp(parentId) {
+    // console.log('sortChildFoldersOp',  parentId)
+    const nodeList = await browser.bookmarks.getChildren(parentId)
+  
+    const sortedNodeList = nodeList
+      .filter(({ url }) => !url)
+      .toSorted(({ title: a }, { title: b }) => a.toLowerCase().localeCompare(b.toLowerCase()))
+
+    let minMoveIndex = -1
+
+    async function placeFolder({ node, index }) {
+        let nodeActual = node
+
+        if (0 <= minMoveIndex && minMoveIndex <= node.index) {
+            ([nodeActual] = await browser.bookmarks.get(node.id))
+        }
+
+        if (nodeActual.index != index) {
+            await browser.bookmarks.move(node.id, { index })
+            
+            if (minMoveIndex == -1) {
+                minMoveIndex = index
+            }
+        }
+    }
+
+    await sortedNodeList.reduce(
+        (promiseChain, node, index) => promiseChain.then(() => placeFolder({ node, index })),
+        Promise.resolve(),
+    );
+
+    // console.log('Sorted',  sortedNodeList.map(({ title }) => title))
+}
+
+async function sortSubtree({ id, recursively = false }) {
+    await sortChildFoldersOp(id)
+  
+    // if (!recursively) {
+    //     const nodeList2 = await browser.bookmarks.getChildren(id)
+    //     const filteredNodeList2 = nodeList2
+    //         .filter(({ url }) => !url)
+    //     const sortedNodeList2 = filteredNodeList2
+    //         .toSorted(({ title: a }, { title: b }) => a.toLowerCase().localeCompare(b.toLowerCase()))
+
+    //     const notSortedList = sortedNodeList2.filter((node, index) => node.id != filteredNodeList2[index].id)
+
+    //     if (notSortedList.length > 0) {
+    //         console.log('### sortFolders', id)
+    //         console.log('### notSortedList', notSortedList.length)
+    //         console.log(notSortedList)
+    //     }
+    // }
+
+    if (recursively) {
+        const nodeList = await browser.bookmarks.getChildren(id)
+        const folderList = nodeList.filter(({ url }) => !url)
+
+        await Promise.all(
+            folderList.map(
+                ({ id }) => sortFolders({ id, recursively })
+            )
+        )
+    }
+}
+  
+async function sortFolders() {
+    await sortSubtree({ id: BOOKMARKS_BAR_FOLDER_ID })
+    await sortSubtree({ id: OTHER_BOOKMARKS_FOLDER_ID })
+
+    // const nestedRootId = await getNestedRootFolderId()
+    // await sortSubtree({ id: nestedRootId, recursively: true })
+}
 async function getDoubles() {
   const doubleList = []
 
@@ -1995,98 +2169,6 @@ async function updateNestedFolders({ nestedRootId }) {
   }
 }
 
-async function sortChildren({ id, recursively = false }) {
-  const nodeList = await browser.bookmarks.getChildren(id)
-  // console.log('nodeList', nodeList);
-
-  const sortedList = nodeList
-    .filter(({ url }) => !url)
-    .map(({ id, index, title }) => ({ id, actualIndex: index, title }))
-    .toSorted(({ title: a }, { title: b }) => a.localeCompare(b))
-
-  // console.log('sortedList', sortedList);
-
-  // for (let index = 0; index < sortedList.length; index += 1) {
-  //   await browser.bookmarks.move(sortedList[index].id, { index })
-  // }
-
-  const STATE = {
-    SKIP_AFTER_START: 'SKIP_AFTER_START',
-    AFTER_MOVE: 'AFTER_MOVE',
-    SKIP_AFTER_MOVE: 'SKIP_AFTER_MOVE'
-  }
-
-  let nMove = 0
-  let state = STATE.SKIP_AFTER_START
-  let index = 0
-  let actualContinueIndex
-  while (index < sortedList.length) {
-    // console.log('state in', state, index, sortedList[index].actualIndex, mMove, sortedList[index].title);
-
-    switch (state) {
-      case STATE.SKIP_AFTER_START: {
-
-        if (sortedList[index].actualIndex !== index) {
-          await browser.bookmarks.move(sortedList[index].id, { index })
-          state = STATE.AFTER_MOVE
-          nMove += 1
-          // console.log('MOVE 1', sortedList[index].actualIndex, index, sortedList[index].title);
-        }
-        break
-      }
-      case STATE.AFTER_MOVE: {
-        const [node] = await browser.bookmarks.get(sortedList[index].id)
-
-        if (node.index === index) {
-          state = STATE.SKIP_AFTER_MOVE
-          actualContinueIndex = sortedList[index].actualIndex
-          // actualContinueIndex = node.index
-
-          // state = STATE.SKIP_AFTER_START
-        } else {
-          await browser.bookmarks.move(sortedList[index].id, { index })
-          state = STATE.AFTER_MOVE
-          nMove += 1
-          // console.log('MOVE 2', sortedList[index].actualIndex, index, sortedList[index].title);
-        }
-
-        break
-      }
-      case STATE.SKIP_AFTER_MOVE: {
-
-        // if (sortedList[index].actualIndex === actualContinueIndex + 1) {
-        if (sortedList[index].actualIndex > actualContinueIndex) {
-          state = STATE.SKIP_AFTER_MOVE
-          actualContinueIndex = sortedList[index].actualIndex
-        } else {
-          await browser.bookmarks.move(sortedList[index].id, { index })
-          state = STATE.AFTER_MOVE
-          nMove += 1
-          // console.log('MOVE 3', sortedList[index].actualIndex, index, sortedList[index].title);
-        }
-
-        break
-      }
-    }
-
-    index += 1
-  }
-
-  // console.log('Sorting mMove1 ', mMove);
-
-  if (recursively) {
-    await Promise.all(
-      sortedList.map(
-        ({ id }) => sortChildren({ id })
-      )
-    )
-  }
-
-  return {
-    nMove
-  }
-}
-
 // async function sortChildren2({ id, recursively = false }) {
 //   const nodeList = await browser.bookmarks.getChildren(id)
 
@@ -2137,34 +2219,6 @@ async function sortChildren({ id, recursively = false }) {
 //   }
 // }
 
-async function moveContent(fromFolderId, toFolderId) {
-  const nodeList = await browser.bookmarks.getChildren(fromFolderId)
-  const reversedNodeList = nodeList.toReversed()
-  
-  await Promise.all(reversedNodeList.map(
-    ({ id }) => browser.bookmarks.move(id, { parentId: toFolderId, index: 0 }))
-  )
-}
-
-async function moveNotDescriptiveFolderToUnclassified({ unclassifiedId }) {
-  const nodeList = await browser.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
-  const folderList = nodeList
-    .filter(({ url }) => !url)
-    .filter(({ title }) => !isDescriptiveFolderTitle(title))
-
-  // await Promise.all(folderList.map(
-  //   ({ id }) => moveContent(id, unclassifiedId)
-  // ))
-  await folderList.reduce(
-    (promiseChain, folderNode) => promiseChain.then(() => moveContent(folderNode.id, unclassifiedId)),
-    Promise.resolve(),
-  );
-
-  await Promise.all(folderList.map(
-    ({ id }) => browser.bookmarks.remove(id)
-  ))
-}
-
 async function flatBookmarks() {
   tagList.blockTagList(true)
 
@@ -2179,12 +2233,10 @@ async function flatBookmarks() {
     await flatBarFolder({ isMoveTodoToBarFolder })
     const { toCopyFolderById } = await flatOtherFolder({ nestedRootId, unclassifiedId, freeSuffix })
     await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
-
     await createNestedFolders({ toCopyFolderById, nestedRootId })
-    await moveNotDescriptiveFolderToUnclassified({ unclassifiedId })
-    await removeDoubleBookmarks()
 
     // MAYBE? delete empty folders
+
     if (isMoveTodoToBarFolder) {
       const childrenList = await browser.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
       const moveList = childrenList
@@ -2196,22 +2248,21 @@ async function flatBookmarks() {
           (node) => browser.bookmarks.move(node.id, { parentId: BOOKMARKS_BAR_FOLDER_ID })
         )
       ) 
-      await sortChildren({ id: BOOKMARKS_BAR_FOLDER_ID })
-      // TODO merge folders with the same name: case insensitive, in barfolder
     }
 
-    await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
-    // sort second time. my sorting algorithm has issue Not all item sorted for first pass
-    await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
-    // TODO merge folders with the same name: case insensitive, in otherfolder
+    await moveNotDescriptiveFoldersToUnclassified()
+    await sortFolders()
+    await mergeFolders()
+    await removeDoubleBookmarks()
 
     // MAYBE? delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
     //await updateNestedFolders({ nestedRootId })
-    await sortChildren({ id: nestedRootId, recursively: true })
+
   } finally {
     tagList.blockTagList(false)
   }
 }
+
 async function addBookmark({ url, title, parentId }) {
   await browser.bookmarks.create({
     index: 0,
