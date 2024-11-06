@@ -1,4 +1,4 @@
-import { flatBookmarks } from '../flat-structure-api.js'
+import { flatBookmarks } from '../../bookmark-list-ops/index.js'
 import {
   STORAGE_KEY,
 } from '../../constant/index.js';

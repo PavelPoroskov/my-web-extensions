@@ -18,7 +18,7 @@ import {
 } from '../api/log-api.js'
 import {
   removeDoubleBookmarks,
-} from '../api/removeDoubleBookmarks.api.js'
+} from '../bookmark-list-ops/index.js'
 import {
   extensionSettings,
 } from '../api/structure/index.js'

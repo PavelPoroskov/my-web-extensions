@@ -1,4 +1,4 @@
-import { ExtraMap } from './structure/index.js'
+import { ExtraMap } from '../api/structure/index.js'
 
 async function getDoubles() {
   const doubleList = []

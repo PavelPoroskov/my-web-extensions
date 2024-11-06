@@ -1,17 +1,25 @@
 import {
   removeDoubleBookmarks,
-} from './removeDoubleBookmarks.api.js';
+} from './removeDoubleBookmarks.js';
+import {
+  moveNotDescriptiveFoldersToUnclassified,
+} from './moveNotDescriptiveFolders.js';
+import {
+  mergeFolders,
+} from './mergeFolders.js';
+import {
+  sortFolders,
+} from './sortFolders.js';
 import {
   BOOKMARKS_BAR_FOLDER_ID,
   getOrCreateNestedRootFolderId,
   getOrCreateUnclassifiedFolderId,
-  isDescriptiveFolderTitle,
   OTHER_BOOKMARKS_FOLDER_ID,
-} from './special-folder.api.js';
+} from '../api/special-folder.api.js';
 import {
   ExtraMap,
   tagList,
-} from './structure/index.js';
+} from '../api/structure/index.js';
 
 async function getMaxUsedSuffix() {
   function getFoldersFromTree(tree) {
@@ -430,98 +438,6 @@ async function updateNestedFolders({ nestedRootId }) {
   }
 }
 
-async function sortChildren({ id, recursively = false }) {
-  const nodeList = await chrome.bookmarks.getChildren(id)
-  // console.log('nodeList', nodeList);
-
-  const sortedList = nodeList
-    .filter(({ url }) => !url)
-    .map(({ id, index, title }) => ({ id, actualIndex: index, title }))
-    .toSorted(({ title: a }, { title: b }) => a.localeCompare(b))
-
-  // console.log('sortedList', sortedList);
-
-  // for (let index = 0; index < sortedList.length; index += 1) {
-  //   await chrome.bookmarks.move(sortedList[index].id, { index })
-  // }
-
-  const STATE = {
-    SKIP_AFTER_START: 'SKIP_AFTER_START',
-    AFTER_MOVE: 'AFTER_MOVE',
-    SKIP_AFTER_MOVE: 'SKIP_AFTER_MOVE'
-  }
-
-  let nMove = 0
-  let state = STATE.SKIP_AFTER_START
-  let index = 0
-  let actualContinueIndex
-  while (index < sortedList.length) {
-    // console.log('state in', state, index, sortedList[index].actualIndex, mMove, sortedList[index].title);
-
-    switch (state) {
-      case STATE.SKIP_AFTER_START: {
-
-        if (sortedList[index].actualIndex !== index) {
-          await chrome.bookmarks.move(sortedList[index].id, { index })
-          state = STATE.AFTER_MOVE
-          nMove += 1
-          // console.log('MOVE 1', sortedList[index].actualIndex, index, sortedList[index].title);
-        }
-        break
-      }
-      case STATE.AFTER_MOVE: {
-        const [node] = await chrome.bookmarks.get(sortedList[index].id)
-
-        if (node.index === index) {
-          state = STATE.SKIP_AFTER_MOVE
-          actualContinueIndex = sortedList[index].actualIndex
-          // actualContinueIndex = node.index
-
-          // state = STATE.SKIP_AFTER_START
-        } else {
-          await chrome.bookmarks.move(sortedList[index].id, { index })
-          state = STATE.AFTER_MOVE
-          nMove += 1
-          // console.log('MOVE 2', sortedList[index].actualIndex, index, sortedList[index].title);
-        }
-
-        break
-      }
-      case STATE.SKIP_AFTER_MOVE: {
-
-        // if (sortedList[index].actualIndex === actualContinueIndex + 1) {
-        if (sortedList[index].actualIndex > actualContinueIndex) {
-          state = STATE.SKIP_AFTER_MOVE
-          actualContinueIndex = sortedList[index].actualIndex
-        } else {
-          await chrome.bookmarks.move(sortedList[index].id, { index })
-          state = STATE.AFTER_MOVE
-          nMove += 1
-          // console.log('MOVE 3', sortedList[index].actualIndex, index, sortedList[index].title);
-        }
-
-        break
-      }
-    }
-
-    index += 1
-  }
-
-  // console.log('Sorting mMove1 ', mMove);
-
-  if (recursively) {
-    await Promise.all(
-      sortedList.map(
-        ({ id }) => sortChildren({ id })
-      )
-    )
-  }
-
-  return {
-    nMove
-  }
-}
-
 // async function sortChildren2({ id, recursively = false }) {
 //   const nodeList = await chrome.bookmarks.getChildren(id)
 
@@ -572,34 +488,6 @@ async function sortChildren({ id, recursively = false }) {
 //   }
 // }
 
-async function moveContent(fromFolderId, toFolderId) {
-  const nodeList = await chrome.bookmarks.getChildren(fromFolderId)
-  const reversedNodeList = nodeList.toReversed()
-  
-  await Promise.all(reversedNodeList.map(
-    ({ id }) => chrome.bookmarks.move(id, { parentId: toFolderId, index: 0 }))
-  )
-}
-
-async function moveNotDescriptiveFolderToUnclassified({ unclassifiedId }) {
-  const nodeList = await chrome.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
-  const folderList = nodeList
-    .filter(({ url }) => !url)
-    .filter(({ title }) => !isDescriptiveFolderTitle(title))
-
-  // await Promise.all(folderList.map(
-  //   ({ id }) => moveContent(id, unclassifiedId)
-  // ))
-  await folderList.reduce(
-    (promiseChain, folderNode) => promiseChain.then(() => moveContent(folderNode.id, unclassifiedId)),
-    Promise.resolve(),
-  );
-
-  await Promise.all(folderList.map(
-    ({ id }) => chrome.bookmarks.remove(id)
-  ))
-}
-
 export async function flatBookmarks() {
   tagList.blockTagList(true)
 
@@ -614,12 +502,10 @@ export async function flatBookmarks() {
     await flatBarFolder({ isMoveTodoToBarFolder })
     const { toCopyFolderById } = await flatOtherFolder({ nestedRootId, unclassifiedId, freeSuffix })
     await moveLinksFromNestedRoot({ nestedRootId, unclassifiedId })
-
     await createNestedFolders({ toCopyFolderById, nestedRootId })
-    await moveNotDescriptiveFolderToUnclassified({ unclassifiedId })
-    await removeDoubleBookmarks()
 
     // MAYBE? delete empty folders
+
     if (isMoveTodoToBarFolder) {
       const childrenList = await chrome.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
       const moveList = childrenList
@@ -631,18 +517,16 @@ export async function flatBookmarks() {
           (node) => chrome.bookmarks.move(node.id, { parentId: BOOKMARKS_BAR_FOLDER_ID })
         )
       ) 
-      await sortChildren({ id: BOOKMARKS_BAR_FOLDER_ID })
-      // TODO merge folders with the same name: case insensitive, in barfolder
     }
 
-    await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
-    // sort second time. my sorting algorithm has issue Not all item sorted for first pass
-    await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
-    // TODO merge folders with the same name: case insensitive, in otherfolder
+    await moveNotDescriptiveFoldersToUnclassified()
+    await sortFolders()
+    await mergeFolders()
+    await removeDoubleBookmarks()
 
     // MAYBE? delete from "Other bookmarks/yy-bookmark-info--nested" folders that was deleted from first level folders
     //await updateNestedFolders({ nestedRootId })
-    await sortChildren({ id: nestedRootId, recursively: true })
+
   } finally {
     tagList.blockTagList(false)
   }
