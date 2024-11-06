@@ -32,7 +32,7 @@ async function sortChildFoldersOp(parentId) {
   
     const sortedNodeList = nodeList
       .filter(({ url }) => !url)
-      .toSorted(({ title: a }, { title: b }) => a.toLowerCase().localeCompare(b.toLowerCase()))
+      .toSorted(({ title: a }, { title: b }) => a.localeCompare(b))
 
     let minMoveIndex = -1
 
