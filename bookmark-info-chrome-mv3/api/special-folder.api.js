@@ -45,16 +45,10 @@ function memoize(fnGetValue) {
   }
 }
 
-// const NESTED_ROOT_TITLE_OLD = 'yy-bookmark-info--nested'
-const NESTED_ROOT_TITLE = 'zz-bookmark-info--nested'
-
 // const UNCLASSIFIED_TITLE_OLD = 'unclassified'
 const UNCLASSIFIED_TITLE = 'zz-bookmark-info--unclassified'
 
-export const getOrCreateNestedRootFolderId = async () => getOrCreateFolderByTitleInRoot(NESTED_ROOT_TITLE)
 export const getOrCreateUnclassifiedFolderId = async () => getOrCreateFolderByTitleInRoot(UNCLASSIFIED_TITLE)
-
-export const getNestedRootFolderId = memoize(async () => getFolderByTitleInRoot(NESTED_ROOT_TITLE))
 export const getUnclassifiedFolderId = memoize(async () => getFolderByTitleInRoot(UNCLASSIFIED_TITLE))
 
 export const isDescriptiveFolderTitle = (title) => !!title 

@@ -4,7 +4,6 @@ import {
 import {
   OTHER_BOOKMARKS_FOLDER_ID,
   BOOKMARKS_BAR_FOLDER_ID,
-  getNestedRootFolderId,
   getUnclassifiedFolderId,
   isDescriptiveFolderTitle,
 } from './special-folder.api.js'
@@ -77,16 +76,14 @@ async function filterFolders(idList, isFlatStructure) {
 
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {
-    const nestedRootFolderId = await getNestedRootFolderId()
     const unclassifiedFolderId = await getUnclassifiedFolderId()
-    const specialFolderSet = new Set([nestedRootFolderId, unclassifiedFolderId])
 
     filteredFolderList = filteredFolderList
       .filter(
         ({ parentId }) => parentId === OTHER_BOOKMARKS_FOLDER_ID || parentId === BOOKMARKS_BAR_FOLDER_ID
       )
       .filter(
-        ({ id }) => !specialFolderSet.has(id)
+        ({ id }) => id !== unclassifiedFolderId
       )
   }
 

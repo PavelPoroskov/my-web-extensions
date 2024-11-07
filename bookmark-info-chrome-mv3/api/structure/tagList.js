@@ -4,8 +4,6 @@ import {
   getRecentTagObj,
 } from '../recent-api.js'
 import {
-  // OTHER_BOOKMARKS_FOLDER_ID,
-  getNestedRootFolderId,
   getUnclassifiedFolderId,
   isDescriptiveFolderTitle,
 } from '../special-folder.api.js'
@@ -158,11 +156,7 @@ class TagList {
       //   return
       // }
 
-      const nestedRootFolderId = await getNestedRootFolderId()
       const unclassifiedFolderId = await getUnclassifiedFolderId()
-      if (nestedRootFolderId && folderNode.id === nestedRootFolderId) {
-        return
-      }
       if (unclassifiedFolderId && folderNode.id === unclassifiedFolderId) {
         return
       }
