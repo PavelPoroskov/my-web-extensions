@@ -17,9 +17,6 @@ import {
   logEvent,
 } from '../api/log-api.js'
 import {
-  removeDoubleBookmarks,
-} from '../bookmark-list-ops/index.js'
-import {
   extensionSettings,
 } from '../api/structure/index.js'
 import {
@@ -151,27 +148,6 @@ export async function onIncomingMessage (message, sender) {
       chrome.runtime.sendMessage({
         command: EXTENSION_COMMAND_ID.FLAT_BOOKMARKS_RESULT,
         success,
-      });
-
-      break
-    }
-    case EXTENSION_COMMAND_ID.OPTIONS_ASKS_DELETE_DOUBLES: {
-      logEvent('runtime.onMessage OPTIONS_ASKS_DELETE_DOUBLES');
-
-      let success
-      let nRemovedDoubles
-
-      try {
-        ({ nRemovedDoubles } = await removeDoubleBookmarks())
-        success = true
-      } catch (e) {
-        console.log('Error on flatting bookmarks', e)
-      }
-      
-      chrome.runtime.sendMessage({
-        command: EXTENSION_COMMAND_ID.DELETE_DOUBLES_RESULT,
-        success,
-        nRemovedDoubles,
       });
 
       break

@@ -5,8 +5,6 @@ const EXTENSION_COMMAND_ID = {
   DATA_FOR_OPTIONS: 'DATA_FOR_OPTIONS',
   OPTIONS_ASKS_FLAT_BOOKMARKS: 'OPTIONS_ASKS_FLAT_BOOKMARKS',
   FLAT_BOOKMARKS_RESULT: 'FLAT_BOOKMARKS_RESULT',
-  OPTIONS_ASKS_DELETE_DOUBLES: 'OPTIONS_ASKS_DELETE_DOUBLES',
-  DELETE_DOUBLES_RESULT: 'DELETE_DOUBLES_RESULT',
   OPTIONS_ASKS_SAVE: 'OPTIONS_ASKS_SAVE',
 }
 
@@ -141,20 +139,6 @@ function restoreOptions(settings) {
   element = document.querySelector(domId)
   element.checked = settings[optionId];
 
-  optionId = 'DELETE_DOUBLES';
-  domId = `#${optionId}`
-  element = document.querySelector(domId)
-  element.addEventListener('click', async () => {
-    await chrome.runtime.sendMessage({
-      command: EXTENSION_COMMAND_ID.OPTIONS_ASKS_DELETE_DOUBLES,
-    });
-    const text = 'Operation started'
-    const value = document.querySelector('#DELETE_DOUBLES_RESULT');
-    value.textContent = text;
-
-    await wait(50)
-  });
-
   optionId = STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST;
   domId = `#${optionId}`
   element = document.querySelector(domId)
@@ -191,16 +175,6 @@ chrome.runtime.onMessage.addListener(async (message) => {
       const element = document.querySelector(domId)
       element.checked = element.checked || !!message.success;
     
-      await wait(50)
-
-      break
-    }
-    case EXTENSION_COMMAND_ID.DELETE_DOUBLES_RESULT: {
-      const text = message.success 
-        ? `Operation completed successfully. Deleted ${message.nRemovedDoubles}`
-        : 'Operation failed'
-      const value = document.querySelector('#DELETE_DOUBLES_RESULT');
-      value.textContent = text;
       await wait(50)
 
       break
