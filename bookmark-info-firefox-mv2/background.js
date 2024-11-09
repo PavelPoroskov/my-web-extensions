@@ -91,8 +91,6 @@ const BROWSER_SPECIFIC = Object.fromEntries(
   DATA_FOR_OPTIONS: 'DATA_FOR_OPTIONS',
   OPTIONS_ASKS_FLAT_BOOKMARKS: 'OPTIONS_ASKS_FLAT_BOOKMARKS',
   FLAT_BOOKMARKS_RESULT: 'FLAT_BOOKMARKS_RESULT',
-  OPTIONS_ASKS_DELETE_DOUBLES: 'OPTIONS_ASKS_DELETE_DOUBLES',
-  DELETE_DOUBLES_RESULT: 'DELETE_DOUBLES_RESULT',
   OPTIONS_ASKS_SAVE: 'OPTIONS_ASKS_SAVE',
 }
 
@@ -2439,27 +2437,6 @@ async function closeDuplicateTabs() {
       browser.runtime.sendMessage({
         command: EXTENSION_COMMAND_ID.FLAT_BOOKMARKS_RESULT,
         success,
-      });
-
-      break
-    }
-    case EXTENSION_COMMAND_ID.OPTIONS_ASKS_DELETE_DOUBLES: {
-      logEvent('runtime.onMessage OPTIONS_ASKS_DELETE_DOUBLES');
-
-      let success
-      let nRemovedDoubles
-
-      try {
-        ({ nRemovedDoubles } = await removeDoubleBookmarks())
-        success = true
-      } catch (e) {
-        console.log('Error on flatting bookmarks', e)
-      }
-      
-      browser.runtime.sendMessage({
-        command: EXTENSION_COMMAND_ID.DELETE_DOUBLES_RESULT,
-        success,
-        nRemovedDoubles,
       });
 
       break
