@@ -66,6 +66,10 @@ export const STORAGE_KEY_META = {
     storageKey: 'FORCE_FLAT_FOLDER_STRUCTURE', 
     default: false,
   },
+  HIDE_TAG_HEADER_ON_PRINTING: {
+    storageKey: 'HIDE_TAGS_ON_PRINTING', 
+    default: false,
+  },
 }
 
 export const STORAGE_KEY = Object.fromEntries(

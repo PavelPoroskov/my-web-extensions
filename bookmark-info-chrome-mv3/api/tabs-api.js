@@ -58,6 +58,7 @@ async function updateTagsForTab({ tabId }) {
     tagList: tagList.list,
     isShowTagList: settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
     tagLength: settings[STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH],
+    isHideSemanticHtmlTagsOnPrinting: settings[STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING],
   }
   logSendEvent('updateTagsForTabTask()', tabId, message);
   await chrome.tabs.sendMessage(tabId, message)

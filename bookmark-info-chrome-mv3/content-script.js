@@ -53,7 +53,22 @@ const log = SHOW_LOG ? console.log : () => {};
   const bkmInfoStyle1Id = 'bkm-info--style1';
   const bkmInfoStyle2Id = 'bkm-info--style2';
 
-  function getStyleText({ tagLength }) {
+  function getStyleText({ tagLength, isHideSemanticHtmlTagsOnPrinting }) {
+    let semanticTagsStyle = ''
+
+    if (isHideSemanticHtmlTagsOnPrinting) {
+      semanticTagsStyle = `
+      @media print {
+        header, footer, aside, nav {
+            display: none;
+        }
+        .blockSpoiler, .blockSpoiler-content {
+          display: none;
+        }
+      }
+      `
+    }
+
     return (
 `
 #${bkmInfoRootId} {
@@ -78,6 +93,7 @@ const log = SHOW_LOG ? console.log : () => {};
       display: none;
   }
 }
+${semanticTagsStyle}
 .bkm-info--row {
   display: flex;
   position: relative;
@@ -292,6 +308,7 @@ const log = SHOW_LOG ? console.log : () => {};
   }
 
   let storedTagLength = 8;
+  let storedIsHideSemanticHtmlTagsOnPrinting = false;
 
   async function deleteBookmark(event) {
     log('deleteBookmark 00');
@@ -444,6 +461,7 @@ const log = SHOW_LOG ? console.log : () => {};
     const inTagList = input.tagList || []
     const isShowTagList = input.isShowTagList || false
     const tagLength = input.tagLength || 8
+    const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting || false
     
     log('showBookmarkInfo 00');
     const usedParentIdSet = new Set(bookmarkInfoList.map(({ parentId }) => parentId))
@@ -461,7 +479,7 @@ const log = SHOW_LOG ? console.log : () => {};
       log('showBookmarkInfo 22 2');
       const rootStyle = document.createElement('style');
       rootStyle.setAttribute('id', bkmInfoStyle1Id);
-      const textNodeStyle = document.createTextNode(getStyleText({ tagLength }));
+      const textNodeStyle = document.createTextNode(getStyleText({ tagLength, isHideSemanticHtmlTagsOnPrinting }));
       rootStyle.appendChild(textNodeStyle);
 
       rootDiv = document.createElement('div');
@@ -482,11 +500,12 @@ const log = SHOW_LOG ? console.log : () => {};
       rootStyle.insertAdjacentElement('afterend', rootStyle2);     
       rootStyle2.insertAdjacentElement('afterend', rootDiv);    
     } else {
-      if (tagLength !== storedTagLength ) {
+      if (tagLength !== storedTagLength || isHideSemanticHtmlTagsOnPrinting !== storedIsHideSemanticHtmlTagsOnPrinting) {
         storedTagLength = tagLength
+        storedIsHideSemanticHtmlTagsOnPrinting = isHideSemanticHtmlTagsOnPrinting
 
         const rootStyle1 = document.getElementById(bkmInfoStyle1Id);
-        const textNodeStyle1 = document.createTextNode(getStyleText({ tagLength }));
+        const textNodeStyle1 = document.createTextNode(getStyleText({ tagLength, isHideSemanticHtmlTagsOnPrinting }));
         rootStyle1.replaceChild(textNodeStyle1, rootStyle1.firstChild);
 
         const rootStyle2 = document.getElementById(bkmInfoStyle2Id);
