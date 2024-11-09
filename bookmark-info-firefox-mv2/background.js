@@ -1666,6 +1666,7 @@ async function flatFolders() {
 }
 
 async function mergeSubFolder(parentId) {
+    // console.log('### mergeSubFolder 00,', parentId)
     const nodeList = await browser.bookmarks.getChildren(parentId)
   
     const filteredNodeList = nodeList
@@ -1682,6 +1683,7 @@ async function mergeSubFolder(parentId) {
             nameSet[name].push(node)
         }
     }
+    // console.log('### mergeSubFolder 11: nameSet', nameSet)
 
     const notUniqList = Object.entries(nameSet).filter(([, nodeList]) => nodeList.length > 1)
     const taskList = []
@@ -1693,6 +1695,7 @@ async function mergeSubFolder(parentId) {
             taskList.push({ fromNode, toNode: firstNode })
         }
     }
+    // console.log('### mergeSubFolder 22: taskList', taskList)
 
     await taskList.reduce(
         (promiseChain, { fromNode, toNode }) => promiseChain.then(() => moveContent(fromNode.id, toNode.id)),
@@ -1700,7 +1703,7 @@ async function mergeSubFolder(parentId) {
     );
     
     await Promise.all(taskList.map(
-        ({ fromNode }) => browser.bookmarks.remove(fromNode.id)
+        ({ fromNode }) => browser.bookmarks.removeTree(fromNode.id)
     ))
 }
 
@@ -1732,7 +1735,7 @@ async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
   );
 
   await Promise.all(folderList.map(
-    ({ id }) => browser.bookmarks.remove(id)
+    ({ id }) => browser.bookmarks.removeTree(id)
   ))
 }
 
@@ -1743,12 +1746,15 @@ async function moveNotDescriptiveFoldersToUnclassified() {
   await moveNotDescriptiveFolders({ fromId: OTHER_BOOKMARKS_FOLDER_ID, unclassifiedId })
 }
 async function moveRootBookmarks({ fromId, unclassifiedId }) {
+  console.log('### moveRootBookmarks 00,', fromId)
   const nodeList = await browser.bookmarks.getChildren(fromId)
   const bkmList = nodeList
     .filter(({ url }) => url)
+    .filter(({ url }) => !url.startsWith('place:'))
+  console.log('### moveRootBookmarks bkmList,', bkmList)
 
   await Promise.all(bkmList.map(
-    (id) => browser.bookmarks.move(id, { parentId: unclassifiedId })
+    ({ id }) => browser.bookmarks.move(id, { parentId: unclassifiedId })
   ))    
 }
 
@@ -1934,8 +1940,8 @@ async function sortChildren(parentId) {
 }
 
 async function sortFolders() {
-    await sortChildren({ id: BOOKMARKS_BAR_FOLDER_ID })
-    await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
+    await sortChildren(BOOKMARKS_BAR_FOLDER_ID)
+    await sortChildren(OTHER_BOOKMARKS_FOLDER_ID)
 }
 async function flatBookmarks() {
   tagList.blockTagList(true)
