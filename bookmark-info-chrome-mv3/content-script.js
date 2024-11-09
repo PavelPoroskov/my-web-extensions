@@ -73,6 +73,11 @@ const log = SHOW_LOG ? console.log : () => {};
   letter-spacing: normal;
   width: ${tagLength}ch;
 }
+@media print {
+  #${bkmInfoRootId} {
+      display: none;
+  }
+}
 .bkm-info--row {
   display: flex;
   position: relative;
