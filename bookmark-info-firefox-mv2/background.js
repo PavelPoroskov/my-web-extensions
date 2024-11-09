@@ -181,6 +181,10 @@ const STORAGE_KEY_META = {
     storageKey: 'FORCE_FLAT_FOLDER_STRUCTURE', 
     default: false,
   },
+  HIDE_TAG_HEADER_ON_PRINTING: {
+    storageKey: 'HIDE_TAGS_ON_PRINTING', 
+    default: false,
+  },
 }
 
 const STORAGE_KEY = Object.fromEntries(
@@ -260,7 +264,7 @@ class DebounceQueue {
   run({ key, fn, options }) {
     if (!this.tasks[key]) {
       logPromiseQueue(' PromiseQueue: first call', key, options)
-      this.tasks[key] = debounce(fn, 30)
+      this.tasks[key] = debounce(fn, 40)
     } else {
       logPromiseQueue(' PromiseQueue: second call', key, options)
     }
@@ -493,6 +497,7 @@ logSettings('IMPORT END', 'memo.js', new Date().toISOString())
       STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
       STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
       STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
+      STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING,
       STORAGE_KEY.CLEAR_URL,
       STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
       STORAGE_KEY.SHOW_BOOKMARK_TITLE,
@@ -1432,6 +1437,7 @@ async function updateTagsForTab({ tabId }) {
     tagList: tagList.list,
     isShowTagList: settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
     tagLength: settings[STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH],
+    isHideSemanticHtmlTagsOnPrinting: settings[STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING],
   }
   logSendEvent('updateTagsForTabTask()', tabId, message);
   await browser.tabs.sendMessage(tabId, message)
@@ -1746,12 +1752,12 @@ async function moveNotDescriptiveFoldersToUnclassified() {
   await moveNotDescriptiveFolders({ fromId: OTHER_BOOKMARKS_FOLDER_ID, unclassifiedId })
 }
 async function moveRootBookmarks({ fromId, unclassifiedId }) {
-  console.log('### moveRootBookmarks 00,', fromId)
+  // console.log('### moveRootBookmarks 00,', fromId)
   const nodeList = await browser.bookmarks.getChildren(fromId)
   const bkmList = nodeList
     .filter(({ url }) => url)
     .filter(({ url }) => !url.startsWith('place:'))
-  console.log('### moveRootBookmarks bkmList,', bkmList)
+  // console.log('### moveRootBookmarks bkmList,', bkmList)
 
   await Promise.all(bkmList.map(
     ({ id }) => browser.bookmarks.move(id, { parentId: unclassifiedId })
@@ -2499,6 +2505,7 @@ async function closeDuplicateTabs() {
         // STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP, // taglist
         // STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED, // session, taglist
         STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
+        STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING,
         STORAGE_KEY.CLEAR_URL,
         STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
         STORAGE_KEY.SHOW_BOOKMARK_TITLE,

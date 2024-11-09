@@ -143,6 +143,12 @@ function restoreOptions(settings) {
   element = document.querySelector(domId)
   element.value = settings[optionId];
   element.addEventListener('input', makeSaveInputHandler(optionId) );
+
+  optionId = STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.checked = settings[optionId];
+  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 }
 
 let clearUrlTargetList
