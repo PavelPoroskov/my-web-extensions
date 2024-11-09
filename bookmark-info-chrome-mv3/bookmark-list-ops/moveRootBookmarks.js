@@ -5,12 +5,15 @@ import {
 } from '../api/special-folder.api.js';
 
 async function moveRootBookmarks({ fromId, unclassifiedId }) {
+  // console.log('### moveRootBookmarks 00,', fromId)
   const nodeList = await chrome.bookmarks.getChildren(fromId)
   const bkmList = nodeList
     .filter(({ url }) => url)
+    .filter(({ url }) => !url.startsWith('place:'))
+  // console.log('### moveRootBookmarks bkmList,', bkmList)
 
   await Promise.all(bkmList.map(
-    (id) => chrome.bookmarks.move(id, { parentId: unclassifiedId })
+    ({ id }) => chrome.bookmarks.move(id, { parentId: unclassifiedId })
   ))    
 }
 

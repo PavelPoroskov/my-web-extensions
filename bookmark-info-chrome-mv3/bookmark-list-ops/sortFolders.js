@@ -92,6 +92,6 @@ async function sortChildren(parentId) {
 }
 
 export async function sortFolders() {
-    await sortChildren({ id: BOOKMARKS_BAR_FOLDER_ID })
-    await sortChildren({ id: OTHER_BOOKMARKS_FOLDER_ID })
+    await sortChildren(BOOKMARKS_BAR_FOLDER_ID)
+    await sortChildren(OTHER_BOOKMARKS_FOLDER_ID)
 }
