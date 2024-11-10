@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Bookmark Info",
-  "version": "2.10.19",
+  "version": "2.10.20",
   "description": "The extension improves the browser's capabilities for working with bookmarks",
-  "homepage_url": "https://github.com/PavelPoroskov/my-web-extensions",
+  "homepage_url": "https://github.com/PavelPoroskov/my-web-extensions/",
   "permissions": [
     "bookmarks",
     "contextMenus",
