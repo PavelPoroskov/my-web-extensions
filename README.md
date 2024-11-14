@@ -24,10 +24,10 @@ https://addons.mozilla.org/en-US/firefox/addon/bookmark-info/
 
 ## How to install extension to every browser profile using policies.  
 ### Instruction for Linux. 
-https://github.com/PavelPoroskov/utils/blob/master/browser-policies/commands.txt
+https://github.com/PavelPoroskov/my-scripts/blob/main/browser-policies/browser-policies-commands.txt  
 
 policies for Firefox  
-https://github.com/PavelPoroskov/utils/blob/master/browser-policies/policies.json  
+https://github.com/PavelPoroskov/my-scripts/blob/main/browser-policies/policies.json  
 
 policies for Chrome/Chromium  
-https://github.com/PavelPoroskov/utils/blob/master/browser-policies/my-chrome-policy.json
+https://github.com/PavelPoroskov/my-scripts/blob/main/browser-policies/my-chrome-policy.json  
