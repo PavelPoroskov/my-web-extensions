@@ -9,7 +9,7 @@ export const memo = {
   previousTabId: '',
   activeTabId: '',
   activeTabUrl: '',
-  isActiveTabBookmarkManager: false,
+  isChromeBookmarkManagerTabActive: false,
 
   cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
   // cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),

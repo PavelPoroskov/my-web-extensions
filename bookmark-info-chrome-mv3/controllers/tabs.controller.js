@@ -113,7 +113,7 @@ export const tabsController = {
       if (Tab) {
         logDebug('tabs.onActivated 11', Tab.index, tabId, Tab.url);
         memo.activeTabUrl = Tab.url
-        memo.isActiveTabBookmarkManager = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
+        memo.isChromeBookmarkManagerTabActive = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
       }
 
       // updateTab({

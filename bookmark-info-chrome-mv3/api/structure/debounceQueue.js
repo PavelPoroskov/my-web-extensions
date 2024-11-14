@@ -23,7 +23,7 @@ function debounce(func, timeout = 300){
 class DebounceQueue {
   constructor () {
     this.tasks = {};
-    this.callTime = {};
+    this.lastCallTimeMap = new Map();
   }
 
   run({ key, fn, options }) {
@@ -34,15 +34,23 @@ class DebounceQueue {
       logPromiseQueue(' PromiseQueue: second call', key, options)
     }
     this.tasks[key](options);
-    this.callTime[key] = Date.now();
+    this.lastCallTimeMap.set(key, Date.now())
 
-    const expireLimit = Date.now() - 60000;
-    Object.entries(this.callTime)
-      .filter(([, callTimeItem]) => callTimeItem < expireLimit)
-      .forEach(([key]) => {
-        delete this.callTime[key]
-        delete this.tasks[key]
-      })
+    const expireLimit = Date.now() - 5000;
+    const deleteKeyList = []
+
+    for (const [testKey, lastCallTime] of this.lastCallTimeMap.entries()) {
+      if (lastCallTime < expireLimit) {
+        deleteKeyList.push(testKey)
+      } else {
+        break
+      }
+    }
+
+    deleteKeyList.forEach((deleteKey) => {
+      delete this.tasks[deleteKey]
+      this.lastCallTimeMap.delete(deleteKey)
+    })
   }
 }
 

@@ -23,8 +23,8 @@ const log = SHOW_LOG ? console.log : () => {};
   // TODO-DOUBLE remove duplication in CONTENT_SCRIPT_COMMAND_ID: command-id.js and content-scripts.js
   const CONTENT_SCRIPT_COMMAND_ID = {
     BOOKMARK_INFO: 'BOOKMARK_INFO',
-    HISTORY_INFO: 'HISTORY_INFO',
-    TAGS_INFO: 'TAGS_INFO',
+    // HISTORY_INFO: 'HISTORY_INFO',
+    // TAGS_INFO: 'TAGS_INFO',
     CLEAR_URL: 'CLEAR_URL',
   }
 
@@ -744,9 +744,9 @@ ${semanticTagsStyle}
   chrome.runtime.onMessage.addListener((message) => {
     log('chrome.runtime.onMessage: ', message);
     switch (message.command) {
-      case CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO: 
-      case CONTENT_SCRIPT_COMMAND_ID.TAGS_INFO: 
-      case CONTENT_SCRIPT_COMMAND_ID.HISTORY_INFO: {
+      // case CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO: 
+      // case CONTENT_SCRIPT_COMMAND_ID.TAGS_INFO: 
+      case CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO: {
         showInHtmlSingleTaskQueue.addUpdate(message)
         break
       }

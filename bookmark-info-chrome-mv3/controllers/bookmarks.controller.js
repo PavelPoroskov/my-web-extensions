@@ -97,7 +97,7 @@ export const bookmarksController = {
         let isReplaceMoveToCreate = false
 
         if (IS_BROWSER_CHROME) {
-          isReplaceMoveToCreate = !memo.isActiveTabBookmarkManager
+          isReplaceMoveToCreate = !memo.isChromeBookmarkManagerTabActive
         } else if (IS_BROWSER_FIREFOX) {
           const childrenList = await chrome.bookmarks.getChildren(parentId)
           const lastIndex = childrenList.length - 1
