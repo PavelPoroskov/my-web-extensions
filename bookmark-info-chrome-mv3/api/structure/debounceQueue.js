@@ -29,7 +29,7 @@ class DebounceQueue {
   run({ key, fn, options }) {
     if (!this.tasks[key]) {
       logPromiseQueue(' PromiseQueue: first call', key, options)
-      this.tasks[key] = debounce(fn, 40)
+      this.tasks[key] = debounce(fn, 30)
     } else {
       logPromiseQueue(' PromiseQueue: second call', key, options)
     }
