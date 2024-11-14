@@ -258,26 +258,34 @@ const logSettings = LOG_CONFIG.SHOW_SETTINGS ? makeLogWithPrefix('SETTINGS') : (
 class DebounceQueue {
   constructor () {
     this.tasks = {};
-    this.callTime = {};
+    this.lastCallTimeMap = new Map();
   }
 
   run({ key, fn, options }) {
     if (!this.tasks[key]) {
       logPromiseQueue(' PromiseQueue: first call', key, options)
-      this.tasks[key] = debounce(fn, 40)
+      this.tasks[key] = debounce(fn, 30)
     } else {
       logPromiseQueue(' PromiseQueue: second call', key, options)
     }
     this.tasks[key](options);
-    this.callTime[key] = Date.now();
+    this.lastCallTimeMap.set(key, Date.now())
 
-    const expireLimit = Date.now() - 60000;
-    Object.entries(this.callTime)
-      .filter(([, callTimeItem]) => callTimeItem < expireLimit)
-      .forEach(([key]) => {
-        delete this.callTime[key]
-        delete this.tasks[key]
-      })
+    const expireLimit = Date.now() - 5000;
+    const deleteKeyList = []
+
+    for (const [testKey, lastCallTime] of this.lastCallTimeMap.entries()) {
+      if (lastCallTime < expireLimit) {
+        deleteKeyList.push(testKey)
+      } else {
+        break
+      }
+    }
+
+    deleteKeyList.forEach((deleteKey) => {
+      delete this.tasks[deleteKey]
+      this.lastCallTimeMap.delete(deleteKey)
+    })
   }
 }
 
@@ -454,7 +462,7 @@ const memo = {
   previousTabId: '',
   activeTabId: '',
   activeTabUrl: '',
-  isActiveTabBookmarkManager: false,
+  isChromeBookmarkManagerTabActive: false,
 
   cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
   // cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
@@ -1405,9 +1413,11 @@ async function getHistoryInfo({ url, useCache=false }) {
     !extensionSettings.isActual() && extensionSettings.restoreFromStorage().then(() => tagList.readFromStorage()),
   ])
 }
-async function updateBookmarksForTabTask({ tabId, url, useCache=false }) {
-  log(' updateBookmarksForTabTask() 00', tabId, url, useCache)
+async function updateTabTask({ tabId, url, useCache=false }) {
+  log(' updateTabTask() 00', tabId, url, useCache)
+  await initExtension()
   const settings = await extensionSettings.get()
+
   let actualUrl = url
 
   if (settings[STORAGE_KEY.CLEAR_URL]) {
@@ -1418,74 +1428,59 @@ async function getHistoryInfo({ url, useCache=false }) {
     }
   } 
 
-  const bookmarkInfo = await getBookmarkInfoUni({ url: actualUrl, useCache });
+  let visitsData
+  const isShowVisits = settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT]
+
+  const [
+    bookmarkInfo,
+    visitInfo,
+  ] = await Promise.all([
+    getBookmarkInfoUni({ url: actualUrl, useCache }),
+    isShowVisits && getHistoryInfo({ url: actualUrl, useCache }),
+  ])
+
+  if (isShowVisits) {
+    visitsData = {
+      visitList: visitInfo.visitList,
+    }  
+  }
 
   const message = {
     command: CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO,
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     showLayer: settings[STORAGE_KEY.SHOW_PATH_LAYERS],
     isShowTitle: settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
-  }
-  logSendEvent('updateBookmarksForTabTask()', tabId, message);
-  await browser.tabs.sendMessage(tabId, message)
-}
-async function updateTagsForTab({ tabId }) {
-  const settings = await extensionSettings.get()
-
-  const message = {
-    command: CONTENT_SCRIPT_COMMAND_ID.TAGS_INFO,
+    // visits history
+    ...visitsData,
+    // recent list
     tagList: tagList.list,
     isShowTagList: settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
     tagLength: settings[STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH],
+    // page settings
     isHideSemanticHtmlTagsOnPrinting: settings[STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING],
   }
-  logSendEvent('updateTagsForTabTask()', tabId, message);
+  logSendEvent('updateTabTask()', tabId, message);
   await browser.tabs.sendMessage(tabId, message)
     // eslint-disable-next-line no-unused-vars
     .catch((er) => {
-      // console.log('Failed to send tagInfo to tab', tabId, ' Ignoring ', er)
+      // console.log('Failed to send bookmarkInfoTo to tab', tabId, ' Ignoring ', er)
     })
-}
-async function updateVisitsForTabTask({ tabId, url, useCache=false }) {
-  log('updateVisitsForTabTask(', tabId, useCache, url);
-
-  const visitInfo = await getHistoryInfo({ url, useCache })
-
-  const message = {
-    command: CONTENT_SCRIPT_COMMAND_ID.HISTORY_INFO,
-    visitList: visitInfo.visitList,
-  }
-  logSendEvent('updateVisitsForTabTask()', tabId, message);
-  
-  return browser.tabs.sendMessage(tabId, message)
 }
 
 async function updateTab({ tabId, url, useCache=false, debugCaller }) {
+  
   if (url && isSupportedProtocol(url)) {
-
-    await initExtension()
-    const settings = await extensionSettings.get()
-
+  
     log(`${debugCaller} -> updateTab() useCache`, useCache);
     debounceQueue.run({
       key: `${tabId}`,
-      fn: updateBookmarksForTabTask,
+      fn: updateTabTask,
       options: {
         tabId,
         url,
         useCache
       },
     });
-
-    if (settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT]) {
-      updateVisitsForTabTask({
-        tabId,
-        url,
-        useCache
-      })
-    }
-
-    await updateTagsForTab({ tabId });
   }
 }
 
@@ -1499,7 +1494,7 @@ async function updateActiveTab({ useCache=false, debugCaller } = {}) {
     if (Tab) {
       memo.activeTabId = Tab.id
       memo.activeTabUrl = Tab.url
-      memo.isActiveTabBookmarkManager = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
+      memo.isChromeBookmarkManagerTabActive = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
     }
   }
 
@@ -2248,7 +2243,7 @@ async function closeDuplicateTabs() {
         let isReplaceMoveToCreate = false
 
         if (IS_BROWSER_CHROME) {
-          isReplaceMoveToCreate = !memo.isActiveTabBookmarkManager
+          isReplaceMoveToCreate = !memo.isChromeBookmarkManagerTabActive
         } else if (IS_BROWSER_FIREFOX) {
           const childrenList = await browser.bookmarks.getChildren(parentId)
           const lastIndex = childrenList.length - 1
@@ -2611,7 +2606,7 @@ async function closeDuplicateTabs() {
       if (Tab) {
         logDebug('tabs.onActivated 11', Tab.index, tabId, Tab.url);
         memo.activeTabUrl = Tab.url
-        memo.isActiveTabBookmarkManager = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
+        memo.isChromeBookmarkManagerTabActive = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
       }
 
       // updateTab({

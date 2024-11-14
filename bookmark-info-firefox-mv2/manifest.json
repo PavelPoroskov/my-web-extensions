@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Bookmark Info",
-  "version": "2.10.19",
+  "version": "2.10.20",
   "browser_specific_settings": {
     "gecko": {
       "id": "boomark-info0@paulprs.net"
