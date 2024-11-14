@@ -1,3 +1,7 @@
+node tools/mv-changes-to-firefox.mjs
+
+./deploy.sh
+
 npm install --global web-ext
 
 node tools/mv-changes-to-firefox.mjs
