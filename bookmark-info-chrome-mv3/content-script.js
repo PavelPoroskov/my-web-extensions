@@ -87,6 +87,7 @@ const log = SHOW_LOG ? console.log : () => {};
   line-height: 1.2;
   letter-spacing: normal;
   width: ${tagLength}ch;
+  margin: 0;
 }
 @media print {
   #${bkmInfoRootId} {
@@ -99,6 +100,7 @@ ${semanticTagsStyle}
   position: relative;
   line-height: inherit;
   font-family: inherit;
+  margin: inherit;
   justify-content: flex-end;
 }
 .bkm-info--label-container {
@@ -106,6 +108,7 @@ ${semanticTagsStyle}
   position: relative;
   line-height: inherit;
   font-family: inherit;
+  margin: inherit;
   justify-content: flex-end;
 }
 .bkm-info--label {
@@ -117,6 +120,7 @@ ${semanticTagsStyle}
   padding-right: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
   line-height: inherit;
   font-family: inherit;
+  margin: inherit;
   width: fit-content;
   text-wrap: nowrap;
 }
@@ -133,12 +137,14 @@ ${semanticTagsStyle}
   display: none;
   line-height: inherit;
   font-family: inherit;
+  margin: inherit;
 }
 .bkm-info--btn-letter {
   color: white;
   font-size: 10px;
   line-height: 1;
   font-family: inherit;
+  margin: inherit;
 }
 .bkm-info--btn:active {
   transform: translateY(0.1ch);
@@ -212,6 +218,8 @@ ${semanticTagsStyle}
   background: lavender;
   width: fit-content;
   text-wrap: nowrap;
+  line-height: inherit;
+  margin: inherit;
 }
 
 .bkm-info--tag {
@@ -222,6 +230,7 @@ ${semanticTagsStyle}
   text-wrap: nowrap;
   line-height: inherit;
   font-family: inherit;
+  margin: inherit;
 }
 .bkm-info--fixed {
   background-color: #40E0D0;
