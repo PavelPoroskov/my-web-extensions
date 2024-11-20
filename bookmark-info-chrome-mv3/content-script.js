@@ -348,6 +348,7 @@ ${semanticTagsStyle}
           url: document.location.href,
           title: document.title,
         });  
+        // const recentTag = fullMessage.tagList.find((item) => item.parentId === parentId)
       }
     }
   }
@@ -466,7 +467,6 @@ ${semanticTagsStyle}
 
   function showBookmarkInfo(input) {
     const bookmarkInfoList = input.bookmarkInfoList || []
-    const showLayer = input.showLayer || 1
     const visitList = input.visitList || []
     const isShowTitle = input.isShowTitle || false
     const inTagList = input.tagList || []
@@ -577,8 +577,8 @@ ${semanticTagsStyle}
       switch (type) {
         case 'bookmark': {
           const { id, fullPathList } = value
-          const shortPathList = fullPathList.slice(-showLayer)
-          const restPathList = fullPathList.slice(0, -showLayer)
+          const shortPathList = fullPathList.slice(-1)
+          const restPathList = fullPathList.slice(0, -1)
           const restPath = restPathList.concat('').join('/ ')
     
           const divLabel = document.createElement('div');

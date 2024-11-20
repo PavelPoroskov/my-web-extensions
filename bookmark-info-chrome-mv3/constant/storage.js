@@ -8,10 +8,6 @@ export const STORAGE_KEY_META = {
     storageKey: 'CLEAR_URL_FROM_QUERY_PARAMS',
     default: true,
   },
-  SHOW_PATH_LAYERS: {
-    storageKey: 'SHOW_PATH_LAYERS',
-    default: 1,
-  },
   SHOW_PREVIOUS_VISIT: {
     storageKey: 'SHOW_PREVIOUS_VISIT',
     default: false,

@@ -118,7 +118,6 @@ async function getPreviousVisitList(url) {
   }
 }
 
-// eslint-disable-next-line no-unused-vars
 export async function getHistoryInfo({ url }) {
   let visitList;
   

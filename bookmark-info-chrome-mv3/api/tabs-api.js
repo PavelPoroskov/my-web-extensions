@@ -75,7 +75,6 @@ async function updateTabTask({ tabId }) {
   const message = {
     command: CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO,
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
-    showLayer: settings[STORAGE_KEY.SHOW_PATH_LAYERS],
     isShowTitle: settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
     // visits history
     ...visitsData,

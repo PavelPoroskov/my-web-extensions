@@ -29,7 +29,6 @@ export const storageController = {
         STORAGE_KEY.CLEAR_URL,
         STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
         STORAGE_KEY.SHOW_BOOKMARK_TITLE,
-        STORAGE_KEY.SHOW_PATH_LAYERS,
         STORAGE_KEY.SHOW_PREVIOUS_VISIT,
         // STORAGE_KEY.START_TIME, // session, browser start time
       ].map((key) => STORAGE_KEY_META[key].storageKey))
