@@ -1,13 +1,8 @@
 import {
   IS_BROWSER_FIREFOX,
-  STORAGE_KEY,
 } from '../constant/index.js';
 import {
-  removeQueryParamsIfTarget,
-} from './clean-url-api.js';
-import {
   browserStartTime,
-  extensionSettings,
 } from './structure/index.js';
 
 const dayMS = 86400000;
@@ -110,23 +105,12 @@ async function getVisitListForUrlList(urlList) {
 }
 
 async function getPreviousVisitList(url) {
-  const settings = await extensionSettings.get()
-  let rootUrl
-
-  if (settings[STORAGE_KEY.CLEAR_URL]) {
-    const { cleanUrl, isPattern } = removeQueryParamsIfTarget(url)
-
-    if (isPattern) {
-      rootUrl = cleanUrl
-    }
-  } 
-
-  if (rootUrl) {
+  if (url) {
     const historyItemList = (await chrome.history.search({
-      text: rootUrl,
+      text: url,
       maxResults: 10,
     }))
-      .filter((i) => i.url && i.url.startsWith(rootUrl))
+      .filter((i) => i.url && i.url.startsWith(url))
 
     return getVisitListForUrlList(historyItemList.map(i => i.url))
   } else {
@@ -135,28 +119,13 @@ async function getPreviousVisitList(url) {
 }
 
 // eslint-disable-next-line no-unused-vars
-export async function getHistoryInfo({ url, useCache=false }) {
+export async function getHistoryInfo({ url }) {
   let visitList;
-  // let source;
-
-  // if (useCache) {
-  //   visitList = memo.cacheUrlToVisitList.get(url);
-    
-  //   if (visitList) {
-  //     source = SOURCE.CACHE;
-  //     logOptimization(' getHistoryInfoUni: from cache bookmarkInfo')
-  //   }
-  // } 
   
-  // if (!visitList) {
-    const allVisitList = await getPreviousVisitList(url);
-    visitList = filterTimeList(allVisitList)
-    // source = SOURCE.ACTUAL;
-    // memo.cacheUrlToVisitList.add(url, visitList);
-  // }
+  const allVisitList = await getPreviousVisitList(url);
+  visitList = filterTimeList(allVisitList)
 
   return {
     visitList,
-    // source,
   };
 }

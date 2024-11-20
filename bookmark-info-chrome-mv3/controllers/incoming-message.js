@@ -1,9 +1,3 @@
-
-
-import {
-  clearUrlInTab,
-  removeQueryParamsIfTarget,
-} from '../api/clean-url-api.js'
 import {
   addBookmark,
   addRecentTagFromView,
@@ -18,6 +12,7 @@ import {
 } from '../api/log-api.js'
 import {
   extensionSettings,
+  memo,
 } from '../api/structure/index.js'
 import {
   updateActiveTab,
@@ -34,25 +29,11 @@ export async function onIncomingMessage (message, sender) {
 
     case EXTENSION_COMMAND_ID.TAB_IS_READY: {
       const tabId = sender?.tab?.id;
-      logEvent('runtime.onMessage contentScriptReady', tabId);
 
-      if (tabId) {
-        const settings = await extensionSettings.get()
-        const url = message.url
-        let cleanUrl
-
-        if (settings[STORAGE_KEY.CLEAR_URL]) {
-          ({ cleanUrl } = removeQueryParamsIfTarget(url));
-          
-          if (url !== cleanUrl) {
-            await clearUrlInTab({ tabId, cleanUrl })
-          }
-        }
-
+      if (tabId && tabId == memo.activeTabId) {
+        logEvent('runtime.onMessage contentScriptReady', tabId);
         updateTab({
           tabId,
-          url: cleanUrl || url,
-          useCache: true,
           debugCaller: 'runtime.onMessage contentScriptReady',
         })
       }
@@ -107,10 +88,6 @@ export async function onIncomingMessage (message, sender) {
     case EXTENSION_COMMAND_ID.ADD_RECENT_TAG: {
       logEvent('runtime.onMessage ADD_RECENT_TAG');
       await addRecentTagFromView(message.bookmarkId)
-      updateActiveTab({
-        debugCaller: 'runtime.onMessage ADD_RECENT_TAG',
-        // useCache: true,
-      });
 
       break
     }

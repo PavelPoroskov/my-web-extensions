@@ -13,7 +13,6 @@ export const windowsController = {
     if (0 < windowId) {
       logEvent('windows.onFocusChanged', windowId);
       updateActiveTab({
-        useCache: true,
         debugCaller: 'windows.onFocusChanged'
       });
     }

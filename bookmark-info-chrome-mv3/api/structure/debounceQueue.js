@@ -2,34 +2,42 @@ import {
   logPromiseQueue,
 } from '../log-api.js'
 
-function debounce(func, timeout = 300){
-  let timer;
-
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(
-      () => {
-        logPromiseQueue(' PromiseQueue: execute task', args[0])
-        func.apply(this, args)
-          .catch((er) => {
-            logPromiseQueue(' IGNORING error: PromiseQueue', er);
-          });
-      },
-      timeout,
-    );
-  };
-}
-
 class DebounceQueue {
   constructor () {
     this.tasks = {};
+    this.timers = {};
     this.lastCallTimeMap = new Map();
   }
 
+  debounce(key, func, timeout = 30){  
+    const debouncedFn = (...args) => {
+      clearTimeout(this.timers[key]);
+
+      this.timers[key] = setTimeout(
+        () => {
+          logPromiseQueue(' PromiseQueue: execute task', args[0])
+          func.apply(this, args)
+            .catch((er) => {
+              logPromiseQueue(' IGNORING error: PromiseQueue', er);
+            });
+        },
+        timeout,
+      );
+    };
+
+    return debouncedFn
+  }
+  cancelTask(deleteKey) {
+    clearTimeout(this.timers[deleteKey])
+    delete this.timers[deleteKey]
+    delete this.tasks[deleteKey]
+    this.lastCallTimeMap.delete(deleteKey)
+  }
+  
   run({ key, fn, options }) {
     if (!this.tasks[key]) {
       logPromiseQueue(' PromiseQueue: first call', key, options)
-      this.tasks[key] = debounce(fn, 30)
+      this.tasks[key] = this.debounce(key, fn)
     } else {
       logPromiseQueue(' PromiseQueue: second call', key, options)
     }
@@ -48,8 +56,7 @@ class DebounceQueue {
     }
 
     deleteKeyList.forEach((deleteKey) => {
-      delete this.tasks[deleteKey]
-      this.lastCallTimeMap.delete(deleteKey)
+      this.cancelTask(deleteKey)
     })
   }
 }

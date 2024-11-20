@@ -1,7 +1,7 @@
 const LOG_CONFIG = {
   SHOW_LOG_CACHE: false,
   SHOW_LOG_EVENT_OUT: false,
-  SHOW_LOG_EVENT_IN: false,
+  SHOW_LOG_EVENT_IN: true,
   SHOW_LOG_IGNORE: false,
   SHOW_LOG_OPTIMIZATION: false,
   SHOW_LOG_QUEUE: false,
@@ -237,34 +237,42 @@ const logOptimization = LOG_CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OP
 const logPromiseQueue = LOG_CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
 const logDebug = LOG_CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
 const logSettings = LOG_CONFIG.SHOW_SETTINGS ? makeLogWithPrefix('SETTINGS') : () => { };
-function debounce(func, timeout = 300){
-  let timer;
-
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(
-      () => {
-        logPromiseQueue(' PromiseQueue: execute task', args[0])
-        func.apply(this, args)
-          .catch((er) => {
-            logPromiseQueue(' IGNORING error: PromiseQueue', er);
-          });
-      },
-      timeout,
-    );
-  };
-}
-
-class DebounceQueue {
+class DebounceQueue {
   constructor () {
     this.tasks = {};
+    this.timers = {};
     this.lastCallTimeMap = new Map();
   }
 
+  debounce(key, func, timeout = 30){  
+    const debouncedFn = (...args) => {
+      clearTimeout(this.timers[key]);
+
+      this.timers[key] = setTimeout(
+        () => {
+          logPromiseQueue(' PromiseQueue: execute task', args[0])
+          func.apply(this, args)
+            .catch((er) => {
+              logPromiseQueue(' IGNORING error: PromiseQueue', er);
+            });
+        },
+        timeout,
+      );
+    };
+
+    return debouncedFn
+  }
+  cancelTask(deleteKey) {
+    clearTimeout(this.timers[deleteKey])
+    delete this.timers[deleteKey]
+    delete this.tasks[deleteKey]
+    this.lastCallTimeMap.delete(deleteKey)
+  }
+  
   run({ key, fn, options }) {
     if (!this.tasks[key]) {
       logPromiseQueue(' PromiseQueue: first call', key, options)
-      this.tasks[key] = debounce(fn, 30)
+      this.tasks[key] = this.debounce(key, fn)
     } else {
       logPromiseQueue(' PromiseQueue: second call', key, options)
     }
@@ -283,8 +291,7 @@ class DebounceQueue {
     }
 
     deleteKeyList.forEach((deleteKey) => {
-      delete this.tasks[deleteKey]
-      this.lastCallTimeMap.delete(deleteKey)
+      this.cancelTask(deleteKey)
     })
   }
 }
@@ -1355,23 +1362,12 @@ async function getVisitListForUrlList(urlList) {
 }
 
 async function getPreviousVisitList(url) {
-  const settings = await extensionSettings.get()
-  let rootUrl
-
-  if (settings[STORAGE_KEY.CLEAR_URL]) {
-    const { cleanUrl, isPattern } = removeQueryParamsIfTarget(url)
-
-    if (isPattern) {
-      rootUrl = cleanUrl
-    }
-  } 
-
-  if (rootUrl) {
+  if (url) {
     const historyItemList = (await browser.history.search({
-      text: rootUrl,
+      text: url,
       maxResults: 10,
     }))
-      .filter((i) => i.url && i.url.startsWith(rootUrl))
+      .filter((i) => i.url && i.url.startsWith(url))
 
     return getVisitListForUrlList(historyItemList.map(i => i.url))
   } else {
@@ -1413,8 +1409,21 @@ async function getHistoryInfo({ url, useCache=false }) {
     !extensionSettings.isActual() && extensionSettings.restoreFromStorage().then(() => tagList.readFromStorage()),
   ])
 }
-async function updateTabTask({ tabId, url, useCache=false }) {
-  log(' updateTabTask() 00', tabId, url, useCache)
+async function updateTabTask({ tabId }) {
+  let url
+
+  try {
+    const Tab = await browser.tabs.get(tabId);
+    url = Tab?.url
+  } catch (er) {
+    logIgnore('IGNORING. tab was deleted', er);
+  }
+
+  if (!(url && isSupportedProtocol(url))) {
+    return
+  }
+
+  log(' updateTabTask() 00', tabId, url)
   await initExtension()
   const settings = await extensionSettings.get()
 
@@ -1435,8 +1444,8 @@ async function getHistoryInfo({ url, useCache=false }) {
     bookmarkInfo,
     visitInfo,
   ] = await Promise.all([
-    getBookmarkInfoUni({ url: actualUrl, useCache }),
-    isShowVisits && getHistoryInfo({ url: actualUrl, useCache }),
+    getBookmarkInfoUni({ url: actualUrl }),
+    isShowVisits && getHistoryInfo({ url: actualUrl }),
   ])
 
   if (isShowVisits) {
@@ -1467,42 +1476,33 @@ async function getHistoryInfo({ url, useCache=false }) {
     })
 }
 
-async function updateTab({ tabId, url, useCache=false, debugCaller }) {
-  
-  if (url && isSupportedProtocol(url)) {
-  
-    log(`${debugCaller} -> updateTab() useCache`, useCache);
-    debounceQueue.run({
-      key: `${tabId}`,
-      fn: updateTabTask,
-      options: {
-        tabId,
-        url,
-        useCache
-      },
-    });
-  }
+async function updateTab({ tabId, debugCaller }) {  
+  log(`${debugCaller} -> updateTab()`);
+
+  debounceQueue.run({
+    key: `${tabId}`,
+    fn: updateTabTask,
+    options: {
+      tabId,
+    },
+  });
 }
 
-async function updateActiveTab({ useCache=false, debugCaller } = {}) {
+async function updateActiveTab({ debugCaller } = {}) {
   log(' updateActiveTab() 00')
 
   if (!memo.activeTabId) {
     const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
     const [Tab] = tabs;
 
-    if (Tab) {
-      memo.activeTabId = Tab.id
-      memo.activeTabUrl = Tab.url
-      memo.isChromeBookmarkManagerTabActive = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
+    if (Tab?.id) {
+      await browser.tabs.update(Tab?.id, { active: true })
     }
   }
 
-  if (memo.activeTabId && memo.activeTabUrl) {   
+  if (memo.activeTabId) {
     updateTab({
       tabId: memo.activeTabId, 
-      url: memo.activeTabUrl, 
-      useCache,
       debugCaller: `${debugCaller} -> updateActiveTab()`
     });
   }
@@ -2237,50 +2237,54 @@ async function closeDuplicateTabs() {
     const [node] = await browser.bookmarks.get(bookmarkId)
     
     if (node.url) {
-      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && parentId !== oldParentId) {
-        await tagList.addRecentTagFromBkm(node);
+      if (parentId !== oldParentId) {
+        if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+          await tagList.addRecentTagFromBkm(node);
 
-        let isReplaceMoveToCreate = false
+          let isReplaceMoveToCreate = false
 
-        if (IS_BROWSER_CHROME) {
-          isReplaceMoveToCreate = !memo.isChromeBookmarkManagerTabActive
-        } else if (IS_BROWSER_FIREFOX) {
-          const childrenList = await browser.bookmarks.getChildren(parentId)
-          const lastIndex = childrenList.length - 1
+          if (IS_BROWSER_CHROME) {
+            const isChromeBookmarkManagerTabActive = !!memo.activeTabUrl && memo.activeTabUrl.startsWith('chrome://bookmarks');
+            isReplaceMoveToCreate = !isChromeBookmarkManagerTabActive
+          } else if (IS_BROWSER_FIREFOX) {
+            const childrenList = await browser.bookmarks.getChildren(parentId)
+            const lastIndex = childrenList.length - 1
 
-          // isReplaceMoveToCreate = index == lastIndex && settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW] 
-          isReplaceMoveToCreate = index == lastIndex
+            // isReplaceMoveToCreate = index == lastIndex && settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW] 
+            isReplaceMoveToCreate = index == lastIndex
+          }
+
+          const unclassifiedFolderId = await getUnclassifiedFolderId()
+          isReplaceMoveToCreate = isReplaceMoveToCreate && parentId !== unclassifiedFolderId
+
+          if (isReplaceMoveToCreate) {
+            log('bookmark.onMoved 22');
+
+            const { url, title } = node
+            await browser.bookmarks.remove(bookmarkId)
+            await browser.bookmarks.create({
+              parentId: oldParentId,
+              title,
+              url
+            })
+            await browser.bookmarks.create({
+              parentId,
+              title,
+              url
+            })
+
+            return
+          }
         }
 
-        const unclassifiedFolderId = await getUnclassifiedFolderId()
-        isReplaceMoveToCreate = isReplaceMoveToCreate && parentId !== unclassifiedFolderId
-
-        if (isReplaceMoveToCreate) {
-          log('bookmark.onMoved 22');
-
-          const { url, title } = node
-          await browser.bookmarks.remove(bookmarkId)
-          await browser.bookmarks.create({
-            parentId: oldParentId,
-            title,
-            url
-          })
-          await browser.bookmarks.create({
-            parentId,
-            title,
-            url
-          })
-
-          return
-        }
+        await updateActiveTab({
+          debugCaller: 'bookmark.onMoved'
+        });
       }
     } else {
       memo.bkmFolderById.delete(bookmarkId);
     }
 
-    await updateActiveTab({
-      debugCaller: 'bookmark.onMoved'
-    });
     // changes in bookmark manager
     getBookmarkInfoUni({ url: node.url })
   },
@@ -2330,25 +2334,11 @@ async function closeDuplicateTabs() {
 
     case EXTENSION_COMMAND_ID.TAB_IS_READY: {
       const tabId = sender?.tab?.id;
-      logEvent('runtime.onMessage contentScriptReady', tabId);
 
-      if (tabId) {
-        const settings = await extensionSettings.get()
-        const url = message.url
-        let cleanUrl
-
-        if (settings[STORAGE_KEY.CLEAR_URL]) {
-          ({ cleanUrl } = removeQueryParamsIfTarget(url));
-          
-          if (url !== cleanUrl) {
-            await clearUrlInTab({ tabId, cleanUrl })
-          }
-        }
-
+      if (tabId && tabId == memo.activeTabId) {
+        logEvent('runtime.onMessage contentScriptReady', tabId);
         updateTab({
           tabId,
-          url: cleanUrl || url,
-          useCache: true,
           debugCaller: 'runtime.onMessage contentScriptReady',
         })
       }
@@ -2403,10 +2393,10 @@ async function closeDuplicateTabs() {
     case EXTENSION_COMMAND_ID.ADD_RECENT_TAG: {
       logEvent('runtime.onMessage ADD_RECENT_TAG');
       await addRecentTagFromView(message.bookmarkId)
-      updateActiveTab({
-        debugCaller: 'runtime.onMessage ADD_RECENT_TAG',
-        // useCache: true,
-      });
+      // updateActiveTab({
+      //   debugCaller: 'runtime.onMessage ADD_RECENT_TAG',
+      //   // useCache: true,
+      // });
 
       break
     }
@@ -2457,7 +2447,6 @@ async function closeDuplicateTabs() {
     createContextMenu()
     await initExtension()
     updateActiveTab({
-      useCache: true,
       debugCaller: 'runtime.onStartup'
     });
 
@@ -2474,7 +2463,6 @@ async function closeDuplicateTabs() {
     createContextMenu()
     await initExtension()
     updateActiveTab({
-      useCache: true,
       debugCaller: 'runtime.onInstalled'
     });
   },
@@ -2526,66 +2514,21 @@ async function closeDuplicateTabs() {
   onCreated({ pendingUrl: url, index, id }) {
     logEvent('tabs.onCreated', index, id, url);
     // We do not have current visit in history on tabs.onCreated(). Only after tabs.onUpdated(status = loading)
-    getBookmarkInfoUni({
-      url,
-      useCache: true,
-    });
+    // getBookmarkInfoUni({
+    //   url,
+    //   useCache: true,
+    // });
   },
   async onUpdated(tabId, changeInfo, Tab) {
     logEvent('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
 
-    if (changeInfo?.url) {
-      if (memo.activeTabId && tabId === memo.activeTabId) {
-        memo.activeTabUrl = changeInfo.url
-      }
-    }
-
     switch (changeInfo?.status) {
-      case ('loading'): {
-        if (changeInfo?.url) {
-          const url = changeInfo.url
-          logEvent('tabs.onUpdated 11 LOADING', Tab.index, tabId, url);
-          let cleanUrl
-          const settings = await extensionSettings.get()
 
-          if (settings[STORAGE_KEY.CLEAR_UR]) {
-            ({ cleanUrl } = removeQueryParamsIfTarget(url));
-            
-            if (url !== cleanUrl) {
-              await clearUrlInTab({ tabId, cleanUrl })
-            }
-          }
-
-          const actualUrl = cleanUrl || url
-          getBookmarkInfoUni({
-            url: actualUrl,
-            useCache: true,
-          });
-          getHistoryInfo({ url: actualUrl, useCache: false })
-        }
-
-        break;
-      }
       case ('complete'): {
-        logEvent('tabs.onUpdated 11 complete tabId activeTabId', tabId, memo.activeTabId);
+        logEvent('tabs.onUpdated complete', tabId, Tab);
         
-        if (tabId === memo.activeTabId || !memo.activeTabId) {
-          logEvent('tabs.onUpdated 22 COMPLETE', Tab.index, tabId, Tab.url);
-          updateTab({
-            tabId, 
-            url: Tab.url, 
-            useCache: true,
-            debugCaller: 'tabs.onUpdated(complete)'
-          });
-
-          if (IS_BROWSER_FIREFOX && !memo.activeTabId) {
-            const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
-            const [Tab] = tabs;
-
-            if (Tab?.id) {
-              browser.tabs.update(Tab.id, { active: true })
-            }
-          }
+        if (tabId === memo.activeTabId && Tab.url != memo.activeTabUrl) {
+          browser.tabs.update(tabId, { active: true })
         }
     
         break;
@@ -2606,30 +2549,19 @@ async function closeDuplicateTabs() {
       if (Tab) {
         logDebug('tabs.onActivated 11', Tab.index, tabId, Tab.url);
         memo.activeTabUrl = Tab.url
-        memo.isChromeBookmarkManagerTabActive = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
       }
-
-      // updateTab({
-      //   tabId, 
-      //   url: Tab.url, 
-      //   useCache: true,
-      //   debugCaller: 'tabs.onActivated(useCache: true)'
-      // });
-      updateTab({
-        tabId, 
-        url: Tab.url, 
-        useCache: false,
-        debugCaller: 'tabs.onActivated(useCache: false)'
-      });
     } catch (er) {
       logIgnore('tabs.onActivated. IGNORING. tab was deleted', er);
     }
 
-    // deleteUncleanUrlBookmarkForTab(memo.previousTabId)
+    updateTab({
+      tabId, 
+      debugCaller: 'tabs.onActivated(useCache: false)'
+    });
   },
-  // eslint-disable-next-line no-unused-vars
   async onRemoved(tabId) {
     // deleteUncleanUrlBookmarkForTab(tabId)
+    debounceQueue.cancelTask(tabId)
   }
 }
 const windowsController = {
@@ -2639,7 +2571,6 @@ async function closeDuplicateTabs() {
     if (0 < windowId) {
       logEvent('windows.onFocusChanged', windowId);
       updateActiveTab({
-        useCache: true,
         debugCaller: 'windows.onFocusChanged'
       });
     }

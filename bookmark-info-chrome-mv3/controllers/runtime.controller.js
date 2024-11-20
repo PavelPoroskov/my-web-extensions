@@ -28,7 +28,6 @@ export const runtimeController = {
     createContextMenu()
     await initExtension()
     updateActiveTab({
-      useCache: true,
       debugCaller: 'runtime.onStartup'
     });
 
@@ -45,7 +44,6 @@ export const runtimeController = {
     createContextMenu()
     await initExtension()
     updateActiveTab({
-      useCache: true,
       debugCaller: 'runtime.onInstalled'
     });
   },

@@ -328,6 +328,8 @@ ${semanticTagsStyle}
         command: EXTENSION_COMMAND_ID.DELETE_BOOKMARK,
         bkmId,
       });
+      // optimistic ui
+      event.target.style = 'display:none;';
     }
   }
 

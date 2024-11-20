@@ -1,6 +1,7 @@
 import {
   log,
   logSendEvent,
+  logIgnore,
 } from './log-api.js'
 import {
   isSupportedProtocol,
@@ -26,8 +27,21 @@ import {
 } from '../constant/index.js'
 import { initExtension } from './init-extension.js'
 
-async function updateTabTask({ tabId, url, useCache=false }) {
-  log(' updateTabTask() 00', tabId, url, useCache)
+async function updateTabTask({ tabId }) {
+  let url
+
+  try {
+    const Tab = await chrome.tabs.get(tabId);
+    url = Tab?.url
+  } catch (er) {
+    logIgnore('IGNORING. tab was deleted', er);
+  }
+
+  if (!(url && isSupportedProtocol(url))) {
+    return
+  }
+
+  log(' updateTabTask() 00', tabId, url)
   await initExtension()
   const settings = await extensionSettings.get()
 
@@ -48,8 +62,8 @@ async function updateTabTask({ tabId, url, useCache=false }) {
     bookmarkInfo,
     visitInfo,
   ] = await Promise.all([
-    getBookmarkInfoUni({ url: actualUrl, useCache }),
-    isShowVisits && getHistoryInfo({ url: actualUrl, useCache }),
+    getBookmarkInfoUni({ url: actualUrl }),
+    isShowVisits && getHistoryInfo({ url: actualUrl }),
   ])
 
   if (isShowVisits) {
@@ -80,42 +94,33 @@ async function updateTabTask({ tabId, url, useCache=false }) {
     })
 }
 
-export async function updateTab({ tabId, url, useCache=false, debugCaller }) {
-  
-  if (url && isSupportedProtocol(url)) {
-  
-    log(`${debugCaller} -> updateTab() useCache`, useCache);
-    debounceQueue.run({
-      key: `${tabId}`,
-      fn: updateTabTask,
-      options: {
-        tabId,
-        url,
-        useCache
-      },
-    });
-  }
+export async function updateTab({ tabId, debugCaller }) {  
+  log(`${debugCaller} -> updateTab()`);
+
+  debounceQueue.run({
+    key: `${tabId}`,
+    fn: updateTabTask,
+    options: {
+      tabId,
+    },
+  });
 }
 
-export async function updateActiveTab({ useCache=false, debugCaller } = {}) {
+export async function updateActiveTab({ debugCaller } = {}) {
   log(' updateActiveTab() 00')
 
   if (!memo.activeTabId) {
     const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     const [Tab] = tabs;
 
-    if (Tab) {
-      memo.activeTabId = Tab.id
-      memo.activeTabUrl = Tab.url
-      memo.isChromeBookmarkManagerTabActive = (Tab.url && Tab.url.startsWith('chrome://bookmarks'));
+    if (Tab?.id) {
+      await chrome.tabs.update(Tab?.id, { active: true })
     }
   }
 
-  if (memo.activeTabId && memo.activeTabUrl) {   
+  if (memo.activeTabId) {
     updateTab({
       tabId: memo.activeTabId, 
-      url: memo.activeTabUrl, 
-      useCache,
       debugCaller: `${debugCaller} -> updateActiveTab()`
     });
   }
