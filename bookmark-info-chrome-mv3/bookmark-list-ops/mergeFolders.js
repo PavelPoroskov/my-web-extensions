@@ -2,6 +2,9 @@ import {
     BOOKMARKS_BAR_FOLDER_ID,
     OTHER_BOOKMARKS_FOLDER_ID,
 } from '../api/special-folder.api.js';
+import {
+    plural,
+} from '../api/pluralize.js';
 
 async function moveContent(fromFolderId, toFolderId) {
     const nodeList = await chrome.bookmarks.getChildren(fromFolderId)
@@ -21,35 +24,56 @@ async function mergeSubFolder(parentId) {
     const nameSet = {}
 
     for (const node of filteredNodeList) {
-        const name = node.title.toLowerCase().trim()
+        const trimmedTitle = node.title.toLowerCase().trim()
+        const wordList = trimmedTitle.split(/\s+/)
+        const lastWord = wordList.at(-1)
+        const pluralLastWord = plural(lastWord)
+        const normalizedWordList = wordList.with(-1, pluralLastWord)
+        const normalizedTitle = normalizedWordList.join(' ')
 
-        if (!nameSet[name]) {
-            nameSet[name] = [node]
+        if (!nameSet[normalizedTitle]) {
+            nameSet[normalizedTitle] = [node]
         } else {
-            nameSet[name].push(node)
+            nameSet[normalizedTitle].push(node)
         }
     }
     // console.log('### mergeSubFolder 11: nameSet', nameSet)
 
     const notUniqList = Object.entries(nameSet).filter(([, nodeList]) => nodeList.length > 1)
-    const taskList = []
+    const moveTaskList = []
+    const renameTaskList = []
     for (const [, nodeList] of notUniqList) {
         const sortedList = nodeList.toSorted((a, b) => b.title.localeCompare(a.title))
         const [firstNode, ...restNodeList] = sortedList
 
         for (const fromNode of restNodeList) {
-            taskList.push({ fromNode, toNode: firstNode })
+            moveTaskList.push({
+                fromNode,
+                toNode: firstNode, 
+            })
+        }
+
+        const trimmedTitle = firstNode.title.trim()
+        if (firstNode.title !== trimmedTitle) {
+            renameTaskList.push({
+                id: firstNode.id,
+                title: trimmedTitle,
+            })
         }
     }
     // console.log('### mergeSubFolder 22: taskList', taskList)
 
-    await taskList.reduce(
+    await moveTaskList.reduce(
         (promiseChain, { fromNode, toNode }) => promiseChain.then(() => moveContent(fromNode.id, toNode.id)),
         Promise.resolve(),
     );
     
-    await Promise.all(taskList.map(
+    await Promise.all(moveTaskList.map(
         ({ fromNode }) => chrome.bookmarks.removeTree(fromNode.id)
+    ))
+
+    await Promise.all(renameTaskList.map(
+        ({ id, title }) => chrome.bookmarks.update(id, { title })
     ))
 }
 
