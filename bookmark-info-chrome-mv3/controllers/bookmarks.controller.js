@@ -111,12 +111,14 @@ export const bookmarksController = {
             await chrome.bookmarks.create({
               parentId: oldParentId,
               title,
-              url
+              url,
+              index: oldIndex,
             })
             await chrome.bookmarks.create({
               parentId,
               title,
-              url
+              url,
+              index: 0,
             })
 
             return
