@@ -9,9 +9,19 @@ import {
 async function moveContent(fromFolderId, toFolderId) {
     const nodeList = await chrome.bookmarks.getChildren(fromFolderId)
     
+    // await Promise.all(nodeList.map(
+    //     ({ id }) => chrome.bookmarks.move(id, { parentId: toFolderId })
+    // ))
     await Promise.all(nodeList.map(
-      ({ id }) => chrome.bookmarks.move(id, { parentId: toFolderId }))
-    )
+        async ({ id, title, url }) => {
+            await chrome.bookmarks.create({
+                parentId: toFolderId,
+                title,
+                url
+              })
+            await chrome.bookmarks.remove(id)
+        }
+    ))
 }
 
 async function mergeSubFolder(parentId) {
@@ -61,7 +71,7 @@ async function mergeSubFolder(parentId) {
             })
         }
     }
-    // console.log('### mergeSubFolder 22: taskList', taskList)
+    // console.log('### moveTaskList', moveTaskList.map(({ fromNode, toNode }) => `${fromNode.title} -> ${toNode.title}`))
 
     await moveTaskList.reduce(
         (promiseChain, { fromNode, toNode }) => promiseChain.then(() => moveContent(fromNode.id, toNode.id)),

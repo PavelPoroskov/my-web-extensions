@@ -9,9 +9,20 @@ async function moveContentToStart(fromFolderId, toFolderId) {
   const nodeList = await chrome.bookmarks.getChildren(fromFolderId)
   const reversedNodeList = nodeList.toReversed()
 
+  // await Promise.all(reversedNodeList.map(
+  //   ({ id }) => chrome.bookmarks.move(id, { parentId: toFolderId, index: 0 }))
+  // )
   await Promise.all(reversedNodeList.map(
-    ({ id }) => chrome.bookmarks.move(id, { parentId: toFolderId, index: 0 }))
-  )
+    async ({ id, title, url }) => {
+        await chrome.bookmarks.create({
+            parentId: toFolderId,
+            title,
+            url,
+            index: 0,
+          })
+        await chrome.bookmarks.remove(id)
+    }
+  ))
 }
 
 async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
