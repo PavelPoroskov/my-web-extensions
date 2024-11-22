@@ -2595,12 +2595,14 @@ async function closeDuplicateTabs() {
             await browser.bookmarks.create({
               parentId: oldParentId,
               title,
-              url
+              url,
+              index: oldIndex,
             })
             await browser.bookmarks.create({
               parentId,
               title,
-              url
+              url,
+              index: 0,
             })
 
             return
