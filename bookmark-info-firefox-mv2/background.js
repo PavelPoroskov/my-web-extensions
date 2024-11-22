@@ -1,7 +1,7 @@
 const LOG_CONFIG = {
   SHOW_LOG_CACHE: false,
   SHOW_LOG_EVENT_OUT: false,
-  SHOW_LOG_EVENT_IN: true,
+  SHOW_LOG_EVENT_IN: false,
   SHOW_LOG_IGNORE: false,
   SHOW_LOG_OPTIMIZATION: false,
   SHOW_LOG_QUEUE: false,
@@ -122,10 +122,6 @@ const STORAGE_KEY_META = {
   CLEAR_URL: {
     storageKey: 'CLEAR_URL_FROM_QUERY_PARAMS',
     default: true,
-  },
-  SHOW_PATH_LAYERS: {
-    storageKey: 'SHOW_PATH_LAYERS',
-    default: 1,
   },
   SHOW_PREVIOUS_VISIT: {
     storageKey: 'SHOW_PREVIOUS_VISIT',
@@ -469,14 +465,11 @@ const memo = {
   previousTabId: '',
   activeTabId: '',
   activeTabUrl: '',
-  isChromeBookmarkManagerTabActive: false,
 
   cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
   // cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
   bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
-  // tabId -> bookmarkId
-  tabMap: new Map(),
-};
+}
 
 logSettings('IMPORT END', 'memo.js', new Date().toISOString())
 class ExtensionSettings {
@@ -516,7 +509,6 @@ logSettings('IMPORT END', 'memo.js', new Date().toISOString())
       STORAGE_KEY.CLEAR_URL,
       STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
       STORAGE_KEY.SHOW_BOOKMARK_TITLE,
-      STORAGE_KEY.SHOW_PATH_LAYERS,
       STORAGE_KEY.SHOW_PREVIOUS_VISIT,
     ])
       .then((result) => {
@@ -1375,30 +1367,14 @@ async function getPreviousVisitList(url) {
   }
 }
 
-// eslint-disable-next-line no-unused-vars
-async function getHistoryInfo({ url, useCache=false }) {
+async function getHistoryInfo({ url }) {
   let visitList;
-  // let source;
-
-  // if (useCache) {
-  //   visitList = memo.cacheUrlToVisitList.get(url);
-    
-  //   if (visitList) {
-  //     source = SOURCE.CACHE;
-  //     logOptimization(' getHistoryInfoUni: from cache bookmarkInfo')
-  //   }
-  // } 
   
-  // if (!visitList) {
-    const allVisitList = await getPreviousVisitList(url);
-    visitList = filterTimeList(allVisitList)
-    // source = SOURCE.ACTUAL;
-    // memo.cacheUrlToVisitList.add(url, visitList);
-  // }
+  const allVisitList = await getPreviousVisitList(url);
+  visitList = filterTimeList(allVisitList)
 
   return {
     visitList,
-    // source,
   };
 }
 async function initExtension() {
@@ -1457,7 +1433,6 @@ async function getHistoryInfo({ url, useCache=false }) {
   const message = {
     command: CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO,
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
-    showLayer: settings[STORAGE_KEY.SHOW_PATH_LAYERS],
     isShowTitle: settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
     // visits history
     ...visitsData,
@@ -1507,6 +1482,323 @@ async function updateActiveTab({ debugCaller } = {}) {
     });
   }
 }
+const pluralRules = [];
+const uncountables = {};
+const irregularPlurals = {};
+const irregularSingles = {};
+
+function sanitizeRule (rule) {
+  if (typeof rule === 'string') {
+    return new RegExp('^' + rule + '$', 'i');
+  }
+
+  return rule;
+}
+
+const addPluralRule = function (rule, replacement) {
+  pluralRules.push([sanitizeRule(rule), replacement]);
+};
+
+const addUncountableRule = function (word) {
+  if (typeof word === 'string') {
+    uncountables[word.toLowerCase()] = true;
+    return;
+  }
+
+  // Set singular and plural references for the word.
+  addPluralRule(word, '$0');
+  // addSingularRule(word, '$0');
+};
+
+const addIrregularRule = function (single, plural) {
+  plural = plural.toLowerCase();
+  single = single.toLowerCase();
+
+  irregularSingles[single] = plural;
+  irregularPlurals[plural] = single;
+};
+
+/**
+ * Irregular rules.
+ */
+[
+  // Pronouns.
+  ['I', 'we'],
+  ['me', 'us'],
+  ['he', 'they'],
+  ['she', 'they'],
+  ['them', 'them'],
+  ['myself', 'ourselves'],
+  ['yourself', 'yourselves'],
+  ['itself', 'themselves'],
+  ['herself', 'themselves'],
+  ['himself', 'themselves'],
+  ['themself', 'themselves'],
+  ['is', 'are'],
+  ['was', 'were'],
+  ['has', 'have'],
+  ['this', 'these'],
+  ['that', 'those'],
+  ['my', 'our'],
+  ['its', 'their'],
+  ['his', 'their'],
+  ['her', 'their'],
+  // Words ending in with a consonant and `o`.
+  ['echo', 'echoes'],
+  ['dingo', 'dingoes'],
+  ['volcano', 'volcanoes'],
+  ['tornado', 'tornadoes'],
+  ['torpedo', 'torpedoes'],
+  // Ends with `us`.
+  ['genus', 'genera'],
+  ['viscus', 'viscera'],
+  // Ends with `ma`.
+  ['stigma', 'stigmata'],
+  ['stoma', 'stomata'],
+  ['dogma', 'dogmata'],
+  ['lemma', 'lemmata'],
+  ['schema', 'schemata'],
+  ['anathema', 'anathemata'],
+  // Other irregular rules.
+  ['ox', 'oxen'],
+  ['axe', 'axes'],
+  ['die', 'dice'],
+  ['yes', 'yeses'],
+  ['foot', 'feet'],
+  ['eave', 'eaves'],
+  ['goose', 'geese'],
+  ['tooth', 'teeth'],
+  ['quiz', 'quizzes'],
+  ['human', 'humans'],
+  ['proof', 'proofs'],
+  ['carve', 'carves'],
+  ['valve', 'valves'],
+  ['looey', 'looies'],
+  ['thief', 'thieves'],
+  ['groove', 'grooves'],
+  ['pickaxe', 'pickaxes'],
+  ['passerby', 'passersby'],
+  ['canvas', 'canvases']
+].forEach(function (rule) {
+  return addIrregularRule(rule[0], rule[1]);
+});
+
+/**
+ * Pluralization rules.
+ */
+[
+  [/s?$/i, 's'],
+  // eslint-disable-next-line no-control-regex
+  [/[^\u0000-\u007F]$/i, '$0'],
+  [/([^aeiou]ese)$/i, '$1'],
+  [/(ax|test)is$/i, '$1es'],
+  [/(alias|[^aou]us|t[lm]as|gas|ris)$/i, '$1es'],
+  [/(e[mn]u)s?$/i, '$1s'],
+  [/([^l]ias|[aeiou]las|[ejzr]as|[iu]am)$/i, '$1'],
+  [/(alumn|syllab|vir|radi|nucle|fung|cact|stimul|termin|bacill|foc|uter|loc|strat)(?:us|i)$/i, '$1i'],
+  [/(alumn|alg|vertebr)(?:a|ae)$/i, '$1ae'],
+  [/(seraph|cherub)(?:im)?$/i, '$1im'],
+  [/(her|at|gr)o$/i, '$1oes'],
+  [/(agend|addend|millenni|dat|extrem|bacteri|desiderat|strat|candelabr|errat|ov|symposi|curricul|automat|quor)(?:a|um)$/i, '$1a'],
+  [/(apheli|hyperbat|periheli|asyndet|noumen|phenomen|criteri|organ|prolegomen|hedr|automat)(?:a|on)$/i, '$1a'],
+  [/sis$/i, 'ses'],
+  [/(?:(kni|wi|li)fe|(ar|l|ea|eo|oa|hoo)f)$/i, '$1$2ves'],
+  [/([^aeiouy]|qu)y$/i, '$1ies'],
+  [/([^ch][ieo][ln])ey$/i, '$1ies'],
+  [/(x|ch|ss|sh|zz)$/i, '$1es'],
+  [/(matr|cod|mur|sil|vert|ind|append)(?:ix|ex)$/i, '$1ices'],
+  [/\b((?:tit)?m|l)(?:ice|ouse)$/i, '$1ice'],
+  [/(pe)(?:rson|ople)$/i, '$1ople'],
+  [/(child)(?:ren)?$/i, '$1ren'],
+  [/eaux$/i, '$0'],
+  [/m[ae]n$/i, 'men'],
+  ['thou', 'you']
+].forEach(function (rule) {
+  return addPluralRule(rule[0], rule[1]);
+});
+
+/**
+ * Uncountable rules.
+ */
+[
+  // Singular words with no plurals.
+  'adulthood',
+  'advice',
+  'agenda',
+  'aid',
+  'aircraft',
+  'alcohol',
+  'ammo',
+  'analytics',
+  'anime',
+  'athletics',
+  'audio',
+  'bison',
+  'blood',
+  'bream',
+  'buffalo',
+  'butter',
+  'carp',
+  'cash',
+  'chassis',
+  'chess',
+  'clothing',
+  'cod',
+  'commerce',
+  'cooperation',
+  'corps',
+  'debris',
+  'diabetes',
+  'digestion',
+  'elk',
+  'energy',
+  'equipment',
+  'excretion',
+  'expertise',
+  'firmware',
+  'flounder',
+  'fun',
+  'gallows',
+  'garbage',
+  'graffiti',
+  'hardware',
+  'headquarters',
+  'health',
+  'herpes',
+  'highjinks',
+  'homework',
+  'housework',
+  'information',
+  'jeans',
+  'justice',
+  'kudos',
+  'labour',
+  'literature',
+  'machinery',
+  'mackerel',
+  'mail',
+  'media',
+  'mews',
+  'moose',
+  'music',
+  'mud',
+  'manga',
+  'news',
+  'only',
+  'personnel',
+  'pike',
+  'plankton',
+  'pliers',
+  'police',
+  'pollution',
+  'premises',
+  'rain',
+  'research',
+  'rice',
+  'salmon',
+  'scissors',
+  'series',
+  'sewage',
+  'shambles',
+  'shrimp',
+  'software',
+  'staff',
+  'swine',
+  'tennis',
+  'traffic',
+  'transportation',
+  'trout',
+  'tuna',
+  'wealth',
+  'welfare',
+  'whiting',
+  'wildebeest',
+  'wildlife',
+  'you',
+  /pok[eé]mon$/i,
+  // Regexes.
+  /[^aeiou]ese$/i, // "chinese", "japanese"
+  /deer$/i, // "deer", "reindeer"
+  /fish$/i, // "fish", "blowfish", "angelfish"
+  /measles$/i,
+  /o[iu]s$/i, // "carnivorous"
+  /pox$/i, // "chickpox", "smallpox"
+  /sheep$/i
+].forEach(addUncountableRule);
+const isHasOwnProperty = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop)
+
+function restoreCase (word, token) {
+  // Tokens are an exact match.
+  if (word === token) return token;
+
+  // Lower cased words. E.g. "hello".
+  if (word === word.toLowerCase()) return token.toLowerCase();
+
+  // Upper cased words. E.g. "WHISKY".
+  if (word === word.toUpperCase()) return token.toUpperCase();
+
+  // Title cased words. E.g. "Title".
+  if (word[0] === word[0].toUpperCase()) {
+    return token.charAt(0).toUpperCase() + token.substr(1).toLowerCase();
+  }
+
+  // Lower cased words. E.g. "test".
+  return token.toLowerCase();
+}
+
+function interpolate (str, args) {
+  return str.replace(/\$(\d{1,2})/g, function (match, index) {
+    return args[index] || '';
+  });
+}
+
+function replace (word, rule) {
+  return word.replace(rule[0], function (match, index) {
+    var result = interpolate(rule[1], arguments);
+
+    if (match === '') {
+      return restoreCase(word[index - 1], result);
+    }
+
+    return restoreCase(match, result);
+  });
+}
+
+function sanitizeWord (token, word, rules) {
+  // Empty string or doesn't need fixing.
+  if (!token.length || isHasOwnProperty(uncountables, token)) {
+    return word;
+  }
+
+  var len = rules.length;
+
+  // Iterate over the sanitization rules and use the first one to match.
+  while (len--) {
+    var rule = rules[len];
+
+    if (rule[0].test(word)) return replace(word, rule);
+  }
+
+  return word;
+}
+
+function plural (word) {
+  // Get the correct token and case restoration functions.
+  var token = word.toLowerCase();
+
+  // Check against the keep object map.
+  if (isHasOwnProperty(irregularPlurals, token)) {
+    return restoreCase(word, token);
+  }
+
+  // Check against the replacement map for a direct word replacement.
+  if (isHasOwnProperty(irregularSingles, token)) {
+    return restoreCase(word, irregularSingles[token]);
+  }
+
+  // Run all the rules against the word.
+  return sanitizeWord(token, word, pluralRules);
+};
 async function getMaxUsedSuffix() {
     function getFoldersFromTree(tree) {
       const folderById = {};
@@ -1661,9 +1953,19 @@ async function flatFolders() {
 async function moveContent(fromFolderId, toFolderId) {
     const nodeList = await browser.bookmarks.getChildren(fromFolderId)
     
+    // await Promise.all(nodeList.map(
+    //     ({ id }) => browser.bookmarks.move(id, { parentId: toFolderId })
+    // ))
     await Promise.all(nodeList.map(
-      ({ id }) => browser.bookmarks.move(id, { parentId: toFolderId }))
-    )
+        async ({ id, title, url }) => {
+            await browser.bookmarks.create({
+                parentId: toFolderId,
+                title,
+                url
+              })
+            await browser.bookmarks.remove(id)
+        }
+    ))
 }
 
 async function mergeSubFolder(parentId) {
@@ -1676,35 +1978,56 @@ async function mergeSubFolder(parentId) {
     const nameSet = {}
 
     for (const node of filteredNodeList) {
-        const name = node.title.toLowerCase().trim()
+        const trimmedTitle = node.title.toLowerCase().trim()
+        const wordList = trimmedTitle.split(/\s+/)
+        const lastWord = wordList.at(-1)
+        const pluralLastWord = plural(lastWord)
+        const normalizedWordList = wordList.with(-1, pluralLastWord)
+        const normalizedTitle = normalizedWordList.join(' ')
 
-        if (!nameSet[name]) {
-            nameSet[name] = [node]
+        if (!nameSet[normalizedTitle]) {
+            nameSet[normalizedTitle] = [node]
         } else {
-            nameSet[name].push(node)
+            nameSet[normalizedTitle].push(node)
         }
     }
     // console.log('### mergeSubFolder 11: nameSet', nameSet)
 
     const notUniqList = Object.entries(nameSet).filter(([, nodeList]) => nodeList.length > 1)
-    const taskList = []
+    const moveTaskList = []
+    const renameTaskList = []
     for (const [, nodeList] of notUniqList) {
         const sortedList = nodeList.toSorted((a, b) => b.title.localeCompare(a.title))
         const [firstNode, ...restNodeList] = sortedList
 
         for (const fromNode of restNodeList) {
-            taskList.push({ fromNode, toNode: firstNode })
+            moveTaskList.push({
+                fromNode,
+                toNode: firstNode, 
+            })
+        }
+
+        const trimmedTitle = firstNode.title.trim()
+        if (firstNode.title !== trimmedTitle) {
+            renameTaskList.push({
+                id: firstNode.id,
+                title: trimmedTitle,
+            })
         }
     }
-    // console.log('### mergeSubFolder 22: taskList', taskList)
+    // console.log('### moveTaskList', moveTaskList.map(({ fromNode, toNode }) => `${fromNode.title} -> ${toNode.title}`))
 
-    await taskList.reduce(
+    await moveTaskList.reduce(
         (promiseChain, { fromNode, toNode }) => promiseChain.then(() => moveContent(fromNode.id, toNode.id)),
         Promise.resolve(),
     );
     
-    await Promise.all(taskList.map(
+    await Promise.all(moveTaskList.map(
         ({ fromNode }) => browser.bookmarks.removeTree(fromNode.id)
+    ))
+
+    await Promise.all(renameTaskList.map(
+        ({ id, title }) => browser.bookmarks.update(id, { title })
     ))
 }
 
@@ -1716,9 +2039,20 @@ async function mergeFolders() {
   const nodeList = await browser.bookmarks.getChildren(fromFolderId)
   const reversedNodeList = nodeList.toReversed()
 
+  // await Promise.all(reversedNodeList.map(
+  //   ({ id }) => browser.bookmarks.move(id, { parentId: toFolderId, index: 0 }))
+  // )
   await Promise.all(reversedNodeList.map(
-    ({ id }) => browser.bookmarks.move(id, { parentId: toFolderId, index: 0 }))
-  )
+    async ({ id, title, url }) => {
+        await browser.bookmarks.create({
+            parentId: toFolderId,
+            title,
+            url,
+            index: 0,
+          })
+        await browser.bookmarks.remove(id)
+    }
+  ))
 }
 
 async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
@@ -2187,8 +2521,6 @@ async function closeDuplicateTabs() {
     await updateActiveTab({
       debugCaller: 'bookmark.onCreated'
     });
-    // changes in bookmark manager
-    getBookmarkInfoUni({ url: node.url });
   },
   async onChanged(bookmarkId, changeInfo) {
     log('bookmark.onChanged 00 <-', changeInfo);
@@ -2212,8 +2544,6 @@ async function closeDuplicateTabs() {
     await updateActiveTab({
       debugCaller: 'bookmark.onChanged'
     });
-    // changes in bookmark manager
-    getBookmarkInfoUni({ url: node.url });   
   },
   async onMoved(bookmarkId, { oldIndex, index, oldParentId, parentId }) {
     log('bookmark.onMoved <-', { oldIndex, index, oldParentId, parentId });
@@ -2284,9 +2614,6 @@ async function closeDuplicateTabs() {
     } else {
       memo.bkmFolderById.delete(bookmarkId);
     }
-
-    // changes in bookmark manager
-    getBookmarkInfoUni({ url: node.url })
   },
   async onRemoved(bookmarkId, { node }) {
     log('bookmark.onRemoved <-');
@@ -2304,9 +2631,6 @@ async function closeDuplicateTabs() {
     await updateActiveTab({
       debugCaller: 'bookmark.onRemoved'
     });
-
-    // changes in bookmark manager
-    getBookmarkInfoUni({ url: node?.url });
   },
 }
 const contextMenusController = {
@@ -2393,10 +2717,6 @@ async function closeDuplicateTabs() {
     case EXTENSION_COMMAND_ID.ADD_RECENT_TAG: {
       logEvent('runtime.onMessage ADD_RECENT_TAG');
       await addRecentTagFromView(message.bookmarkId)
-      // updateActiveTab({
-      //   debugCaller: 'runtime.onMessage ADD_RECENT_TAG',
-      //   // useCache: true,
-      // });
 
       break
     }
@@ -2492,7 +2812,6 @@ async function closeDuplicateTabs() {
         STORAGE_KEY.CLEAR_URL,
         STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
         STORAGE_KEY.SHOW_BOOKMARK_TITLE,
-        STORAGE_KEY.SHOW_PATH_LAYERS,
         STORAGE_KEY.SHOW_PREVIOUS_VISIT,
         // STORAGE_KEY.START_TIME, // session, browser start time
       ].map((key) => STORAGE_KEY_META[key].storageKey))
@@ -2513,11 +2832,6 @@ async function closeDuplicateTabs() {
 const tabsController = {
   onCreated({ pendingUrl: url, index, id }) {
     logEvent('tabs.onCreated', index, id, url);
-    // We do not have current visit in history on tabs.onCreated(). Only after tabs.onUpdated(status = loading)
-    // getBookmarkInfoUni({
-    //   url,
-    //   useCache: true,
-    // });
   },
   async onUpdated(tabId, changeInfo, Tab) {
     logEvent('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
@@ -2556,7 +2870,7 @@ async function closeDuplicateTabs() {
 
     updateTab({
       tabId, 
-      debugCaller: 'tabs.onActivated(useCache: false)'
+      debugCaller: 'tabs.onActivated'
     });
   },
   async onRemoved(tabId) {

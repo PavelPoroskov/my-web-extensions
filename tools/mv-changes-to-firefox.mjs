@@ -34,6 +34,8 @@ createFileForFirefox(
     'api/history-api.js',
     'api/init-extension.js',
     'api/tabs-api.js',
+    'api/pluralize-rules.js',
+    'api/pluralize.js',
     'bookmark-list-ops/flatFolders.js',
     'bookmark-list-ops/mergeFolders.js',
     'bookmark-list-ops/moveNotDescriptiveFolders.js',
