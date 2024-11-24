@@ -1,15 +1,4 @@
-const LOG_CONFIG = {
-  SHOW_LOG_CACHE: false,
-  SHOW_LOG_EVENT_OUT: false,
-  SHOW_LOG_EVENT_IN: false,
-  SHOW_LOG_IGNORE: false,
-  SHOW_LOG_OPTIMIZATION: false,
-  SHOW_LOG_QUEUE: false,
-  SHOW_LOG: false,
-  SHOW_DEBUG: false,
-  SHOW_SETTINGS: false,
-}
-const BROWSER_OPTIONS = {
+const BROWSER_OPTIONS = {
   CHROME: 'CHROME',
   FIREFOX: 'FIREFOX',
 }
@@ -189,6 +178,28 @@ const STORAGE_KEY = Object.fromEntries(
 
 const ADD_BOOKMARK_LIST_MAX = 50
 
+const logModuleList = [
+  // 'bookmarks-api',
+  // 'bookmarks.controller',
+  // 'browserStartTime',
+  // 'cache',
+  // 'clean-url-api',
+  // 'contextMenu.controller',
+  // 'debounceQueue',
+  // 'extensionSettings',
+  // 'incoming-message',
+  // 'memo',
+  // 'recent-api',
+  // 'runtime.controller',
+  // 'storage-api',
+  // 'storage.controller',
+  // 'tabs-api',
+  // 'tabs.controller',
+  // 'windows.controller',
+]
+const logModuleMap = Object.fromEntries(
+  logModuleList.map((moduleKey) => [moduleKey, true])
+)
 const makeLogWithTime = () => {
   let startTime;
   let prevLogTime;
@@ -212,7 +223,8 @@ const ADD_BOOKMARK_LIST_MAX = 50
 
 const logWithTime = makeLogWithTime();
 
-const makeLogWithPrefix = (prefix = '') => {
+// eslint-disable-next-line no-unused-vars
+const makeLogWithPrefixAndTime = (prefix = '') => {
   return function () {  
     const ar = Array.from(arguments);
 
@@ -224,16 +236,25 @@ const makeLogWithPrefix = (prefix = '') => {
   }
 }
 
-const log = LOG_CONFIG.SHOW_LOG ? makeLogWithPrefix() : () => { };
-const logCache = LOG_CONFIG.SHOW_LOG_CACHE ? logWithTime : () => { };
-const logSendEvent = LOG_CONFIG.SHOW_LOG_EVENT_OUT ? makeLogWithPrefix('SEND =>') : () => { };
-const logEvent = LOG_CONFIG.SHOW_LOG_EVENT_IN ? makeLogWithPrefix('EVENT <=') : () => { };
-const logIgnore = LOG_CONFIG.SHOW_LOG_IGNORE ? makeLogWithPrefix('IGNORE') : () => { };
-const logOptimization = LOG_CONFIG.SHOW_LOG_OPTIMIZATION ? makeLogWithPrefix('OPTIMIZATION') : () => { };
-const logPromiseQueue = LOG_CONFIG.SHOW_LOG_QUEUE ? logWithTime : () => { };
-const logDebug = LOG_CONFIG.SHOW_DEBUG ? makeLogWithPrefix('DEBUG') : () => { };
-const logSettings = LOG_CONFIG.SHOW_SETTINGS ? makeLogWithPrefix('SETTINGS') : () => { };
-class DebounceQueue {
+const makeLogFunction = ({ module }) => {
+
+  const isLogging = logModuleMap[module] || false
+
+  if (!isLogging) {
+    return () => {}
+  }
+
+  const prefix = module;
+
+  return function () {
+    const ar = Array.from(arguments);
+    ar.unshift(prefix);
+    console.log(...ar);
+  }
+}
+const logDQ = makeLogFunction({ module: 'debounceQueue' })
+
+class DebounceQueue {
   constructor () {
     this.tasks = {};
     this.timers = {};
@@ -246,10 +267,10 @@ const logSettings = LOG_CONFIG.SHOW_SETTINGS ? makeLogWithPrefix('SETTINGS') : (
 
       this.timers[key] = setTimeout(
         () => {
-          logPromiseQueue(' PromiseQueue: execute task', args[0])
+          logDQ(' PromiseQueue: execute task', args[0])
           func.apply(this, args)
             .catch((er) => {
-              logPromiseQueue(' IGNORING error: PromiseQueue', er);
+              logDQ(' IGNORING error: PromiseQueue', er);
             });
         },
         timeout,
@@ -267,10 +288,10 @@ const logSettings = LOG_CONFIG.SHOW_SETTINGS ? makeLogWithPrefix('SETTINGS') : (
   
   run({ key, fn, options }) {
     if (!this.tasks[key]) {
-      logPromiseQueue(' PromiseQueue: first call', key, options)
+      logDQ(' PromiseQueue: first call', key, options)
       this.tasks[key] = this.debounce(key, fn)
     } else {
-      logPromiseQueue(' PromiseQueue: second call', key, options)
+      logDQ(' PromiseQueue: second call', key, options)
     }
     this.tasks[key](options);
     this.lastCallTimeMap.set(key, Date.now())
@@ -310,7 +331,9 @@ const debounceQueue = new DebounceQueue();
     super.set(key, ar.concat(item))
   }
 }
-class CacheWithLimit {
+const logC = makeLogFunction({ module: 'cache' })
+
+class CacheWithLimit {
   constructor ({ name='cache', size = 100 }) {
     this.cache = new Map();
     this.LIMIT = size;
@@ -338,26 +361,26 @@ const debounceQueue = new DebounceQueue();
 
   add (key,value) {
     this.cache.set(key, value);
-    logCache(`   ${this.name}.add: ${key}`, value);
+    logC(`   ${this.name}.add: ${key}`, value);
     
     this.removeStale();
   }
   
   get(key) {
     const value = this.cache.get(key);
-    logCache(`   ${this.name}.get: ${key}`, value);
+    logC(`   ${this.name}.get: ${key}`, value);
   
     return value;
   }
 
   delete(key) {
     this.cache.delete(key);
-    logCache(`   ${this.name}.delete: ${key}`);
+    logC(`   ${this.name}.delete: ${key}`);
   }
   
   clear() {
     this.cache.clear();
-    logCache(`   ${this.name}.clear()`);
+    logC(`   ${this.name}.clear()`);
   }
 
   has(key) {
@@ -365,10 +388,12 @@ const debounceQueue = new DebounceQueue();
   }
 
   print() {
-    logCache(this.cache);
+    logC(this.cache);
   }
 }
-async function setOptions(obj) {
+const logSA = makeLogFunction({ module: 'storage-api' })
+
+async function setOptions(obj) {
   const entryList = Object.entries(obj)
     .map(([key, value]) => ({
       key, 
@@ -376,7 +401,6 @@ const debounceQueue = new DebounceQueue();
       value,
     }))
 
-  
   const localList = entryList
     .filter((item) => item.storage === STORAGE_TYPE.LOCAL)
   const localObj = Object.fromEntries(
@@ -389,8 +413,8 @@ const debounceQueue = new DebounceQueue();
     sessionList.map(({ key, value }) => [STORAGE_KEY_META[key].storageKey, value])
   )
 
-  logDebug('setOptions localObj', localObj)
-  logDebug('setOptions sessionObj', sessionObj)
+  logSA('setOptions localObj', localObj)
+  logSA('setOptions sessionObj', sessionObj)
   await Promise.all([
     localList.length > 0 && browser.storage.local.set(localObj),
     sessionList.length > 0 && browser.storage.session.set(sessionObj),
@@ -460,7 +484,8 @@ async function getOptions(keyList) {
     ...sessionObj,
   }
 }
-// console.log('IMPORTING', 'memo.js')
+const logM = makeLogFunction({ module: 'memo' })
+
 const memo = {
   previousTabId: '',
   activeTabId: '',
@@ -471,8 +496,10 @@ const memo = {
   bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
 }
 
-logSettings('IMPORT END', 'memo.js', new Date().toISOString())
-class ExtensionSettings {
+logM('IMPORT END', 'memo.js', new Date().toISOString())
+const logES = makeLogFunction({ module: 'extensionSettings' })
+
+class ExtensionSettings {
   _isActual = false
   _settings = {}
   promise
@@ -491,7 +518,7 @@ logSettings('IMPORT END', 'memo.js', new Date().toISOString())
     this._isActual = false
   }
   async restoreFromStorage() {
-    logSettings('readSavedSettings START')
+    logES('readSavedSettings START')
     this._isActual = true
 
     this.promise = new Promise((fnResolve, fnReject) => {
@@ -516,8 +543,8 @@ logSettings('IMPORT END', 'memo.js', new Date().toISOString())
         this.fnResolve()
       })
       .catch(this.fnReject);
-    logSettings('readSavedSettings')
-    logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
+    logES('readSavedSettings')
+    logES(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
   }
 
   async update(updateObj) {
@@ -530,7 +557,9 @@ logSettings('IMPORT END', 'memo.js', new Date().toISOString())
 }
 
 const extensionSettings = new ExtensionSettings()
-class BrowserStartTime {
+const logBST = makeLogFunction({ module: 'browserStartTime' })
+
+class BrowserStartTime {
   _isActual = false
   startTime
   promise
@@ -542,7 +571,7 @@ const extensionSettings = new ExtensionSettings()
   }
   async getStartTime() {
     const storedSession = await getOptions(STORAGE_KEY.START_TIME)
-    logSettings('storedSession', storedSession)
+    logBST('storedSession', storedSession)
 
     let result
 
@@ -577,7 +606,7 @@ const extensionSettings = new ExtensionSettings()
       })
       .catch(this.fnReject)
 
-    logSettings('profileStartTimeMS', new Date(this.startTime).toISOString())
+      logBST('profileStartTimeMS', new Date(this.startTime).toISOString())
   }
   async get() {
     await this.promise
@@ -655,8 +684,10 @@ const isDescriptiveFolderTitle = (title) => !!title
     || title.startsWith('New Folder')
     || title.startsWith('(to title)')
   ) 
-async function getRecentList(nItems) {
-  log('getRecentList() 00', nItems)
+const logRA = makeLogFunction({ module: 'recent-api' })
+
+async function getRecentList(nItems) {
+  logRA('getRecentList() 00', nItems)
   const list = await browser.bookmarks.getRecent(nItems);
 
   const folderList = list
@@ -1032,7 +1063,9 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
 
 const tagList = new TagList()
 
-const targetMap = new Map(
+const logCU = makeLogFunction({ module: 'clean-url-api' })
+
+const targetMap = new Map(
   clearUrlTargetList.map(({ hostname, paths }) => [hostname, paths])
 )
 
@@ -1098,10 +1131,10 @@ async function clearUrlInTab({ tabId, cleanUrl }) {
     command: CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL,
     cleanUrl,
   }
-  logSendEvent('clearUrlInTab()', tabId, msg)
+  logCU('clearUrlInTab() sendMessage', tabId, msg)
   await browser.tabs.sendMessage(tabId, msg)
     .catch((err) => {
-      logIgnore('clearUrlInTab()', err)
+      logCU('clearUrlInTab() IGNORE', err)
     })
 }
 // MAYBE did can we not create menu on evert time
@@ -1127,17 +1160,19 @@ async function createContextMenu() {
   });
   // MAYBE? bookmark and close tabs (tabs without bookmarks)
 }
-// async function deleteUncleanUrlBookmarkForTab(tabId) {
-//   log('deleteUncleanUrlBookmarkForTab 00 tabId', tabId)
+const logBA = makeLogFunction({ module: 'bookmarks-api' })
+
+// async function deleteUncleanUrlBookmarkForTab(tabId) {
+//   logBA('deleteUncleanUrlBookmarkForTab 00 tabId', tabId)
 //   if (!tabId) {
 //     return
 //   }
 
 //   const tabData = memo.tabMap.get(tabId)
-//   log('deleteUncleanUrlBookmarkForTab 11 tabData', tabData)
+//   logBA('deleteUncleanUrlBookmarkForTab 11 tabData', tabData)
 
 //   if (tabData?.bookmarkId) {
-//     log('deleteUncleanUrlBookmarkForTab 22')
+//     logBA('deleteUncleanUrlBookmarkForTab 22')
 //     await browser.bookmarks.remove(tabData.bookmarkId)
 //     memo.tabMap.delete(tabId)
 //   }
@@ -1239,7 +1274,7 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
     
     if (bookmarkInfoList) {
       source = SOURCE.CACHE;
-      logOptimization(' getBookmarkInfoUni: from cache bookmarkInfo')
+      logBA('getBookmarkInfoUni OPTIMIZATION: from cache bookmarkInfo')
     }
   } 
   
@@ -1385,21 +1420,23 @@ async function getHistoryInfo({ url }) {
     !extensionSettings.isActual() && extensionSettings.restoreFromStorage().then(() => tagList.readFromStorage()),
   ])
 }
-async function updateTabTask({ tabId }) {
+const logTA = makeLogFunction({ module: 'tabs-api' })
+
+async function updateTabTask({ tabId }) {
   let url
 
   try {
     const Tab = await browser.tabs.get(tabId);
     url = Tab?.url
   } catch (er) {
-    logIgnore('IGNORING. tab was deleted', er);
+    logTA('IGNORING. tab was deleted', er);
   }
 
   if (!(url && isSupportedProtocol(url))) {
     return
   }
 
-  log(' updateTabTask() 00', tabId, url)
+  logTA(' updateTabTask() 00', tabId, url)
   await initExtension()
   const settings = await extensionSettings.get()
 
@@ -1443,16 +1480,16 @@ async function getHistoryInfo({ url }) {
     // page settings
     isHideSemanticHtmlTagsOnPrinting: settings[STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING],
   }
-  logSendEvent('updateTabTask()', tabId, message);
+  logTA('updateTabTask() sendMessage', tabId, message);
   await browser.tabs.sendMessage(tabId, message)
     // eslint-disable-next-line no-unused-vars
     .catch((er) => {
-      // console.log('Failed to send bookmarkInfoTo to tab', tabId, ' Ignoring ', er)
+      // logTA('Failed to send bookmarkInfoTo to tab', tabId, ' Ignoring ', er)
     })
 }
 
 async function updateTab({ tabId, debugCaller }) {  
-  log(`${debugCaller} -> updateTab()`);
+  logTA(`updateTab() 00 <-${debugCaller}`);
 
   debounceQueue.run({
     key: `${tabId}`,
@@ -1464,7 +1501,7 @@ async function updateTab({ tabId, debugCaller }) {
 }
 
 async function updateActiveTab({ debugCaller } = {}) {
-  log(' updateActiveTab() 00')
+  logTA('updateActiveTab() 00')
 
   if (!memo.activeTabId) {
     const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
@@ -2502,9 +2539,11 @@ async function closeDuplicateTabs() {
   await tagList.removeFixedTag(parentId)
 }
 
-const bookmarksController = {
+const logBC = makeLogFunction({ module: 'bookmarks.controller' })
+
+const bookmarksController = {
   async onCreated(bookmarkId, node) {
-    log('bookmark.onCreated <-', node);
+    logBC('bookmark.onCreated <-', node);
     const settings = await extensionSettings.get()
 
     if (node.url) {
@@ -2523,7 +2562,7 @@ async function closeDuplicateTabs() {
     });
   },
   async onChanged(bookmarkId, changeInfo) {
-    log('bookmark.onChanged 00 <-', changeInfo);
+    logBC('bookmark.onChanged 00 <-', changeInfo);
     const settings = await extensionSettings.get()
 
     const [node] = await browser.bookmarks.get(bookmarkId)
@@ -2546,7 +2585,7 @@ async function closeDuplicateTabs() {
     });
   },
   async onMoved(bookmarkId, { oldIndex, index, oldParentId, parentId }) {
-    log('bookmark.onMoved <-', { oldIndex, index, oldParentId, parentId });
+    logBC('bookmark.onMoved <-', { oldIndex, index, oldParentId, parentId });
     const settings = await extensionSettings.get()
     // switch (true) {
     //   // in bookmark manager. no changes for this extension
@@ -2588,7 +2627,7 @@ async function closeDuplicateTabs() {
           isReplaceMoveToCreate = isReplaceMoveToCreate && parentId !== unclassifiedFolderId
 
           if (isReplaceMoveToCreate) {
-            log('bookmark.onMoved 22');
+            logBC('bookmark.onMoved 22');
 
             const { url, title } = node
             await browser.bookmarks.remove(bookmarkId)
@@ -2618,7 +2657,7 @@ async function closeDuplicateTabs() {
     }
   },
   async onRemoved(bookmarkId, { node }) {
-    log('bookmark.onRemoved <-');
+    logBC('bookmark.onRemoved <-');
     const settings = await extensionSettings.get()
 
     if (!node.url) {
@@ -2635,9 +2674,11 @@ async function closeDuplicateTabs() {
     });
   },
 }
-const contextMenusController = {
+const logCMC = makeLogFunction({ module: 'contextMenu.controller' })
+
+const contextMenusController = {
   async onClicked (OnClickData) {
-    // logEvent('contextMenus.onClicked <-');
+    logCMC('contextMenus.onClicked <- EVENT');
 
     switch (OnClickData.menuItemId) {
       case CONTEXT_MENU_ID.CLOSE_DUPLICATE: {
@@ -2655,14 +2696,16 @@ async function closeDuplicateTabs() {
     }
   }
 }
-async function onIncomingMessage (message, sender) {
+const logIM = makeLogFunction({ module: 'incoming-message' })
+
+async function onIncomingMessage (message, sender) {
   switch (message?.command) {
 
     case EXTENSION_COMMAND_ID.TAB_IS_READY: {
       const tabId = sender?.tab?.id;
 
       if (tabId && tabId == memo.activeTabId) {
-        logEvent('runtime.onMessage contentScriptReady', tabId);
+        logIM('runtime.onMessage contentScriptReady', tabId);
         updateTab({
           tabId,
           debugCaller: 'runtime.onMessage contentScriptReady',
@@ -2672,7 +2715,7 @@ async function closeDuplicateTabs() {
       break
     }
     case EXTENSION_COMMAND_ID.ADD_BOOKMARK: {
-      logEvent('runtime.onMessage addBookmark');
+      logIM('runtime.onMessage addBookmark');
       await addBookmark({
         url: message.url,
         title: message.title,
@@ -2682,19 +2725,19 @@ async function closeDuplicateTabs() {
       break
     }
     case EXTENSION_COMMAND_ID.DELETE_BOOKMARK: {
-      logEvent('runtime.onMessage deleteBookmark');
+      logIM('runtime.onMessage deleteBookmark');
 
       deleteBookmark(message.bkmId);
       break
     }
     case EXTENSION_COMMAND_ID.SHOW_TAG_LIST: {
-      logEvent('runtime.onMessage SHOW_RECENT_LIST');
+      logIM('runtime.onMessage SHOW_RECENT_LIST');
       await switchShowRecentList(message.value)
 
       break
     }
     case EXTENSION_COMMAND_ID.FIX_TAG: {
-      logEvent('runtime.onMessage fixTag');
+      logIM('runtime.onMessage fixTag');
       await fixTag({
         parentId: message.parentId, 
         title: message.title,
@@ -2707,7 +2750,7 @@ async function closeDuplicateTabs() {
       break
     }
     case EXTENSION_COMMAND_ID.UNFIX_TAG: {
-      logEvent('runtime.onMessage unfixTag');
+      logIM('runtime.onMessage unfixTag');
       await unfixTag(message.parentId)
       updateActiveTab({
         debugCaller: 'runtime.onMessage fixTag',
@@ -2717,13 +2760,13 @@ async function closeDuplicateTabs() {
       break
     }
     case EXTENSION_COMMAND_ID.ADD_RECENT_TAG: {
-      logEvent('runtime.onMessage ADD_RECENT_TAG');
+      logIM('runtime.onMessage ADD_RECENT_TAG');
       await addRecentTagFromView(message.bookmarkId)
 
       break
     }
     case EXTENSION_COMMAND_ID.OPTIONS_ASKS_DATA: {
-      logEvent('runtime.onMessage OPTIONS_ASKS_DATA');
+      logIM('runtime.onMessage OPTIONS_ASKS_DATA');
 
       const settings = await extensionSettings.get();
       browser.runtime.sendMessage({
@@ -2736,13 +2779,13 @@ async function closeDuplicateTabs() {
       break
     }
     case EXTENSION_COMMAND_ID.OPTIONS_ASKS_SAVE: {
-      logEvent('runtime.onMessage OPTIONS_ASKS_SAVE');
+      logIM('runtime.onMessage OPTIONS_ASKS_SAVE');
       await extensionSettings.update(message.updateObj)
 
       break
     }
     case EXTENSION_COMMAND_ID.OPTIONS_ASKS_FLAT_BOOKMARKS: {
-      logEvent('runtime.onMessage OPTIONS_ASKS_FLAT_BOOKMARKS');
+      logIM('runtime.onMessage OPTIONS_ASKS_FLAT_BOOKMARKS');
 
       let success
 
@@ -2750,7 +2793,7 @@ async function closeDuplicateTabs() {
         await moveToFlatFolderStructure()
         success = true
       } catch (e) {
-        console.log('Error on flatting bookmarks', e)
+        logIM('IGNORE Error on flatting bookmarks', e);
       }
       
       browser.runtime.sendMessage({
@@ -2762,9 +2805,11 @@ async function closeDuplicateTabs() {
     }
   }
 }
-const runtimeController = {
+const logRC = makeLogFunction({ module: 'runtime.controller' })
+
+const runtimeController = {
   async onStartup() {
-    logEvent('runtime.onStartup');
+    logRC('runtime.onStartup');
     // is only firefox use it?
     createContextMenu()
     await initExtension()
@@ -2781,7 +2826,7 @@ async function closeDuplicateTabs() {
     }
   },
   async onInstalled () {
-    logEvent('runtime.onInstalled');
+    logRC('runtime.onInstalled');
     createContextMenu()
     await initExtension()
     updateActiveTab({
@@ -2789,12 +2834,14 @@ async function closeDuplicateTabs() {
     });
   },
   async onMessage (message, sender) {
-    logEvent('runtime.onMessage message', message);
+    logRC('runtime.onMessage message', message);
 
     await onIncomingMessage(message, sender)
   }
 };
-const storageController = {
+const logSC = makeLogFunction({ module: 'storage.controller' })
+
+const storageController = {
   
   async onChanged(changes, namespace) {
     
@@ -2820,7 +2867,7 @@ async function closeDuplicateTabs() {
       const intersectSet = changesSet.intersection(settingSet)
 
       if (intersectSet.size > 0) {
-        logEvent('storage.onChanged', namespace, changes);
+        logSC('storage.onChanged', namespace, changes);
 
         extensionSettings.invalidate()
 
@@ -2831,19 +2878,23 @@ async function closeDuplicateTabs() {
     }
   },
 };
-const tabsController = {
+const logTC = makeLogFunction({ module: 'tabs.controller' })
+
+const tabsController = {
   onCreated({ pendingUrl: url, index, id }) {
-    logEvent('tabs.onCreated', index, id, url);
+    logTC('tabs.onCreated', index, id, url);
   },
   async onUpdated(tabId, changeInfo, Tab) {
-    logEvent('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
+    logTC('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
 
     switch (changeInfo?.status) {
 
       case ('complete'): {
-        logEvent('tabs.onUpdated complete', tabId, Tab);
+        logTC('tabs.onUpdated complete', tabId, Tab);
         
         if (tabId === memo.activeTabId && Tab.url != memo.activeTabUrl) {
+          logTC('tabs.onUpdated complete browser.tabs.update');
+          // It did not trigger tabsController.onActivated()
           browser.tabs.update(tabId, { active: true })
         }
     
@@ -2852,7 +2903,7 @@ async function closeDuplicateTabs() {
     }
   },
   async onActivated({ tabId }) {
-    logEvent('tabs.onActivated 00', tabId);
+    logTC('tabs.onActivated 00', tabId);
 
     if (memo.activeTabId !== tabId) {
       memo.previousTabId = memo.activeTabId;
@@ -2863,11 +2914,11 @@ async function closeDuplicateTabs() {
       const Tab = await browser.tabs.get(tabId);
 
       if (Tab) {
-        logDebug('tabs.onActivated 11', Tab.index, tabId, Tab.url);
+        logTC('tabs.onActivated 11', Tab.index, tabId, Tab.url);
         memo.activeTabUrl = Tab.url
       }
     } catch (er) {
-      logIgnore('tabs.onActivated. IGNORING. tab was deleted', er);
+      logTC('tabs.onActivated. IGNORING. tab was deleted', er);
     }
 
     updateTab({
@@ -2880,12 +2931,14 @@ async function closeDuplicateTabs() {
     debounceQueue.cancelTask(tabId)
   }
 }
-const windowsController = {
+const logWC = makeLogFunction({ module: 'windows.controller' })
+
+const windowsController = {
   async onFocusChanged(windowId) {
-    logDebug('windows.onFocusChanged', windowId);
+    logWC('windows.onFocusChanged', windowId);
     
     if (0 < windowId) {
-      logEvent('windows.onFocusChanged', windowId);
+      logWC('windows.onFocusChanged', windowId);
       updateActiveTab({
         debugCaller: 'windows.onFocusChanged'
       });

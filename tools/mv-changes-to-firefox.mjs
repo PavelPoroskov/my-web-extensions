@@ -5,7 +5,6 @@ import {
 
 createFileForFirefox(
   [
-    'constant/log-config.js',
     'constant/browser-specific.js',
     'constant/clean-url.js',
     'constant/command-id.js',
@@ -14,7 +13,8 @@ createFileForFirefox(
     'constant/storage.js',
     'constant/index.js',
     
-      'api/log-api.js',
+    'api/log-api-config.js',
+    'api/log-api.js',
     'api/structure/debounceQueue.js',
     'api/structure/extraMap.js',
     'api/structure/cache.js',
