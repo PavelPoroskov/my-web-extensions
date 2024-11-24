@@ -27,7 +27,7 @@ import { initExtension } from './init-extension.js'
 
 const logTA = makeLogFunction({ module: 'tabs-api' })
 
-async function updateTabTask({ tabId }) {
+export async function updateTab({ tabId, debugCaller, useCache=false }) {
   let url
 
   try {
@@ -41,7 +41,8 @@ async function updateTabTask({ tabId }) {
     return
   }
 
-  logTA(' updateTabTask() 00', tabId, url)
+  logTA(`updateTab() 00 <-${debugCaller}`, tabId, url);
+
   await initExtension()
   const settings = await extensionSettings.get()
 
@@ -62,7 +63,7 @@ async function updateTabTask({ tabId }) {
     bookmarkInfo,
     visitInfo,
   ] = await Promise.all([
-    getBookmarkInfoUni({ url: actualUrl }),
+    getBookmarkInfoUni({ url: actualUrl, useCache }),
     isShowVisits && getHistoryInfo({ url: actualUrl }),
   ])
 
@@ -93,18 +94,6 @@ async function updateTabTask({ tabId }) {
     })
 }
 
-export async function updateTab({ tabId, debugCaller }) {  
-  logTA(`updateTab() 00 <-${debugCaller}`);
-
-  debounceQueue.run({
-    key: `${tabId}`,
-    fn: updateTabTask,
-    options: {
-      tabId,
-    },
-  });
-}
-
 export async function updateActiveTab({ debugCaller } = {}) {
   logTA('updateActiveTab() 00')
 
@@ -118,9 +107,13 @@ export async function updateActiveTab({ debugCaller } = {}) {
   }
 
   if (memo.activeTabId) {
-    updateTab({
-      tabId: memo.activeTabId, 
-      debugCaller: `${debugCaller} -> updateActiveTab()`
+    debounceQueue.run({
+      key: memo.activeTabId,
+      fn: updateTab,
+      options: {
+        tabId: memo.activeTabId,
+        debugCaller: `updateActiveTab() <- ${debugCaller}`,
+      },
     });
   }
 }

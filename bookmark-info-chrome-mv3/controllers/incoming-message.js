@@ -12,7 +12,6 @@ import {
   memo,
 } from '../api/structure/index.js'
 import {
-  updateActiveTab,
   updateTab,
 } from '../api/tabs-api.js'
 import {
@@ -70,20 +69,26 @@ export async function onIncomingMessage (message, sender) {
         parentId: message.parentId, 
         title: message.title,
       })
-      updateActiveTab({
+
+      const tabId = sender?.tab?.id;
+      updateTab({
+        tabId,
         debugCaller: 'runtime.onMessage fixTag',
         useCache: true,
-      });
-  
+      })
+
       break
     }
     case EXTENSION_COMMAND_ID.UNFIX_TAG: {
       logIM('runtime.onMessage unfixTag');
       await unfixTag(message.parentId)
-      updateActiveTab({
-        debugCaller: 'runtime.onMessage fixTag',
+
+      const tabId = sender?.tab?.id;
+      updateTab({
+        tabId,
+        debugCaller: 'runtime.onMessage unfixTag',
         useCache: true,
-      });
+      })
 
       break
     }

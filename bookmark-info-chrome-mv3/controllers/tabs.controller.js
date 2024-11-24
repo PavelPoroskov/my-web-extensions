@@ -23,10 +23,15 @@ export const tabsController = {
       case ('complete'): {
         logTC('tabs.onUpdated complete', tabId, Tab);
         
-        if (tabId === memo.activeTabId && Tab.url != memo.activeTabUrl) {
+        if (tabId === memo.activeTabId) {
           logTC('tabs.onUpdated complete chrome.tabs.update');
-          // It did not trigger tabsController.onActivated()
-          chrome.tabs.update(tabId, { active: true })
+          // // It did not trigger tabsController.onActivated()
+          // chrome.tabs.update(tabId, { active: true })
+
+          // updateTab({
+          //   tabId, 
+          //   debugCaller: 'tabs.onUpdated complete'
+          // });
         }
     
         break;
