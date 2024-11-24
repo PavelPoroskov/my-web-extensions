@@ -1,7 +1,4 @@
 import {
-  logEvent
-} from '../api/log-api.js'
-import {
   createContextMenu,
 } from '../api/context-menu.js'
 import {
@@ -20,10 +17,15 @@ import {
   onIncomingMessage,
 } from './incoming-message.js'
 import { initExtension } from '../api/init-extension.js'
+import {
+  makeLogFunction,
+} from '../api/log-api.js'
+
+const logRC = makeLogFunction({ module: 'runtime.controller' })
 
 export const runtimeController = {
   async onStartup() {
-    logEvent('runtime.onStartup');
+    logRC('runtime.onStartup');
     // is only firefox use it?
     createContextMenu()
     await initExtension()
@@ -40,7 +42,7 @@ export const runtimeController = {
     }
   },
   async onInstalled () {
-    logEvent('runtime.onInstalled');
+    logRC('runtime.onInstalled');
     createContextMenu()
     await initExtension()
     updateActiveTab({
@@ -48,7 +50,7 @@ export const runtimeController = {
     });
   },
   async onMessage (message, sender) {
-    logEvent('runtime.onMessage message', message);
+    logRC('runtime.onMessage message', message);
 
     await onIncomingMessage(message, sender)
   }

@@ -8,9 +8,6 @@ import {
   unfixTag,
 } from '../api/command/index.js'
 import {
-  logEvent,
-} from '../api/log-api.js'
-import {
   extensionSettings,
   memo,
 } from '../api/structure/index.js'
@@ -23,6 +20,11 @@ import {
   STORAGE_KEY,
   clearUrlTargetList,
 } from '../constant/index.js'
+import {
+  makeLogFunction,
+} from '../api/log-api.js'
+
+const logIM = makeLogFunction({ module: 'incoming-message' })
 
 export async function onIncomingMessage (message, sender) {
   switch (message?.command) {
@@ -31,7 +33,7 @@ export async function onIncomingMessage (message, sender) {
       const tabId = sender?.tab?.id;
 
       if (tabId && tabId == memo.activeTabId) {
-        logEvent('runtime.onMessage contentScriptReady', tabId);
+        logIM('runtime.onMessage contentScriptReady', tabId);
         updateTab({
           tabId,
           debugCaller: 'runtime.onMessage contentScriptReady',
@@ -41,7 +43,7 @@ export async function onIncomingMessage (message, sender) {
       break
     }
     case EXTENSION_COMMAND_ID.ADD_BOOKMARK: {
-      logEvent('runtime.onMessage addBookmark');
+      logIM('runtime.onMessage addBookmark');
       await addBookmark({
         url: message.url,
         title: message.title,
@@ -51,19 +53,19 @@ export async function onIncomingMessage (message, sender) {
       break
     }
     case EXTENSION_COMMAND_ID.DELETE_BOOKMARK: {
-      logEvent('runtime.onMessage deleteBookmark');
+      logIM('runtime.onMessage deleteBookmark');
 
       deleteBookmark(message.bkmId);
       break
     }
     case EXTENSION_COMMAND_ID.SHOW_TAG_LIST: {
-      logEvent('runtime.onMessage SHOW_RECENT_LIST');
+      logIM('runtime.onMessage SHOW_RECENT_LIST');
       await switchShowRecentList(message.value)
 
       break
     }
     case EXTENSION_COMMAND_ID.FIX_TAG: {
-      logEvent('runtime.onMessage fixTag');
+      logIM('runtime.onMessage fixTag');
       await fixTag({
         parentId: message.parentId, 
         title: message.title,
@@ -76,7 +78,7 @@ export async function onIncomingMessage (message, sender) {
       break
     }
     case EXTENSION_COMMAND_ID.UNFIX_TAG: {
-      logEvent('runtime.onMessage unfixTag');
+      logIM('runtime.onMessage unfixTag');
       await unfixTag(message.parentId)
       updateActiveTab({
         debugCaller: 'runtime.onMessage fixTag',
@@ -86,13 +88,13 @@ export async function onIncomingMessage (message, sender) {
       break
     }
     case EXTENSION_COMMAND_ID.ADD_RECENT_TAG: {
-      logEvent('runtime.onMessage ADD_RECENT_TAG');
+      logIM('runtime.onMessage ADD_RECENT_TAG');
       await addRecentTagFromView(message.bookmarkId)
 
       break
     }
     case EXTENSION_COMMAND_ID.OPTIONS_ASKS_DATA: {
-      logEvent('runtime.onMessage OPTIONS_ASKS_DATA');
+      logIM('runtime.onMessage OPTIONS_ASKS_DATA');
 
       const settings = await extensionSettings.get();
       chrome.runtime.sendMessage({
@@ -105,13 +107,13 @@ export async function onIncomingMessage (message, sender) {
       break
     }
     case EXTENSION_COMMAND_ID.OPTIONS_ASKS_SAVE: {
-      logEvent('runtime.onMessage OPTIONS_ASKS_SAVE');
+      logIM('runtime.onMessage OPTIONS_ASKS_SAVE');
       await extensionSettings.update(message.updateObj)
 
       break
     }
     case EXTENSION_COMMAND_ID.OPTIONS_ASKS_FLAT_BOOKMARKS: {
-      logEvent('runtime.onMessage OPTIONS_ASKS_FLAT_BOOKMARKS');
+      logIM('runtime.onMessage OPTIONS_ASKS_FLAT_BOOKMARKS');
 
       let success
 
@@ -119,7 +121,7 @@ export async function onIncomingMessage (message, sender) {
         await moveToFlatFolderStructure()
         success = true
       } catch (e) {
-        console.log('Error on flatting bookmarks', e)
+        logIM('IGNORE Error on flatting bookmarks', e);
       }
       
       chrome.runtime.sendMessage({

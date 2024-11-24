@@ -1,5 +1,5 @@
 import {
-  logSettings,
+  makeLogFunction,
 } from '../log-api.js'
 import {
   getOptions, setOptions
@@ -7,6 +7,8 @@ import {
 import {
   STORAGE_KEY,
 } from '../../constant/index.js';
+
+const logES = makeLogFunction({ module: 'extensionSettings' })
 
 class ExtensionSettings {
   _isActual = false
@@ -27,7 +29,7 @@ class ExtensionSettings {
     this._isActual = false
   }
   async restoreFromStorage() {
-    logSettings('readSavedSettings START')
+    logES('readSavedSettings START')
     this._isActual = true
 
     this.promise = new Promise((fnResolve, fnReject) => {
@@ -52,8 +54,8 @@ class ExtensionSettings {
         this.fnResolve()
       })
       .catch(this.fnReject);
-    logSettings('readSavedSettings')
-    logSettings(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
+    logES('readSavedSettings')
+    logES(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
   }
 
   async update(updateObj) {

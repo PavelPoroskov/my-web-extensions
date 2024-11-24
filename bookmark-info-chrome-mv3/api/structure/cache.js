@@ -1,7 +1,9 @@
 
 import {
-  logCache,
+  makeLogFunction,
 } from '../log-api.js'
+
+const logC = makeLogFunction({ module: 'cache' })
 
 export class CacheWithLimit {
   constructor ({ name='cache', size = 100 }) {
@@ -31,26 +33,26 @@ export class CacheWithLimit {
 
   add (key,value) {
     this.cache.set(key, value);
-    logCache(`   ${this.name}.add: ${key}`, value);
+    logC(`   ${this.name}.add: ${key}`, value);
     
     this.removeStale();
   }
   
   get(key) {
     const value = this.cache.get(key);
-    logCache(`   ${this.name}.get: ${key}`, value);
+    logC(`   ${this.name}.get: ${key}`, value);
   
     return value;
   }
 
   delete(key) {
     this.cache.delete(key);
-    logCache(`   ${this.name}.delete: ${key}`);
+    logC(`   ${this.name}.delete: ${key}`);
   }
   
   clear() {
     this.cache.clear();
-    logCache(`   ${this.name}.clear()`);
+    logC(`   ${this.name}.clear()`);
   }
 
   has(key) {
@@ -58,7 +60,7 @@ export class CacheWithLimit {
   }
 
   print() {
-    logCache(this.cache);
+    logC(this.cache);
   }
 }
 

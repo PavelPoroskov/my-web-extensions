@@ -1,6 +1,8 @@
 import {
-  logPromiseQueue,
+  makeLogFunction,
 } from '../log-api.js'
+
+const logDQ = makeLogFunction({ module: 'debounceQueue' })
 
 class DebounceQueue {
   constructor () {
@@ -15,10 +17,10 @@ class DebounceQueue {
 
       this.timers[key] = setTimeout(
         () => {
-          logPromiseQueue(' PromiseQueue: execute task', args[0])
+          logDQ(' PromiseQueue: execute task', args[0])
           func.apply(this, args)
             .catch((er) => {
-              logPromiseQueue(' IGNORING error: PromiseQueue', er);
+              logDQ(' IGNORING error: PromiseQueue', er);
             });
         },
         timeout,
@@ -36,10 +38,10 @@ class DebounceQueue {
   
   run({ key, fn, options }) {
     if (!this.tasks[key]) {
-      logPromiseQueue(' PromiseQueue: first call', key, options)
+      logDQ(' PromiseQueue: first call', key, options)
       this.tasks[key] = this.debounce(key, fn)
     } else {
-      logPromiseQueue(' PromiseQueue: second call', key, options)
+      logDQ(' PromiseQueue: second call', key, options)
     }
     this.tasks[key](options);
     this.lastCallTimeMap.set(key, Date.now())

@@ -1,10 +1,12 @@
 import {
-  logDebug,
-} from './log-api.js'
+  makeLogFunction,
+} from '../api/log-api.js'
 import {
   STORAGE_TYPE,
   STORAGE_KEY_META,
 } from '../constant/index.js';
+
+const logSA = makeLogFunction({ module: 'storage-api' })
 
 export async function setOptions(obj) {
   const entryList = Object.entries(obj)
@@ -14,7 +16,6 @@ export async function setOptions(obj) {
       value,
     }))
 
-  
   const localList = entryList
     .filter((item) => item.storage === STORAGE_TYPE.LOCAL)
   const localObj = Object.fromEntries(
@@ -27,8 +28,8 @@ export async function setOptions(obj) {
     sessionList.map(({ key, value }) => [STORAGE_KEY_META[key].storageKey, value])
   )
 
-  logDebug('setOptions localObj', localObj)
-  logDebug('setOptions sessionObj', sessionObj)
+  logSA('setOptions localObj', localObj)
+  logSA('setOptions sessionObj', sessionObj)
   await Promise.all([
     localList.length > 0 && chrome.storage.local.set(localObj),
     sessionList.length > 0 && chrome.storage.session.set(sessionObj),

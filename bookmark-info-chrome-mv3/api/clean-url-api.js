@@ -1,12 +1,12 @@
-
 import {
   CONTENT_SCRIPT_COMMAND_ID,
   clearUrlTargetList 
 } from '../constant/index.js'
 import {
-  logSendEvent,
-  logIgnore,
-} from './log-api.js'
+  makeLogFunction,
+} from '../api/log-api.js'
+
+const logCU = makeLogFunction({ module: 'clean-url-api' })
 
 const targetMap = new Map(
   clearUrlTargetList.map(({ hostname, paths }) => [hostname, paths])
@@ -74,9 +74,9 @@ export async function clearUrlInTab({ tabId, cleanUrl }) {
     command: CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL,
     cleanUrl,
   }
-  logSendEvent('clearUrlInTab()', tabId, msg)
+  logCU('clearUrlInTab() sendMessage', tabId, msg)
   await chrome.tabs.sendMessage(tabId, msg)
     .catch((err) => {
-      logIgnore('clearUrlInTab()', err)
+      logCU('clearUrlInTab() IGNORE', err)
     })
 }

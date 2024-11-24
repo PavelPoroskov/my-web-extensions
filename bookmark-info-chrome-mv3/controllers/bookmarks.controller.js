@@ -1,7 +1,4 @@
 import {
-  log,
-} from '../api/log-api.js'
-import {
   getUnclassifiedFolderId,
 } from '../api/special-folder.api.js'
 import {
@@ -17,10 +14,15 @@ import {
   IS_BROWSER_FIREFOX,
   STORAGE_KEY,
 } from '../constant/index.js'
+import {
+  makeLogFunction,
+} from '../api/log-api.js'
+
+const logBC = makeLogFunction({ module: 'bookmarks.controller' })
 
 export const bookmarksController = {
   async onCreated(bookmarkId, node) {
-    log('bookmark.onCreated <-', node);
+    logBC('bookmark.onCreated <-', node);
     const settings = await extensionSettings.get()
 
     if (node.url) {
@@ -39,7 +41,7 @@ export const bookmarksController = {
     });
   },
   async onChanged(bookmarkId, changeInfo) {
-    log('bookmark.onChanged 00 <-', changeInfo);
+    logBC('bookmark.onChanged 00 <-', changeInfo);
     const settings = await extensionSettings.get()
 
     const [node] = await chrome.bookmarks.get(bookmarkId)
@@ -62,7 +64,7 @@ export const bookmarksController = {
     });
   },
   async onMoved(bookmarkId, { oldIndex, index, oldParentId, parentId }) {
-    log('bookmark.onMoved <-', { oldIndex, index, oldParentId, parentId });
+    logBC('bookmark.onMoved <-', { oldIndex, index, oldParentId, parentId });
     const settings = await extensionSettings.get()
     // switch (true) {
     //   // in bookmark manager. no changes for this extension
@@ -104,7 +106,7 @@ export const bookmarksController = {
           isReplaceMoveToCreate = isReplaceMoveToCreate && parentId !== unclassifiedFolderId
 
           if (isReplaceMoveToCreate) {
-            log('bookmark.onMoved 22');
+            logBC('bookmark.onMoved 22');
 
             const { url, title } = node
             await chrome.bookmarks.remove(bookmarkId)
@@ -134,7 +136,7 @@ export const bookmarksController = {
     }
   },
   async onRemoved(bookmarkId, { node }) {
-    log('bookmark.onRemoved <-');
+    logBC('bookmark.onRemoved <-');
     const settings = await extensionSettings.get()
 
     if (!node.url) {

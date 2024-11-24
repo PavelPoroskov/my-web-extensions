@@ -1,13 +1,15 @@
 import {
-  logEvent,
-} from '../api/log-api.js'
-import {
   STORAGE_KEY,
   STORAGE_KEY_META,
 } from '../constant/index.js'
 import {
   extensionSettings,
 } from '../api/structure/index.js'
+import {
+  makeLogFunction,
+} from '../api/log-api.js'
+
+const logSC = makeLogFunction({ module: 'storage.controller' })
 
 export const storageController = {
   
@@ -35,7 +37,7 @@ export const storageController = {
       const intersectSet = changesSet.intersection(settingSet)
 
       if (intersectSet.size > 0) {
-        logEvent('storage.onChanged', namespace, changes);
+        logSC('storage.onChanged', namespace, changes);
 
         extensionSettings.invalidate()
 

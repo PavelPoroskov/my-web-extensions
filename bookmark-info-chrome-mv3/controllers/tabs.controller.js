@@ -1,8 +1,5 @@
-
 import {
-  logDebug,
-  logEvent,
-  logIgnore,
+  makeLogFunction,
 } from '../api/log-api.js'
 import {
   debounceQueue,
@@ -12,20 +9,23 @@ import {
   updateTab,
 } from '../api/tabs-api.js'
 
+const logTC = makeLogFunction({ module: 'tabs.controller' })
 
 export const tabsController = {
   onCreated({ pendingUrl: url, index, id }) {
-    logEvent('tabs.onCreated', index, id, url);
+    logTC('tabs.onCreated', index, id, url);
   },
   async onUpdated(tabId, changeInfo, Tab) {
-    logEvent('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
+    logTC('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
 
     switch (changeInfo?.status) {
 
       case ('complete'): {
-        logEvent('tabs.onUpdated complete', tabId, Tab);
+        logTC('tabs.onUpdated complete', tabId, Tab);
         
         if (tabId === memo.activeTabId && Tab.url != memo.activeTabUrl) {
+          logTC('tabs.onUpdated complete chrome.tabs.update');
+          // It did not trigger tabsController.onActivated()
           chrome.tabs.update(tabId, { active: true })
         }
     
@@ -34,7 +34,7 @@ export const tabsController = {
     }
   },
   async onActivated({ tabId }) {
-    logEvent('tabs.onActivated 00', tabId);
+    logTC('tabs.onActivated 00', tabId);
 
     if (memo.activeTabId !== tabId) {
       memo.previousTabId = memo.activeTabId;
@@ -45,11 +45,11 @@ export const tabsController = {
       const Tab = await chrome.tabs.get(tabId);
 
       if (Tab) {
-        logDebug('tabs.onActivated 11', Tab.index, tabId, Tab.url);
+        logTC('tabs.onActivated 11', Tab.index, tabId, Tab.url);
         memo.activeTabUrl = Tab.url
       }
     } catch (er) {
-      logIgnore('tabs.onActivated. IGNORING. tab was deleted', er);
+      logTC('tabs.onActivated. IGNORING. tab was deleted', er);
     }
 
     updateTab({

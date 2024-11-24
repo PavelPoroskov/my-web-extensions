@@ -1,9 +1,9 @@
-// console.log('IMPORTING', 'memo.js')
 import { CacheWithLimit } from './cache.js'
 import {
-  logSettings,
-  // logDebug,
+  makeLogFunction,
 } from '../log-api.js'
+
+const logM = makeLogFunction({ module: 'memo' })
 
 export const memo = {
   previousTabId: '',
@@ -15,4 +15,4 @@ export const memo = {
   bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
 }
 
-logSettings('IMPORT END', 'memo.js', new Date().toISOString())
+logM('IMPORT END', 'memo.js', new Date().toISOString())

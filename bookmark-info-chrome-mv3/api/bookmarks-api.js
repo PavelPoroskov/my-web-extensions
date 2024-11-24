@@ -1,7 +1,4 @@
 import {
-  logOptimization,
-} from './log-api.js'
-import {
   memo,
 } from './structure/index.js'
 import {
@@ -10,18 +7,23 @@ import {
 import {
   SOURCE,
 } from '../constant/index.js'
+import {
+  makeLogFunction,
+} from '../api/log-api.js'
+
+const logBA = makeLogFunction({ module: 'bookmarks-api' })
 
 // export async function deleteUncleanUrlBookmarkForTab(tabId) {
-//   log('deleteUncleanUrlBookmarkForTab 00 tabId', tabId)
+//   logBA('deleteUncleanUrlBookmarkForTab 00 tabId', tabId)
 //   if (!tabId) {
 //     return
 //   }
 
 //   const tabData = memo.tabMap.get(tabId)
-//   log('deleteUncleanUrlBookmarkForTab 11 tabData', tabData)
+//   logBA('deleteUncleanUrlBookmarkForTab 11 tabData', tabData)
 
 //   if (tabData?.bookmarkId) {
-//     log('deleteUncleanUrlBookmarkForTab 22')
+//     logBA('deleteUncleanUrlBookmarkForTab 22')
 //     await chrome.bookmarks.remove(tabData.bookmarkId)
 //     memo.tabMap.delete(tabId)
 //   }
@@ -123,7 +125,7 @@ export async function getBookmarkInfoUni({ url, useCache=false }) {
     
     if (bookmarkInfoList) {
       source = SOURCE.CACHE;
-      logOptimization(' getBookmarkInfoUni: from cache bookmarkInfo')
+      logBA('getBookmarkInfoUni OPTIMIZATION: from cache bookmarkInfo')
     }
   } 
   

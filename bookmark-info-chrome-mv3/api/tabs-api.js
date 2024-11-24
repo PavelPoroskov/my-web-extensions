@@ -1,8 +1,6 @@
 import {
-  log,
-  logSendEvent,
-  logIgnore,
-} from './log-api.js'
+  makeLogFunction,
+} from '../api/log-api.js'
 import {
   isSupportedProtocol,
 } from './common-api.js'
@@ -27,6 +25,8 @@ import {
 } from '../constant/index.js'
 import { initExtension } from './init-extension.js'
 
+const logTA = makeLogFunction({ module: 'tabs-api' })
+
 async function updateTabTask({ tabId }) {
   let url
 
@@ -34,14 +34,14 @@ async function updateTabTask({ tabId }) {
     const Tab = await chrome.tabs.get(tabId);
     url = Tab?.url
   } catch (er) {
-    logIgnore('IGNORING. tab was deleted', er);
+    logTA('IGNORING. tab was deleted', er);
   }
 
   if (!(url && isSupportedProtocol(url))) {
     return
   }
 
-  log(' updateTabTask() 00', tabId, url)
+  logTA(' updateTabTask() 00', tabId, url)
   await initExtension()
   const settings = await extensionSettings.get()
 
@@ -85,16 +85,16 @@ async function updateTabTask({ tabId }) {
     // page settings
     isHideSemanticHtmlTagsOnPrinting: settings[STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING],
   }
-  logSendEvent('updateTabTask()', tabId, message);
+  logTA('updateTabTask() sendMessage', tabId, message);
   await chrome.tabs.sendMessage(tabId, message)
     // eslint-disable-next-line no-unused-vars
     .catch((er) => {
-      // console.log('Failed to send bookmarkInfoTo to tab', tabId, ' Ignoring ', er)
+      // logTA('Failed to send bookmarkInfoTo to tab', tabId, ' Ignoring ', er)
     })
 }
 
 export async function updateTab({ tabId, debugCaller }) {  
-  log(`${debugCaller} -> updateTab()`);
+  logTA(`updateTab() 00 <-${debugCaller}`);
 
   debounceQueue.run({
     key: `${tabId}`,
@@ -106,7 +106,7 @@ export async function updateTab({ tabId, debugCaller }) {
 }
 
 export async function updateActiveTab({ debugCaller } = {}) {
-  log(' updateActiveTab() 00')
+  logTA('updateActiveTab() 00')
 
   if (!memo.activeTabId) {
     const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });

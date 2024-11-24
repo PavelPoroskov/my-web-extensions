@@ -6,10 +6,15 @@ import {
   closeBookmarkedTabs,
   closeDuplicateTabs,
 } from '../api/command/index.js'
+import {
+  makeLogFunction,
+} from '../api/log-api.js'
+
+const logCMC = makeLogFunction({ module: 'contextMenu.controller' })
 
 export const contextMenusController = {
   async onClicked (OnClickData) {
-    // logEvent('contextMenus.onClicked <-');
+    logCMC('contextMenus.onClicked <- EVENT');
 
     switch (OnClickData.menuItemId) {
       case CONTEXT_MENU_ID.CLOSE_DUPLICATE: {

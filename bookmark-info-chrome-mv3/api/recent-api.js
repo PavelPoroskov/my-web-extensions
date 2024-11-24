@@ -1,15 +1,17 @@
 import {
-  log,
-} from './log-api.js'
-import {
   OTHER_BOOKMARKS_FOLDER_ID,
   BOOKMARKS_BAR_FOLDER_ID,
   getUnclassifiedFolderId,
   isDescriptiveFolderTitle,
 } from './special-folder.api.js'
+import {
+  makeLogFunction,
+} from '../api/log-api.js'
+
+const logRA = makeLogFunction({ module: 'recent-api' })
 
 async function getRecentList(nItems) {
-  log('getRecentList() 00', nItems)
+  logRA('getRecentList() 00', nItems)
   const list = await chrome.bookmarks.getRecent(nItems);
 
   const folderList = list

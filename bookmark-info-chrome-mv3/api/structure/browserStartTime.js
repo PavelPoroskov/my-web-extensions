@@ -1,5 +1,5 @@
 import {
-  logSettings,
+  makeLogFunction,
 } from '../log-api.js'
 import {
   getOptions, setOptions
@@ -7,6 +7,8 @@ import {
 import {
   STORAGE_KEY,
 } from '../../constant/index.js';
+
+const logBST = makeLogFunction({ module: 'browserStartTime' })
 
 class BrowserStartTime {
   _isActual = false
@@ -20,7 +22,7 @@ class BrowserStartTime {
   }
   async getStartTime() {
     const storedSession = await getOptions(STORAGE_KEY.START_TIME)
-    logSettings('storedSession', storedSession)
+    logBST('storedSession', storedSession)
 
     let result
 
@@ -55,7 +57,7 @@ class BrowserStartTime {
       })
       .catch(this.fnReject)
 
-    logSettings('profileStartTimeMS', new Date(this.startTime).toISOString())
+      logBST('profileStartTimeMS', new Date(this.startTime).toISOString())
   }
   async get() {
     await this.promise
