@@ -4,7 +4,9 @@
   "description": "Browser extension",
   "main": "bookmark-info-chrome-mv3/bkm-info-sw.js",
   "scripts": {
-    "eslint": "eslint"
+    "eslint": "eslint",
+    "to-ff": "node tools/mv-changes-to-firefox.mjs",
+    "deploy": "./deploy.sh"
   },
   "keywords": [],
   "author": "",
