@@ -102,7 +102,9 @@ export async function updateActiveTab({ debugCaller } = {}) {
     const [Tab] = tabs;
 
     if (Tab?.id) {
-      await chrome.tabs.update(Tab?.id, { active: true })
+      memo.activeTabId = Tab.id;
+      memo.activeTabUrl = Tab.url
+      // await chrome.tabs.update(Tab.id, { active: true })
     }
   }
 

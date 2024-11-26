@@ -28,6 +28,7 @@ export const tabsController = {
           // // It did not trigger tabsController.onActivated()
           // chrome.tabs.update(tabId, { active: true })
 
+          // we here after message page-is-ready. that message triggers update. not necessary to update here
           // updateTab({
           //   tabId, 
           //   debugCaller: 'tabs.onUpdated complete'
@@ -46,6 +47,11 @@ export const tabsController = {
       memo.activeTabId = tabId;
     }
 
+    updateTab({
+      tabId, 
+      debugCaller: 'tabs.onActivated'
+    });
+
     try {
       const Tab = await chrome.tabs.get(tabId);
 
@@ -56,11 +62,6 @@ export const tabsController = {
     } catch (er) {
       logTC('tabs.onActivated. IGNORING. tab was deleted', er);
     }
-
-    updateTab({
-      tabId, 
-      debugCaller: 'tabs.onActivated'
-    });
   },
   async onRemoved(tabId) {
     // deleteUncleanUrlBookmarkForTab(tabId)

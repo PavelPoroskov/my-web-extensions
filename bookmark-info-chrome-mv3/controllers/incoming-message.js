@@ -30,9 +30,11 @@ export async function onIncomingMessage (message, sender) {
 
     case EXTENSION_COMMAND_ID.TAB_IS_READY: {
       const tabId = sender?.tab?.id;
+      logIM('runtime.onMessage contentScriptReady 00', 'tabId', tabId, 'memo.activeTabId', memo.activeTabId);
+      logIM('#  runtime.onMessage contentScriptReady 00', message.url);
 
       if (tabId && tabId == memo.activeTabId) {
-        logIM('runtime.onMessage contentScriptReady', tabId);
+        logIM('runtime.onMessage contentScriptReady 11 updateTab', tabId);
         updateTab({
           tabId,
           debugCaller: 'runtime.onMessage contentScriptReady',
