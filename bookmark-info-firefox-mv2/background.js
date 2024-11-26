@@ -50,6 +50,8 @@ const BROWSER_SPECIFIC = Object.fromEntries(
       '/list/',
       '/imdbpicks/',
       '/interest/',
+      // TODO remove only selected query params: ref=
+      '/',
     ] 
   },
   {
@@ -188,6 +190,7 @@ const ADD_BOOKMARK_LIST_MAX = 50
   // 'debounceQueue',
   // 'extensionSettings',
   // 'incoming-message',
+  // 'init-extension',
   // 'memo',
   // 'recent-api',
   // 'runtime.controller',
@@ -1412,17 +1415,21 @@ async function getHistoryInfo({ url }) {
     visitList,
   };
 }
-async function initExtension() {
+const logIX = makeLogFunction({ module: 'init-extension' })
+
+async function initExtension() {
   // await tagList.readFromStorage()
+  logIX('initExtension() 00')
 
   await Promise.all([
     !browserStartTime.isActual() && browserStartTime.init(),
     !extensionSettings.isActual() && extensionSettings.restoreFromStorage().then(() => tagList.readFromStorage()),
   ])
+  logIX('initExtension() end')
 }
 const logTA = makeLogFunction({ module: 'tabs-api' })
 
-async function updateTabTask({ tabId }) {
+async function updateTab({ tabId, debugCaller, useCache=false }) {
   let url
 
   try {
@@ -1436,7 +1443,8 @@ async function updateTabTask({ tabId }) {
     return
   }
 
-  logTA(' updateTabTask() 00', tabId, url)
+  logTA(`updateTab() 00 <-${debugCaller}`, tabId, url);
+
   await initExtension()
   const settings = await extensionSettings.get()
 
@@ -1457,7 +1465,7 @@ async function updateTabTask({ tabId }) {
     bookmarkInfo,
     visitInfo,
   ] = await Promise.all([
-    getBookmarkInfoUni({ url: actualUrl }),
+    getBookmarkInfoUni({ url: actualUrl, useCache }),
     isShowVisits && getHistoryInfo({ url: actualUrl }),
   ])
 
@@ -1488,18 +1496,6 @@ async function updateTabTask({ tabId }) {
     })
 }
 
-async function updateTab({ tabId, debugCaller }) {  
-  logTA(`updateTab() 00 <-${debugCaller}`);
-
-  debounceQueue.run({
-    key: `${tabId}`,
-    fn: updateTabTask,
-    options: {
-      tabId,
-    },
-  });
-}
-
 async function updateActiveTab({ debugCaller } = {}) {
   logTA('updateActiveTab() 00')
 
@@ -1508,14 +1504,20 @@ async function updateActiveTab({ debugCaller } = {}) {
     const [Tab] = tabs;
 
     if (Tab?.id) {
-      await browser.tabs.update(Tab?.id, { active: true })
+      memo.activeTabId = Tab.id;
+      memo.activeTabUrl = Tab.url
+      // await browser.tabs.update(Tab.id, { active: true })
     }
   }
 
   if (memo.activeTabId) {
-    updateTab({
-      tabId: memo.activeTabId, 
-      debugCaller: `${debugCaller} -> updateActiveTab()`
+    debounceQueue.run({
+      key: memo.activeTabId,
+      fn: updateTab,
+      options: {
+        tabId: memo.activeTabId,
+        debugCaller: `updateActiveTab() <- ${debugCaller}`,
+      },
     });
   }
 }
@@ -2703,13 +2705,39 @@ async function onIncomingMessage (message, sender) {
 
     case EXTENSION_COMMAND_ID.TAB_IS_READY: {
       const tabId = sender?.tab?.id;
+      logIM('runtime.onMessage contentScriptReady 00', 'tabId', tabId, 'memo.activeTabId', memo.activeTabId);
+      logIM('#  runtime.onMessage contentScriptReady 00', message.url);
 
-      if (tabId && tabId == memo.activeTabId) {
-        logIM('runtime.onMessage contentScriptReady', tabId);
-        updateTab({
-          tabId,
-          debugCaller: 'runtime.onMessage contentScriptReady',
-        })
+      if (tabId) {
+        const settings = await extensionSettings.get()
+        const url = message.url
+        let cleanUrl
+
+        if (settings[STORAGE_KEY.CLEAR_URL]) {
+          ({ cleanUrl } = removeQueryParamsIfTarget(url));
+          
+          if (url !== cleanUrl) {
+            await clearUrlInTab({ tabId, cleanUrl })
+          }
+        }
+
+        if (!memo.activeTabId) {
+          const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+          const [Tab] = tabs;
+      
+          if (Tab?.id) {
+            memo.activeTabId = Tab.id;
+          }
+        }
+
+        if (tabId == memo.activeTabId) {
+          logIM('runtime.onMessage contentScriptReady 11 updateTab', 'tabId', tabId, 'memo.activeTabId', memo.activeTabId);
+          updateTab({
+            tabId,
+            debugCaller: 'runtime.onMessage contentScriptReady',
+          })
+          memo.activeTabUrl = cleanUrl || Tab.url
+        }
       }
 
       break
@@ -2742,20 +2770,26 @@ async function onIncomingMessage (message, sender) {
         parentId: message.parentId, 
         title: message.title,
       })
-      updateActiveTab({
+
+      const tabId = sender?.tab?.id;
+      updateTab({
+        tabId,
         debugCaller: 'runtime.onMessage fixTag',
         useCache: true,
-      });
-  
+      })
+
       break
     }
     case EXTENSION_COMMAND_ID.UNFIX_TAG: {
       logIM('runtime.onMessage unfixTag');
       await unfixTag(message.parentId)
-      updateActiveTab({
-        debugCaller: 'runtime.onMessage fixTag',
+
+      const tabId = sender?.tab?.id;
+      updateTab({
+        tabId,
+        debugCaller: 'runtime.onMessage unfixTag',
         useCache: true,
-      });
+      })
 
       break
     }
@@ -2888,14 +2922,47 @@ const tabsController = {
     logTC('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
 
     switch (changeInfo?.status) {
+      case ('loading'): {
+        if (changeInfo?.url) {
+          const url = changeInfo.url
+          logTC('tabs.onUpdated 11 LOADING', Tab.index, tabId, url);
+          // let cleanUrl
+          // const settings = await extensionSettings.get()
 
+          // if (settings[STORAGE_KEY.CLEAR_URL]) {
+          //   ({ cleanUrl } = removeQueryParamsIfTarget(url));
+            
+          //   logTC('tabs.onUpdated 22 LOADING', 'cleanUrl', cleanUrl);
+          //   if (url !== cleanUrl) {
+          //     // failed to send message. Recipient does not exist
+          //     await clearUrlInTab({ tabId, cleanUrl })
+          //   }
+          // }
+        }
+
+        break;
+      }
       case ('complete'): {
         logTC('tabs.onUpdated complete', tabId, Tab);
         
-        if (tabId === memo.activeTabId && Tab.url != memo.activeTabUrl) {
+        if (tabId === memo.activeTabId) {
           logTC('tabs.onUpdated complete browser.tabs.update');
-          // It did not trigger tabsController.onActivated()
-          browser.tabs.update(tabId, { active: true })
+
+          // we here after message page-is-ready. that message set memo.activeTabUrl
+          // if (changeInfo?.url) {
+          //   if (memo.activeTabUrl != changeInfo.url) {
+          //     memo.activeTabUrl = changeInfo.url
+          //   }
+          // }
+
+          // // It did not trigger tabsController.onActivated()
+          // browser.tabs.update(tabId, { active: true })
+
+          // we here after message page-is-ready. that message triggers update. not necessary to update here
+          // updateTab({
+          //   tabId, 
+          //   debugCaller: 'tabs.onUpdated complete'
+          // });
         }
     
         break;
@@ -2910,6 +2977,11 @@ const tabsController = {
       memo.activeTabId = tabId;
     }
 
+    updateTab({
+      tabId, 
+      debugCaller: 'tabs.onActivated'
+    });
+
     try {
       const Tab = await browser.tabs.get(tabId);
 
@@ -2920,11 +2992,6 @@ const tabsController = {
     } catch (er) {
       logTC('tabs.onActivated. IGNORING. tab was deleted', er);
     }
-
-    updateTab({
-      tabId, 
-      debugCaller: 'tabs.onActivated'
-    });
   },
   async onRemoved(tabId) {
     // deleteUncleanUrlBookmarkForTab(tabId)
