@@ -19,12 +19,39 @@ export const tabsController = {
     logTC('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
 
     switch (changeInfo?.status) {
+      case ('loading'): {
+        if (changeInfo?.url) {
+          const url = changeInfo.url
+          logTC('tabs.onUpdated 11 LOADING', Tab.index, tabId, url);
+          // let cleanUrl
+          // const settings = await extensionSettings.get()
 
+          // if (settings[STORAGE_KEY.CLEAR_URL]) {
+          //   ({ cleanUrl } = removeQueryParamsIfTarget(url));
+            
+          //   logTC('tabs.onUpdated 22 LOADING', 'cleanUrl', cleanUrl);
+          //   if (url !== cleanUrl) {
+          //     // failed to send message. Recipient does not exist
+          //     await clearUrlInTab({ tabId, cleanUrl })
+          //   }
+          // }
+        }
+
+        break;
+      }
       case ('complete'): {
         logTC('tabs.onUpdated complete', tabId, Tab);
         
         if (tabId === memo.activeTabId) {
           logTC('tabs.onUpdated complete chrome.tabs.update');
+
+          // we here after message page-is-ready. that message set memo.activeTabUrl
+          // if (changeInfo?.url) {
+          //   if (memo.activeTabUrl != changeInfo.url) {
+          //     memo.activeTabUrl = changeInfo.url
+          //   }
+          // }
+
           // // It did not trigger tabsController.onActivated()
           // chrome.tabs.update(tabId, { active: true })
 

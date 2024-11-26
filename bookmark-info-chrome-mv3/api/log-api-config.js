@@ -8,6 +8,7 @@ const logModuleList = [
   // 'debounceQueue',
   // 'extensionSettings',
   // 'incoming-message',
+  // 'init-extension',
   // 'memo',
   // 'recent-api',
   // 'runtime.controller',

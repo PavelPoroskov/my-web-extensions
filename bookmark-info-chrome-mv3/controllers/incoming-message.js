@@ -22,6 +22,10 @@ import {
 import {
   makeLogFunction,
 } from '../api/log-api.js'
+import {
+  clearUrlInTab,
+  removeQueryParamsIfTarget,
+} from '../api/clean-url-api.js'
 
 const logIM = makeLogFunction({ module: 'incoming-message' })
 
@@ -33,12 +37,36 @@ export async function onIncomingMessage (message, sender) {
       logIM('runtime.onMessage contentScriptReady 00', 'tabId', tabId, 'memo.activeTabId', memo.activeTabId);
       logIM('#  runtime.onMessage contentScriptReady 00', message.url);
 
-      if (tabId && tabId == memo.activeTabId) {
-        logIM('runtime.onMessage contentScriptReady 11 updateTab', tabId);
-        updateTab({
-          tabId,
-          debugCaller: 'runtime.onMessage contentScriptReady',
-        })
+      if (tabId) {
+        const settings = await extensionSettings.get()
+        const url = message.url
+        let cleanUrl
+
+        if (settings[STORAGE_KEY.CLEAR_URL]) {
+          ({ cleanUrl } = removeQueryParamsIfTarget(url));
+          
+          if (url !== cleanUrl) {
+            await clearUrlInTab({ tabId, cleanUrl })
+          }
+        }
+
+        if (!memo.activeTabId) {
+          const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+          const [Tab] = tabs;
+      
+          if (Tab?.id) {
+            memo.activeTabId = Tab.id;
+          }
+        }
+
+        if (tabId == memo.activeTabId) {
+          logIM('runtime.onMessage contentScriptReady 11 updateTab', 'tabId', tabId, 'memo.activeTabId', memo.activeTabId);
+          updateTab({
+            tabId,
+            debugCaller: 'runtime.onMessage contentScriptReady',
+          })
+          memo.activeTabUrl = cleanUrl || Tab.url
+        }
       }
 
       break

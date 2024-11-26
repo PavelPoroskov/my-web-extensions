@@ -1,4 +1,3 @@
-
 export const clearUrlTargetList = [
   // TODO-NEXT if we clean url on open then we loose check-in, check-out dates
   //    need search bookmark for clean url
@@ -31,6 +30,8 @@ export const clearUrlTargetList = [
       '/list/',
       '/imdbpicks/',
       '/interest/',
+      // TODO remove only selected query params: ref=
+      '/',
     ] 
   },
   {
