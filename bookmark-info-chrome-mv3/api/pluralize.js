@@ -1,4 +1,4 @@
-import { irregularPlurals, irregularSingles, pluralRules, uncountables } from './pluralize-rules.js';
+import { pluralRules, singularRules, uncountables, irregularPlurals, irregularSingles  } from './pluralize-rules.js';
 
 const isHasOwnProperty = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop)
 
@@ -57,20 +57,49 @@ function sanitizeWord (token, word, rules) {
   return word;
 }
 
-export function plural (word) {
-  // Get the correct token and case restoration functions.
-  var token = word.toLowerCase();
+function replaceWord (replaceMap, keepMap, rules) {
+  return function (word) {
+    // Get the correct token and case restoration functions.
+    var token = word.toLowerCase();
 
-  // Check against the keep object map.
-  if (isHasOwnProperty(irregularPlurals, token)) {
-    return restoreCase(word, token);
-  }
+    // Check against the keep object map.
+    if (isHasOwnProperty(keepMap, token)) {
+      return restoreCase(word, token);
+    }
 
-  // Check against the replacement map for a direct word replacement.
-  if (isHasOwnProperty(irregularSingles, token)) {
-    return restoreCase(word, irregularSingles[token]);
-  }
+    // Check against the replacement map for a direct word replacement.
+    if (isHasOwnProperty(replaceMap, token)) {
+      return restoreCase(word, replaceMap[token]);
+    }
 
-  // Run all the rules against the word.
-  return sanitizeWord(token, word, pluralRules);
-};
+    // Run all the rules against the word.
+    return sanitizeWord(token, word, rules);
+  };
+}
+
+function checkWord (replaceMap, keepMap, rules) {
+  return function (word) {
+    var token = word.toLowerCase();
+
+    if (isHasOwnProperty(keepMap, token)) return true;
+    if (isHasOwnProperty(replaceMap, token)) return false;
+
+    return sanitizeWord(token, token, rules) === token;
+  };
+}
+
+export const plural = replaceWord(
+  irregularSingles, irregularPlurals, pluralRules
+);
+
+export const isPlural = checkWord(
+  irregularSingles, irregularPlurals, pluralRules
+);
+
+export const singular = replaceWord(
+  irregularPlurals, irregularSingles, singularRules
+);
+
+export const isSingular = checkWord(
+  irregularPlurals, irregularSingles, singularRules
+);

@@ -10,13 +10,13 @@ export const clearUrlTargetList = [
   //     '/rooms/',
   //   ] 
   // },
-  {
-    hostname: 'djinni.co',
-    paths: [
-      '/my/profile/',
-      '/jobs/',
-    ] 
-  },
+  // {
+  //   hostname: 'djinni.co',
+  //   paths: [
+  //     '/my/profile/',
+  //     '/jobs/',
+  //   ] 
+  // },
   {
     hostname: 'frontendmasters.com',
     paths: [

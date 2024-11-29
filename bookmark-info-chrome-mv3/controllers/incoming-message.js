@@ -65,7 +65,7 @@ export async function onIncomingMessage (message, sender) {
             tabId,
             debugCaller: 'runtime.onMessage contentScriptReady',
           })
-          memo.activeTabUrl = cleanUrl || Tab.url
+          memo.activeTabUrl = cleanUrl || url
         }
       }
 

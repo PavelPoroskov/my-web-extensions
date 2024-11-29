@@ -3,7 +3,7 @@ import {
     OTHER_BOOKMARKS_FOLDER_ID,
 } from '../api/special-folder.api.js';
 import {
-    plural,
+    singular,
 } from '../api/pluralize.js';
 
 async function moveContent(fromFolderId, toFolderId) {
@@ -27,18 +27,15 @@ async function moveContent(fromFolderId, toFolderId) {
 async function mergeSubFolder(parentId) {
     // console.log('### mergeSubFolder 00,', parentId)
     const nodeList = await chrome.bookmarks.getChildren(parentId)
-  
-    const filteredNodeList = nodeList
-      .filter(({ url }) => !url)
-
+    const folderNodeList = nodeList.filter(({ url }) => !url)
     const nameSet = {}
 
-    for (const node of filteredNodeList) {
+    for (const node of folderNodeList) {
         const trimmedTitle = node.title.toLowerCase().trim()
-        const wordList = trimmedTitle.split(/\s+/)
+        const wordList = trimmedTitle.replaceAll('-', ' ').split(/\s+/)
         const lastWord = wordList.at(-1)
-        const pluralLastWord = plural(lastWord)
-        const normalizedWordList = wordList.with(-1, pluralLastWord)
+        const singularLastWord = singular(lastWord)
+        const normalizedWordList = wordList.with(-1, singularLastWord)
         const normalizedTitle = normalizedWordList.join(' ')
 
         if (!nameSet[normalizedTitle]) {
@@ -82,6 +79,19 @@ async function mergeSubFolder(parentId) {
         ({ fromNode }) => chrome.bookmarks.removeTree(fromNode.id)
     ))
 
+
+    const uniqList = Object.entries(nameSet).filter(([, nodeList]) => nodeList.length === 1)
+    for (const [, nodeList] of uniqList) {
+        const [firstNode] = nodeList
+        
+        const trimmedTitle = firstNode.title.trim()
+        if (firstNode.title !== trimmedTitle) {
+            renameTaskList.push({
+                id: firstNode.id,
+                title: trimmedTitle,
+            })
+        }
+    }
     await Promise.all(renameTaskList.map(
         ({ id, title }) => chrome.bookmarks.update(id, { title })
     ))
