@@ -88,11 +88,13 @@ function checkWord (replaceMap, keepMap, rules) {
   };
 }
 
-export const plural = replaceWord(
+// eslint-disable-next-line no-unused-vars
+const plural = replaceWord(
   irregularSingles, irregularPlurals, pluralRules
 );
 
-export const isPlural = checkWord(
+// eslint-disable-next-line no-unused-vars
+const isPlural = checkWord(
   irregularSingles, irregularPlurals, pluralRules
 );
 
@@ -100,6 +102,7 @@ export const singular = replaceWord(
   irregularPlurals, irregularSingles, singularRules
 );
 
-export const isSingular = checkWord(
+// eslint-disable-next-line no-unused-vars
+const isSingular = checkWord(
   irregularPlurals, irregularSingles, singularRules
 );

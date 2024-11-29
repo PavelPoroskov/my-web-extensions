@@ -30,13 +30,13 @@ const BROWSER_SPECIFIC = Object.fromEntries(
   //     '/rooms/',
   //   ] 
   // },
-  {
-    hostname: 'djinni.co',
-    paths: [
-      '/my/profile/',
-      '/jobs/',
-    ] 
-  },
+  // {
+  //   hostname: 'djinni.co',
+  //   paths: [
+  //     '/my/profile/',
+  //     '/jobs/',
+  //   ] 
+  // },
   {
     hostname: 'frontendmasters.com',
     paths: [
@@ -1522,6 +1522,7 @@ async function updateActiveTab({ debugCaller } = {}) {
   }
 }
 const pluralRules = [];
+const singularRules = [];
 const uncountables = {};
 const irregularPlurals = {};
 const irregularSingles = {};
@@ -1534,11 +1535,15 @@ function sanitizeRule (rule) {
   return rule;
 }
 
-const addPluralRule = function (rule, replacement) {
+function addPluralRule(rule, replacement) {
   pluralRules.push([sanitizeRule(rule), replacement]);
 };
 
-const addUncountableRule = function (word) {
+function addSingularRule(rule, replacement) {
+  singularRules.push([sanitizeRule(rule), replacement]);
+};
+
+function addUncountableRule(word) {
   if (typeof word === 'string') {
     uncountables[word.toLowerCase()] = true;
     return;
@@ -1546,10 +1551,10 @@ const addUncountableRule = function (word) {
 
   // Set singular and plural references for the word.
   addPluralRule(word, '$0');
-  // addSingularRule(word, '$0');
+  addSingularRule(word, '$0');
 };
 
-const addIrregularRule = function (single, plural) {
+function addIrregularRule(single, plural) {
   plural = plural.toLowerCase();
   single = single.toLowerCase();
 
@@ -1654,6 +1659,38 @@ const addIrregularRule = function (single, plural) {
   ['thou', 'you']
 ].forEach(function (rule) {
   return addPluralRule(rule[0], rule[1]);
+});
+
+/**
+ * Singularization rules.
+ */
+[
+  [/s$/i, ''],
+  [/(ss)$/i, '$1'],
+  [/(wi|kni|(?:after|half|high|low|mid|non|night|[^\w]|^)li)ves$/i, '$1fe'],
+  [/(ar|(?:wo|[ae])l|[eo][ao])ves$/i, '$1f'],
+  [/ies$/i, 'y'],
+  [/(dg|ss|ois|lk|ok|wn|mb|th|ch|ec|oal|is|ck|ix|sser|ts|wb)ies$/i, '$1ie'],
+  [/\b(l|(?:neck|cross|hog|aun)?t|coll|faer|food|gen|goon|group|hipp|junk|vegg|(?:pork)?p|charl|calor|cut)ies$/i, '$1ie'],
+  [/\b(mon|smil)ies$/i, '$1ey'],
+  [/\b((?:tit)?m|l)ice$/i, '$1ouse'],
+  [/(seraph|cherub)im$/i, '$1'],
+  [/(x|ch|ss|sh|zz|tto|go|cho|alias|[^aou]us|t[lm]as|gas|(?:her|at|gr)o|[aeiou]ris)(?:es)?$/i, '$1'],
+  [/(analy|diagno|parenthe|progno|synop|the|empha|cri|ne)(?:sis|ses)$/i, '$1sis'],
+  [/(movie|twelve|abuse|e[mn]u)s$/i, '$1'],
+  [/(test)(?:is|es)$/i, '$1is'],
+  [/(alumn|syllab|vir|radi|nucle|fung|cact|stimul|termin|bacill|foc|uter|loc|strat)(?:us|i)$/i, '$1us'],
+  [/(agend|addend|millenni|dat|extrem|bacteri|desiderat|strat|candelabr|errat|ov|symposi|curricul|quor)a$/i, '$1um'],
+  [/(apheli|hyperbat|periheli|asyndet|noumen|phenomen|criteri|organ|prolegomen|hedr|automat)a$/i, '$1on'],
+  [/(alumn|alg|vertebr)ae$/i, '$1a'],
+  [/(cod|mur|sil|vert|ind)ices$/i, '$1ex'],
+  [/(matr|append)ices$/i, '$1ix'],
+  [/(pe)(rson|ople)$/i, '$1rson'],
+  [/(child)ren$/i, '$1'],
+  [/(eau)x?$/i, '$1'],
+  [/men$/i, 'man']
+].forEach(function (rule) {
+  return addSingularRule(rule[0], rule[1]);
 });
 
 /**
@@ -1821,23 +1858,55 @@ function sanitizeWord (token, word, rules) {
   return word;
 }
 
-function plural (word) {
-  // Get the correct token and case restoration functions.
-  var token = word.toLowerCase();
+function replaceWord (replaceMap, keepMap, rules) {
+  return function (word) {
+    // Get the correct token and case restoration functions.
+    var token = word.toLowerCase();
 
-  // Check against the keep object map.
-  if (isHasOwnProperty(irregularPlurals, token)) {
-    return restoreCase(word, token);
-  }
+    // Check against the keep object map.
+    if (isHasOwnProperty(keepMap, token)) {
+      return restoreCase(word, token);
+    }
 
-  // Check against the replacement map for a direct word replacement.
-  if (isHasOwnProperty(irregularSingles, token)) {
-    return restoreCase(word, irregularSingles[token]);
-  }
+    // Check against the replacement map for a direct word replacement.
+    if (isHasOwnProperty(replaceMap, token)) {
+      return restoreCase(word, replaceMap[token]);
+    }
 
-  // Run all the rules against the word.
-  return sanitizeWord(token, word, pluralRules);
-};
+    // Run all the rules against the word.
+    return sanitizeWord(token, word, rules);
+  };
+}
+
+function checkWord (replaceMap, keepMap, rules) {
+  return function (word) {
+    var token = word.toLowerCase();
+
+    if (isHasOwnProperty(keepMap, token)) return true;
+    if (isHasOwnProperty(replaceMap, token)) return false;
+
+    return sanitizeWord(token, token, rules) === token;
+  };
+}
+
+// eslint-disable-next-line no-unused-vars
+const plural = replaceWord(
+  irregularSingles, irregularPlurals, pluralRules
+);
+
+// eslint-disable-next-line no-unused-vars
+const isPlural = checkWord(
+  irregularSingles, irregularPlurals, pluralRules
+);
+
+const singular = replaceWord(
+  irregularPlurals, irregularSingles, singularRules
+);
+
+// eslint-disable-next-line no-unused-vars
+const isSingular = checkWord(
+  irregularPlurals, irregularSingles, singularRules
+);
 async function getMaxUsedSuffix() {
     function getFoldersFromTree(tree) {
       const folderById = {};
@@ -2010,18 +2079,15 @@ async function flatFolders() {
 async function mergeSubFolder(parentId) {
     // console.log('### mergeSubFolder 00,', parentId)
     const nodeList = await browser.bookmarks.getChildren(parentId)
-  
-    const filteredNodeList = nodeList
-      .filter(({ url }) => !url)
-
+    const folderNodeList = nodeList.filter(({ url }) => !url)
     const nameSet = {}
 
-    for (const node of filteredNodeList) {
+    for (const node of folderNodeList) {
         const trimmedTitle = node.title.toLowerCase().trim()
-        const wordList = trimmedTitle.split(/\s+/)
+        const wordList = trimmedTitle.replaceAll('-', ' ').split(/\s+/)
         const lastWord = wordList.at(-1)
-        const pluralLastWord = plural(lastWord)
-        const normalizedWordList = wordList.with(-1, pluralLastWord)
+        const singularLastWord = singular(lastWord)
+        const normalizedWordList = wordList.with(-1, singularLastWord)
         const normalizedTitle = normalizedWordList.join(' ')
 
         if (!nameSet[normalizedTitle]) {
@@ -2065,6 +2131,19 @@ async function mergeSubFolder(parentId) {
         ({ fromNode }) => browser.bookmarks.removeTree(fromNode.id)
     ))
 
+
+    const uniqList = Object.entries(nameSet).filter(([, nodeList]) => nodeList.length === 1)
+    for (const [, nodeList] of uniqList) {
+        const [firstNode] = nodeList
+        
+        const trimmedTitle = firstNode.title.trim()
+        if (firstNode.title !== trimmedTitle) {
+            renameTaskList.push({
+                id: firstNode.id,
+                title: trimmedTitle,
+            })
+        }
+    }
     await Promise.all(renameTaskList.map(
         ({ id, title }) => browser.bookmarks.update(id, { title })
     ))
@@ -2736,7 +2815,7 @@ async function onIncomingMessage (message, sender) {
             tabId,
             debugCaller: 'runtime.onMessage contentScriptReady',
           })
-          memo.activeTabUrl = cleanUrl || Tab.url
+          memo.activeTabUrl = cleanUrl || url
         }
       }
 
