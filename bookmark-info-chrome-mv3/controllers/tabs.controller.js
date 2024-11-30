@@ -18,6 +18,14 @@ export const tabsController = {
   async onUpdated(tabId, changeInfo, Tab) {
     logTC('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
 
+    // if (changeInfo?.url) {
+    //   if (tabId === memo.activeTabId) {
+    //     if (memo.activeTabUrl != changeInfo.url) {
+    //       memo.activeTabUrl = changeInfo.url
+    //     }        
+    //   }
+    // }
+
     switch (changeInfo?.status) {
       case ('loading'): {
         if (changeInfo?.url) {
@@ -45,21 +53,14 @@ export const tabsController = {
         if (tabId === memo.activeTabId) {
           logTC('tabs.onUpdated complete chrome.tabs.update');
 
-          // we here after message page-is-ready. that message set memo.activeTabUrl
-          // if (changeInfo?.url) {
-          //   if (memo.activeTabUrl != changeInfo.url) {
-          //     memo.activeTabUrl = changeInfo.url
-          //   }
-          // }
-
-          // // It did not trigger tabsController.onActivated()
-          // chrome.tabs.update(tabId, { active: true })
-
           // we here after message page-is-ready. that message triggers update. not necessary to update here
-          // updateTab({
-          //   tabId, 
-          //   debugCaller: 'tabs.onUpdated complete'
-          // });
+          if (Tab.url !== memo.activeTabUrl) {
+            memo.activeTabUrl = Tab.url
+            updateTab({
+              tabId, 
+              debugCaller: 'tabs.onUpdated complete'
+            });
+          }
         }
     
         break;
@@ -67,12 +68,13 @@ export const tabsController = {
     }
   },
   async onActivated({ tabId }) {
-    logTC('tabs.onActivated 00', tabId);
+    logTC('tabs.onActivated 00 memo.activeTabId =', tabId);
 
-    if (memo.activeTabId !== tabId) {
-      memo.previousTabId = memo.activeTabId;
-      memo.activeTabId = tabId;
-    }
+    // if (memo.activeTabId !== tabId) {
+    //   memo.previousTabId = memo.activeTabId;
+    //   memo.activeTabId = tabId;
+    // }
+    memo.activeTabId = tabId;
 
     updateTab({
       tabId, 

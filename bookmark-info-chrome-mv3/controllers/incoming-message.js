@@ -50,22 +50,13 @@ export async function onIncomingMessage (message, sender) {
           }
         }
 
-        if (!memo.activeTabId) {
-          const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-          const [Tab] = tabs;
-      
-          if (Tab?.id) {
-            memo.activeTabId = Tab.id;
-          }
-        }
-
         if (tabId == memo.activeTabId) {
           logIM('runtime.onMessage contentScriptReady 11 updateTab', 'tabId', tabId, 'memo.activeTabId', memo.activeTabId);
           updateTab({
             tabId,
             debugCaller: 'runtime.onMessage contentScriptReady',
           })
-          memo.activeTabUrl = cleanUrl || url
+          memo.activeTabUrl = url
         }
       }
 

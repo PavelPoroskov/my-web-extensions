@@ -28,7 +28,7 @@ export const runtimeController = {
     logRC('runtime.onStartup');
     // is only firefox use it?
     createContextMenu()
-    await initExtension()
+    await initExtension({ debugCaller: 'runtime.onStartup' })
     updateActiveTab({
       debugCaller: 'runtime.onStartup'
     });
@@ -44,6 +44,7 @@ export const runtimeController = {
   async onInstalled () {
     logRC('runtime.onInstalled');
     createContextMenu()
+    await initExtension({ debugCaller: 'runtime.onInstalled' })
     await initExtension()
     updateActiveTab({
       debugCaller: 'runtime.onInstalled'

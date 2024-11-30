@@ -41,9 +41,9 @@ export async function updateTab({ tabId, debugCaller, useCache=false }) {
     return
   }
 
-  logTA(`updateTab() 00 <-${debugCaller}`, tabId, url);
+  logTA(`updateTab() 00 <- ${debugCaller}`, tabId, url);
 
-  await initExtension()
+  await initExtension({ debugCaller: 'updateTab()' })
   const settings = await extensionSettings.get()
 
   let actualUrl = url
@@ -86,7 +86,7 @@ export async function updateTab({ tabId, debugCaller, useCache=false }) {
     // page settings
     isHideSemanticHtmlTagsOnPrinting: settings[STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING],
   }
-  logTA('updateTabTask() sendMessage', tabId, message);
+  logTA('updateTab() sendMessage', tabId, message);
   await chrome.tabs.sendMessage(tabId, message)
     // eslint-disable-next-line no-unused-vars
     .catch((er) => {
@@ -96,17 +96,6 @@ export async function updateTab({ tabId, debugCaller, useCache=false }) {
 
 export async function updateActiveTab({ debugCaller } = {}) {
   logTA('updateActiveTab() 00')
-
-  if (!memo.activeTabId) {
-    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    const [Tab] = tabs;
-
-    if (Tab?.id) {
-      memo.activeTabId = Tab.id;
-      memo.activeTabUrl = Tab.url
-      // await chrome.tabs.update(Tab.id, { active: true })
-    }
-  }
 
   if (memo.activeTabId) {
     debounceQueue.run({
