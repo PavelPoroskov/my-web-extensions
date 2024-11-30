@@ -1417,15 +1417,35 @@ async function getHistoryInfo({ url }) {
 }
 const logIX = makeLogFunction({ module: 'init-extension' })
 
-async function initExtension() {
+async function setFirstActiveTab({ debugCaller='' }) {
+  // logIX(`setFirstActiveTab() 00 <- ${debugCaller}`, memo.activeTabId)
+
+  if (!memo.activeTabId) {
+    const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+    const [Tab] = tabs;
+
+    if (Tab?.id) {
+      memo.activeTabId = Tab.id;
+      memo.activeTabUrl = Tab.url
+
+      logIX(`setFirstActiveTab() 11 <- ${debugCaller}`, memo.activeTabId)
+    }
+  }
+}
+
+async function initExtension({ debugCaller='' }) {
   // await tagList.readFromStorage()
-  logIX('initExtension() 00')
+  if (!browserStartTime.isActual() || !extensionSettings.isActual() || !memo.activeTabId) {
+    logIX(`initExtension() 00 <- ${debugCaller}`)
+  }
 
   await Promise.all([
     !browserStartTime.isActual() && browserStartTime.init(),
     !extensionSettings.isActual() && extensionSettings.restoreFromStorage().then(() => tagList.readFromStorage()),
+    !memo.activeTabId && setFirstActiveTab({ debugCaller: `initExtension() <- ${debugCaller}` }),
   ])
-  logIX('initExtension() end')
+
+  // logIX('initExtension() end')
 }
 const logTA = makeLogFunction({ module: 'tabs-api' })
 
@@ -1443,9 +1463,9 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
     return
   }
 
-  logTA(`updateTab() 00 <-${debugCaller}`, tabId, url);
+  logTA(`updateTab() 00 <- ${debugCaller}`, tabId, url);
 
-  await initExtension()
+  await initExtension({ debugCaller: 'updateTab()' })
   const settings = await extensionSettings.get()
 
   let actualUrl = url
@@ -1488,7 +1508,7 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
     // page settings
     isHideSemanticHtmlTagsOnPrinting: settings[STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING],
   }
-  logTA('updateTabTask() sendMessage', tabId, message);
+  logTA('updateTab() sendMessage', tabId, message);
   await browser.tabs.sendMessage(tabId, message)
     // eslint-disable-next-line no-unused-vars
     .catch((er) => {
@@ -1498,17 +1518,6 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
 
 async function updateActiveTab({ debugCaller } = {}) {
   logTA('updateActiveTab() 00')
-
-  if (!memo.activeTabId) {
-    const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
-    const [Tab] = tabs;
-
-    if (Tab?.id) {
-      memo.activeTabId = Tab.id;
-      memo.activeTabUrl = Tab.url
-      // await browser.tabs.update(Tab.id, { active: true })
-    }
-  }
 
   if (memo.activeTabId) {
     debounceQueue.run({
@@ -2800,22 +2809,13 @@ async function onIncomingMessage (message, sender) {
           }
         }
 
-        if (!memo.activeTabId) {
-          const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
-          const [Tab] = tabs;
-      
-          if (Tab?.id) {
-            memo.activeTabId = Tab.id;
-          }
-        }
-
         if (tabId == memo.activeTabId) {
           logIM('runtime.onMessage contentScriptReady 11 updateTab', 'tabId', tabId, 'memo.activeTabId', memo.activeTabId);
           updateTab({
             tabId,
             debugCaller: 'runtime.onMessage contentScriptReady',
           })
-          memo.activeTabUrl = cleanUrl || url
+          memo.activeTabUrl = url
         }
       }
 
@@ -2925,7 +2925,7 @@ const runtimeController = {
     logRC('runtime.onStartup');
     // is only firefox use it?
     createContextMenu()
-    await initExtension()
+    await initExtension({ debugCaller: 'runtime.onStartup' })
     updateActiveTab({
       debugCaller: 'runtime.onStartup'
     });
@@ -2941,6 +2941,7 @@ const runtimeController = {
   async onInstalled () {
     logRC('runtime.onInstalled');
     createContextMenu()
+    await initExtension({ debugCaller: 'runtime.onInstalled' })
     await initExtension()
     updateActiveTab({
       debugCaller: 'runtime.onInstalled'
@@ -3000,6 +3001,14 @@ const tabsController = {
   async onUpdated(tabId, changeInfo, Tab) {
     logTC('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
 
+    // if (changeInfo?.url) {
+    //   if (tabId === memo.activeTabId) {
+    //     if (memo.activeTabUrl != changeInfo.url) {
+    //       memo.activeTabUrl = changeInfo.url
+    //     }        
+    //   }
+    // }
+
     switch (changeInfo?.status) {
       case ('loading'): {
         if (changeInfo?.url) {
@@ -3027,21 +3036,14 @@ const tabsController = {
         if (tabId === memo.activeTabId) {
           logTC('tabs.onUpdated complete browser.tabs.update');
 
-          // we here after message page-is-ready. that message set memo.activeTabUrl
-          // if (changeInfo?.url) {
-          //   if (memo.activeTabUrl != changeInfo.url) {
-          //     memo.activeTabUrl = changeInfo.url
-          //   }
-          // }
-
-          // // It did not trigger tabsController.onActivated()
-          // browser.tabs.update(tabId, { active: true })
-
           // we here after message page-is-ready. that message triggers update. not necessary to update here
-          // updateTab({
-          //   tabId, 
-          //   debugCaller: 'tabs.onUpdated complete'
-          // });
+          if (Tab.url !== memo.activeTabUrl) {
+            memo.activeTabUrl = Tab.url
+            updateTab({
+              tabId, 
+              debugCaller: 'tabs.onUpdated complete'
+            });
+          }
         }
     
         break;
@@ -3049,12 +3051,13 @@ const tabsController = {
     }
   },
   async onActivated({ tabId }) {
-    logTC('tabs.onActivated 00', tabId);
+    logTC('tabs.onActivated 00 memo.activeTabId =', tabId);
 
-    if (memo.activeTabId !== tabId) {
-      memo.previousTabId = memo.activeTabId;
-      memo.activeTabId = tabId;
-    }
+    // if (memo.activeTabId !== tabId) {
+    //   memo.previousTabId = memo.activeTabId;
+    //   memo.activeTabId = tabId;
+    // }
+    memo.activeTabId = tabId;
 
     updateTab({
       tabId, 
@@ -3085,6 +3088,7 @@ const windowsController = {
     
     if (0 < windowId) {
       logWC('windows.onFocusChanged', windowId);
+      await setFirstActiveTab({ debugCaller: 'windows.onFocusChanged' })
       updateActiveTab({
         debugCaller: 'windows.onFocusChanged'
       });
