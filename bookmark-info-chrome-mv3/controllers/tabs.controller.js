@@ -2,7 +2,6 @@ import {
   makeLogFunction,
 } from '../api/log-api.js'
 import {
-  debounceQueue,
   memo,
 } from '../api/structure/index.js'
 import {
@@ -91,8 +90,8 @@ export const tabsController = {
       logTC('tabs.onActivated. IGNORING. tab was deleted', er);
     }
   },
+  // eslint-disable-next-line no-unused-vars
   async onRemoved(tabId) {
     // deleteUncleanUrlBookmarkForTab(tabId)
-    debounceQueue.cancelTask(tabId)
   }
 }
