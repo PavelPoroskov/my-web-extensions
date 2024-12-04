@@ -238,7 +238,7 @@ ${semanticTagsStyle}
 .bkm-info--fixed:active:not(.bkm-info--used-tag) {
   transform: translateY(0.1ch);
 }
-.bkm-info--fixed:hover, .bkm-info--btn-unfix:hover + .bkm-info--fixed {
+.bkm-info--fixed:hover, .bkm-info--btn-unfix:hover + .bkm-info--fixed, .bkm-info--fixed:has(+ .bkm-info--btn-del2:hover) {
   max-width: fit-content;
 }
 .bkm-info--fixed:hover:not(.bkm-info--used-tag), .bkm-info--btn-unfix:hover + .bkm-info--fixed:not(.bkm-info--used-tag) {
@@ -246,11 +246,11 @@ ${semanticTagsStyle}
 }
 .bkm-info--btn-unfix:has( + .bkm-info--fixed:hover) {
   display: flex;
-  background-color: #00FF00;
+  background-color: #32CD32;
 }
 .bkm-info--btn-unfix:hover {
   display: flex;
-  background-color: #32CD32;
+  background-color: #00FF00;
 }
 
 .bkm-info--recent {
@@ -259,7 +259,7 @@ ${semanticTagsStyle}
 .bkm-info--recent:active:not(.bkm-info--used-tag) {
   transform: translateY(0.1ch);
 }
-.bkm-info--recent:hover, .bkm-info--btn-fix:hover + .bkm-info--recent {
+.bkm-info--recent:hover, .bkm-info--btn-fix:hover + .bkm-info--recent, .bkm-info--recent:has(+ .bkm-info--btn-del2:hover) {
   max-width: fit-content;
 }
 .bkm-info--recent:hover:not(.bkm-info--used-tag), .bkm-info--btn-fix:hover + .bkm-info--recent:not(.bkm-info--used-tag) {
@@ -279,6 +279,20 @@ ${semanticTagsStyle}
 }
 .bkm-info--last-tag:not(.bkm-info--used-tag) {
   font-weight: 600;
+}
+.bkm-info--btn-del2 {
+  padding-right: ${BROWSER_SPECIFIC.DEL_BTN_RIGHT_PADDING};
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+.bkm-info--used-tag:hover + .bkm-info--btn-del2 {
+  display: flex;
+  background-color: lightsalmon;
+}
+.bkm-info--btn-del2:hover {
+  display: flex;
+  background-color: darkorange;
 }
 `
     )
@@ -349,6 +363,23 @@ ${semanticTagsStyle}
           title: document.title,
         });  
         // const recentTag = fullMessage.tagList.find((item) => item.parentId === parentId)
+      }
+    }
+  }
+
+  async function deleteBookmarkFromTag(event) {
+    log('deleteBookmarkFromTag 00');
+    const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
+
+    if (parentId) {
+      const fullMessage = showInHtmlSingleTaskQueue.getState()
+      const bkm = fullMessage.bookmarkInfoList.find((item) => item.parentId === parentId)
+
+      if (bkm?.id) {
+        await chrome.runtime.sendMessage({
+          command: EXTENSION_COMMAND_ID.DELETE_BOOKMARK,
+          bkmId: bkm?.id,
+        });
       }
     }
   }
@@ -668,19 +699,33 @@ ${semanticTagsStyle}
           const textNodeLabel = document.createTextNode(`${title}`);
           divLabel.appendChild(textNodeLabel);
 
+          const divFixBtn = document.createElement('div');
+          divFixBtn.setAttribute('data-parentid', parentId);
+          divFixBtn.classList.add('bkm-info--btn', 'bkm-info--btn-fix');
+          divFixBtn.addEventListener('click', fixTag);
+    
+          const divFixBtnLetter = document.createElement('div');
+          divFixBtnLetter.classList.add('bkm-info--btn-letter');
+          const textNodeFix = document.createTextNode('⊙');
+          divFixBtnLetter.appendChild(textNodeFix);
+          divFixBtn.appendChild(divFixBtnLetter);    
+
           const divDelBtn = document.createElement('div');
           divDelBtn.setAttribute('data-parentid', parentId);
-          divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-fix');
-          divDelBtn.addEventListener('click', fixTag);
+          divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-del2');
     
           const divDelBtnLetter = document.createElement('div');
           divDelBtnLetter.classList.add('bkm-info--btn-letter');
-          const textNodeDel = document.createTextNode('⊙');
+          const textNodeDel = document.createTextNode('X');
           divDelBtnLetter.appendChild(textNodeDel);
-          divDelBtn.appendChild(divDelBtnLetter);    
+          
+          divDelBtn.appendChild(divDelBtnLetter);
+          divDelBtn.addEventListener('click', deleteBookmarkFromTag);
+    
 
-          divLabelContainer.appendChild(divDelBtn);
+          divLabelContainer.appendChild(divFixBtn);
           divLabelContainer.appendChild(divLabel);
+          divLabelContainer.appendChild(divDelBtn);
 
           break
         }
@@ -704,20 +749,35 @@ ${semanticTagsStyle}
           const textNodeLabel = document.createTextNode(`${title}`);
           divLabel.appendChild(textNodeLabel);
 
+          const divFixBtn = document.createElement('div');
+          divFixBtn.setAttribute('data-parentid', parentId);
+          divFixBtn.classList.add('bkm-info--btn', 'bkm-info--btn-unfix');
+          divFixBtn.addEventListener('click', unfixTag);
+    
+          const divFixBtnLetter = document.createElement('div');
+          divFixBtnLetter.classList.add('bkm-info--btn-letter');
+          const textNodeFix = document.createTextNode('X');
+          divFixBtnLetter.appendChild(textNodeFix);
+          
+          divFixBtn.appendChild(divFixBtnLetter);    
+
+
           const divDelBtn = document.createElement('div');
           divDelBtn.setAttribute('data-parentid', parentId);
-          divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-unfix');
-          divDelBtn.addEventListener('click', unfixTag);
+          divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-del2');
     
           const divDelBtnLetter = document.createElement('div');
           divDelBtnLetter.classList.add('bkm-info--btn-letter');
           const textNodeDel = document.createTextNode('X');
           divDelBtnLetter.appendChild(textNodeDel);
           
-          divDelBtn.appendChild(divDelBtnLetter);    
+          divDelBtn.appendChild(divDelBtnLetter);
+          divDelBtn.addEventListener('click', deleteBookmarkFromTag);
 
-          divLabelContainer.appendChild(divDelBtn);
+
+          divLabelContainer.appendChild(divFixBtn);
           divLabelContainer.appendChild(divLabel);
+          divLabelContainer.appendChild(divDelBtn);
 
           break
         }
