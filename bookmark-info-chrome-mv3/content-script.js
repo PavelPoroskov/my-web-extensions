@@ -235,10 +235,10 @@ ${semanticTagsStyle}
 .bkm-info--fixed {
   background-color: #40E0D0;
 }
-.bkm-info--fixed:active:not(.bkm-info--used-tag) {
+.bkm-info--fixed:active {
   transform: translateY(0.1ch);
 }
-.bkm-info--fixed:hover, .bkm-info--btn-unfix:hover + .bkm-info--fixed, .bkm-info--fixed:has(+ .bkm-info--btn-del2:hover) {
+.bkm-info--fixed:hover, .bkm-info--btn-unfix:hover + .bkm-info--fixed {
   max-width: fit-content;
 }
 .bkm-info--fixed:hover:not(.bkm-info--used-tag), .bkm-info--btn-unfix:hover + .bkm-info--fixed:not(.bkm-info--used-tag) {
@@ -256,10 +256,10 @@ ${semanticTagsStyle}
 .bkm-info--recent {
   background-color: #DAF7A6;
 }
-.bkm-info--recent:active:not(.bkm-info--used-tag) {
+.bkm-info--recent:active {
   transform: translateY(0.1ch);
 }
-.bkm-info--recent:hover, .bkm-info--btn-fix:hover + .bkm-info--recent, .bkm-info--recent:has(+ .bkm-info--btn-del2:hover) {
+.bkm-info--recent:hover, .bkm-info--btn-fix:hover + .bkm-info--recent {
   max-width: fit-content;
 }
 .bkm-info--recent:hover:not(.bkm-info--used-tag), .bkm-info--btn-fix:hover + .bkm-info--recent:not(.bkm-info--used-tag) {
@@ -279,20 +279,6 @@ ${semanticTagsStyle}
 }
 .bkm-info--last-tag:not(.bkm-info--used-tag) {
   font-weight: 600;
-}
-.bkm-info--btn-del2 {
-  padding-right: ${BROWSER_SPECIFIC.DEL_BTN_RIGHT_PADDING};
-  position: absolute;
-  top: 0;
-  right: 0;
-}
-.bkm-info--used-tag:hover + .bkm-info--btn-del2 {
-  display: flex;
-  background-color: lightsalmon;
-}
-.bkm-info--btn-del2:hover {
-  display: flex;
-  background-color: darkorange;
 }
 `
     )
@@ -353,33 +339,20 @@ ${semanticTagsStyle}
 
     if (parentId) {
       const fullMessage = showInHtmlSingleTaskQueue.getState()
-      const isExist = fullMessage.bookmarkInfoList.some((item) => item.parentId === parentId)
+      const bkm = fullMessage.bookmarkInfoList.find((item) => item.parentId === parentId)
 
-      if (!isExist) {
+      if (bkm?.id) {
+        await chrome.runtime.sendMessage({
+          command: EXTENSION_COMMAND_ID.DELETE_BOOKMARK,
+          bkmId: bkm.id,
+        });
+      } else {
         await chrome.runtime.sendMessage({
           command: EXTENSION_COMMAND_ID.ADD_BOOKMARK,
           parentId,
           url: document.location.href,
           title: document.title,
         });  
-        // const recentTag = fullMessage.tagList.find((item) => item.parentId === parentId)
-      }
-    }
-  }
-
-  async function deleteBookmarkFromTag(event) {
-    log('deleteBookmarkFromTag 00');
-    const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
-
-    if (parentId) {
-      const fullMessage = showInHtmlSingleTaskQueue.getState()
-      const bkm = fullMessage.bookmarkInfoList.find((item) => item.parentId === parentId)
-
-      if (bkm?.id) {
-        await chrome.runtime.sendMessage({
-          command: EXTENSION_COMMAND_ID.DELETE_BOOKMARK,
-          bkmId: bkm?.id,
-        });
       }
     }
   }
@@ -684,17 +657,11 @@ ${semanticTagsStyle}
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag', 'bkm-info--recent');
+          divLabel.setAttribute('data-parentid', parentId);
+          divLabel.addEventListener('click', addBookmark);
 
-          if (isUsed) {
-            divLabel.classList.toggle('bkm-info--used-tag', isUsed);
-          } else {
-            divLabel.setAttribute('data-parentid', parentId);
-            divLabel.addEventListener('click', addBookmark);
-          }
-
-          if (isLast) {
-            divLabel.classList.toggle('bkm-info--last-tag', isLast);
-          }
+          divLabel.classList.toggle('bkm-info--used-tag', isUsed);
+          divLabel.classList.toggle('bkm-info--last-tag', isLast);
 
           const textNodeLabel = document.createTextNode(`${title}`);
           divLabel.appendChild(textNodeLabel);
@@ -710,22 +677,8 @@ ${semanticTagsStyle}
           divFixBtnLetter.appendChild(textNodeFix);
           divFixBtn.appendChild(divFixBtnLetter);    
 
-          const divDelBtn = document.createElement('div');
-          divDelBtn.setAttribute('data-parentid', parentId);
-          divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-del2');
-    
-          const divDelBtnLetter = document.createElement('div');
-          divDelBtnLetter.classList.add('bkm-info--btn-letter');
-          const textNodeDel = document.createTextNode('X');
-          divDelBtnLetter.appendChild(textNodeDel);
-          
-          divDelBtn.appendChild(divDelBtnLetter);
-          divDelBtn.addEventListener('click', deleteBookmarkFromTag);
-    
-
           divLabelContainer.appendChild(divFixBtn);
           divLabelContainer.appendChild(divLabel);
-          divLabelContainer.appendChild(divDelBtn);
 
           break
         }
@@ -734,17 +687,11 @@ ${semanticTagsStyle}
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag', 'bkm-info--fixed');
+          divLabel.setAttribute('data-parentid', parentId);
+          divLabel.addEventListener('click', addBookmark);
 
-          if (isUsed) {
-            divLabel.classList.toggle('bkm-info--used-tag', isUsed);
-          } else {
-            divLabel.setAttribute('data-parentid', parentId);
-            divLabel.addEventListener('click', addBookmark);
-          }
-
-          if (isLast) {
-            divLabel.classList.toggle('bkm-info--last-tag', isLast);
-          }
+          divLabel.classList.toggle('bkm-info--used-tag', isUsed);
+          divLabel.classList.toggle('bkm-info--last-tag', isLast);
 
           const textNodeLabel = document.createTextNode(`${title}`);
           divLabel.appendChild(textNodeLabel);
@@ -761,23 +708,8 @@ ${semanticTagsStyle}
           
           divFixBtn.appendChild(divFixBtnLetter);    
 
-
-          const divDelBtn = document.createElement('div');
-          divDelBtn.setAttribute('data-parentid', parentId);
-          divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-del2');
-    
-          const divDelBtnLetter = document.createElement('div');
-          divDelBtnLetter.classList.add('bkm-info--btn-letter');
-          const textNodeDel = document.createTextNode('X');
-          divDelBtnLetter.appendChild(textNodeDel);
-          
-          divDelBtn.appendChild(divDelBtnLetter);
-          divDelBtn.addEventListener('click', deleteBookmarkFromTag);
-
-
           divLabelContainer.appendChild(divFixBtn);
           divLabelContainer.appendChild(divLabel);
-          divLabelContainer.appendChild(divDelBtn);
 
           break
         }
