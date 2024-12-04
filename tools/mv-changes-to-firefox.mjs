@@ -15,7 +15,6 @@ createFileForFirefox(
     
     'api/log-api-config.js',
     'api/log-api.js',
-    'api/structure/debounceQueue.js',
     'api/structure/extraMap.js',
     'api/structure/cache.js',
       'api/storage-api.js',

@@ -7,7 +7,7 @@ import {
   tagList,
 } from '../api/structure/index.js'
 import {
-  updateActiveTab,
+  debouncedUpdateActiveTab,
 } from '../api/tabs-api.js'
 import {
   IS_BROWSER_CHROME,
@@ -36,7 +36,7 @@ export const bookmarksController = {
     }
 
     // changes in active tab
-    await updateActiveTab({
+    debouncedUpdateActiveTab({
       debugCaller: 'bookmark.onCreated'
     });
   },
@@ -59,7 +59,7 @@ export const bookmarksController = {
     }
 
     // changes in active tab
-    await updateActiveTab({
+    debouncedUpdateActiveTab({
       debugCaller: 'bookmark.onChanged'
     });
   },
@@ -127,7 +127,7 @@ export const bookmarksController = {
           }
         }
 
-        await updateActiveTab({
+        debouncedUpdateActiveTab({
           debugCaller: 'bookmark.onMoved'
         });
       }
@@ -148,7 +148,7 @@ export const bookmarksController = {
     }
 
     // changes in active tab
-    await updateActiveTab({
+    debouncedUpdateActiveTab({
       debugCaller: 'bookmark.onRemoved'
     });
   },

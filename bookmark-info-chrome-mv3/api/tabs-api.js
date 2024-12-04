@@ -2,6 +2,7 @@ import {
   makeLogFunction,
 } from '../api/log-api.js'
 import {
+  debounce,
   isSupportedProtocol,
 } from './common-api.js'
 import {
@@ -16,7 +17,6 @@ import {
 import {
   extensionSettings,
   memo,
-  debounceQueue,
   tagList,
 } from './structure/index.js'
 import {
@@ -27,7 +27,7 @@ import { initExtension } from './init-extension.js'
 
 const logTA = makeLogFunction({ module: 'tabs-api' })
 
-export async function updateTab({ tabId, debugCaller, useCache=false }) {
+async function updateTab({ tabId, debugCaller, useCache=false }) {
   let url
 
   try {
@@ -41,9 +41,9 @@ export async function updateTab({ tabId, debugCaller, useCache=false }) {
     return
   }
 
-  logTA(`updateTab() 00 <- ${debugCaller}`, tabId, url);
+  logTA(`updateTab () 00 <- ${debugCaller}`, tabId, url);
 
-  await initExtension({ debugCaller: 'updateTab()' })
+  await initExtension({ debugCaller: 'updateTab ()' })
   const settings = await extensionSettings.get()
 
   let actualUrl = url
@@ -86,7 +86,7 @@ export async function updateTab({ tabId, debugCaller, useCache=false }) {
     // page settings
     isHideSemanticHtmlTagsOnPrinting: settings[STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING],
   }
-  logTA('updateTab() sendMessage', tabId, message);
+  logTA('updateTab () sendMessage', tabId, message);
   await chrome.tabs.sendMessage(tabId, message)
     // eslint-disable-next-line no-unused-vars
     .catch((er) => {
@@ -94,17 +94,36 @@ export async function updateTab({ tabId, debugCaller, useCache=false }) {
     })
 }
 
-export async function updateActiveTab({ debugCaller } = {}) {
-  logTA('updateActiveTab() 00')
+function updateTabTask(options) {
+  if (options?.isStop) {
+    return
+  }
+
+  updateTab(options)
+}
+
+const debouncedUpdateTab = debounce(updateTabTask, 30)
+
+export function debouncedUpdateActiveTab({ debugCaller } = {}) {
+  logTA('debouncedUpdateActiveTab () 00', 'memo[\'activeTabId\']', memo['activeTabId'])
 
   if (memo.activeTabId) {
-    debounceQueue.run({
-      key: memo.activeTabId,
-      fn: updateTab,
-      options: {
-        tabId: memo.activeTabId,
-        debugCaller: `updateActiveTab() <- ${debugCaller}`,
-      },
-    });
+    debouncedUpdateTab({
+      tabId: memo.activeTabId,
+      debugCaller: `debouncedUpdateActiveTab () <- ${debugCaller}`,
+    })
+  }
+}
+
+export async function updateActiveTab({ debugCaller, useCache } = {}) {
+  // stop debounced
+  debouncedUpdateTab({ isStop: true })
+
+  if (memo.activeTabId) {
+    updateTab({
+      tabId: memo.activeTabId,
+      useCache,
+      debugCaller: `updateActiveTab () <- ${debugCaller}`,
+    })
   }
 }

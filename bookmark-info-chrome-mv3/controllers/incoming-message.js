@@ -12,7 +12,7 @@ import {
   memo,
 } from '../api/structure/index.js'
 import {
-  updateTab,
+  updateActiveTab,
 } from '../api/tabs-api.js'
 import {
   EXTENSION_COMMAND_ID,
@@ -34,7 +34,7 @@ export async function onIncomingMessage (message, sender) {
 
     case EXTENSION_COMMAND_ID.TAB_IS_READY: {
       const tabId = sender?.tab?.id;
-      logIM('runtime.onMessage contentScriptReady 00', 'tabId', tabId, 'memo.activeTabId', memo.activeTabId);
+      logIM('runtime.onMessage contentScriptReady 00', 'tabId', tabId, 'memo[\'activeTabId\']', memo['activeTabId']);
       logIM('#  runtime.onMessage contentScriptReady 00', message.url);
 
       if (tabId) {
@@ -51,9 +51,8 @@ export async function onIncomingMessage (message, sender) {
         }
 
         if (tabId == memo.activeTabId) {
-          logIM('runtime.onMessage contentScriptReady 11 updateTab', 'tabId', tabId, 'memo.activeTabId', memo.activeTabId);
-          updateTab({
-            tabId,
+          logIM('runtime.onMessage contentScriptReady 11 updateTab', 'tabId', tabId, 'memo[\'activeTabId\']', memo['activeTabId']);
+          updateActiveTab({
             debugCaller: 'runtime.onMessage contentScriptReady',
           })
           memo.activeTabUrl = url
@@ -92,11 +91,12 @@ export async function onIncomingMessage (message, sender) {
       })
 
       const tabId = sender?.tab?.id;
-      updateTab({
-        tabId,
-        debugCaller: 'runtime.onMessage fixTag',
-        useCache: true,
-      })
+      if (tabId == memo.activeTabId) {
+        updateActiveTab({
+          debugCaller: 'runtime.onMessage fixTag',
+          useCache: true,
+        })
+      }
 
       break
     }
@@ -105,11 +105,12 @@ export async function onIncomingMessage (message, sender) {
       await unfixTag(message.parentId)
 
       const tabId = sender?.tab?.id;
-      updateTab({
-        tabId,
-        debugCaller: 'runtime.onMessage unfixTag',
-        useCache: true,
-      })
+      if (tabId == memo.activeTabId) {
+        updateActiveTab({
+          debugCaller: 'runtime.onMessage unfixTag',
+          useCache: true,
+        })
+      }
 
       break
     }

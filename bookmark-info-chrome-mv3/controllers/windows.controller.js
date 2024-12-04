@@ -2,7 +2,7 @@ import {
   makeLogFunction,
 } from '../api/log-api.js'
 import {
-  updateActiveTab,
+  debouncedUpdateActiveTab,
 } from '../api/tabs-api.js'
 import {
   setFirstActiveTab,
@@ -17,7 +17,7 @@ export const windowsController = {
     if (0 < windowId) {
       logWC('windows.onFocusChanged', windowId);
       await setFirstActiveTab({ debugCaller: 'windows.onFocusChanged' })
-      updateActiveTab({
+      debouncedUpdateActiveTab({
         debugCaller: 'windows.onFocusChanged'
       });
     }

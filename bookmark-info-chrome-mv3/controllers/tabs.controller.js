@@ -6,7 +6,7 @@ import {
   memo,
 } from '../api/structure/index.js'
 import {
-  updateTab,
+  updateActiveTab,
 } from '../api/tabs-api.js'
 
 const logTC = makeLogFunction({ module: 'tabs.controller' })
@@ -56,8 +56,7 @@ export const tabsController = {
           // we here after message page-is-ready. that message triggers update. not necessary to update here
           if (Tab.url !== memo.activeTabUrl) {
             memo.activeTabUrl = Tab.url
-            updateTab({
-              tabId, 
+            updateActiveTab({
               debugCaller: 'tabs.onUpdated complete'
             });
           }
@@ -68,16 +67,16 @@ export const tabsController = {
     }
   },
   async onActivated({ tabId }) {
-    logTC('tabs.onActivated 00 memo.activeTabId =', tabId);
+    logTC('tabs.onActivated 00', 'memo[\'activeTabId\'] <=', tabId);
 
+    // detect tab was changed
     // if (memo.activeTabId !== tabId) {
     //   memo.previousTabId = memo.activeTabId;
     //   memo.activeTabId = tabId;
     // }
     memo.activeTabId = tabId;
 
-    updateTab({
-      tabId, 
+    updateActiveTab({
       debugCaller: 'tabs.onActivated'
     });
 

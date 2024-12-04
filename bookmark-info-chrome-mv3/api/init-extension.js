@@ -11,7 +11,7 @@ import {
 const logIX = makeLogFunction({ module: 'init-extension' })
 
 export async function setFirstActiveTab({ debugCaller='' }) {
-  // logIX(`setFirstActiveTab() 00 <- ${debugCaller}`, memo.activeTabId)
+  logIX(`setFirstActiveTab() 00 <- ${debugCaller}`, memo['activeTabId'])
 
   if (!memo.activeTabId) {
     const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
@@ -21,14 +21,14 @@ export async function setFirstActiveTab({ debugCaller='' }) {
       memo.activeTabId = Tab.id;
       memo.activeTabUrl = Tab.url
 
-      logIX(`setFirstActiveTab() 11 <- ${debugCaller}`, memo.activeTabId)
+      logIX(`setFirstActiveTab() 11 <- ${debugCaller}`, memo['activeTabId'])
     }
   }
 }
 
 export async function initExtension({ debugCaller='' }) {
-  // await tagList.readFromStorage()
-  if (!browserStartTime.isActual() || !extensionSettings.isActual() || !memo.activeTabId) {
+  const isInitRequired = !browserStartTime.isActual() || !extensionSettings.isActual() || !memo.activeTabId
+  if (isInitRequired) {
     logIX(`initExtension() 00 <- ${debugCaller}`)
   }
 
@@ -38,5 +38,7 @@ export async function initExtension({ debugCaller='' }) {
     !memo.activeTabId && setFirstActiveTab({ debugCaller: `initExtension() <- ${debugCaller}` }),
   ])
 
-  // logIX('initExtension() end')
+  if (isInitRequired) {
+    logIX('initExtension() end')
+  }
 }

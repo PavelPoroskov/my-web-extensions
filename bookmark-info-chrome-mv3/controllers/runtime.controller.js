@@ -2,7 +2,7 @@ import {
   createContextMenu,
 } from '../api/context-menu.js'
 import {
-  updateActiveTab,
+  debouncedUpdateActiveTab,
 } from '../api/tabs-api.js'
 import {
   flatBookmarks,
@@ -26,11 +26,11 @@ const logRC = makeLogFunction({ module: 'runtime.controller' })
 export const runtimeController = {
   async onStartup() {
     logRC('runtime.onStartup');
-    
+
     // is only firefox use it?
     createContextMenu()
     await initExtension({ debugCaller: 'runtime.onStartup' })
-    updateActiveTab({
+    debouncedUpdateActiveTab({
       debugCaller: 'runtime.onStartup'
     });
 
@@ -47,7 +47,7 @@ export const runtimeController = {
 
     createContextMenu()
     await initExtension({ debugCaller: 'runtime.onInstalled' })
-    updateActiveTab({
+    debouncedUpdateActiveTab({
       debugCaller: 'runtime.onInstalled'
     });
   },
