@@ -255,68 +255,6 @@ const makeLogFunction = ({ module }) => {
     console.log(...ar);
   }
 }
-const logDQ = makeLogFunction({ module: 'debounceQueue' })
-
-class DebounceQueue {
-  constructor () {
-    this.tasks = {};
-    this.timers = {};
-    this.lastCallTimeMap = new Map();
-  }
-
-  debounce(key, func, timeout = 30){  
-    const debouncedFn = (...args) => {
-      clearTimeout(this.timers[key]);
-
-      this.timers[key] = setTimeout(
-        () => {
-          logDQ(' PromiseQueue: execute task', args[0])
-          func.apply(this, args)
-            .catch((er) => {
-              logDQ(' IGNORING error: PromiseQueue', er);
-            });
-        },
-        timeout,
-      );
-    };
-
-    return debouncedFn
-  }
-  cancelTask(deleteKey) {
-    clearTimeout(this.timers[deleteKey])
-    delete this.timers[deleteKey]
-    delete this.tasks[deleteKey]
-    this.lastCallTimeMap.delete(deleteKey)
-  }
-  
-  run({ key, fn, options }) {
-    if (!this.tasks[key]) {
-      logDQ(' PromiseQueue: first call', key, options)
-      this.tasks[key] = this.debounce(key, fn)
-    } else {
-      logDQ(' PromiseQueue: second call', key, options)
-    }
-    this.tasks[key](options);
-    this.lastCallTimeMap.set(key, Date.now())
-
-    const expireLimit = Date.now() - 5000;
-    const deleteKeyList = []
-
-    for (const [testKey, lastCallTime] of this.lastCallTimeMap.entries()) {
-      if (lastCallTime < expireLimit) {
-        deleteKeyList.push(testKey)
-      } else {
-        break
-      }
-    }
-
-    deleteKeyList.forEach((deleteKey) => {
-      this.cancelTask(deleteKey)
-    })
-  }
-}
-
-const debounceQueue = new DebounceQueue();
 class ExtraMap extends Map {
   sum(key, addValue) {
     super.set(key, (super.get(key) || 0) + addValue)
@@ -630,6 +568,20 @@ function isSupportedProtocol(urlString) {
   } catch (_er) {
     return false;
   }
+}
+
+function debounce(func, timeout = 300){
+  let timer;
+
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(
+      () => {
+        func.apply(this, args);
+      },
+      timeout,
+    );
+  };
 }
 const BOOKMARKS_BAR_FOLDER_ID = IS_BROWSER_FIREFOX ? 'toolbar_____' : '1'
 const OTHER_BOOKMARKS_FOLDER_ID = IS_BROWSER_FIREFOX ? 'unfiled_____' : '2'
@@ -1418,7 +1370,7 @@ async function getHistoryInfo({ url }) {
 const logIX = makeLogFunction({ module: 'init-extension' })
 
 async function setFirstActiveTab({ debugCaller='' }) {
-  // logIX(`setFirstActiveTab() 00 <- ${debugCaller}`, memo.activeTabId)
+  logIX(`setFirstActiveTab() 00 <- ${debugCaller}`, memo['activeTabId'])
 
   if (!memo.activeTabId) {
     const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
@@ -1428,14 +1380,14 @@ async function setFirstActiveTab({ debugCaller='' }) {
       memo.activeTabId = Tab.id;
       memo.activeTabUrl = Tab.url
 
-      logIX(`setFirstActiveTab() 11 <- ${debugCaller}`, memo.activeTabId)
+      logIX(`setFirstActiveTab() 11 <- ${debugCaller}`, memo['activeTabId'])
     }
   }
 }
 
 async function initExtension({ debugCaller='' }) {
-  // await tagList.readFromStorage()
-  if (!browserStartTime.isActual() || !extensionSettings.isActual() || !memo.activeTabId) {
+  const isInitRequired = !browserStartTime.isActual() || !extensionSettings.isActual() || !memo.activeTabId
+  if (isInitRequired) {
     logIX(`initExtension() 00 <- ${debugCaller}`)
   }
 
@@ -1445,7 +1397,9 @@ async function initExtension({ debugCaller='' }) {
     !memo.activeTabId && setFirstActiveTab({ debugCaller: `initExtension() <- ${debugCaller}` }),
   ])
 
-  // logIX('initExtension() end')
+  if (isInitRequired) {
+    logIX('initExtension() end')
+  }
 }
 const logTA = makeLogFunction({ module: 'tabs-api' })
 
@@ -1463,9 +1417,9 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
     return
   }
 
-  logTA(`updateTab() 00 <- ${debugCaller}`, tabId, url);
+  logTA(`updateTab () 00 <- ${debugCaller}`, tabId, url);
 
-  await initExtension({ debugCaller: 'updateTab()' })
+  await initExtension({ debugCaller: 'updateTab ()' })
   const settings = await extensionSettings.get()
 
   let actualUrl = url
@@ -1508,7 +1462,7 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
     // page settings
     isHideSemanticHtmlTagsOnPrinting: settings[STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING],
   }
-  logTA('updateTab() sendMessage', tabId, message);
+  logTA('updateTab () sendMessage', tabId, message);
   await browser.tabs.sendMessage(tabId, message)
     // eslint-disable-next-line no-unused-vars
     .catch((er) => {
@@ -1516,18 +1470,37 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
     })
 }
 
-async function updateActiveTab({ debugCaller } = {}) {
-  logTA('updateActiveTab() 00')
+function updateTabTask(options) {
+  if (options?.isStop) {
+    return
+  }
+
+  updateTab(options)
+}
+
+const debouncedUpdateTab = debounce(updateTabTask, 30)
+
+function debouncedUpdateActiveTab({ debugCaller } = {}) {
+  logTA('debouncedUpdateActiveTab () 00', 'memo[\'activeTabId\']', memo['activeTabId'])
 
   if (memo.activeTabId) {
-    debounceQueue.run({
-      key: memo.activeTabId,
-      fn: updateTab,
-      options: {
-        tabId: memo.activeTabId,
-        debugCaller: `updateActiveTab() <- ${debugCaller}`,
-      },
-    });
+    debouncedUpdateTab({
+      tabId: memo.activeTabId,
+      debugCaller: `debouncedUpdateActiveTab () <- ${debugCaller}`,
+    })
+  }
+}
+
+async function updateActiveTab({ debugCaller, useCache } = {}) {
+  // stop debounced
+  debouncedUpdateTab({ isStop: true })
+
+  if (memo.activeTabId) {
+    updateTab({
+      tabId: memo.activeTabId,
+      useCache,
+      debugCaller: `updateActiveTab () <- ${debugCaller}`,
+    })
   }
 }
 const pluralRules = [];
@@ -2647,7 +2620,7 @@ const bookmarksController = {
     }
 
     // changes in active tab
-    await updateActiveTab({
+    debouncedUpdateActiveTab({
       debugCaller: 'bookmark.onCreated'
     });
   },
@@ -2670,7 +2643,7 @@ const bookmarksController = {
     }
 
     // changes in active tab
-    await updateActiveTab({
+    debouncedUpdateActiveTab({
       debugCaller: 'bookmark.onChanged'
     });
   },
@@ -2738,7 +2711,7 @@ const bookmarksController = {
           }
         }
 
-        await updateActiveTab({
+        debouncedUpdateActiveTab({
           debugCaller: 'bookmark.onMoved'
         });
       }
@@ -2759,7 +2732,7 @@ const bookmarksController = {
     }
 
     // changes in active tab
-    await updateActiveTab({
+    debouncedUpdateActiveTab({
       debugCaller: 'bookmark.onRemoved'
     });
   },
@@ -2793,7 +2766,7 @@ async function onIncomingMessage (message, sender) {
 
     case EXTENSION_COMMAND_ID.TAB_IS_READY: {
       const tabId = sender?.tab?.id;
-      logIM('runtime.onMessage contentScriptReady 00', 'tabId', tabId, 'memo.activeTabId', memo.activeTabId);
+      logIM('runtime.onMessage contentScriptReady 00', 'tabId', tabId, 'memo[\'activeTabId\']', memo['activeTabId']);
       logIM('#  runtime.onMessage contentScriptReady 00', message.url);
 
       if (tabId) {
@@ -2810,9 +2783,8 @@ async function onIncomingMessage (message, sender) {
         }
 
         if (tabId == memo.activeTabId) {
-          logIM('runtime.onMessage contentScriptReady 11 updateTab', 'tabId', tabId, 'memo.activeTabId', memo.activeTabId);
-          updateTab({
-            tabId,
+          logIM('runtime.onMessage contentScriptReady 11 updateTab', 'tabId', tabId, 'memo[\'activeTabId\']', memo['activeTabId']);
+          updateActiveTab({
             debugCaller: 'runtime.onMessage contentScriptReady',
           })
           memo.activeTabUrl = url
@@ -2851,11 +2823,12 @@ async function onIncomingMessage (message, sender) {
       })
 
       const tabId = sender?.tab?.id;
-      updateTab({
-        tabId,
-        debugCaller: 'runtime.onMessage fixTag',
-        useCache: true,
-      })
+      if (tabId == memo.activeTabId) {
+        updateActiveTab({
+          debugCaller: 'runtime.onMessage fixTag',
+          useCache: true,
+        })
+      }
 
       break
     }
@@ -2864,11 +2837,12 @@ async function onIncomingMessage (message, sender) {
       await unfixTag(message.parentId)
 
       const tabId = sender?.tab?.id;
-      updateTab({
-        tabId,
-        debugCaller: 'runtime.onMessage unfixTag',
-        useCache: true,
-      })
+      if (tabId == memo.activeTabId) {
+        updateActiveTab({
+          debugCaller: 'runtime.onMessage unfixTag',
+          useCache: true,
+        })
+      }
 
       break
     }
@@ -2923,10 +2897,11 @@ async function onIncomingMessage (message, sender) {
 const runtimeController = {
   async onStartup() {
     logRC('runtime.onStartup');
+
     // is only firefox use it?
     createContextMenu()
     await initExtension({ debugCaller: 'runtime.onStartup' })
-    updateActiveTab({
+    debouncedUpdateActiveTab({
       debugCaller: 'runtime.onStartup'
     });
 
@@ -2940,10 +2915,10 @@ const runtimeController = {
   },
   async onInstalled () {
     logRC('runtime.onInstalled');
+
     createContextMenu()
     await initExtension({ debugCaller: 'runtime.onInstalled' })
-    await initExtension()
-    updateActiveTab({
+    debouncedUpdateActiveTab({
       debugCaller: 'runtime.onInstalled'
     });
   },
@@ -3039,8 +3014,7 @@ const tabsController = {
           // we here after message page-is-ready. that message triggers update. not necessary to update here
           if (Tab.url !== memo.activeTabUrl) {
             memo.activeTabUrl = Tab.url
-            updateTab({
-              tabId, 
+            updateActiveTab({
               debugCaller: 'tabs.onUpdated complete'
             });
           }
@@ -3051,16 +3025,16 @@ const tabsController = {
     }
   },
   async onActivated({ tabId }) {
-    logTC('tabs.onActivated 00 memo.activeTabId =', tabId);
+    logTC('tabs.onActivated 00', 'memo[\'activeTabId\'] <=', tabId);
 
+    // detect tab was changed
     // if (memo.activeTabId !== tabId) {
     //   memo.previousTabId = memo.activeTabId;
     //   memo.activeTabId = tabId;
     // }
     memo.activeTabId = tabId;
 
-    updateTab({
-      tabId, 
+    updateActiveTab({
       debugCaller: 'tabs.onActivated'
     });
 
@@ -3075,9 +3049,9 @@ const tabsController = {
       logTC('tabs.onActivated. IGNORING. tab was deleted', er);
     }
   },
+  // eslint-disable-next-line no-unused-vars
   async onRemoved(tabId) {
     // deleteUncleanUrlBookmarkForTab(tabId)
-    debounceQueue.cancelTask(tabId)
   }
 }
 const logWC = makeLogFunction({ module: 'windows.controller' })
@@ -3089,7 +3063,7 @@ const windowsController = {
     if (0 < windowId) {
       logWC('windows.onFocusChanged', windowId);
       await setFirstActiveTab({ debugCaller: 'windows.onFocusChanged' })
-      updateActiveTab({
+      debouncedUpdateActiveTab({
         debugCaller: 'windows.onFocusChanged'
       });
     }

@@ -235,7 +235,7 @@ ${semanticTagsStyle}
 .bkm-info--fixed {
   background-color: #40E0D0;
 }
-.bkm-info--fixed:active:not(.bkm-info--used-tag) {
+.bkm-info--fixed:active {
   transform: translateY(0.1ch);
 }
 .bkm-info--fixed:hover, .bkm-info--btn-unfix:hover + .bkm-info--fixed {
@@ -246,17 +246,17 @@ ${semanticTagsStyle}
 }
 .bkm-info--btn-unfix:has( + .bkm-info--fixed:hover) {
   display: flex;
-  background-color: #00FF00;
+  background-color: #32CD32;
 }
 .bkm-info--btn-unfix:hover {
   display: flex;
-  background-color: #32CD32;
+  background-color: #00FF00;
 }
 
 .bkm-info--recent {
   background-color: #DAF7A6;
 }
-.bkm-info--recent:active:not(.bkm-info--used-tag) {
+.bkm-info--recent:active {
   transform: translateY(0.1ch);
 }
 .bkm-info--recent:hover, .bkm-info--btn-fix:hover + .bkm-info--recent {
@@ -339,16 +339,20 @@ ${semanticTagsStyle}
 
     if (parentId) {
       const fullMessage = showInHtmlSingleTaskQueue.getState()
-      const isExist = fullMessage.bookmarkInfoList.some((item) => item.parentId === parentId)
+      const bkm = fullMessage.bookmarkInfoList.find((item) => item.parentId === parentId)
 
-      if (!isExist) {
+      if (bkm?.id) {
+        await browser.runtime.sendMessage({
+          command: EXTENSION_COMMAND_ID.DELETE_BOOKMARK,
+          bkmId: bkm.id,
+        });
+      } else {
         await browser.runtime.sendMessage({
           command: EXTENSION_COMMAND_ID.ADD_BOOKMARK,
           parentId,
           url: document.location.href,
           title: document.title,
         });  
-        // const recentTag = fullMessage.tagList.find((item) => item.parentId === parentId)
       }
     }
   }
@@ -653,33 +657,27 @@ ${semanticTagsStyle}
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag', 'bkm-info--recent');
+          divLabel.setAttribute('data-parentid', parentId);
+          divLabel.addEventListener('click', addBookmark);
 
-          if (isUsed) {
-            divLabel.classList.toggle('bkm-info--used-tag', isUsed);
-          } else {
-            divLabel.setAttribute('data-parentid', parentId);
-            divLabel.addEventListener('click', addBookmark);
-          }
-
-          if (isLast) {
-            divLabel.classList.toggle('bkm-info--last-tag', isLast);
-          }
+          divLabel.classList.toggle('bkm-info--used-tag', isUsed);
+          divLabel.classList.toggle('bkm-info--last-tag', isLast);
 
           const textNodeLabel = document.createTextNode(`${title}`);
           divLabel.appendChild(textNodeLabel);
 
-          const divDelBtn = document.createElement('div');
-          divDelBtn.setAttribute('data-parentid', parentId);
-          divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-fix');
-          divDelBtn.addEventListener('click', fixTag);
+          const divFixBtn = document.createElement('div');
+          divFixBtn.setAttribute('data-parentid', parentId);
+          divFixBtn.classList.add('bkm-info--btn', 'bkm-info--btn-fix');
+          divFixBtn.addEventListener('click', fixTag);
     
-          const divDelBtnLetter = document.createElement('div');
-          divDelBtnLetter.classList.add('bkm-info--btn-letter');
-          const textNodeDel = document.createTextNode('⊙');
-          divDelBtnLetter.appendChild(textNodeDel);
-          divDelBtn.appendChild(divDelBtnLetter);    
+          const divFixBtnLetter = document.createElement('div');
+          divFixBtnLetter.classList.add('bkm-info--btn-letter');
+          const textNodeFix = document.createTextNode('⊙');
+          divFixBtnLetter.appendChild(textNodeFix);
+          divFixBtn.appendChild(divFixBtnLetter);    
 
-          divLabelContainer.appendChild(divDelBtn);
+          divLabelContainer.appendChild(divFixBtn);
           divLabelContainer.appendChild(divLabel);
 
           break
@@ -689,34 +687,28 @@ ${semanticTagsStyle}
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag', 'bkm-info--fixed');
+          divLabel.setAttribute('data-parentid', parentId);
+          divLabel.addEventListener('click', addBookmark);
 
-          if (isUsed) {
-            divLabel.classList.toggle('bkm-info--used-tag', isUsed);
-          } else {
-            divLabel.setAttribute('data-parentid', parentId);
-            divLabel.addEventListener('click', addBookmark);
-          }
-
-          if (isLast) {
-            divLabel.classList.toggle('bkm-info--last-tag', isLast);
-          }
+          divLabel.classList.toggle('bkm-info--used-tag', isUsed);
+          divLabel.classList.toggle('bkm-info--last-tag', isLast);
 
           const textNodeLabel = document.createTextNode(`${title}`);
           divLabel.appendChild(textNodeLabel);
 
-          const divDelBtn = document.createElement('div');
-          divDelBtn.setAttribute('data-parentid', parentId);
-          divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-unfix');
-          divDelBtn.addEventListener('click', unfixTag);
+          const divFixBtn = document.createElement('div');
+          divFixBtn.setAttribute('data-parentid', parentId);
+          divFixBtn.classList.add('bkm-info--btn', 'bkm-info--btn-unfix');
+          divFixBtn.addEventListener('click', unfixTag);
     
-          const divDelBtnLetter = document.createElement('div');
-          divDelBtnLetter.classList.add('bkm-info--btn-letter');
-          const textNodeDel = document.createTextNode('X');
-          divDelBtnLetter.appendChild(textNodeDel);
+          const divFixBtnLetter = document.createElement('div');
+          divFixBtnLetter.classList.add('bkm-info--btn-letter');
+          const textNodeFix = document.createTextNode('X');
+          divFixBtnLetter.appendChild(textNodeFix);
           
-          divDelBtn.appendChild(divDelBtnLetter);    
+          divFixBtn.appendChild(divFixBtnLetter);    
 
-          divLabelContainer.appendChild(divDelBtn);
+          divLabelContainer.appendChild(divFixBtn);
           divLabelContainer.appendChild(divLabel);
 
           break
