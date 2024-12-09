@@ -12,7 +12,7 @@ export async function setOptions(obj) {
   const entryList = Object.entries(obj)
     .map(([key, value]) => ({
       key, 
-      storage: STORAGE_KEY_META[key].storage || STORAGE_TYPE.LOCAL,
+      storage: STORAGE_KEY_META[key].storage,
       value,
     }))
 
@@ -42,7 +42,7 @@ export async function getOptions(keyList) {
   const entryList = inKeyList
     .map((key) => ({
       key, 
-      storage: STORAGE_KEY_META[key].storage || STORAGE_TYPE.LOCAL,
+      storage: STORAGE_KEY_META[key].storage,
     }))
 
   const localList = entryList

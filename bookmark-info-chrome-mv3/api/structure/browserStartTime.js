@@ -21,13 +21,13 @@ class BrowserStartTime {
     return this._isActual
   }
   async getStartTime() {
-    const storedSession = await getOptions(STORAGE_KEY.START_TIME)
+    const storedSession = await getOptions(STORAGE_KEY.BROWSER_START_TIME)
     logBST('storedSession', storedSession)
 
     let result
 
-    if (storedSession[STORAGE_KEY.START_TIME]) {
-      result = storedSession[STORAGE_KEY.START_TIME]
+    if (storedSession[STORAGE_KEY.BROWSER_START_TIME]) {
+      result = storedSession[STORAGE_KEY.BROWSER_START_TIME]
     } else {
       // I get start for service-worker now.
       //    It is correct if this web-extension was installed in the previous browser session
@@ -35,7 +35,7 @@ class BrowserStartTime {
       //  tab with minimal tabId
       result = performance.timeOrigin
       await setOptions({
-        [STORAGE_KEY.START_TIME]: this._profileStartTimeMS
+        [STORAGE_KEY.BROWSER_START_TIME]: this._profileStartTimeMS
       })
     }
 
