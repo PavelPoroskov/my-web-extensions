@@ -28,7 +28,6 @@ createFileForFirefox(
       'api/structure/tagList.js',
       'api/structure/index.js',
     'api/clean-url-api.js',
-    'api/context-menu.js',
     'api/bookmarks-api.js',
     'api/history-api.js',
     'api/init-extension.js',
@@ -55,6 +54,7 @@ createFileForFirefox(
     'api/command/moveToFlatFolderStructure.js',
     'api/command/switchShowRecentList.js',
     'api/command/unfixTag.js',
+    'api/command/toggleYoutubeHeader.js',
     'api/command/index.js',
 
     'controllers/bookmarks.controller.js',

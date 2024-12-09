@@ -54,6 +54,10 @@ const STORAGE_KEY_PROTO = {
     default: false,
     isUserOption: true,
   },
+  HIDE_PAGE_HEADER_FOR_YOUTUBE: {
+    default: false,
+    isUserOption: true,
+  },
   HIDE_TAG_HEADER_ON_PRINTING: {
     default: false,
     isUserOption: true,

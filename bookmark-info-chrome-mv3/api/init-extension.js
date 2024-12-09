@@ -1,4 +1,9 @@
 import {
+  BROWSER_SPECIFIC,
+  CONTEXT_MENU_ID,
+  STORAGE_KEY,
+} from '../constant/index.js'
+import {
   browserStartTime,
   extensionSettings,
   tagList,
@@ -9,6 +14,35 @@ import {
 } from './log-api.js'
 
 const logIX = makeLogFunction({ module: 'init-extension' })
+
+export async function createContextMenu(settings) {
+  await chrome.contextMenus.removeAll();
+
+  chrome.contextMenus.create({
+    id: CONTEXT_MENU_ID.CLOSE_DUPLICATE,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'close duplicate tabs',
+  });  
+  chrome.contextMenus.create({
+    id: CONTEXT_MENU_ID.CLEAR_URL,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'clear url',
+  });
+
+  if (settings[STORAGE_KEY.HIDE_PAGE_HEADER_FOR_YOUTUBE]) {
+    chrome.contextMenus.create({
+      id: CONTEXT_MENU_ID.TOGGLE_YOUTUBE_HEADER,
+      contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+      title: 'toggle youtube page header',
+    });  
+  }
+
+  chrome.contextMenus.create({
+    id: CONTEXT_MENU_ID.CLOSE_BOOKMARKED,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'close bookmarked tabs',
+  });
+}
 
 export async function setFirstActiveTab({ debugCaller='' }) {
   logIX(`setFirstActiveTab() 00 <- ${debugCaller}`, memo['activeTabId'])
@@ -26,6 +60,16 @@ export async function setFirstActiveTab({ debugCaller='' }) {
   }
 }
 
+async function initFromUserOptions() {
+  await extensionSettings.restoreFromStorage()
+  const settings = await extensionSettings.get()
+
+  await Promise.all([
+    createContextMenu(settings),
+    tagList.readFromStorage(),
+  ])
+}
+
 export async function initExtension({ debugCaller='' }) {
   const isInitRequired = !browserStartTime.isActual() || !extensionSettings.isActual() || !memo.activeTabId
   if (isInitRequired) {
@@ -34,7 +78,7 @@ export async function initExtension({ debugCaller='' }) {
 
   await Promise.all([
     !browserStartTime.isActual() && browserStartTime.init(),
-    !extensionSettings.isActual() && extensionSettings.restoreFromStorage().then(() => tagList.readFromStorage()),
+    !extensionSettings.isActual() && initFromUserOptions(),
     !memo.activeTabId && setFirstActiveTab({ debugCaller: `initExtension() <- ${debugCaller}` }),
   ])
 

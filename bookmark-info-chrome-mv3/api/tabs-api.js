@@ -85,6 +85,7 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
     tagLength: settings[STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH],
     // page settings
     isHideSemanticHtmlTagsOnPrinting: settings[STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING],
+    isHideHeaderForYoutube: settings[STORAGE_KEY.HIDE_PAGE_HEADER_FOR_YOUTUBE],
   }
   logTA('updateTab () sendMessage', tabId, message);
   await chrome.tabs.sendMessage(tabId, message)

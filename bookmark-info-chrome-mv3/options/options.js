@@ -144,6 +144,12 @@ function restoreOptions(settings) {
   element = document.querySelector(domId)
   element.checked = settings[optionId];
   element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
+
+  optionId = STORAGE_KEY.HIDE_PAGE_HEADER_FOR_YOUTUBE;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.checked = settings[optionId];
+  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 }
 
 let clearUrlTargetList

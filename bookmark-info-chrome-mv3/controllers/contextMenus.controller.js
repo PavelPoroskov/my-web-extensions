@@ -5,6 +5,7 @@ import {
   clearUrlInActiveTab,
   closeBookmarkedTabs,
   closeDuplicateTabs,
+  toggleYoutubeHeader,
 } from '../api/command/index.js'
 import {
   makeLogFunction,
@@ -27,6 +28,10 @@ export const contextMenusController = {
       }
       case CONTEXT_MENU_ID.CLEAR_URL: {
         clearUrlInActiveTab()
+        break;
+      }
+      case CONTEXT_MENU_ID.TOGGLE_YOUTUBE_HEADER: {
+        toggleYoutubeHeader()
         break;
       }
     }

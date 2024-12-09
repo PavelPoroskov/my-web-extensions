@@ -26,6 +26,7 @@ const log = SHOW_LOG ? console.log : () => {};
     // HISTORY_INFO: 'HISTORY_INFO',
     // TAGS_INFO: 'TAGS_INFO',
     CLEAR_URL: 'CLEAR_URL',
+    TOGGLE_YOUTUBE_HEADER: 'TOGGLE_YOUTUBE_HEADER',
   }
 
   // TODO-DOUBLE remove duplication BROWSER in browser-specific.js and content-scripts.js
@@ -477,8 +478,30 @@ ${semanticTagsStyle}
     const isShowTagList = input.isShowTagList || false
     const tagLength = input.tagLength || 8
     const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting || false
+    const isHideHeaderForYoutube = input.isHideHeaderForYoutube || false
+    const togglePageHeader = input.togglePageHeader || 0
     
     log('showBookmarkInfo 00');
+
+    if (isHideHeaderForYoutube) {
+      const ytDiv = document.querySelector('#page-header-container');
+      
+      log('isHideHeaderForYoutube 00 ytDiv', ytDiv?.id, ytDiv);
+      if (ytDiv) {
+        const isShowNow = !ytDiv.style.display
+        const isShowNeed = togglePageHeader % 2 == 1
+        log('isHideHeaderForYoutube 11', ytDiv.style.display, isShowNow, isShowNeed);
+        if (isShowNow != isShowNeed) {
+          log('isHideHeaderForYoutube 22');
+          if (isShowNeed) {
+            ytDiv.style.removeProperty('display')
+          } else {
+            ytDiv.style = 'display: none;'
+          }
+        }  
+      }
+    }
+
     const usedParentIdSet = new Set(bookmarkInfoList.map(({ parentId }) => parentId))
     const tagList = inTagList.map(({ parentId, title, isFixed, isLast}) => ({
       parentId,
@@ -744,6 +767,7 @@ ${semanticTagsStyle}
     }
   }
 
+  let togglePageHeader = 0
   chrome.runtime.onMessage.addListener((message) => {
     log('chrome.runtime.onMessage: ', message);
     switch (message.command) {
@@ -761,6 +785,11 @@ ${semanticTagsStyle}
           window.history.replaceState(null, "", message.cleanUrl);
         }
         
+        break
+      }
+      case CONTENT_SCRIPT_COMMAND_ID.TOGGLE_YOUTUBE_HEADER: {
+        togglePageHeader += 1
+        showInHtmlSingleTaskQueue.addUpdate({ togglePageHeader })
         break
       }
     }

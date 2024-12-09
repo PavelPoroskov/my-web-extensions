@@ -1,7 +1,4 @@
 import {
-  createContextMenu,
-} from '../api/context-menu.js'
-import {
   debouncedUpdateActiveTab,
 } from '../api/tabs-api.js'
 import {
@@ -27,8 +24,6 @@ export const runtimeController = {
   async onStartup() {
     logRC('runtime.onStartup');
 
-    // is only firefox use it?
-    createContextMenu()
     await initExtension({ debugCaller: 'runtime.onStartup' })
     debouncedUpdateActiveTab({
       debugCaller: 'runtime.onStartup'
@@ -45,7 +40,6 @@ export const runtimeController = {
   async onInstalled () {
     logRC('runtime.onInstalled');
 
-    createContextMenu()
     await initExtension({ debugCaller: 'runtime.onInstalled' })
     debouncedUpdateActiveTab({
       debugCaller: 'runtime.onInstalled'
