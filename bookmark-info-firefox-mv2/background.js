@@ -91,6 +91,7 @@ const CONTENT_SCRIPT_COMMAND_ID = {
   HISTORY_INFO: 'HISTORY_INFO',
   TAGS_INFO: 'TAGS_INFO',
   CLEAR_URL: 'CLEAR_URL',
+  TOGGLE_YOUTUBE_HEADER: 'TOGGLE_YOUTUBE_HEADER',
 }
 const BASE_ID = 'BKM_INF';
 
@@ -98,7 +99,7 @@ const CONTEXT_MENU_ID = {
   CLOSE_DUPLICATE: `${BASE_ID}_CLOSE_DUPLICATE`,
   CLOSE_BOOKMARKED: `${BASE_ID}_CLOSE_BOOKMARKED`,
   CLEAR_URL: `${BASE_ID}_CLEAR_URL`,
-  // BOOKMARK_AND_CLOSE: `${BASE_ID}_BOOKMARK_AND_CLOSE`,
+  TOGGLE_YOUTUBE_HEADER: `${BASE_ID}_TOGGLE_YOUTUBE_HEADER`,
 };
 const SOURCE = {
   CACHE: 'CACHE',
@@ -109,70 +110,81 @@ const CONTEXT_MENU_ID = {
   SESSION: 'SESSION',
 }
 
-const STORAGE_KEY_META = {
+const STORAGE_KEY_PROTO = {
   CLEAR_URL: {
     storageKey: 'CLEAR_URL_FROM_QUERY_PARAMS',
     default: true,
+    isUserOption: true,
   },
   SHOW_PREVIOUS_VISIT: {
-    storageKey: 'SHOW_PREVIOUS_VISIT',
     default: false,
+    isUserOption: true,
   },
   SHOW_BOOKMARK_TITLE: {
-    storageKey: 'SHOW_BOOKMARK_TITLE',
     default: false,
+    isUserOption: true,
   },
-  // SHOW_PROFILE: {
-  //   storageKey: 'SHOW_PROFILE', 
-  //   default: false,
-  // },
   ADD_BOOKMARK_IS_ON: {
-    storageKey: 'ADD_BOOKMARK',
     default: true,
+    isUserOption: true,
   },
   ADD_BOOKMARK_LIST_SHOW: {
-    storageKey: 'ADD_BOOKMARK_LIST_SHOW',
     default: false,
     storage: STORAGE_TYPE.SESSION,
   },
   ADD_BOOKMARK_LIST_LIMIT: {
-    storageKey: 'ADD_BOOKMARK_LIST_LIMIT', 
     default: 35,
+    isUserOption: true,
   },
   ADD_BOOKMARK_TAG_LENGTH: {
-    storageKey: 'ADD_BOOKMARK_TAG_LENGTH', 
     default: 15,
+    isUserOption: true,
   },
   ADD_BOOKMARK_HIGHLIGHT_LAST: {
-    storageKey: 'ADD_BOOKMARK_HIGHLIGHT_LAST', 
     default: 5,
+    isUserOption: true,
   },
   ADD_BOOKMARK_SESSION_STARTED: {
-    storageKey: 'ADD_BOOKMARK_SESSION_STARTED',
     storage: STORAGE_TYPE.SESSION,
     default: false,
   },
   ADD_BOOKMARK_RECENT_MAP: {
-    storageKey: 'ADD_BOOKMARK_RECENT_MAP',
     default: {},
   },
   ADD_BOOKMARK_FIXED_MAP: {
-    storageKey: 'ADD_BOOKMARK_FIXED_MAP',
     default: {},
   },
-  START_TIME: {
-    storageKey: 'START_TIME',
+  BROWSER_START_TIME: {
     storage: STORAGE_TYPE.SESSION,
   },
   FORCE_FLAT_FOLDER_STRUCTURE: {
-    storageKey: 'FORCE_FLAT_FOLDER_STRUCTURE', 
     default: false,
+    isUserOption: true,
+  },
+  HIDE_PAGE_HEADER_FOR_YOUTUBE: {
+    default: false,
+    isUserOption: true,
   },
   HIDE_TAG_HEADER_ON_PRINTING: {
-    storageKey: 'HIDE_TAGS_ON_PRINTING', 
     default: false,
+    isUserOption: true,
   },
 }
+
+const STORAGE_KEY_META = Object.fromEntries(
+  Object.entries(STORAGE_KEY_PROTO)
+    .map(([key, obj]) => [key, {
+      ...obj,
+      storageKey: obj.storageKey || key,
+      storage: obj.storage || STORAGE_TYPE.LOCAL
+    }])
+)
+
+const USER_OPTION_KEY_LIST = Object.entries(STORAGE_KEY_META)
+  .filter(([, { isUserOption }]) => isUserOption)
+  .map(([key]) => key)
+
+const USER_OPTION_STORAGE_KEY_LIST = USER_OPTION_KEY_LIST.map((key) => STORAGE_KEY_META[key].storageKey)
 
 const STORAGE_KEY = Object.fromEntries(
   Object.keys(STORAGE_KEY_META).map((key) => [key, key])
@@ -338,7 +350,7 @@ async function setOptions(obj) {
   const entryList = Object.entries(obj)
     .map(([key, value]) => ({
       key, 
-      storage: STORAGE_KEY_META[key].storage || STORAGE_TYPE.LOCAL,
+      storage: STORAGE_KEY_META[key].storage,
       value,
     }))
 
@@ -368,7 +380,7 @@ async function getOptions(keyList) {
   const entryList = inKeyList
     .map((key) => ({
       key, 
-      storage: STORAGE_KEY_META[key].storage || STORAGE_TYPE.LOCAL,
+      storage: STORAGE_KEY_META[key].storage,
     }))
 
   const localList = entryList
@@ -467,23 +479,13 @@ class ExtensionSettings {
       this.fnReject = fnReject;
     });
 
-    await getOptions([
-      STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
-      STORAGE_KEY.ADD_BOOKMARK_IS_ON,
-      STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
-      STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW,
-      STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
-      STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING,
-      STORAGE_KEY.CLEAR_URL,
-      STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
-      STORAGE_KEY.SHOW_BOOKMARK_TITLE,
-      STORAGE_KEY.SHOW_PREVIOUS_VISIT,
-    ])
+    await getOptions(USER_OPTION_KEY_LIST)
       .then((result) => {
         this._settings = result
         this.fnResolve()
       })
       .catch(this.fnReject);
+  
     logES('readSavedSettings')
     logES(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
   }
@@ -511,13 +513,13 @@ class BrowserStartTime {
     return this._isActual
   }
   async getStartTime() {
-    const storedSession = await getOptions(STORAGE_KEY.START_TIME)
+    const storedSession = await getOptions(STORAGE_KEY.BROWSER_START_TIME)
     logBST('storedSession', storedSession)
 
     let result
 
-    if (storedSession[STORAGE_KEY.START_TIME]) {
-      result = storedSession[STORAGE_KEY.START_TIME]
+    if (storedSession[STORAGE_KEY.BROWSER_START_TIME]) {
+      result = storedSession[STORAGE_KEY.BROWSER_START_TIME]
     } else {
       // I get start for service-worker now.
       //    It is correct if this web-extension was installed in the previous browser session
@@ -525,7 +527,7 @@ class BrowserStartTime {
       //  tab with minimal tabId
       result = performance.timeOrigin
       await setOptions({
-        [STORAGE_KEY.START_TIME]: this._profileStartTimeMS
+        [STORAGE_KEY.BROWSER_START_TIME]: this._profileStartTimeMS
       })
     }
 
@@ -1092,29 +1094,6 @@ async function clearUrlInTab({ tabId, cleanUrl }) {
       logCU('clearUrlInTab() IGNORE', err)
     })
 }
-// MAYBE did can we not create menu on evert time
-async function createContextMenu() {
-  await browser.menus.removeAll();
-
-  browser.menus.create({
-    id: CONTEXT_MENU_ID.CLOSE_DUPLICATE,
-    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'close duplicate tabs',
-  });  
-  browser.menus.create({
-    id: CONTEXT_MENU_ID.CLEAR_URL,
-    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'clear url',
-  });
-  // MAYBE? bookmark and close all tabs (tabs without bookmarks and tabs with bookmarks)
-  //   copy bookmarked tabs
-  browser.menus.create({
-    id: CONTEXT_MENU_ID.CLOSE_BOOKMARKED,
-    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'close bookmarked tabs',
-  });
-  // MAYBE? bookmark and close tabs (tabs without bookmarks)
-}
 const logBA = makeLogFunction({ module: 'bookmarks-api' })
 
 // async function deleteUncleanUrlBookmarkForTab(tabId) {
@@ -1369,6 +1348,35 @@ async function getHistoryInfo({ url }) {
 }
 const logIX = makeLogFunction({ module: 'init-extension' })
 
+async function createContextMenu(settings) {
+  await browser.menus.removeAll();
+
+  browser.menus.create({
+    id: CONTEXT_MENU_ID.CLOSE_DUPLICATE,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'close duplicate tabs',
+  });  
+  browser.menus.create({
+    id: CONTEXT_MENU_ID.CLEAR_URL,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'clear url',
+  });
+
+  browser.menus.create({
+    id: CONTEXT_MENU_ID.CLOSE_BOOKMARKED,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'close bookmarked tabs',
+  });
+
+  if (settings[STORAGE_KEY.HIDE_PAGE_HEADER_FOR_YOUTUBE]) {
+    browser.menus.create({
+      id: CONTEXT_MENU_ID.TOGGLE_YOUTUBE_HEADER,
+      contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+      title: 'toggle youtube page header',
+    });  
+  }
+}
+
 async function setFirstActiveTab({ debugCaller='' }) {
   logIX(`setFirstActiveTab() 00 <- ${debugCaller}`, memo['activeTabId'])
 
@@ -1385,6 +1393,16 @@ async function setFirstActiveTab({ debugCaller='' }) {
   }
 }
 
+async function initFromUserOptions() {
+  await extensionSettings.restoreFromStorage()
+  const settings = await extensionSettings.get()
+
+  await Promise.all([
+    createContextMenu(settings),
+    tagList.readFromStorage(),
+  ])
+}
+
 async function initExtension({ debugCaller='' }) {
   const isInitRequired = !browserStartTime.isActual() || !extensionSettings.isActual() || !memo.activeTabId
   if (isInitRequired) {
@@ -1393,7 +1411,7 @@ async function initExtension({ debugCaller='' }) {
 
   await Promise.all([
     !browserStartTime.isActual() && browserStartTime.init(),
-    !extensionSettings.isActual() && extensionSettings.restoreFromStorage().then(() => tagList.readFromStorage()),
+    !extensionSettings.isActual() && initFromUserOptions(),
     !memo.activeTabId && setFirstActiveTab({ debugCaller: `initExtension() <- ${debugCaller}` }),
   ])
 
@@ -1461,6 +1479,7 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
     tagLength: settings[STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH],
     // page settings
     isHideSemanticHtmlTagsOnPrinting: settings[STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING],
+    isHideHeaderForYoutube: settings[STORAGE_KEY.HIDE_PAGE_HEADER_FOR_YOUTUBE],
   }
   logTA('updateTab () sendMessage', tabId, message);
   await browser.tabs.sendMessage(tabId, message)
@@ -2601,6 +2620,20 @@ async function closeDuplicateTabs() {
 async function unfixTag(parentId) {
   await tagList.removeFixedTag(parentId)
 }
+async function toggleYoutubeHeader() {
+  const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+  const [activeTab] = tabs;
+
+  if (activeTab?.id) {
+    const msg = {
+      command: CONTENT_SCRIPT_COMMAND_ID.TOGGLE_YOUTUBE_HEADER,
+    }
+    await browser.tabs.sendMessage(activeTab.id, msg)
+      .catch(() => {
+        // logCU('toggleYoutubeHeader() IGNORE', err)
+      })
+  }
+}
 
 const logBC = makeLogFunction({ module: 'bookmarks.controller' })
 
@@ -2756,6 +2789,10 @@ const contextMenusController = {
         clearUrlInActiveTab()
         break;
       }
+      case CONTEXT_MENU_ID.TOGGLE_YOUTUBE_HEADER: {
+        toggleYoutubeHeader()
+        break;
+      }
     }
   }
 }
@@ -2898,8 +2935,6 @@ const runtimeController = {
   async onStartup() {
     logRC('runtime.onStartup');
 
-    // is only firefox use it?
-    createContextMenu()
     await initExtension({ debugCaller: 'runtime.onStartup' })
     debouncedUpdateActiveTab({
       debugCaller: 'runtime.onStartup'
@@ -2916,7 +2951,6 @@ const runtimeController = {
   async onInstalled () {
     logRC('runtime.onInstalled');
 
-    createContextMenu()
     await initExtension({ debugCaller: 'runtime.onInstalled' })
     debouncedUpdateActiveTab({
       debugCaller: 'runtime.onInstalled'
@@ -2932,37 +2966,17 @@ const runtimeController = {
 
 const storageController = {
   
-  async onChanged(changes, namespace) {
+  onChanged(changes, namespace) {
     
     if (namespace === 'local') {
       const changesSet = new Set(Object.keys(changes))
-      // TODO? do we need invalidate setting for all this keys
-      const settingSet = new Set([
-        // STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP, // taglist
-        STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST,
-        STORAGE_KEY.ADD_BOOKMARK_IS_ON,
-        STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT,
-        // STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW, // session, taglist
-        // STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP, // taglist
-        // STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED, // session, taglist
-        STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH,
-        STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING,
-        STORAGE_KEY.CLEAR_URL,
-        STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
-        STORAGE_KEY.SHOW_BOOKMARK_TITLE,
-        STORAGE_KEY.SHOW_PREVIOUS_VISIT,
-        // STORAGE_KEY.START_TIME, // session, browser start time
-      ].map((key) => STORAGE_KEY_META[key].storageKey))
-      const intersectSet = changesSet.intersection(settingSet)
+      const userOptionSet = new Set(USER_OPTION_STORAGE_KEY_LIST)
+      const intersectSet = changesSet.intersection(userOptionSet)
 
       if (intersectSet.size > 0) {
         logSC('storage.onChanged', namespace, changes);
 
         extensionSettings.invalidate()
-
-        // if (changesSet.has(STORAGE_KEY.SHOW_PREVIOUS_VISIT)) {
-        //   memo.cacheUrlToVisitList.clear()
-        // }
       }
     }
   },

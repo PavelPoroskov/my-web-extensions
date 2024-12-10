@@ -26,6 +26,7 @@ const log = SHOW_LOG ? console.log : () => {};
     // HISTORY_INFO: 'HISTORY_INFO',
     // TAGS_INFO: 'TAGS_INFO',
     CLEAR_URL: 'CLEAR_URL',
+    TOGGLE_YOUTUBE_HEADER: 'TOGGLE_YOUTUBE_HEADER',
   }
 
   // TODO-DOUBLE remove duplication BROWSER in browser-specific.js and content-scripts.js
@@ -479,6 +480,7 @@ ${semanticTagsStyle}
     const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting || false
     
     log('showBookmarkInfo 00');
+
     const usedParentIdSet = new Set(bookmarkInfoList.map(({ parentId }) => parentId))
     const tagList = inTagList.map(({ parentId, title, isFixed, isLast}) => ({
       parentId,
@@ -744,6 +746,61 @@ ${semanticTagsStyle}
     }
   }
 
+  const options = {}
+  let cToggleYoutubePageHeader = 0
+  let ytHeaderPadding
+  // eslint-disable-next-line no-unused-vars
+  let ytTimerId
+
+  function toggleYoutubePageHeaderInDom() {
+    const ytDiv = document.querySelector('#page-header-container');
+    log('isHideHeaderForYoutube 00 ytDiv', ytDiv?.id, ytDiv);
+
+    if (ytDiv) {
+      const isShowNow = !ytDiv.style.display
+      const isShowNeed = cToggleYoutubePageHeader % 2 == 1
+      log('isHideHeaderForYoutube 11', {
+        'ytDiv.style.display': ytDiv.style.display, 
+        isShowNow, 
+        isShowNeed
+      });
+
+      if (isShowNow != isShowNeed) {
+        const ytDiv2 = document.querySelector('div.tp-yt-app-header-layout:nth-child(2)');
+
+        if (isShowNeed) {
+          log('isHideHeaderForYoutube 22 show');
+          ytDiv.style.removeProperty('display')
+          ytDiv2.style['padding-top'] = ytHeaderPadding || '473px'
+        } else {
+          log('isHideHeaderForYoutube 22 hide');
+          ytDiv.style = 'display: none;'
+          ytHeaderPadding = ytDiv2.style['padding-top']
+          ytDiv2.style = 'padding-top: 48px;'
+        }
+      }  
+    }
+  }
+
+  function toggleYoutubePageHeader() {
+    const isHideHeaderForYoutube = options.isHideHeaderForYoutube || false
+
+    if (isHideHeaderForYoutube) {
+      const isYoutubePage = document.location.hostname.endsWith('youtube.com')
+
+      if (isYoutubePage) {
+        const ytDiv = document.querySelector('#page-header-container');
+
+        if (ytDiv) {
+          toggleYoutubePageHeaderInDom()
+        } else {
+          log('isHideHeaderForYoutube 00 empty ytDiv. set timeout 150');
+          ytTimerId = setTimeout(toggleYoutubePageHeaderInDom, 150)
+        }  
+      }
+    }
+  }
+
   browser.runtime.onMessage.addListener((message) => {
     log('browser.runtime.onMessage: ', message);
     switch (message.command) {
@@ -751,6 +808,8 @@ ${semanticTagsStyle}
       // case CONTENT_SCRIPT_COMMAND_ID.TAGS_INFO: 
       case CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO: {
         showInHtmlSingleTaskQueue.addUpdate(message)
+        options.isHideHeaderForYoutube = message.isHideHeaderForYoutube || false
+        toggleYoutubePageHeader()
         break
       }
       case CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL: {
@@ -761,6 +820,11 @@ ${semanticTagsStyle}
           window.history.replaceState(null, "", message.cleanUrl);
         }
         
+        break
+      }
+      case CONTENT_SCRIPT_COMMAND_ID.TOGGLE_YOUTUBE_HEADER: {
+        cToggleYoutubePageHeader += 1
+        toggleYoutubePageHeader()
         break
       }
     }
