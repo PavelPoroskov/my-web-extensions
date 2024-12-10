@@ -782,20 +782,33 @@ ${semanticTagsStyle}
     }
   }
 
-  function toggleYoutubePageHeader() {
+  function toggleYoutubePageHeader({ nTry } = { nTry: 1 }) {
     const isHideHeaderForYoutube = options.isHideHeaderForYoutube || false
 
     if (isHideHeaderForYoutube) {
       const isYoutubePage = document.location.hostname.endsWith('youtube.com')
+      const isChannel = isYoutubePage && (
+        document.location.pathname.startsWith('/@') 
+        || document.location.pathname.startsWith('/c/')
+      )
 
-      if (isYoutubePage) {
+      if (isChannel) {
         const ytDiv = document.querySelector('#page-header-container');
+        const restNTry = nTry - 1
 
         if (ytDiv) {
           toggleYoutubePageHeaderInDom()
         } else {
-          log('isHideHeaderForYoutube 00 empty ytDiv. set timeout 150');
-          ytTimerId = setTimeout(toggleYoutubePageHeaderInDom, 150)
+          log('isHideHeaderForYoutube 00 nTry', nTry, 'empty ytDiv');
+          if (restNTry > 0) {
+            log('isHideHeaderForYoutube 00 set timeout 200');
+            ytTimerId = setTimeout(
+              () => {
+                toggleYoutubePageHeader({ nTry: restNTry })
+              }, 
+              200,
+            )  
+          }
         }  
       }
     }
@@ -809,7 +822,7 @@ ${semanticTagsStyle}
       case CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO: {
         showInHtmlSingleTaskQueue.addUpdate(message)
         options.isHideHeaderForYoutube = message.isHideHeaderForYoutube || false
-        toggleYoutubePageHeader()
+        toggleYoutubePageHeader({ nTry: 30 })
         break
       }
       case CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL: {
@@ -824,7 +837,7 @@ ${semanticTagsStyle}
       }
       case CONTENT_SCRIPT_COMMAND_ID.TOGGLE_YOUTUBE_HEADER: {
         cToggleYoutubePageHeader += 1
-        toggleYoutubePageHeader()
+        toggleYoutubePageHeader({ nTry: 1 })
         break
       }
     }
