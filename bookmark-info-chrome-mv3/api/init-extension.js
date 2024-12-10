@@ -29,6 +29,12 @@ export async function createContextMenu(settings) {
     title: 'clear url',
   });
 
+  chrome.contextMenus.create({
+    id: CONTEXT_MENU_ID.CLOSE_BOOKMARKED,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'close bookmarked tabs',
+  });
+
   if (settings[STORAGE_KEY.HIDE_PAGE_HEADER_FOR_YOUTUBE]) {
     chrome.contextMenus.create({
       id: CONTEXT_MENU_ID.TOGGLE_YOUTUBE_HEADER,
@@ -36,12 +42,6 @@ export async function createContextMenu(settings) {
       title: 'toggle youtube page header',
     });  
   }
-
-  chrome.contextMenus.create({
-    id: CONTEXT_MENU_ID.CLOSE_BOOKMARKED,
-    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'close bookmarked tabs',
-  });
 }
 
 export async function setFirstActiveTab({ debugCaller='' }) {

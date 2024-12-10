@@ -478,29 +478,8 @@ ${semanticTagsStyle}
     const isShowTagList = input.isShowTagList || false
     const tagLength = input.tagLength || 8
     const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting || false
-    const isHideHeaderForYoutube = input.isHideHeaderForYoutube || false
-    const togglePageHeader = input.togglePageHeader || 0
     
     log('showBookmarkInfo 00');
-
-    if (isHideHeaderForYoutube) {
-      const ytDiv = document.querySelector('#page-header-container');
-      
-      log('isHideHeaderForYoutube 00 ytDiv', ytDiv?.id, ytDiv);
-      if (ytDiv) {
-        const isShowNow = !ytDiv.style.display
-        const isShowNeed = togglePageHeader % 2 == 1
-        log('isHideHeaderForYoutube 11', ytDiv.style.display, isShowNow, isShowNeed);
-        if (isShowNow != isShowNeed) {
-          log('isHideHeaderForYoutube 22');
-          if (isShowNeed) {
-            ytDiv.style.removeProperty('display')
-          } else {
-            ytDiv.style = 'display: none;'
-          }
-        }  
-      }
-    }
 
     const usedParentIdSet = new Set(bookmarkInfoList.map(({ parentId }) => parentId))
     const tagList = inTagList.map(({ parentId, title, isFixed, isLast}) => ({
@@ -767,7 +746,61 @@ ${semanticTagsStyle}
     }
   }
 
-  let togglePageHeader = 0
+  const options = {}
+  let cToggleYoutubePageHeader = 0
+  let ytHeaderPadding
+  // eslint-disable-next-line no-unused-vars
+  let ytTimerId
+
+  function toggleYoutubePageHeaderInDom() {
+    const ytDiv = document.querySelector('#page-header-container');
+    log('isHideHeaderForYoutube 00 ytDiv', ytDiv?.id, ytDiv);
+
+    if (ytDiv) {
+      const isShowNow = !ytDiv.style.display
+      const isShowNeed = cToggleYoutubePageHeader % 2 == 1
+      log('isHideHeaderForYoutube 11', {
+        'ytDiv.style.display': ytDiv.style.display, 
+        isShowNow, 
+        isShowNeed
+      });
+
+      if (isShowNow != isShowNeed) {
+        const ytDiv2 = document.querySelector('div.tp-yt-app-header-layout:nth-child(2)');
+
+        if (isShowNeed) {
+          log('isHideHeaderForYoutube 22 show');
+          ytDiv.style.removeProperty('display')
+          ytDiv2.style['padding-top'] = ytHeaderPadding || '473px'
+        } else {
+          log('isHideHeaderForYoutube 22 hide');
+          ytDiv.style = 'display: none;'
+          ytHeaderPadding = ytDiv2.style['padding-top']
+          ytDiv2.style = 'padding-top: 48px;'
+        }
+      }  
+    }
+  }
+
+  function toggleYoutubePageHeader() {
+    const isHideHeaderForYoutube = options.isHideHeaderForYoutube || false
+
+    if (isHideHeaderForYoutube) {
+      const isYoutubePage = document.location.hostname.endsWith('youtube.com')
+
+      if (isYoutubePage) {
+        const ytDiv = document.querySelector('#page-header-container');
+
+        if (ytDiv) {
+          toggleYoutubePageHeaderInDom()
+        } else {
+          log('isHideHeaderForYoutube 00 empty ytDiv. set timeout 150');
+          ytTimerId = setTimeout(toggleYoutubePageHeaderInDom, 150)
+        }  
+      }
+    }
+  }
+
   chrome.runtime.onMessage.addListener((message) => {
     log('chrome.runtime.onMessage: ', message);
     switch (message.command) {
@@ -775,6 +808,8 @@ ${semanticTagsStyle}
       // case CONTENT_SCRIPT_COMMAND_ID.TAGS_INFO: 
       case CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO: {
         showInHtmlSingleTaskQueue.addUpdate(message)
+        options.isHideHeaderForYoutube = message.isHideHeaderForYoutube || false
+        toggleYoutubePageHeader()
         break
       }
       case CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL: {
@@ -788,8 +823,8 @@ ${semanticTagsStyle}
         break
       }
       case CONTENT_SCRIPT_COMMAND_ID.TOGGLE_YOUTUBE_HEADER: {
-        togglePageHeader += 1
-        showInHtmlSingleTaskQueue.addUpdate({ togglePageHeader })
+        cToggleYoutubePageHeader += 1
+        toggleYoutubePageHeader()
         break
       }
     }
