@@ -193,15 +193,6 @@ ${semanticTagsStyle}
     display:block;
   }
 }
-.bkm-info--bkm span {
-  line-height: inherit;
-  font-family: inherit;
-}
-.bkm-info--bkm span:nth-child(even) {
-  background-color: lightgray;
-  display: inline-block;
-  width: 0.8ch;
-}
 .bkm-info--history {
   color: white;
   background-color: fuchsia;
@@ -329,8 +320,12 @@ ${semanticTagsStyle}
         command: EXTENSION_COMMAND_ID.DELETE_BOOKMARK,
         bkmId,
       });
+
       // optimistic ui
-      event.target.style = 'display:none;';
+      const fullState = showInHtmlSingleTaskQueue.getState()
+      const bookmarkInfoList = fullState.bookmarkInfoList || []
+      const newBookmarkInfoList = bookmarkInfoList.filter((item) => item.id != bkmId)
+      showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
     }
   }
 
@@ -339,21 +334,38 @@ ${semanticTagsStyle}
     const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
 
     if (parentId) {
-      const fullMessage = showInHtmlSingleTaskQueue.getState()
-      const bkm = fullMessage.bookmarkInfoList.find((item) => item.parentId === parentId)
+      const fullState = showInHtmlSingleTaskQueue.getState()
+      const bookmarkInfoList = fullState.bookmarkInfoList || []
+      const bkm = bookmarkInfoList.find((item) => item.parentId === parentId)
 
       if (bkm?.id) {
         await chrome.runtime.sendMessage({
           command: EXTENSION_COMMAND_ID.DELETE_BOOKMARK,
           bkmId: bkm.id,
         });
+        // optimistic ui
+        const newBookmarkInfoList = bookmarkInfoList.filter((item) => item.id != bkm.id)
+        showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
       } else {
         await chrome.runtime.sendMessage({
           command: EXTENSION_COMMAND_ID.ADD_BOOKMARK,
           parentId,
           url: document.location.href,
           title: document.title,
-        });  
+        });
+
+        // optimistic ui
+        const tagList = fullState.tagList || []
+        const tag = tagList.find((item) => item.parentId === parentId)
+        if (tag) {
+          const newBookmarkInfoList = bookmarkInfoList.concat({ 
+            id: '', 
+            title: document.title, 
+            fullPathList: [tag.title], 
+            parentId,
+          })
+          showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })  
+        }
       }
     }
   }
@@ -583,26 +595,15 @@ ${semanticTagsStyle}
       switch (type) {
         case 'bookmark': {
           const { id, fullPathList } = value
-          const shortPathList = fullPathList.slice(-1)
+          const [folderName] = fullPathList.slice(-1)
           const restPathList = fullPathList.slice(0, -1)
           const restPath = restPathList.concat('').join('/ ')
     
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
-    
-          shortPathList[shortPathList.length - 1] = `${shortPathList[shortPathList.length - 1]}`
-          const shortPathListWithSeparator = shortPathList
-            .slice(0, -1).flatMap((str) => [str, '/ '])
-            .concat(shortPathList[shortPathList.length - 1])
-          
-          shortPathListWithSeparator.forEach((str) => {
-            const span = document.createElement('span');
-            // createTextNode is safe method for XSS-injection
-            // const shortPathList = shortPath.split(/(\/ )/)
-            const textNode = document.createTextNode(str);
-            span.appendChild(textNode);
-            divLabel.appendChild(span);
-          })
+              
+          const textNode = document.createTextNode(folderName);
+          divLabel.appendChild(textNode);
     
           divLabel.addEventListener('click', onBookmarkLabelClick);
           // TODO sanitize: remove ",<,>
