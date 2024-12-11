@@ -16,11 +16,11 @@ chrome.bookmarks.onRemoved.addListener(bookmarksController.onRemoved);
 // listen for window switching
 chrome.windows.onFocusChanged.addListener(windowsController.onFocusChanged);
 
-chrome.tabs.onCreated.addListener(tabsController.onCreated);
+// chrome.tabs.onCreated.addListener(tabsController.onCreated);
 chrome.tabs.onUpdated.addListener(tabsController.onUpdated);
 // listen for tab switching
 chrome.tabs.onActivated.addListener(tabsController.onActivated);
-chrome.tabs.onRemoved.addListener(tabsController.onRemoved);
+// chrome.tabs.onRemoved.addListener(tabsController.onRemoved);
 
 chrome.contextMenus.onClicked.addListener(contextMenusController.onClicked); 
 

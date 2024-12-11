@@ -849,17 +849,6 @@ ${semanticTagsStyle}
     }
   });
 
-  log('before send contentScriptReady');
-  try {
-    await chrome.runtime.sendMessage({
-      command: EXTENSION_COMMAND_ID.TAB_IS_READY,
-      url: document.location.href,
-    });
-    log('after send contentScriptReady');
-  } catch (er) {
-    log('IGNORE send contentScriptReady', er);
-  }
-
   function fullscreenchanged() {
     let rootDiv = document.getElementById(bkmInfoRootId);
 
@@ -873,4 +862,35 @@ ${semanticTagsStyle}
   }
   
   document.addEventListener("fullscreenchange", fullscreenchanged);
+
+  let isMsgReadyWasSend = false
+
+  async function sendTabIsReady() {
+    if (isMsgReadyWasSend) {
+      return
+    }
+    isMsgReadyWasSend = true
+
+    try {
+      log('before send contentScriptReady');
+      await chrome.runtime.sendMessage({
+        command: EXTENSION_COMMAND_ID.TAB_IS_READY,
+        url: document.location.href,
+      });
+      log('after send contentScriptReady');
+    } catch (er) {
+      log('IGNORE send contentScriptReady', er);
+    }
+  }
+
+  // we will receive bookmark-info from tab.onactivated
+  // document.addEventListener("visibilitychange", () => {
+  //   if (!document.hidden && isPageReady) {
+  //     sendTabIsReady()
+  //   }
+  // });
+
+  if (!document.hidden) {
+    sendTabIsReady()
+  }
 })();

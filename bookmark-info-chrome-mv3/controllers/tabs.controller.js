@@ -11,9 +11,9 @@ import {
 const logTC = makeLogFunction({ module: 'tabs.controller' })
 
 export const tabsController = {
-  onCreated({ pendingUrl: url, index, id }) {
-    logTC('tabs.onCreated', index, id, url);
-  },
+  // onCreated({ pendingUrl: url, index, id }) {
+  //   logTC('tabs.onCreated', index, id, url);
+  // },
   async onUpdated(tabId, changeInfo, Tab) {
     logTC('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
 
@@ -26,26 +26,26 @@ export const tabsController = {
     // }
 
     switch (changeInfo?.status) {
-      case ('loading'): {
-        if (changeInfo?.url) {
-          const url = changeInfo.url
-          logTC('tabs.onUpdated 11 LOADING', Tab.index, tabId, url);
-          // let cleanUrl
-          // const settings = await extensionSettings.get()
+      // case ('loading'): {
+      //   if (changeInfo?.url) {
+      //     const url = changeInfo.url
+      //     logTC('tabs.onUpdated 11 LOADING', Tab.index, tabId, url);
+      //     // let cleanUrl
+      //     // const settings = await extensionSettings.get()
 
-          // if (settings[STORAGE_KEY.CLEAR_URL]) {
-          //   ({ cleanUrl } = removeQueryParamsIfTarget(url));
+      //     // if (settings[STORAGE_KEY.CLEAR_URL]) {
+      //     //   ({ cleanUrl } = removeQueryParamsIfTarget(url));
             
-          //   logTC('tabs.onUpdated 22 LOADING', 'cleanUrl', cleanUrl);
-          //   if (url !== cleanUrl) {
-          //     // failed to send message. Recipient does not exist
-          //     await clearUrlInTab({ tabId, cleanUrl })
-          //   }
-          // }
-        }
+      //     //   logTC('tabs.onUpdated 22 LOADING', 'cleanUrl', cleanUrl);
+      //     //   if (url !== cleanUrl) {
+      //     //     // failed to send message. Recipient does not exist
+      //     //     await clearUrlInTab({ tabId, cleanUrl })
+      //     //   }
+      //     // }
+      //   }
 
-        break;
-      }
+      //   break;
+      // }
       case ('complete'): {
         logTC('tabs.onUpdated complete', tabId, Tab);
         
@@ -90,8 +90,8 @@ export const tabsController = {
       logTC('tabs.onActivated. IGNORING. tab was deleted', er);
     }
   },
-  // eslint-disable-next-line no-unused-vars
-  async onRemoved(tabId) {
-    // deleteUncleanUrlBookmarkForTab(tabId)
-  }
+  // // eslint-disable-next-line no-unused-vars
+  // async onRemoved(tabId) {
+  //   // deleteUncleanUrlBookmarkForTab(tabId)
+  // }
 }
