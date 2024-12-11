@@ -118,6 +118,14 @@ export async function onIncomingMessage (message, sender) {
       logIM('runtime.onMessage ADD_RECENT_TAG');
       await addRecentTagFromView(message.bookmarkId)
 
+      // const tabId = sender?.tab?.id;
+      // if (tabId == memo.activeTabId) {
+      //   updateActiveTab({
+      //     debugCaller: 'runtime.onMessage ADD_RECENT_TAG',
+      //     useCache: true,
+      //   })
+      // }
+
       break
     }
     case EXTENSION_COMMAND_ID.OPTIONS_ASKS_DATA: {

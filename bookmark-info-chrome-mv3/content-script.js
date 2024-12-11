@@ -311,6 +311,30 @@ ${semanticTagsStyle}
   let storedTagLength = 8;
   let storedIsHideSemanticHtmlTagsOnPrinting = false;
 
+  async function hideBookmarks() {
+    const rootDiv = document.getElementById(bkmInfoRootId);
+
+    if (rootDiv) {
+      while (rootDiv.lastChild) {
+        rootDiv.removeChild(rootDiv.lastChild);
+      }  
+    }
+  }
+
+  async function onBookmarkLabelClick(event) {
+    log('onBookmarkLabelClick 00', event?.target);
+    const bkmid = event?.target?.dataset?.bkmid
+
+    if (bkmid) {
+      await chrome.runtime.sendMessage({
+        command: EXTENSION_COMMAND_ID.ADD_RECENT_TAG,
+        bookmarkId: bkmid,
+      });
+    }
+
+    hideBookmarks()
+  }
+
   async function deleteBookmark(event) {
     log('deleteBookmark 00');
     const bkmId = event?.target?.dataset?.bkmid || event?.target?.parentNode?.dataset?.bkmid;
@@ -329,7 +353,19 @@ ${semanticTagsStyle}
     }
   }
 
-  async function addBookmark(event) {
+  async function toggleTagList() {
+    log('toggleTagList');
+    const fullMessage = showInHtmlSingleTaskQueue.getState()
+    const before = !!fullMessage.isShowTagList
+
+    showInHtmlSingleTaskQueue.addUpdate({ isShowTagList: !before })
+    await chrome.runtime.sendMessage({
+      command: EXTENSION_COMMAND_ID.SHOW_TAG_LIST,
+      value: !before,
+    });
+  }
+
+  async function bookmarkFromTag(event) {
     log('addBookmark 00');
     const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
 
@@ -384,6 +420,7 @@ ${semanticTagsStyle}
       });
     }
   }
+
   async function unfixTag(event) {
     log('unfixTag 00');
     const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
@@ -396,91 +433,6 @@ ${semanticTagsStyle}
     }
   }
 
-  async function hideBookmarks() {
-    const rootDiv = document.getElementById(bkmInfoRootId);
-
-    if (rootDiv) {
-      while (rootDiv.lastChild) {
-        rootDiv.removeChild(rootDiv.lastChild);
-      }  
-    }
-  }
-
-  async function onBookmarkLabelClick(event) {
-    const bkmid = event?.target?.dataset?.bkmid
-
-    if (bkmid) {
-      await chrome.runtime.sendMessage({
-        command: EXTENSION_COMMAND_ID.ADD_RECENT_TAG,
-        bookmarkId: bkmid,
-      });
-    } else {
-      hideBookmarks()
-    }
-  }
-
-  class TaskQueue {
-    fullState = {}
-    updateList = []
-    fnTask
-
-    promise = Promise.resolve(0)
-    fnResolve
-    fnReject
-
-    constructor(fnTask) {
-      this.fnTask = fnTask
-    }
-    async continueQueue() {
-      // console.log('continueQueue 00')
-      await this.promise.catch()
-
-      // console.log('continueQueue 11')
-      this.promise = new Promise((fnResolve, fnReject) => {
-        this.fnResolve = fnResolve;
-        this.fnReject = fnReject;
-      });
-
-      let sumUpdate = {}
-      let step = this.updateList.shift()
-      while (step) {
-        sumUpdate = { ...sumUpdate, ...step }
-        step = this.updateList.shift()
-      }
-      // console.log('continueQueue 66 sumUpdate', sumUpdate)
-      if (Object.keys(sumUpdate).length > 0) {
-        this.fullState = { ...this.fullState, ...sumUpdate }
-        // console.log('continueQueue 77 ')
-        this.fnTask(this.fullState)
-      }
-
-      // console.log('continueQueue 88')
-      this.fnResolve()
-      // console.log('continueQueue 99')
-    }
-    addUpdate(update) {
-      this.updateList.push(update)
-
-      this.continueQueue()
-    }
-    getState() {
-      return { ...this.fullState }
-    }
-  }
-
-  const showInHtmlSingleTaskQueue = new TaskQueue(showBookmarkInfo)
-
-  async function updateIsShowTagList() {
-    log('updateIsShowTagList');
-    const fullMessage = showInHtmlSingleTaskQueue.getState()
-    const before = !!fullMessage.isShowTagList
-
-    showInHtmlSingleTaskQueue.addUpdate({ isShowTagList: !before })
-    await chrome.runtime.sendMessage({
-      command: EXTENSION_COMMAND_ID.SHOW_TAG_LIST,
-      value: !before,
-    });
-  }
 
   function showBookmarkInfo(input) {
     const bookmarkInfoList = input.bookmarkInfoList || []
@@ -501,6 +453,44 @@ ${semanticTagsStyle}
       isLast,
       isUsed: usedParentIdSet.has(parentId)
     }))
+
+    const drawList = []
+    let prevTitle
+    bookmarkInfoList.forEach((value, index) => {
+      const { title } = value
+
+      if (isShowTitle && title) {
+        if (title !== prevTitle) {
+          drawList.push({ type: 'title', value: title })        
+          prevTitle = title
+        }  
+      }
+      
+      drawList.push({ type: 'bookmark', value, bkmIndex: index })
+    })
+
+    if (visitList.length > 0) {
+      const prevVisit = visitList
+        .toReversed()
+        .map((i) => formatPrevVisit(i))
+        .flatMap((value, index, array) => index === 0 || value !== array[index - 1] ? [value]: [])
+        .join(", ") 
+      drawList.push({ type: 'history', value: prevVisit })
+    }
+
+    if (tagList.length > 0) {
+      drawList.push({ type: 'separator' })
+
+      if (isShowTagList) {
+        tagList.forEach(({ isFixed, isLast, parentId, title, isUsed }) => {
+          drawList.push({
+            type: isFixed ? 'fixedTag' : 'recentTag',
+            value: { parentId, title, isUsed, isLast },
+          })
+        })
+      }
+    }
+
 
     let rootDiv = document.getElementById(bkmInfoRootId);
 
@@ -550,43 +540,6 @@ ${semanticTagsStyle}
 
     const rawNodeList = rootDiv.childNodes;
     const beforeRawLength = rawNodeList.length;
-
-    const drawList = []
-    let prevTitle
-    bookmarkInfoList.forEach((value, index) => {
-      const { title } = value
-
-      if (isShowTitle && title) {
-        if (title !== prevTitle) {
-          drawList.push({ type: 'title', value: title })        
-          prevTitle = title
-        }  
-      }
-      
-      drawList.push({ type: 'bookmark', value, bkmIndex: index })
-    })
-
-    if (visitList.length > 0) {
-      const prevVisit = visitList
-        .toReversed()
-        .map((i) => formatPrevVisit(i))
-        .flatMap((value, index, array) => index === 0 || value !== array[index - 1] ? [value]: [])
-        .join(", ") 
-      drawList.push({ type: 'history', value: prevVisit })
-    }
-
-    if (tagList.length > 0) {
-      drawList.push({ type: 'separator' })
-
-      if (isShowTagList) {
-        tagList.forEach(({ isFixed, isLast, parentId, title, isUsed }) => {
-          drawList.push({
-            type: isFixed ? 'fixedTag' : 'recentTag',
-            value: { parentId, title, isUsed, isLast },
-          })
-        })
-      }
-    }
 
     drawList.forEach(({ type, value, bkmIndex }, index) => {
       const divLabelContainer = document.createElement('div');
@@ -648,7 +601,7 @@ ${semanticTagsStyle}
         case 'separator': {
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--separator');
-          divLabel.addEventListener('click', updateIsShowTagList);
+          divLabel.addEventListener('click', toggleTagList);
           const textNode = document.createTextNode( isShowTagList ? '▴ hide' : '▾ add' );
           divLabel.appendChild(textNode);
           divLabelContainer.appendChild(divLabel);
@@ -661,7 +614,7 @@ ${semanticTagsStyle}
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag', 'bkm-info--recent');
           divLabel.setAttribute('data-parentid', parentId);
-          divLabel.addEventListener('click', addBookmark);
+          divLabel.addEventListener('click', bookmarkFromTag);
 
           divLabel.classList.toggle('bkm-info--used-tag', isUsed);
           divLabel.classList.toggle('bkm-info--last-tag', isLast);
@@ -691,7 +644,7 @@ ${semanticTagsStyle}
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag', 'bkm-info--fixed');
           divLabel.setAttribute('data-parentid', parentId);
-          divLabel.addEventListener('click', addBookmark);
+          divLabel.addEventListener('click', bookmarkFromTag);
 
           divLabel.classList.toggle('bkm-info--used-tag', isUsed);
           divLabel.classList.toggle('bkm-info--last-tag', isLast);
@@ -746,6 +699,58 @@ ${semanticTagsStyle}
       rawListLength -= 1;
     }
   }
+
+  class TaskQueue {
+    fullState = {}
+    updateList = []
+    fnTask
+
+    promise = Promise.resolve(0)
+    fnResolve
+    fnReject
+
+    constructor(fnTask) {
+      this.fnTask = fnTask
+    }
+    async continueQueue() {
+      // console.log('continueQueue 00')
+      await this.promise.catch()
+
+      // console.log('continueQueue 11')
+      this.promise = new Promise((fnResolve, fnReject) => {
+        this.fnResolve = fnResolve;
+        this.fnReject = fnReject;
+      });
+
+      let sumUpdate = {}
+      let step = this.updateList.shift()
+      while (step) {
+        sumUpdate = { ...sumUpdate, ...step }
+        step = this.updateList.shift()
+      }
+      // console.log('continueQueue 66 sumUpdate', sumUpdate)
+      if (Object.keys(sumUpdate).length > 0) {
+        this.fullState = { ...this.fullState, ...sumUpdate }
+        // console.log('continueQueue 77 ')
+        this.fnTask(this.fullState)
+      }
+
+      // console.log('continueQueue 88')
+      this.fnResolve()
+      // console.log('continueQueue 99')
+    }
+    addUpdate(update) {
+      this.updateList.push(update)
+
+      this.continueQueue()
+    }
+    getState() {
+      return { ...this.fullState }
+    }
+  }
+
+  const showInHtmlSingleTaskQueue = new TaskQueue(showBookmarkInfo)
+
 
   const options = {}
   let cToggleYoutubePageHeader = 0
