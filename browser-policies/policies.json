@@ -1,0 +1,35 @@
+{
+  "policies": {
+    "DisableFirefoxAccounts": true,
+    "DisablePocket": true,
+    "ExtensionSettings": {
+      "{d270de14-df6e-4f0b-a81a-7163af0368f3}": {
+        "installation_mode": "force_installed",
+        "install_url": "https://addons.mozilla.org/firefox/downloads/latest/{d270de14-df6e-4f0b-a81a-7163af0368f3}/latest.xpi"
+      },
+      "uBlock0@raymondhill.net": {
+        "installation_mode": "force_installed",
+        "install_url": "https://addons.mozilla.org/firefox/downloads/latest/uBlock0@raymondhill.net/latest.xpi"
+      }
+    },
+    "DisplayBookmarksToolbar": "never",
+    "HttpsOnlyMode": "force_enabled",
+    "Preferences": {
+      "dom.security.https_only_mode": {
+        "Value": true,
+        "Status": "default"
+      },
+      "dom.security.https_only_mode_ever_enabled": {
+        "Value": true,
+        "Status": "default"
+      }
+    },
+    "Homepage": {
+      "StartPage": "previous-session"
+    },
+    "FirefoxHome": {
+      "SponsoredTopSites": false,
+      "SponsoredPocket": false
+    }
+  }
+}

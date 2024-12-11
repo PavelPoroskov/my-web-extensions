@@ -1,0 +1,17 @@
+{
+  "SitePerProcess": true,
+  "RestoreOnStartup": 1,
+  "HttpsOnlyMode": "force_enabled",
+  "ExtensionInstallForcelist": [
+    "ncigbofjfbodhkaffojakplpmnleeoee",
+    "cjpalhdlnbpafiamejdnhcphjbkeiagm",
+    "npeicpdbkakmehahjeeohfdhnlpdklia"
+  ],
+  "ExtensionInstallBlacklist": [
+    "hojggiaghnldpcknpbciehjcaoafceil",
+    "ghbmnnjooekpmoecnnnilnnbdlolhkhi",
+    "aohghmighlieiainnegkcijnfilokake",
+    "felcaaldnbdncclmgdcncolpebgiejap",
+    "aapocclcgogkmnckokdopfmhonfmgoek"
+  ]
+}

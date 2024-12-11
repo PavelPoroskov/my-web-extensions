@@ -1,0 +1,14 @@
+sudo mkdir -p /etc/firefox/policies
+# sudo cp policies-debug.json /etc/firefox/policies/policies.json
+sudo cp policies.json /etc/firefox/policies/
+# sudo nano /etc/firefox/policies/policies.json
+
+sudo mkdir -p /etc/opt/chrome/policies/managed
+# sudo cp my-chrome-policy-debug.json /etc/opt/chrome/policies/managed/my-chrome-policy.json
+sudo cp my-chrome-policy.json /etc/opt/chrome/policies/managed/
+# sudo nano /etc/opt/chrome/policies/managed/my-chrome-policy.json
+
+sudo mkdir -p /etc/chromium/policies/managed
+# sudo cp my-chrome-policy-debug.json /etc/chromium/policies/managed/my-chrome-policy.json
+sudo cp my-chrome-policy.json /etc/chromium/policies/managed/
+# sudo nano /etc/chromium/policies/managed/my-chrome-policy.json
