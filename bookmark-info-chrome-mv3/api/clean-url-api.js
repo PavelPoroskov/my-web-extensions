@@ -8,8 +8,14 @@ import {
 
 const logCU = makeLogFunction({ module: 'clean-url-api' })
 
-const targetMap = new Map(
-  clearUrlTargetList.map(({ hostname, paths }) => [hostname, paths])
+const targetHostSettingsMap = new Map(
+  clearUrlTargetList.map(({ hostname, paths, removeSearchParamList }) => [
+    hostname, 
+    { 
+      paths, 
+      removeSearchParamList: removeSearchParamList || [] 
+    }
+  ])
 )
 
 const getHostBase = (str) => str.split('.').slice(-2).join('.')
@@ -21,13 +27,33 @@ export const removeQueryParamsIfTarget = (url) => {
   try {
     const oLink = new URL(url);
     const { hostname, pathname } = oLink;
-    const targetPathList = targetMap.get(getHostBase(hostname))
+    const targetHostSettings = targetHostSettingsMap.get(getHostBase(hostname))
 
-    if (targetPathList && targetPathList.some((targetPath) => pathname.startsWith(targetPath))) {
-      isPattern = true
-      oLink.search = ''
+    if (targetHostSettings) {
+      const { paths: targetPathList, removeSearchParamList } = targetHostSettings
 
-      cleanUrl = oLink.toString();  
+      if (targetPathList.some((targetPath) => pathname.startsWith(targetPath))) {
+        // remove all query params
+        isPattern = true
+        oLink.search = ''
+
+        cleanUrl = oLink.toString();  
+      } else {
+        // remove query params by list
+        const oSearchParams = oLink.searchParams;
+        const isHasThisSearchParams = removeSearchParamList.some((searchParam) => oSearchParams.get(searchParam) !== null)
+
+        if (isHasThisSearchParams) {
+          removeSearchParamList.forEach((searchParam) => {
+            oSearchParams.delete(searchParam)
+          })
+          isPattern = true
+          oLink.search = oSearchParams.size > 0
+            ? `?${oSearchParams.toString()}`
+            : ''
+          cleanUrl = oLink.toString();  
+        }
+      }
     }
   
   /* eslint-disable no-unused-vars */
