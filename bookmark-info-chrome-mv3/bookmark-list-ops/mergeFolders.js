@@ -5,22 +5,19 @@ import {
 import {
     singular,
 } from '../api/pluralize.js';
+import {
+    ignoreBkmControllerApiActionSet,
+} from '../api/structure/ignoreBkmControllerApiActionSet.js';
 
 async function moveContent(fromFolderId, toFolderId) {
     const nodeList = await chrome.bookmarks.getChildren(fromFolderId)
     
-    // await Promise.all(nodeList.map(
-    //     ({ id }) => chrome.bookmarks.move(id, { parentId: toFolderId })
-    // ))
+    nodeList.forEach(({ id: bookmarkId }) => {
+        ignoreBkmControllerApiActionSet.addIgnoreMove(bookmarkId)
+    })
+
     await Promise.all(nodeList.map(
-        async ({ id, title, url }) => {
-            await chrome.bookmarks.create({
-                parentId: toFolderId,
-                title,
-                url
-              })
-            await chrome.bookmarks.remove(id)
-        }
+        ({ id }) => chrome.bookmarks.move(id, { parentId: toFolderId })
     ))
 }
 

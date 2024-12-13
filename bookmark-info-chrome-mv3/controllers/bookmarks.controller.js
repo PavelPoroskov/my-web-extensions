@@ -5,6 +5,7 @@ import {
   extensionSettings,
   memo,
   tagList,
+  ignoreBkmControllerApiActionSet,
 } from '../api/structure/index.js'
 import {
   debouncedUpdateActiveTab,
@@ -22,6 +23,11 @@ const logBC = makeLogFunction({ module: 'bookmarks.controller' })
 
 export const bookmarksController = {
   async onCreated(bookmarkId, node) {
+    if (ignoreBkmControllerApiActionSet.hasIgnoreCreate(node)) {
+      logBC('bookmark.onCreated ignore', node);
+      return
+    }
+
     logBC('bookmark.onCreated <-', node);
     const settings = await extensionSettings.get()
 
@@ -64,6 +70,11 @@ export const bookmarksController = {
     });
   },
   async onMoved(bookmarkId, { oldIndex, index, oldParentId, parentId }) {
+    if (ignoreBkmControllerApiActionSet.hasIgnoreMove(bookmarkId)) {
+      logBC('bookmark.onMoved ignore', bookmarkId);
+      return
+    }
+
     logBC('bookmark.onMoved <-', { oldIndex, index, oldParentId, parentId });
     const settings = await extensionSettings.get()
     // switch (true) {
@@ -109,21 +120,24 @@ export const bookmarksController = {
             logBC('bookmark.onMoved 22');
 
             const { url, title } = node
+            ignoreBkmControllerApiActionSet.addIgnoreRemove(bookmarkId)
             await chrome.bookmarks.remove(bookmarkId)
-            await chrome.bookmarks.create({
+            const oldBkm = {
               parentId: oldParentId,
               title,
               url,
               index: oldIndex,
-            })
-            await chrome.bookmarks.create({
+            }
+            const newBkm = {
               parentId,
               title,
               url,
               index: 0,
-            })
-
-            return
+            }
+            ignoreBkmControllerApiActionSet.addIgnoreCreate(oldBkm)
+            ignoreBkmControllerApiActionSet.addIgnoreCreate(newBkm)
+            await chrome.bookmarks.create(oldBkm)
+            await chrome.bookmarks.create(newBkm)
           }
         }
 
@@ -136,7 +150,12 @@ export const bookmarksController = {
     }
   },
   async onRemoved(bookmarkId, { node }) {
-    logBC('bookmark.onRemoved <-');
+    if (ignoreBkmControllerApiActionSet.hasIgnoreRemove(bookmarkId)) {
+      logBC('bookmark.onRemoved ignore', bookmarkId);
+      return
+    }
+
+    logBC('bookmark.onRemoved <-', bookmarkId);
     const settings = await extensionSettings.get()
 
     if (!node.url) {

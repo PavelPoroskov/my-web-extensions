@@ -13,22 +13,6 @@ import {
 
 const logBA = makeLogFunction({ module: 'bookmarks-api' })
 
-// export async function deleteUncleanUrlBookmarkForTab(tabId) {
-//   logBA('deleteUncleanUrlBookmarkForTab 00 tabId', tabId)
-//   if (!tabId) {
-//     return
-//   }
-
-//   const tabData = memo.tabMap.get(tabId)
-//   logBA('deleteUncleanUrlBookmarkForTab 11 tabData', tabData)
-
-//   if (tabData?.bookmarkId) {
-//     logBA('deleteUncleanUrlBookmarkForTab 22')
-//     await chrome.bookmarks.remove(tabData.bookmarkId)
-//     memo.tabMap.delete(tabId)
-//   }
-// }
-
 const getParentIdList = (bookmarkList) => {
   const parentIdList = bookmarkList
     .map((bookmarkItem) => bookmarkItem.parentId)

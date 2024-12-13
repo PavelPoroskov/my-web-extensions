@@ -1,6 +1,9 @@
 import {
   IS_BROWSER_FIREFOX,
 } from '../constant/index.js';
+import {
+  ignoreBkmControllerApiActionSet,
+} from './structure/ignoreBkmControllerApiActionSet.js';
 
 export const BOOKMARKS_BAR_FOLDER_ID = IS_BROWSER_FIREFOX ? 'toolbar_____' : '1'
 export const OTHER_BOOKMARKS_FOLDER_ID = IS_BROWSER_FIREFOX ? 'unfiled_____' : '2'
@@ -13,10 +16,12 @@ async function getOrCreateFolderByTitleInRoot(title) {
     return foundItem.id
   }
 
-  const newNode = await chrome.bookmarks.create({
+  const folder = {
     parentId: OTHER_BOOKMARKS_FOLDER_ID,
     title
-  })
+  }
+  ignoreBkmControllerApiActionSet.addIgnoreCreate(folder)
+  const newNode = await chrome.bookmarks.create(folder)
 
   return newNode.id
 }
@@ -45,7 +50,6 @@ function memoize(fnGetValue) {
   }
 }
 
-// const UNCLASSIFIED_TITLE_OLD = 'unclassified'
 const UNCLASSIFIED_TITLE = 'zz-bookmark-info--unclassified'
 
 export const getOrCreateUnclassifiedFolderId = async () => getOrCreateFolderByTitleInRoot(UNCLASSIFIED_TITLE)

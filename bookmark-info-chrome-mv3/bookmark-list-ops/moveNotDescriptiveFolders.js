@@ -4,25 +4,21 @@ import {
   BOOKMARKS_BAR_FOLDER_ID,
   OTHER_BOOKMARKS_FOLDER_ID,
 } from '../api/special-folder.api.js';
+import {
+  ignoreBkmControllerApiActionSet,
+} from '../api/structure/ignoreBkmControllerApiActionSet.js';
 
 async function moveContentToStart(fromFolderId, toFolderId) {
   const nodeList = await chrome.bookmarks.getChildren(fromFolderId)
   const reversedNodeList = nodeList.toReversed()
 
-  // await Promise.all(reversedNodeList.map(
-  //   ({ id }) => chrome.bookmarks.move(id, { parentId: toFolderId, index: 0 }))
-  // )
+  reversedNodeList.forEach(({ id: bookmarkId }) => {
+    ignoreBkmControllerApiActionSet.addIgnoreMove(bookmarkId)
+  })
+
   await Promise.all(reversedNodeList.map(
-    async ({ id, title, url }) => {
-        await chrome.bookmarks.create({
-            parentId: toFolderId,
-            title,
-            url,
-            index: 0,
-          })
-        await chrome.bookmarks.remove(id)
-    }
-  ))
+    ({ id }) => chrome.bookmarks.move(id, { parentId: toFolderId, index: 0 }))
+  )
 }
 
 async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {

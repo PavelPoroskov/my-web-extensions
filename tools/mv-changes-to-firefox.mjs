@@ -21,6 +21,7 @@ createFileForFirefox(
     'api/structure/memo.js',
     'api/structure/extensionSettings.js',
     'api/structure/browserStartTime.js',
+    'api/structure/ignoreBkmControllerApiActionSet.js',
     
     'api/common-api.js',
     'api/special-folder.api.js',
