@@ -32,6 +32,11 @@ export const bookmarksController = {
     const settings = await extensionSettings.get()
 
     if (node.url) {
+      if (node.index !== 0) {
+        ignoreBkmControllerApiActionSet.addIgnoreMove(bookmarkId)
+        await chrome.bookmarks.move(bookmarkId, { index: 0 })
+      }
+
       if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
         await tagList.addRecentTagFromBkm(node)
       }
