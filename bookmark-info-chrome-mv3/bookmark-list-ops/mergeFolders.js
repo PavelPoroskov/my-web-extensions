@@ -3,8 +3,9 @@ import {
     OTHER_BOOKMARKS_FOLDER_ID,
 } from '../api/special-folder.api.js';
 import {
-    singular,
-} from '../api/pluralize.js';
+    normalizeTitle,
+    trimTitle,
+} from '../api/text.api.js';
 import {
     ignoreBkmControllerApiActionSet,
 } from '../api/structure/ignoreBkmControllerApiActionSet.js';
@@ -28,12 +29,7 @@ async function mergeSubFolder(parentId) {
     const nameSet = {}
 
     for (const node of folderNodeList) {
-        const trimmedTitle = node.title.toLowerCase().trim()
-        const wordList = trimmedTitle.replaceAll('-', ' ').split(/\s+/)
-        const lastWord = wordList.at(-1)
-        const singularLastWord = singular(lastWord)
-        const normalizedWordList = wordList.with(-1, singularLastWord)
-        const normalizedTitle = normalizedWordList.join(' ')
+        const normalizedTitle = normalizeTitle(node.title)
 
         if (!nameSet[normalizedTitle]) {
             nameSet[normalizedTitle] = [node]
@@ -45,23 +41,14 @@ async function mergeSubFolder(parentId) {
 
     const notUniqList = Object.entries(nameSet).filter(([, nodeList]) => nodeList.length > 1)
     const moveTaskList = []
-    const renameTaskList = []
     for (const [, nodeList] of notUniqList) {
-        const sortedList = nodeList.toSorted((a, b) => b.title.localeCompare(a.title))
+        const sortedList = nodeList.toSorted((a, b) => -a.title.localeCompare(b.title))
         const [firstNode, ...restNodeList] = sortedList
 
         for (const fromNode of restNodeList) {
             moveTaskList.push({
                 fromNode,
                 toNode: firstNode, 
-            })
-        }
-
-        const trimmedTitle = firstNode.title.trim()
-        if (firstNode.title !== trimmedTitle) {
-            renameTaskList.push({
-                id: firstNode.id,
-                title: trimmedTitle,
             })
         }
     }
@@ -75,20 +62,24 @@ async function mergeSubFolder(parentId) {
     await Promise.all(moveTaskList.map(
         ({ fromNode }) => chrome.bookmarks.removeTree(fromNode.id)
     ))
+}
 
+async function trimTitleInSubFolder(parentId) {
+    const nodeList = await chrome.bookmarks.getChildren(parentId)
+    const folderNodeList = nodeList.filter(({ url }) => !url)
 
-    const uniqList = Object.entries(nameSet).filter(([, nodeList]) => nodeList.length === 1)
-    for (const [, nodeList] of uniqList) {
-        const [firstNode] = nodeList
-        
-        const trimmedTitle = firstNode.title.trim()
-        if (firstNode.title !== trimmedTitle) {
+    const renameTaskList = []
+    for (const folderNode of folderNodeList) {
+
+        const trimmedTitle = trimTitle(folderNode.title)
+        if (folderNode.title !== trimmedTitle) {
             renameTaskList.push({
-                id: firstNode.id,
+                id: folderNode.id,
                 title: trimmedTitle,
             })
         }
     }
+
     await Promise.all(renameTaskList.map(
         ({ id, title }) => chrome.bookmarks.update(id, { title })
     ))
@@ -97,4 +88,7 @@ async function mergeSubFolder(parentId) {
 export async function mergeFolders() {
     await mergeSubFolder(BOOKMARKS_BAR_FOLDER_ID)
     await mergeSubFolder(OTHER_BOOKMARKS_FOLDER_ID)
+
+    await trimTitleInSubFolder(BOOKMARKS_BAR_FOLDER_ID)
+    await trimTitleInSubFolder(OTHER_BOOKMARKS_FOLDER_ID)
 }

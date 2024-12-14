@@ -19,6 +19,7 @@ const log = SHOW_LOG ? console.log : () => {};
     TAB_IS_READY: 'TAB_IS_READY',
     SHOW_TAG_LIST: 'SHOW_TAG_LIST',
     ADD_RECENT_TAG: 'ADD_RECENT_TAG',
+    ADD_BOOKMARK_FROM_SELECTION_EXT: 'ADD_BOOKMARK_FROM_SELECTION_EXT',
   }
   // TODO-DOUBLE remove duplication in CONTENT_SCRIPT_COMMAND_ID: command-id.js and content-scripts.js
   const CONTENT_SCRIPT_COMMAND_ID = {
@@ -27,6 +28,7 @@ const log = SHOW_LOG ? console.log : () => {};
     // TAGS_INFO: 'TAGS_INFO',
     CLEAR_URL: 'CLEAR_URL',
     TOGGLE_YOUTUBE_HEADER: 'TOGGLE_YOUTUBE_HEADER',
+    ADD_BOOKMARK_FROM_SELECTION_PAGE: 'ADD_BOOKMARK_FROM_SELECTION_PAGE',
   }
 
   // TODO-DOUBLE remove duplication BROWSER in browser-specific.js and content-scripts.js
@@ -846,6 +848,19 @@ ${semanticTagsStyle}
         toggleYoutubePageHeader({ nTry: 1 })
         break
       }
+      case CONTENT_SCRIPT_COMMAND_ID.ADD_BOOKMARK_FROM_SELECTION_PAGE: {
+        const selection = document.getSelection().toString() 
+
+        if (selection) {
+          chrome.runtime.sendMessage({
+            command: EXTENSION_COMMAND_ID.ADD_BOOKMARK_FROM_SELECTION_EXT,
+            url: document.location.href,
+            title: document.title,
+            selection,
+          });  
+        }
+        break
+      }
     }
   });
 
@@ -884,11 +899,11 @@ ${semanticTagsStyle}
   }
 
   // we will receive bookmark-info from tab.onactivated
-  // document.addEventListener("visibilitychange", () => {
-  //   if (!document.hidden && isPageReady) {
-  //     sendTabIsReady()
-  //   }
-  // });
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      sendTabIsReady()
+    }
+  });
 
   if (!document.hidden) {
     sendTabIsReady()

@@ -2,10 +2,9 @@ import {
     BOOKMARKS_BAR_FOLDER_ID,
     OTHER_BOOKMARKS_FOLDER_ID,
 } from '../api/special-folder.api.js';
-
-function isStartWithTODO(str) {
-    return !!str && str.slice(0, 4).toLowerCase() === 'todo'
-}
+import {
+  isStartWithTODO,
+} from '../api/text.api.js';
 
 async function moveFolderByName({ fromId, toId, isCondition }) {
     const childrenList = await chrome.bookmarks.getChildren(fromId)

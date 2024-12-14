@@ -19,16 +19,20 @@ export async function createContextMenu(settings) {
   await chrome.contextMenus.removeAll();
 
   chrome.contextMenus.create({
-    id: CONTEXT_MENU_ID.CLOSE_DUPLICATE,
+    id: CONTEXT_MENU_ID.ADD_BOOKMARK_FROM_SELECTION_MENU,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'close duplicate tabs',
+    title: 'add bookmark, selection as a tag',
   });  
   chrome.contextMenus.create({
     id: CONTEXT_MENU_ID.CLEAR_URL,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'clear url',
   });
-
+  chrome.contextMenus.create({
+    id: CONTEXT_MENU_ID.CLOSE_DUPLICATE,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'close duplicate tabs',
+  });  
   chrome.contextMenus.create({
     id: CONTEXT_MENU_ID.CLOSE_BOOKMARKED,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,

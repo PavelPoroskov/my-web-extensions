@@ -5,6 +5,7 @@ import {
   clearUrlInActiveTab,
   closeBookmarkedTabs,
   closeDuplicateTabs,
+  startAddBookmarkFromSelection,
   toggleYoutubeHeader,
 } from '../api/command/index.js'
 import {
@@ -18,6 +19,10 @@ export const contextMenusController = {
     logCMC('contextMenus.onClicked <- EVENT');
 
     switch (OnClickData.menuItemId) {
+      case CONTEXT_MENU_ID.ADD_BOOKMARK_FROM_SELECTION_MENU: {
+        startAddBookmarkFromSelection()
+        break;
+      }
       case CONTEXT_MENU_ID.CLOSE_DUPLICATE: {
         closeDuplicateTabs();
         break;
@@ -37,3 +42,4 @@ export const contextMenusController = {
     }
   }
 }
+

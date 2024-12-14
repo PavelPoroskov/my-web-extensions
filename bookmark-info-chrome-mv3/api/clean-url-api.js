@@ -21,6 +21,7 @@ const targetHostSettingsMap = new Map(
 const getHostBase = (str) => str.split('.').slice(-2).join('.')
 
 export const removeQueryParamsIfTarget = (url) => {
+  logCU('removeQueryParamsIfTarget () 00', url)
   let cleanUrl = url
   let isPattern = false
 
@@ -62,6 +63,8 @@ export const removeQueryParamsIfTarget = (url) => {
     
   }
   /* eslint-enable no-unused-vars */
+
+  logCU('removeQueryParamsIfTarget () 99 cleanUrl', isPattern, cleanUrl)
 
   return {
     cleanUrl,

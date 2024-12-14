@@ -3,6 +3,7 @@ import { bookmarksController } from './controllers/bookmarks.controller.js';
 import { tabsController } from './controllers/tabs.controller.js';
 import { windowsController } from './controllers/windows.controller.js';
 import { contextMenusController } from './controllers/contextMenus.controller.js';
+import { commandsController } from './controllers/commands.controller.js';
 
 import { runtimeController } from './controllers/runtime.controller.js';
 
@@ -22,6 +23,7 @@ chrome.tabs.onUpdated.addListener(tabsController.onUpdated);
 chrome.tabs.onActivated.addListener(tabsController.onActivated);
 // chrome.tabs.onRemoved.addListener(tabsController.onRemoved);
 
+chrome.commands.onCommand.addListener(commandsController.onCommand);
 chrome.contextMenus.onClicked.addListener(contextMenusController.onClicked); 
 
 chrome.runtime.onStartup.addListener(runtimeController.onStartup)

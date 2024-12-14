@@ -35,6 +35,8 @@ createFileForFirefox(
     'api/tabs-api.js',
     'api/pluralize-rules.js',
     'api/pluralize.js',
+    'api/text.api.js',
+    'api/folder.api.js',
     'bookmark-list-ops/flatFolders.js',
     'bookmark-list-ops/mergeFolders.js',
     'bookmark-list-ops/moveNotDescriptiveFolders.js',
@@ -46,6 +48,7 @@ createFileForFirefox(
     'bookmark-list-ops/index.js',
 
     'api/command/addBookmark.js',
+    'api/command/addBookmarkFromSelection.js',
     'api/command/addRecentTagFromView.js',
     'api/command/clearUrlInActiveTab.js',
     'api/command/closeBookmarkedTabs.js',
@@ -59,6 +62,7 @@ createFileForFirefox(
     'api/command/index.js',
 
     'controllers/bookmarks.controller.js',
+    'controllers/commands.controller.js',
     'controllers/contextMenus.controller.js',
     'controllers/incoming-message.js',
     'controllers/runtime.controller.js',

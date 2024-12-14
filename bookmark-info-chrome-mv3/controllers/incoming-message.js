@@ -1,5 +1,6 @@
 import {
   addBookmark,
+  addBookmarkFromSelection,
   addRecentTagFromView,
   deleteBookmark,
   fixTag,
@@ -163,6 +164,17 @@ export async function onIncomingMessage (message, sender) {
         command: EXTENSION_COMMAND_ID.FLAT_BOOKMARKS_RESULT,
         success,
       });
+
+      break
+    }
+    case EXTENSION_COMMAND_ID.ADD_BOOKMARK_FROM_SELECTION_EXT: {
+      logIM('runtime.onMessage ADD_BOOKMARK_FROM_SELECTION_EXT', message.selection);
+
+      await addBookmarkFromSelection({
+        url: message.url,
+        title: message.title,
+        selection: message.selection,
+      })
 
       break
     }

@@ -1,4 +1,5 @@
 export * from './addBookmark.js'
+export * from './addBookmarkFromSelection.js'
 export * from './addRecentTagFromView.js'
 export * from './clearUrlInActiveTab.js'
 export * from './closeBookmarkedTabs.js'
