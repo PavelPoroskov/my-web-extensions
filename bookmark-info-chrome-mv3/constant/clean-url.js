@@ -25,16 +25,20 @@ export const clearUrlTargetList = [
   },
   {
     hostname: 'hh.ru',  
-    paths: [
-      '/vacancy/',
-    ],
     removeSearchParamList: [
       'hhtmFrom',
       'hhtmFromLabel',
-    ]
+    ],
+    paths: [
+      '/vacancy/',
+    ],
   },
   {
     hostname: 'imdb.com',  
+    // TODO remove only selected query params: ref=
+    removeSearchParamList: [
+      'ref_',
+    ],
     paths: [
       '/title/',
       '/list/',
@@ -42,10 +46,6 @@ export const clearUrlTargetList = [
       '/interest/',
       '/',
     ],
-    // TODO remove only selected query params: ref=
-    removeSearchParamList: [
-      'ref',
-    ]
   },
   {
     hostname: 'linkedin.com',  

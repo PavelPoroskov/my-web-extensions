@@ -33,13 +33,7 @@ export const removeQueryParamsIfTarget = (url) => {
     if (targetHostSettings) {
       const { paths: targetPathList, removeSearchParamList } = targetHostSettings
 
-      if (targetPathList.some((targetPath) => pathname.startsWith(targetPath))) {
-        // remove all query params
-        isPattern = true
-        oLink.search = ''
-
-        cleanUrl = oLink.toString();  
-      } else {
+      if (removeSearchParamList.length > 0) {
         // remove query params by list
         const oSearchParams = oLink.searchParams;
         const isHasThisSearchParams = removeSearchParamList.some((searchParam) => oSearchParams.get(searchParam) !== null)
@@ -54,6 +48,12 @@ export const removeQueryParamsIfTarget = (url) => {
             : ''
           cleanUrl = oLink.toString();  
         }
+      } else if (targetPathList.some((targetPath) => pathname.startsWith(targetPath))) {
+        // remove all query params
+        isPattern = true
+        oLink.search = ''
+
+        cleanUrl = oLink.toString();  
       }
     }
   
