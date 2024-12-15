@@ -15,7 +15,7 @@ const logModuleList = [
   // 'memo',
   // 'recent-api',
   // 'runtime.controller',
-  // 'storage-api',
+  // 'storage.api',
   // 'storage.controller',
   // 'tabs-api',
   // 'tabs.controller',

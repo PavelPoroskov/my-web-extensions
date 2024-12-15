@@ -3,7 +3,7 @@ import {
 } from '../log-api.js'
 import {
   getOptions, setOptions
-} from '../storage-api.js'
+} from '../storage.api.js'
 import {
   USER_OPTION_KEY_LIST,
 } from '../../constant/index.js';

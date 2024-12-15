@@ -6,7 +6,7 @@ import {
 } from '../bookmark-list-ops/index.js'
 import {
   getOptions,
-} from '../api/storage-api.js'
+} from '../api/storage.api.js'
 import {
   STORAGE_KEY,
 } from '../constant/index.js';

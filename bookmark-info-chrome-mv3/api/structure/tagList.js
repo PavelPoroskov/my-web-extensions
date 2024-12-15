@@ -14,7 +14,7 @@ import {
 import {
   getOptions,
   setOptions
-} from '../storage-api.js'
+} from '../storage.api.js'
 import {
   extensionSettings,
 } from './extensionSettings.js'

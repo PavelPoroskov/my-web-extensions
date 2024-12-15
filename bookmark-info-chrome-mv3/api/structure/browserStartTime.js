@@ -3,7 +3,7 @@ import {
 } from '../log-api.js'
 import {
   getOptions, setOptions
-} from '../storage-api.js'
+} from '../storage.api.js'
 import {
   STORAGE_KEY,
 } from '../../constant/index.js';

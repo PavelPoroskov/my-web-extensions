@@ -4,9 +4,9 @@ import {
 import {
   STORAGE_TYPE,
   STORAGE_KEY_META,
-} from '../constant/index.js';
+} from './storage.api.config.js';
 
-const logSA = makeLogFunction({ module: 'storage-api' })
+const logSA = makeLogFunction({ module: 'storage.api' })
 
 export async function setOptions(obj) {
   const entryList = Object.entries(obj)
