@@ -36,7 +36,7 @@ async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
   );
 
   await Promise.all(folderList.map(
-    ({ id }) => chrome.bookmarks.removeTree(id)
+    ({ id }) => chrome.bookmarks.remove(id)
   ))
 }
 

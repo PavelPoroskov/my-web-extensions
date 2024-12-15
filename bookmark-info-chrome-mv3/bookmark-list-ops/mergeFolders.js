@@ -60,7 +60,7 @@ async function mergeSubFolder(parentId) {
     );
     
     await Promise.all(moveTaskList.map(
-        ({ fromNode }) => chrome.bookmarks.removeTree(fromNode.id)
+        ({ fromNode }) => chrome.bookmarks.remove(fromNode.id)
     ))
 }
 
