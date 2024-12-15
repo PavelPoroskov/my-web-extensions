@@ -26,26 +26,6 @@ export const tabsController = {
     // }
 
     switch (changeInfo?.status) {
-      // case ('loading'): {
-      //   if (changeInfo?.url) {
-      //     const url = changeInfo.url
-      //     logTC('tabs.onUpdated 11 LOADING', Tab.index, tabId, url);
-      //     // let cleanUrl
-      //     // const settings = await extensionSettings.get()
-
-      //     // if (settings[STORAGE_KEY.CLEAR_URL]) {
-      //     //   ({ cleanUrl } = removeQueryParamsIfTarget(url));
-            
-      //     //   logTC('tabs.onUpdated 22 LOADING', 'cleanUrl', cleanUrl);
-      //     //   if (url !== cleanUrl) {
-      //     //     // failed to send message. Recipient does not exist
-      //     //     await clearUrlInTab ({ tabId, cleanUrl })
-      //     //   }
-      //     // }
-      //   }
-
-      //   break;
-      // }
       case ('complete'): {
         logTC('tabs.onUpdated complete', tabId, Tab);
         

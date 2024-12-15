@@ -1,5 +1,6 @@
 import {
   CONTENT_SCRIPT_MSG_ID,
+  STORAGE_KEY,
 } from '../../constant/index.js'
 import {
   removeAnchorAndSearchParams,
@@ -7,6 +8,12 @@ import {
 import {
   makeLogFunction,
 } from '../log.api.js'
+import {
+  removeQueryParamsIfTarget,
+} from '../url.api.js'
+import {
+  extensionSettings,
+} from '../structure/index.js'
 
 const logCU = makeLogFunction({ module: 'clearUrlInActiveTab' })
 
@@ -33,4 +40,16 @@ export async function removeFromUrlAnchorAndSearchParamsInActiveTab() {
       await changeUrlInTab({ tabId: activeTab.id, url: cleanUrl })
     }
   }
+}
+
+export async function clearUrlOnPageOpen({ tabId, url }) {
+  const settings = await extensionSettings.get()
+
+  if (settings[STORAGE_KEY.CLEAR_URL_ON_PAGE_OPEN]) {
+    const { cleanUrl } = removeQueryParamsIfTarget(url);
+    
+    if (url !== cleanUrl) {
+      await changeUrlInTab({ tabId, url: cleanUrl })
+    }
+  }  
 }

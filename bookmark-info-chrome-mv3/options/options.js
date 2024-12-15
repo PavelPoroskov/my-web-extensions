@@ -67,7 +67,7 @@ function makeSaveSelectHandler(optionId) {
 }
 
 function restoreOptions(settings) {
-  let optionId = STORAGE_KEY.CLEAR_URL;
+  let optionId = STORAGE_KEY.CLEAR_URL_ON_PAGE_OPEN;
   let domId = `#${optionId}`
   let element = document.querySelector(domId)
   element.checked = settings[optionId];

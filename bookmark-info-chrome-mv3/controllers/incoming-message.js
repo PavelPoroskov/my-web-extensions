@@ -7,7 +7,7 @@ import {
   moveToFlatFolderStructure,
   switchShowRecentList,
   unfixTag,
-  changeUrlInTab,
+  clearUrlOnPageOpen,
 } from '../api/command/index.js'
 import {
   extensionSettings,
@@ -24,9 +24,6 @@ import {
 import {
   makeLogFunction,
 } from '../api/log.api.js'
-import {
-  removeQueryParamsIfTarget,
-} from '../api/url.api.js'
 
 const logIM = makeLogFunction({ module: 'incoming-message' })
 
@@ -35,29 +32,18 @@ export async function onIncomingMessage (message, sender) {
 
     case EXTENSION_MSG_ID.TAB_IS_READY: {
       const tabId = sender?.tab?.id;
+      const url = message.url
       logIM('runtime.onMessage contentScriptReady 00', 'tabId', tabId, 'memo[\'activeTabId\']', memo['activeTabId']);
-      logIM('#  runtime.onMessage contentScriptReady 00', message.url);
+      logIM('#  runtime.onMessage contentScriptReady 00', url);
 
-      if (tabId) {
-        const settings = await extensionSettings.get()
-        const url = message.url
-        let cleanUrl
+      if (tabId && tabId == memo.activeTabId) {
+        await clearUrlOnPageOpen({ tabId, url })
 
-        if (settings[STORAGE_KEY.CLEAR_URL]) {
-          ({ cleanUrl } = removeQueryParamsIfTarget(url));
-          
-          if (url !== cleanUrl) {
-            await changeUrlInTab({ tabId, url: cleanUrl })
-          }
-        }
-
-        if (tabId == memo.activeTabId) {
-          logIM('runtime.onMessage contentScriptReady 11 updateTab', 'tabId', tabId, 'memo[\'activeTabId\']', memo['activeTabId']);
-          updateActiveTab({
-            debugCaller: 'runtime.onMessage contentScriptReady',
-          })
-          memo.activeTabUrl = url
-        }
+        memo.activeTabUrl = url
+        logIM('runtime.onMessage contentScriptReady 11 updateTab', 'tabId', tabId, 'memo[\'activeTabId\']', memo['activeTabId']);
+        updateActiveTab({
+          debugCaller: 'runtime.onMessage contentScriptReady',
+        })
       }
 
       break

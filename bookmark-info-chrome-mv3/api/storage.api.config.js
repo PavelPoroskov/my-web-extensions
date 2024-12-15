@@ -4,8 +4,7 @@ export const STORAGE_TYPE = {
 }
 
 const STORAGE_KEY_PROTO = {
-  CLEAR_URL: {
-    storageKey: 'CLEAR_URL_FROM_QUERY_PARAMS',
+  CLEAR_URL_ON_PAGE_OPEN: {
     default: true,
     isUserOption: true,
   },

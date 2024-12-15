@@ -48,7 +48,7 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
 
   let actualUrl = url
 
-  if (settings[STORAGE_KEY.CLEAR_URL]) {
+  if (settings[STORAGE_KEY.CLEAR_URL_ON_PAGE_OPEN]) {
     const { cleanUrl } = removeQueryParamsIfTarget(url)
 
     if (url !== cleanUrl) {
