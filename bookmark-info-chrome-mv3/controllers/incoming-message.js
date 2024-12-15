@@ -18,9 +18,13 @@ import {
 } from '../api/tabs.api.js'
 import {
   EXTENSION_MSG_ID,
-  STORAGE_KEY,
-  clearUrlTargetList,
 } from '../constant/index.js'
+import {
+  USER_OPTION,
+} from '../api/storage.api.config.js'
+import {
+  clearUrlTargetList,
+} from '../api/url.api.config.js'
 import {
   makeLogFunction,
 } from '../api/log.api.js'
@@ -122,7 +126,7 @@ export async function onIncomingMessage (message, sender) {
       chrome.runtime.sendMessage({
         command: EXTENSION_MSG_ID.DATA_FOR_OPTIONS,
         clearUrlTargetList,
-        STORAGE_KEY,
+        USER_OPTION,
         settings,
       });
 

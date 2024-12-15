@@ -67,7 +67,7 @@ function makeSaveSelectHandler(optionId) {
 }
 
 function restoreOptions(settings) {
-  let optionId = STORAGE_KEY.CLEAR_URL_ON_PAGE_OPEN;
+  let optionId = USER_OPTION.CLEAR_URL_ON_PAGE_OPEN;
   let domId = `#${optionId}`
   let element = document.querySelector(domId)
   element.checked = settings[optionId];
@@ -78,31 +78,31 @@ function restoreOptions(settings) {
   element = document.querySelector(domId)
   element.value = formatTargetList(clearUrlTargetList).join('\n');
 
-  optionId = STORAGE_KEY.SHOW_BOOKMARK_TITLE;
+  optionId = USER_OPTION.SHOW_BOOKMARK_TITLE;
   domId = `#${optionId}`
   element = document.querySelector(domId)
   element.checked = settings[optionId];
   element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 
-  optionId = STORAGE_KEY.SHOW_PREVIOUS_VISIT;
+  optionId = USER_OPTION.SHOW_PREVIOUS_VISIT;
   domId = `#${optionId}`
   element = document.querySelector(domId)
   element.checked = settings[optionId];
   element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 
-  optionId = STORAGE_KEY.ADD_BOOKMARK_IS_ON;
+  optionId = USER_OPTION.TAG_LIST_USE;
   domId = `#${optionId}`
   element = document.querySelector(domId)
   element.checked = settings[optionId];
   element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 
-  optionId = STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT;
+  optionId = USER_OPTION.TAG_LIST_LIST_LENGTH;
   domId = `#${optionId}`
   element = document.querySelector(domId)
   element.value = settings[optionId];
   element.addEventListener('input', makeSaveInputHandler(optionId) );
 
-  optionId = STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH;
+  optionId = USER_OPTION.TAG_LIST_TAG_LENGTH;
   domId = `#${optionId}`
   element = document.querySelector(domId)
   element.value = settings[optionId];
@@ -128,24 +128,24 @@ function restoreOptions(settings) {
     await wait(50)
   });
 
-  optionId = STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE;
+  optionId = USER_OPTION.USE_FLAT_FOLDER_STRUCTURE;
   domId = `#${optionId}`
   element = document.querySelector(domId)
   element.checked = settings[optionId];
 
-  optionId = STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST;
+  optionId = USER_OPTION.TAG_LIST_HIGHLIGHT_LAST;
   domId = `#${optionId}`
   element = document.querySelector(domId)
   element.value = settings[optionId];
   element.addEventListener('input', makeSaveInputHandler(optionId) );
 
-  optionId = STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING;
+  optionId = USER_OPTION.HIDE_TAG_HEADER_ON_PRINTING;
   domId = `#${optionId}`
   element = document.querySelector(domId)
   element.checked = settings[optionId];
   element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 
-  optionId = STORAGE_KEY.HIDE_PAGE_HEADER_FOR_YOUTUBE;
+  optionId = USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE;
   domId = `#${optionId}`
   element = document.querySelector(domId)
   element.checked = settings[optionId];
@@ -153,7 +153,7 @@ function restoreOptions(settings) {
 }
 
 let clearUrlTargetList
-let STORAGE_KEY
+let USER_OPTION
 
 chrome.runtime.onMessage.addListener(async (message) => {
   // console.log('onMessage', message)
@@ -161,7 +161,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
     case EXTENSION_MSG_ID.DATA_FOR_OPTIONS: {
       // console.log('option in DATA_FOR_OPTIONS')
       clearUrlTargetList = message.clearUrlTargetList
-      STORAGE_KEY = message.STORAGE_KEY
+      USER_OPTION = message.USER_OPTION
       restoreOptions(message.settings)
       break
     }
@@ -176,7 +176,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
       //  may be debug mode
       value.textContent = text;
 
-      const optionId = STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE;
+      const optionId = USER_OPTION.USE_FLAT_FOLDER_STRUCTURE;
       const domId = `#${optionId}`
       const element = document.querySelector(domId)
       element.checked = element.checked || !!message.success;

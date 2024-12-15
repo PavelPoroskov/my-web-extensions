@@ -3,68 +3,79 @@ export const STORAGE_TYPE = {
   SESSION: 'SESSION',
 }
 
-const STORAGE_KEY_PROTO = {
+const USER_OPTION_META = {
   CLEAR_URL_ON_PAGE_OPEN: {
     default: true,
-    isUserOption: true,
   },
   SHOW_PREVIOUS_VISIT: {
     default: false,
-    isUserOption: true,
   },
   SHOW_BOOKMARK_TITLE: {
     default: false,
-    isUserOption: true,
   },
-  ADD_BOOKMARK_IS_ON: {
+  // TODO rename ADD_BOOKMARK_IS_ON -> TAG_LIST_USE
+  TAG_LIST_USE: {
     default: true,
-    isUserOption: true,
   },
-  ADD_BOOKMARK_LIST_SHOW: {
-    default: false,
-    storage: STORAGE_TYPE.SESSION,
-  },
-  ADD_BOOKMARK_LIST_LIMIT: {
+  // TODO rename ADD_BOOKMARK_LIST_LIMIT -> TAG_LIST_LIST_LENGTH
+  TAG_LIST_LIST_LENGTH: {
     default: 35,
-    isUserOption: true,
   },
-  ADD_BOOKMARK_TAG_LENGTH: {
+  // TODO rename ADD_BOOKMARK_TAG_LENGTH -> TAG_LIST_TAG_LENGTH
+  TAG_LIST_TAG_LENGTH: {
     default: 15,
-    isUserOption: true,
   },
-  ADD_BOOKMARK_HIGHLIGHT_LAST: {
-    default: 5,
-    isUserOption: true,
+  // TODO rename ADD_BOOKMARK_HIGHLIGHT_LAST -> TAG_LIST_HIGHLIGHT_LAST
+  TAG_LIST_HIGHLIGHT_LAST: {
+    default: 7,
   },
-  ADD_BOOKMARK_SESSION_STARTED: {
-    storage: STORAGE_TYPE.SESSION,
+  // TODO rename FORCE_FLAT_FOLDER_STRUCTURE -> USE_FLAT_FOLDER_STRUCTURE
+  USE_FLAT_FOLDER_STRUCTURE: {
     default: false,
   },
-  ADD_BOOKMARK_RECENT_MAP: {
+  HIDE_PAGE_HEADER_FOR_YOUTUBE: {
+    default: false,
+  },
+  HIDE_TAG_HEADER_ON_PRINTING: {
+    default: false,
+  },
+}
+
+const INTERNAL_VALUES_META = {
+  // TODO rename ADD_BOOKMARK_LIST_SHOW -> TAG_LIST_IS_OPEN
+  TAG_LIST_IS_OPEN: {
+    default: false,
+    storage: STORAGE_TYPE.SESSION,
+  },
+  // TODO rename ADD_BOOKMARK_SESSION_STARTED -> TAG_LIST_SESSION_STARTED
+  TAG_LIST_SESSION_STARTED: {
+    default: false,
+    storage: STORAGE_TYPE.SESSION,
+  },
+  // TODO rename ADD_BOOKMARK_RECENT_MAP -> TAG_LIST_RECENT_MAP
+  TAG_LIST_RECENT_MAP: {
     default: {},
   },
-  ADD_BOOKMARK_FIXED_MAP: {
+  // TODO rename ADD_BOOKMARK_FIXED_MAP -> TAG_LIST_FIXED_MAP
+  TAG_LIST_FIXED_MAP: {
     default: {},
   },
   BROWSER_START_TIME: {
     storage: STORAGE_TYPE.SESSION,
   },
-  FORCE_FLAT_FOLDER_STRUCTURE: {
-    default: false,
-    isUserOption: true,
-  },
-  HIDE_PAGE_HEADER_FOR_YOUTUBE: {
-    default: false,
-    isUserOption: true,
-  },
-  HIDE_TAG_HEADER_ON_PRINTING: {
-    default: false,
-    isUserOption: true,
-  },
 }
 
+const userOptionSet = new Set(Object.keys(USER_OPTION_META))
+const internalValuesSet = new Set(Object.keys(INTERNAL_VALUES_META))
+const intersectSet = userOptionSet.intersection(internalValuesSet)
+
+if (intersectSet.size > 0) {
+  throw new Error(`User options and internal keys has intersection: ${Array.from(intersectSet.keys())}`)
+}
+
+// it is used inside getOptions()/setOptions() only
 export const STORAGE_KEY_META = Object.fromEntries(
-  Object.entries(STORAGE_KEY_PROTO)
+  Object.entries({ ...USER_OPTION_META, ...INTERNAL_VALUES_META })
     .map(([key, obj]) => [key, {
       ...obj,
       storageKey: obj.storageKey || key,
@@ -72,16 +83,19 @@ export const STORAGE_KEY_META = Object.fromEntries(
     }])
 )
 
-export const USER_OPTION_KEY_LIST = Object.entries(STORAGE_KEY_META)
-  .filter(([, { isUserOption }]) => isUserOption)
-  .map(([key]) => key)
+// it is used to read one option value in program code
+export const USER_OPTION = Object.fromEntries(
+  Object.keys(USER_OPTION_META).map((key) => [key, key])
+)
+// it is used in extensionSettings to read ALL user options from storage to program
+export const USER_OPTION_KEY_LIST = Object.keys(USER_OPTION_META)
 
+// it is used in storage controller to detect user options was changed
 export const USER_OPTION_STORAGE_KEY_LIST = USER_OPTION_KEY_LIST.map((key) => STORAGE_KEY_META[key].storageKey)
 
-export const STORAGE_KEY = Object.fromEntries(
-  Object.keys(STORAGE_KEY_META).map((key) => [key, key])
+export const INTERNAL_VALUES = Object.fromEntries(
+  Object.keys(INTERNAL_VALUES_META).map((key) => [key, key])
 )
 
-export const ADD_BOOKMARK_LIST_MAX = 50
-
-
+// rename ADD_BOOKMARK_LIST_MAX -> TAG_LIST_MAX_LIST_LENGTH
+export const TAG_LIST_MAX_LIST_LENGTH = 50

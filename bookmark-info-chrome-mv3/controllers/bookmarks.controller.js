@@ -11,9 +11,11 @@ import {
   debouncedUpdateActiveTab,
 } from '../api/tabs.api.js'
 import {
+  USER_OPTION,
+} from '../api/storage.api.config.js'
+import {
   IS_BROWSER_CHROME,
   IS_BROWSER_FIREFOX,
-  STORAGE_KEY,
 } from '../constant/index.js'
 import {
   makeLogFunction,
@@ -37,11 +39,11 @@ export const bookmarksController = {
         await chrome.bookmarks.move(bookmarkId, { index: 0 })
       }
 
-      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+      if (settings[USER_OPTION.TAG_LIST_USE]) {
         await tagList.addRecentTagFromBkm(node)
       }
     } else {
-      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+      if (settings[USER_OPTION.TAG_LIST_USE]) {
         await tagList.addRecentTagFromFolder(node)
       }
     }
@@ -63,7 +65,7 @@ export const bookmarksController = {
     } else {
       memo.bkmFolderById.delete(bookmarkId);
 
-      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && changeInfo.title) {
+      if (settings[USER_OPTION.TAG_LIST_USE] && changeInfo.title) {
         // await tagList.updateTag(bookmarkId, changeInfo.title)
         await tagList.addRecentTagFromFolder(node)
       }
@@ -102,7 +104,7 @@ export const bookmarksController = {
     
     if (node.url) {
       if (parentId !== oldParentId) {
-        if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+        if (settings[USER_OPTION.TAG_LIST_USE]) {
           await tagList.addRecentTagFromBkm(node);
 
           let isReplaceMoveToCreate = false
@@ -114,7 +116,7 @@ export const bookmarksController = {
             const childrenList = await chrome.bookmarks.getChildren(parentId)
             const lastIndex = childrenList.length - 1
 
-            // isReplaceMoveToCreate = index == lastIndex && settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW] 
+            // isReplaceMoveToCreate = index == lastIndex && settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN] 
             isReplaceMoveToCreate = index == lastIndex
           }
 
@@ -166,7 +168,7 @@ export const bookmarksController = {
     if (!node.url) {
       memo.bkmFolderById.delete(bookmarkId);
 
-      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+      if (settings[USER_OPTION.TAG_LIST_USE]) {
         await tagList.removeTag(bookmarkId)
       }
     }

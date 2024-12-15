@@ -15,13 +15,16 @@ import {
   removeQueryParamsIfTarget,
 } from './url.api.js'
 import {
+  USER_OPTION,
+  INTERNAL_VALUES,
+} from './storage.api.config.js'
+import {
   extensionSettings,
   memo,
   tagList,
 } from './structure/index.js'
 import {
   CONTENT_SCRIPT_MSG_ID,
-  STORAGE_KEY,
 } from '../constant/index.js'
 import { initExtension } from './init-extension.js'
 
@@ -48,7 +51,8 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
 
   let actualUrl = url
 
-  if (settings[STORAGE_KEY.CLEAR_URL_ON_PAGE_OPEN]) {
+  // TODO no need condition here, other clean than for open
+  if (settings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN]) {
     const { cleanUrl } = removeQueryParamsIfTarget(url)
 
     if (url !== cleanUrl) {
@@ -57,7 +61,7 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
   } 
 
   let visitsData
-  const isShowVisits = settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT]
+  const isShowVisits = settings[USER_OPTION.SHOW_PREVIOUS_VISIT]
 
   const [
     bookmarkInfo,
@@ -76,16 +80,16 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
   const message = {
     command: CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO,
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
-    isShowTitle: settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
+    isShowTitle: settings[USER_OPTION.SHOW_BOOKMARK_TITLE],
     // visits history
     ...visitsData,
     // recent list
     tagList: tagList.list,
-    isShowTagList: settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
-    tagLength: settings[STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH],
+    isShowTagList: settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN],
+    tagLength: settings[USER_OPTION.TAG_LIST_TAG_LENGTH],
     // page settings
-    isHideSemanticHtmlTagsOnPrinting: settings[STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING],
-    isHideHeaderForYoutube: settings[STORAGE_KEY.HIDE_PAGE_HEADER_FOR_YOUTUBE],
+    isHideSemanticHtmlTagsOnPrinting: settings[USER_OPTION.HIDE_TAG_HEADER_ON_PRINTING],
+    isHideHeaderForYoutube: settings[USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE],
   }
   logTA('updateTab () sendMessage', tabId, message);
   await chrome.tabs.sendMessage(tabId, message)

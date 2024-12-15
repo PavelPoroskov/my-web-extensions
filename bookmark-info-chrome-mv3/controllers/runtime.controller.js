@@ -8,8 +8,8 @@ import {
   getOptions,
 } from '../api/storage.api.js'
 import {
-  STORAGE_KEY,
-} from '../constant/index.js';
+  USER_OPTION,
+} from '../api/storage.api.config.js'
 import {
   onIncomingMessage,
 } from './incoming-message.js'
@@ -30,10 +30,10 @@ export const runtimeController = {
     });
 
     const savedObj = await getOptions([
-      STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
+      USER_OPTION.USE_FLAT_FOLDER_STRUCTURE,
     ]);
 
-    if (savedObj[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]) {
+    if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
       await flatBookmarks()
     }
   },

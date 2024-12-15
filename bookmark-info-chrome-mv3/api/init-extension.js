@@ -1,7 +1,6 @@
 import {
   BROWSER_SPECIFIC,
   CONTEXT_MENU_CMD_ID,
-  STORAGE_KEY,
 } from '../constant/index.js'
 import {
   browserStartTime,
@@ -12,6 +11,9 @@ import {
 import {
   makeLogFunction,
 } from './log.api.js'
+import {
+  USER_OPTION,
+} from './storage.api.config.js'
 
 const logIX = makeLogFunction({ module: 'init-extension' })
 
@@ -39,7 +41,7 @@ export async function createContextMenu(settings) {
     title: 'close bookmarked tabs',
   });
 
-  if (settings[STORAGE_KEY.HIDE_PAGE_HEADER_FOR_YOUTUBE]) {
+  if (settings[USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE]) {
     chrome.contextMenus.create({
       id: CONTEXT_MENU_CMD_ID.TOGGLE_YOUTUBE_HEADER,
       contexts: BROWSER_SPECIFIC.MENU_CONTEXT,

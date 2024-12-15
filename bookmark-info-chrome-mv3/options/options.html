@@ -59,7 +59,7 @@
     <fieldset>
       <article>
       <label>
-        <input type="checkbox" id="ADD_BOOKMARK_IS_ON" style="vertical-align: middle;"/>
+        <input type="checkbox" id="TAG_LIST_USE" style="vertical-align: middle;"/>
         User can add bookmark from recent bookmarks.
       </label>
       </article>
@@ -70,7 +70,7 @@
       </label>
       <div style="display: flex">
         <div style="flex: 1">
-          <input type="range" id="ADD_BOOKMARK_LIST_LIMIT" name="list-limit" list="list-limit-values" min="10" max="50" step="5" style="width: 100%;" />
+          <input type="range" id="TAG_LIST_LIST_LENGTH" name="list-limit" list="list-limit-values" min="10" max="50" step="5" style="width: 100%;" />
           <datalist id="list-limit-values">
             <option value="10" label="10">10</option>
             <option value="15" label="15">15</option>
@@ -95,14 +95,14 @@
         </label>
         <div style="display: flex">
           <div style="flex: 1">
-            <input type="range" id="ADD_BOOKMARK_TAG_LENGTH" name="tag-length" list="list-tag-length" min="8" max="25" step="1" style="width: 100%;" />
+            <input type="range" id="TAG_LIST_TAG_LENGTH" name="tag-length" list="list-tag-length" min="8" max="25" step="1" style="width: 100%;" />
             <datalist id="list-tag-length">
               <option value="8" label="8">8</option>
               <option value="25" label="25">25</option>
             </datalist>    
           </div>
           <div style="flex: 1; padding-left: 2ch; padding-top: 0.7ch;">
-            Value: <output id="ADD_BOOKMARK_TAG_LENGTH-VALUE"></output>
+            Value: <output id="TAG_LIST_TAG_LENGTH-VALUE"></output>
           </div>  
         </div>
         </article>
@@ -113,7 +113,7 @@
           </label>
           <div style="display: flex">
             <div>
-              <input type="range" id="ADD_BOOKMARK_HIGHLIGHT_LAST" name="highlight-last" list="highlight-last-values" min="0" max="7" step="1"/>
+              <input type="range" id="TAG_LIST_HIGHLIGHT_LAST" name="highlight-last" list="highlight-last-values" min="0" max="7" step="1"/>
               <datalist id="highlight-last-values">
                 <option value="0" label="0">0</option>
                 <option value="1" label="1">1</option>
@@ -153,7 +153,7 @@
         </div>
         <div style="padding-top: 1ch;">
           <label>
-            <input type="checkbox" id="FORCE_FLAT_FOLDER_STRUCTURE" disabled style="vertical-align: middle;"/>
+            <input type="checkbox" id="USE_FLAT_FOLDER_STRUCTURE" disabled style="vertical-align: middle;"/>
             Enforce flat folder structure.
           </label>
         </div>

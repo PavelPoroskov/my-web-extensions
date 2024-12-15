@@ -2,11 +2,11 @@ import {
   extensionSettings,
 } from '../structure/index.js'
 import {
-  STORAGE_KEY,
-} from '../../constant/index.js';
+  INTERNAL_VALUES,
+} from '../storage.api.config.js'
 
 export async function switchShowRecentList(isShow) {
   await extensionSettings.update({
-    [STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW]: isShow
+    [INTERNAL_VALUES.TAG_LIST_IS_OPEN]: isShow
   })
 }
