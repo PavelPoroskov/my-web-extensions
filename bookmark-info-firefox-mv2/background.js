@@ -18,69 +18,6 @@ const BROWSER_SPECIFIC = Object.fromEntries(
   Object.entries(BROWSER_SPECIFIC_OPTIONS)
     .map(([option, obj]) => [option, obj[BROWSER]])
 );
-const clearUrlTargetList = [
-  // TODO-NEXT if we clean url on open then we loose check-in, check-out dates
-  //    need search bookmark for clean url
-  //    strategy01: clean url on open
-  //    strategy02: clean url on save
-  //    strategy00: don't clear url, default
-  // {
-  //   hostname: 'airbnb.com',  
-  //   paths: [
-  //     '/rooms/',
-  //   ] 
-  // },
-  // {
-  //   hostname: 'djinni.co',
-  //   paths: [
-  //     '/my/profile/',
-  //     '/jobs/',
-  //   ] 
-  // },
-  {
-    hostname: 'frontendmasters.com',
-    paths: [
-      '/courses/',
-    ] 
-  },
-  {
-    hostname: 'hh.ru',  
-    removeSearchParamList: [
-      'hhtmFrom',
-      'hhtmFromLabel',
-    ],
-    paths: [
-      '/vacancy/',
-    ],
-  },
-  {
-    hostname: 'imdb.com',  
-    // TODO remove only selected query params: ref=
-    removeSearchParamList: [
-      'ref_',
-    ],
-    paths: [
-      '/title/',
-      '/list/',
-      '/imdbpicks/',
-      '/interest/',
-      '/',
-    ],
-  },
-  {
-    hostname: 'linkedin.com',  
-    paths: [
-      '/jobs/view/',
-      '/posts/'
-    ] 
-  },
-  {
-    hostname: 'udemy.com',  
-    paths: [
-      '/course/',
-    ] 
-  },
-]
 const EXTENSION_COMMAND_ID = {
   // TODO remove duplication in EXTENSION_COMMAND_ID: command-id.js and content-scripts.js
   DELETE_BOOKMARK: 'DELETE_BOOKMARK',
@@ -104,7 +41,7 @@ const CONTENT_SCRIPT_COMMAND_ID = {
   BOOKMARK_INFO: 'BOOKMARK_INFO',
   HISTORY_INFO: 'HISTORY_INFO',
   TAGS_INFO: 'TAGS_INFO',
-  CLEAR_URL: 'CLEAR_URL',
+  CHANGE_URL: 'CHANGE_URL',
   TOGGLE_YOUTUBE_HEADER: 'TOGGLE_YOUTUBE_HEADER',
   ADD_BOOKMARK_FROM_SELECTION_PAGE: 'ADD_BOOKMARK_FROM_SELECTION_PAGE',
 }
@@ -213,7 +150,8 @@ const ADD_BOOKMARK_LIST_MAX = 50
   // 'bookmarks.controller',
   // 'browserStartTime',
   // 'cache',
-  // 'clean-url-api',
+  // 'url.api',
+  // 'clearUrlInActiveTab',
   // 'commands.controller',
   // 'contextMenu.controller',
   // 'debounceQueue',
@@ -1096,7 +1034,70 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
 
 const tagList = new TagList()
 
-const logCU = makeLogFunction({ module: 'clean-url-api' })
+const clearUrlTargetList = [
+  // TODO-NEXT if we clean url on open then we loose check-in, check-out dates
+  //    need search bookmark for clean url
+  //    strategy01: clean url on open
+  //    strategy02: clean url on save
+  //    strategy00: don't clear url, default
+  // {
+  //   hostname: 'airbnb.com',  
+  //   paths: [
+  //     '/rooms/',
+  //   ] 
+  // },
+  // {
+  //   hostname: 'djinni.co',
+  //   paths: [
+  //     '/my/profile/',
+  //     '/jobs/',
+  //   ] 
+  // },
+  {
+    hostname: 'frontendmasters.com',
+    paths: [
+      '/courses/',
+    ] 
+  },
+  {
+    hostname: 'hh.ru',  
+    removeSearchParamList: [
+      'hhtmFrom',
+      'hhtmFromLabel',
+    ],
+    paths: [
+      '/vacancy/',
+    ],
+  },
+  {
+    hostname: 'imdb.com',  
+    // TODO remove only selected query params: ref=
+    removeSearchParamList: [
+      'ref_',
+    ],
+    paths: [
+      '/title/',
+      '/list/',
+      '/imdbpicks/',
+      '/interest/',
+      '/',
+    ],
+  },
+  {
+    hostname: 'linkedin.com',  
+    paths: [
+      '/jobs/view/',
+      '/posts/'
+    ] 
+  },
+  {
+    hostname: 'udemy.com',  
+    paths: [
+      '/course/',
+    ] 
+  },
+]
+const logUA = makeLogFunction({ module: 'url.api' })
 
 const targetHostSettingsMap = new Map(
   clearUrlTargetList.map(({ hostname, paths, removeSearchParamList }) => [
@@ -1111,7 +1112,7 @@ const targetHostSettingsMap = new Map(
 const getHostBase = (str) => str.split('.').slice(-2).join('.')
 
 const removeQueryParamsIfTarget = (url) => {
-  logCU('removeQueryParamsIfTarget () 00', url)
+  logUA('removeQueryParamsIfTarget () 00', url)
   let cleanUrl = url
   let isPattern = false
 
@@ -1154,7 +1155,7 @@ const removeQueryParamsIfTarget = (url) => {
   }
   /* eslint-enable no-unused-vars */
 
-  logCU('removeQueryParamsIfTarget () 99 cleanUrl', isPattern, cleanUrl)
+  logUA('removeQueryParamsIfTarget () 99 cleanUrl', isPattern, cleanUrl)
 
   return {
     cleanUrl,
@@ -1162,12 +1163,14 @@ const removeQueryParamsIfTarget = (url) => {
   }
 }
 
-const removeQueryParams = (link) => {
+function removeAnchorAndSearchParams(link) {
   try {
     const oLink = new URL(link);
     oLink.search = ''
+    const resNoSearchParams = oLink.toString()
+    const [resNoAnchor] = resNoSearchParams.split('#')
   
-    return oLink.toString();  
+    return resNoAnchor;  
   // eslint-disable-next-line no-unused-vars
   } catch (e) {
     return link
@@ -1187,18 +1190,6 @@ const removeQueryParams = (link) => {
 // console.log('test ', removeQueryParamsIfTarget(testStr))
 //
 // https://career.proxify.io/apply?uuid=566c933b-432e-64e0-b317-dd4390d6a74e&step=AdditionalInformation
-
-async function clearUrlInTab({ tabId, cleanUrl }) {
-  const msg = {
-    command: CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL,
-    cleanUrl,
-  }
-  logCU('clearUrlInTab() sendMessage', tabId, msg)
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logCU('clearUrlInTab() IGNORE', err)
-    })
-}
 const logBA = makeLogFunction({ module: 'bookmarks-api' })
 
 const getParentIdList = (bookmarkList) => {
@@ -1448,7 +1439,7 @@ async function createContextMenu(settings) {
   browser.menus.create({
     id: CONTEXT_MENU_ID.CLEAR_URL,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'clear url',
+    title: 'clear url from anchor and all search params',
   });
   browser.menus.create({
     id: CONTEXT_MENU_ID.CLOSE_DUPLICATE,
@@ -2675,7 +2666,7 @@ async function sortFolders() {
       // logCU('addBookmarkFromSelection() sendMessage', activeTab.id, msg)
       await browser.tabs.sendMessage(activeTab.id, msg)
         // .catch((err) => {
-        //   logCU('clearUrlInTab() IGNORE', err)
+        //   logCU('startAddBookmarkFromSelection() IGNORE', err)
         // })
   }
 }
@@ -2692,15 +2683,29 @@ async function addBookmarkFromSelection({ url, title, selection }) {
   const [bkmNode] = await browser.bookmarks.get(bookmarkId)
   await tagList.addRecentTagFromBkm(bkmNode)
 }
-async function clearUrlInActiveTab() {
+const logCU = makeLogFunction({ module: 'clearUrlInActiveTab' })
+
+async function changeUrlInTab({ tabId, url }) {
+  const msg = {
+    command: CONTENT_SCRIPT_COMMAND_ID.CHANGE_URL,
+    url,
+  }
+  logCU('clearUrlInTab () sendMessage', tabId, msg)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logCU('clearUrlInTab () IGNORE', err)
+    })
+}
+
+async function removeFromUrlAnchorAndSearchParamsInActiveTab() {
   const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
   const [activeTab] = tabs;
 
   if (activeTab?.id && activeTab?.url) {
-    const cleanUrl = removeQueryParams(activeTab.url);
+    const cleanUrl = removeAnchorAndSearchParams(activeTab.url);
 
     if (activeTab.url !== cleanUrl) {
-      await clearUrlInTab({ tabId: activeTab.id, cleanUrl })
+      await changeUrlInTab({ tabId: activeTab.id, url: cleanUrl })
     }
   }
 }
@@ -3091,7 +3096,7 @@ const contextMenusController = {
         break;
       }
       case CONTEXT_MENU_ID.CLEAR_URL: {
-        clearUrlInActiveTab()
+        removeFromUrlAnchorAndSearchParamsInActiveTab()
         break;
       }
       case CONTEXT_MENU_ID.TOGGLE_YOUTUBE_HEADER: {
@@ -3120,7 +3125,7 @@ async function onIncomingMessage (message, sender) {
           ({ cleanUrl } = removeQueryParamsIfTarget(url));
           
           if (url !== cleanUrl) {
-            await clearUrlInTab({ tabId, cleanUrl })
+            await clearUrlInTab({ tabId, url: cleanUrl })
           }
         }
 
@@ -3336,7 +3341,7 @@ const tabsController = {
       //     //   logTC('tabs.onUpdated 22 LOADING', 'cleanUrl', cleanUrl);
       //     //   if (url !== cleanUrl) {
       //     //     // failed to send message. Recipient does not exist
-      //     //     await clearUrlInTab({ tabId, cleanUrl })
+      //     //     await clearUrlInTab ({ tabId, cleanUrl })
       //     //   }
       //     // }
       //   }

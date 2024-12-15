@@ -13,7 +13,7 @@ import {
 } from './history-api.js'
 import {
   removeQueryParamsIfTarget,
-} from './clean-url-api.js'
+} from './url.api.js'
 import {
   extensionSettings,
   memo,

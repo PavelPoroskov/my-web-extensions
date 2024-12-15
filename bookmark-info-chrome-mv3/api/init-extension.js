@@ -26,7 +26,7 @@ export async function createContextMenu(settings) {
   chrome.contextMenus.create({
     id: CONTEXT_MENU_ID.CLEAR_URL,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'clear url',
+    title: 'clear url from anchor and all search params',
   });
   chrome.contextMenus.create({
     id: CONTEXT_MENU_ID.CLOSE_DUPLICATE,

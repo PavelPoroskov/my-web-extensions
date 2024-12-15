@@ -1,12 +1,11 @@
 import {
-  CONTENT_SCRIPT_COMMAND_ID,
   clearUrlTargetList 
-} from '../constant/index.js'
+} from './url.api.config.js'
 import {
   makeLogFunction,
 } from '../api/log-api.js'
 
-const logCU = makeLogFunction({ module: 'clean-url-api' })
+const logUA = makeLogFunction({ module: 'url.api' })
 
 const targetHostSettingsMap = new Map(
   clearUrlTargetList.map(({ hostname, paths, removeSearchParamList }) => [
@@ -21,7 +20,7 @@ const targetHostSettingsMap = new Map(
 const getHostBase = (str) => str.split('.').slice(-2).join('.')
 
 export const removeQueryParamsIfTarget = (url) => {
-  logCU('removeQueryParamsIfTarget () 00', url)
+  logUA('removeQueryParamsIfTarget () 00', url)
   let cleanUrl = url
   let isPattern = false
 
@@ -64,7 +63,7 @@ export const removeQueryParamsIfTarget = (url) => {
   }
   /* eslint-enable no-unused-vars */
 
-  logCU('removeQueryParamsIfTarget () 99 cleanUrl', isPattern, cleanUrl)
+  logUA('removeQueryParamsIfTarget () 99 cleanUrl', isPattern, cleanUrl)
 
   return {
     cleanUrl,
@@ -72,12 +71,14 @@ export const removeQueryParamsIfTarget = (url) => {
   }
 }
 
-export const removeQueryParams = (link) => {
+export function removeAnchorAndSearchParams(link) {
   try {
     const oLink = new URL(link);
     oLink.search = ''
+    const resNoSearchParams = oLink.toString()
+    const [resNoAnchor] = resNoSearchParams.split('#')
   
-    return oLink.toString();  
+    return resNoAnchor;  
   // eslint-disable-next-line no-unused-vars
   } catch (e) {
     return link
@@ -97,15 +98,3 @@ export const removeQueryParams = (link) => {
 // console.log('test ', removeQueryParamsIfTarget(testStr))
 //
 // https://career.proxify.io/apply?uuid=566c933b-432e-64e0-b317-dd4390d6a74e&step=AdditionalInformation
-
-export async function clearUrlInTab({ tabId, cleanUrl }) {
-  const msg = {
-    command: CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL,
-    cleanUrl,
-  }
-  logCU('clearUrlInTab() sendMessage', tabId, msg)
-  await chrome.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logCU('clearUrlInTab() IGNORE', err)
-    })
-}

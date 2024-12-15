@@ -2,7 +2,7 @@ import {
   CONTEXT_MENU_ID,
 } from '../constant/index.js';
 import {
-  clearUrlInActiveTab,
+  removeFromUrlAnchorAndSearchParamsInActiveTab,
   closeBookmarkedTabs,
   closeDuplicateTabs,
   startAddBookmarkFromSelection,
@@ -32,7 +32,7 @@ export const contextMenusController = {
         break;
       }
       case CONTEXT_MENU_ID.CLEAR_URL: {
-        clearUrlInActiveTab()
+        removeFromUrlAnchorAndSearchParamsInActiveTab()
         break;
       }
       case CONTEXT_MENU_ID.TOGGLE_YOUTUBE_HEADER: {

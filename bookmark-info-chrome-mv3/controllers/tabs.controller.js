@@ -39,7 +39,7 @@ export const tabsController = {
       //     //   logTC('tabs.onUpdated 22 LOADING', 'cleanUrl', cleanUrl);
       //     //   if (url !== cleanUrl) {
       //     //     // failed to send message. Recipient does not exist
-      //     //     await clearUrlInTab({ tabId, cleanUrl })
+      //     //     await clearUrlInTab ({ tabId, cleanUrl })
       //     //   }
       //     // }
       //   }

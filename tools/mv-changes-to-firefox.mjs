@@ -6,7 +6,6 @@ import {
 createFileForFirefox(
   [
     'constant/browser-specific.js',
-    'constant/clean-url.js',
     'constant/command-id.js',
     'constant/id.js',
     'constant/optimization-cache.js',
@@ -28,7 +27,8 @@ createFileForFirefox(
     'api/recent-api.js',
       'api/structure/tagList.js',
       'api/structure/index.js',
-    'api/clean-url-api.js',
+    'api/url.api.config.js',
+    'api/url.api.js',
     'api/bookmarks-api.js',
     'api/history-api.js',
     'api/init-extension.js',

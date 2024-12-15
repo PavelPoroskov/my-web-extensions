@@ -26,7 +26,7 @@ const log = SHOW_LOG ? console.log : () => {};
     BOOKMARK_INFO: 'BOOKMARK_INFO',
     // HISTORY_INFO: 'HISTORY_INFO',
     // TAGS_INFO: 'TAGS_INFO',
-    CLEAR_URL: 'CLEAR_URL',
+    CHANGE_URL: 'CHANGE_URL',
     TOGGLE_YOUTUBE_HEADER: 'TOGGLE_YOUTUBE_HEADER',
     ADD_BOOKMARK_FROM_SELECTION_PAGE: 'ADD_BOOKMARK_FROM_SELECTION_PAGE',
   }
@@ -833,12 +833,14 @@ ${semanticTagsStyle}
         toggleYoutubePageHeader({ nTry: 30 })
         break
       }
-      case CONTENT_SCRIPT_COMMAND_ID.CLEAR_URL: {
-        log('content-script:', message.cleanUrl);
-        if (document.location.href.startsWith(message.cleanUrl)) {
-          //document.location.href = message.cleanUrl
-          //window.history.pushState(message.cleanUrl)
-          window.history.replaceState(null, "", message.cleanUrl);
+      case CONTENT_SCRIPT_COMMAND_ID.CHANGE_URL: {
+        log('content-script:', message.url);
+        const newUrl = message.url
+        
+        if (document.location.href.startsWith(newUrl)) {
+          //document.location.href = newUrl
+          //window.history.pushState(newUrl)
+          window.history.replaceState(null, "", newUrl);
         }
         
         break

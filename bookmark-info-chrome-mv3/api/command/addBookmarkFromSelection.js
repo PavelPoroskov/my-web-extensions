@@ -13,7 +13,7 @@ export async function startAddBookmarkFromSelection() {
       // logCU('addBookmarkFromSelection() sendMessage', activeTab.id, msg)
       await chrome.tabs.sendMessage(activeTab.id, msg)
         // .catch((err) => {
-        //   logCU('clearUrlInTab() IGNORE', err)
+        //   logCU('startAddBookmarkFromSelection() IGNORE', err)
         // })
   }
 }
