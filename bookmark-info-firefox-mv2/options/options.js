@@ -1,5 +1,5 @@
-// TODO-DOUBLE remove duplication in EXTENSION_COMMAND_ID: command-id.js and options.js
-const EXTENSION_COMMAND_ID = {
+// TODO-DOUBLE remove duplication in EXTENSION_MSG_ID: message-id.js and options.js
+const EXTENSION_MSG_ID = {
   OPTIONS_ASKS_DATA: 'OPTIONS_ASKS_DATA',
   DATA_FOR_OPTIONS: 'DATA_FOR_OPTIONS',
   OPTIONS_ASKS_FLAT_BOOKMARKS: 'OPTIONS_ASKS_FLAT_BOOKMARKS',
@@ -11,7 +11,7 @@ const wait = ms => new Promise(res => setTimeout(res, ms));
 
 async function delegateSaveOptions(updateObj) {
   await browser.runtime.sendMessage({
-    command: EXTENSION_COMMAND_ID.OPTIONS_ASKS_SAVE,
+    command: EXTENSION_MSG_ID.OPTIONS_ASKS_SAVE,
     updateObj,
   });
 }
@@ -66,7 +66,7 @@ function makeSaveSelectHandler(optionId) {
 }
 
 function restoreOptions(settings) {
-  let optionId = STORAGE_KEY.CLEAR_URL;
+  let optionId = STORAGE_KEY.CLEAR_URL_ON_PAGE_OPEN;
   let domId = `#${optionId}`
   let element = document.querySelector(domId)
   element.checked = settings[optionId];
@@ -118,7 +118,7 @@ function restoreOptions(settings) {
   element = document.querySelector(domId)
   element.addEventListener('click', async () => {
     await browser.runtime.sendMessage({
-      command: EXTENSION_COMMAND_ID.OPTIONS_ASKS_FLAT_BOOKMARKS,
+      command: EXTENSION_MSG_ID.OPTIONS_ASKS_FLAT_BOOKMARKS,
     });
     const text = 'Operation started'
     const value = document.querySelector('#FLAT_BOOKMARKS_RESULT');
@@ -157,14 +157,14 @@ let STORAGE_KEY
 browser.runtime.onMessage.addListener(async (message) => {
   // console.log('onMessage', message)
   switch (message?.command) {
-    case EXTENSION_COMMAND_ID.DATA_FOR_OPTIONS: {
+    case EXTENSION_MSG_ID.DATA_FOR_OPTIONS: {
       // console.log('option in DATA_FOR_OPTIONS')
       clearUrlTargetList = message.clearUrlTargetList
       STORAGE_KEY = message.STORAGE_KEY
       restoreOptions(message.settings)
       break
     }
-    case EXTENSION_COMMAND_ID.FLAT_BOOKMARKS_RESULT: {
+    case EXTENSION_MSG_ID.FLAT_BOOKMARKS_RESULT: {
       // console.log('option in FLAT_BOOKMARKS_RESULT', message.success)
       const text = message.success 
         ? 'Operation completed successfully'
@@ -189,6 +189,6 @@ browser.runtime.onMessage.addListener(async (message) => {
 //document.addEventListener('DOMContentLoaded', restoreOptions);
 document.addEventListener('DOMContentLoaded', async () => {
   await browser.runtime.sendMessage({
-    command: EXTENSION_COMMAND_ID.OPTIONS_ASKS_DATA,
+    command: EXTENSION_MSG_ID.OPTIONS_ASKS_DATA,
   });
 });
