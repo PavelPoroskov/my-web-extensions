@@ -4,13 +4,13 @@ import {
 import {
   debounce,
   isSupportedProtocol,
-} from './common-api.js'
+} from './common.api.js'
 import {
   getBookmarkInfoUni,
-} from './bookmarks-api.js'
+} from './bookmarks.api.js'
 import {
   getHistoryInfo,
-} from './history-api.js'
+} from './history.api.js'
 import {
   removeQueryParamsIfTarget,
 } from './url.api.js'
@@ -20,12 +20,12 @@ import {
   tagList,
 } from './structure/index.js'
 import {
-  CONTENT_SCRIPT_COMMAND_ID,
+  CONTENT_SCRIPT_MSG_ID,
   STORAGE_KEY,
 } from '../constant/index.js'
 import { initExtension } from './init-extension.js'
 
-const logTA = makeLogFunction({ module: 'tabs-api' })
+const logTA = makeLogFunction({ module: 'tabs.api' })
 
 async function updateTab({ tabId, debugCaller, useCache=false }) {
   let url
@@ -74,7 +74,7 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
   }
 
   const message = {
-    command: CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO,
+    command: CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO,
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     isShowTitle: settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
     // visits history

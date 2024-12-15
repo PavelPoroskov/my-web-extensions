@@ -1,5 +1,5 @@
 const logModuleList = [
-  // 'bookmarks-api',
+  // 'bookmarks.api',
   // 'bookmarks.controller',
   // 'browserStartTime',
   // 'cache',
@@ -13,11 +13,11 @@ const logModuleList = [
   // 'incoming-message',
   // 'init-extension',
   // 'memo',
-  // 'recent-api',
+  // 'recent.api',
   // 'runtime.controller',
   // 'storage.api',
   // 'storage.controller',
-  // 'tabs-api',
+  // 'tabs.api',
   // 'tabs.controller',
   // 'windows.controller',
 ]

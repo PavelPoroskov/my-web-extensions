@@ -1,5 +1,5 @@
 import {
-  CONTEXT_MENU_ID,
+  CONTEXT_MENU_CMD_ID,
 } from '../constant/index.js';
 import {
   removeFromUrlAnchorAndSearchParamsInActiveTab,
@@ -19,23 +19,23 @@ export const contextMenusController = {
     logCMC('contextMenus.onClicked <- EVENT');
 
     switch (OnClickData.menuItemId) {
-      case CONTEXT_MENU_ID.ADD_BOOKMARK_FROM_SELECTION_MENU: {
+      case CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_SELECTION_MENU: {
         startAddBookmarkFromSelection()
         break;
       }
-      case CONTEXT_MENU_ID.CLOSE_DUPLICATE: {
+      case CONTEXT_MENU_CMD_ID.CLOSE_DUPLICATE: {
         closeDuplicateTabs();
         break;
       }
-      case CONTEXT_MENU_ID.CLOSE_BOOKMARKED: {
+      case CONTEXT_MENU_CMD_ID.CLOSE_BOOKMARKED: {
         closeBookmarkedTabs();
         break;
       }
-      case CONTEXT_MENU_ID.CLEAR_URL: {
+      case CONTEXT_MENU_CMD_ID.CLEAR_URL: {
         removeFromUrlAnchorAndSearchParamsInActiveTab()
         break;
       }
-      case CONTEXT_MENU_ID.TOGGLE_YOUTUBE_HEADER: {
+      case CONTEXT_MENU_CMD_ID.TOGGLE_YOUTUBE_HEADER: {
         toggleYoutubeHeader()
         break;
       }

@@ -3,7 +3,7 @@ import {
 } from './structure/index.js'
 import {
   isSupportedProtocol,
-} from './common-api.js'
+} from './common.api.js'
 import {
   SOURCE,
 } from '../constant/index.js'
@@ -11,7 +11,7 @@ import {
   makeLogFunction,
 } from '../api/log.api.js'
 
-const logBA = makeLogFunction({ module: 'bookmarks-api' })
+const logBA = makeLogFunction({ module: 'bookmarks.api' })
 
 const getParentIdList = (bookmarkList) => {
   const parentIdList = bookmarkList

@@ -1,6 +1,6 @@
 import {
   BROWSER_SPECIFIC,
-  CONTEXT_MENU_ID,
+  CONTEXT_MENU_CMD_ID,
   STORAGE_KEY,
 } from '../constant/index.js'
 import {
@@ -19,29 +19,29 @@ export async function createContextMenu(settings) {
   await chrome.contextMenus.removeAll();
 
   chrome.contextMenus.create({
-    id: CONTEXT_MENU_ID.ADD_BOOKMARK_FROM_SELECTION_MENU,
+    id: CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_SELECTION_MENU,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'add bookmark, selection as a tag',
   });  
   chrome.contextMenus.create({
-    id: CONTEXT_MENU_ID.CLEAR_URL,
+    id: CONTEXT_MENU_CMD_ID.CLEAR_URL,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'clear url from anchor and all search params',
   });
   chrome.contextMenus.create({
-    id: CONTEXT_MENU_ID.CLOSE_DUPLICATE,
+    id: CONTEXT_MENU_CMD_ID.CLOSE_DUPLICATE,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'close duplicate tabs',
   });  
   chrome.contextMenus.create({
-    id: CONTEXT_MENU_ID.CLOSE_BOOKMARKED,
+    id: CONTEXT_MENU_CMD_ID.CLOSE_BOOKMARKED,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'close bookmarked tabs',
   });
 
   if (settings[STORAGE_KEY.HIDE_PAGE_HEADER_FOR_YOUTUBE]) {
     chrome.contextMenus.create({
-      id: CONTEXT_MENU_ID.TOGGLE_YOUTUBE_HEADER,
+      id: CONTEXT_MENU_CMD_ID.TOGGLE_YOUTUBE_HEADER,
       contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
       title: 'toggle youtube page header',
     });  

@@ -8,7 +8,7 @@ import {
   makeLogFunction,
 } from '../api/log.api.js'
 
-const logRA = makeLogFunction({ module: 'recent-api' })
+const logRA = makeLogFunction({ module: 'recent.api' })
 
 async function getRecentList(nItems) {
   logRA('getRecentList() 00', nItems)

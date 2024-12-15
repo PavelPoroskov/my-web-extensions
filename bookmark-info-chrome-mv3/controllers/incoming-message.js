@@ -15,9 +15,9 @@ import {
 } from '../api/structure/index.js'
 import {
   updateActiveTab,
-} from '../api/tabs-api.js'
+} from '../api/tabs.api.js'
 import {
-  EXTENSION_COMMAND_ID,
+  EXTENSION_MSG_ID,
   STORAGE_KEY,
   clearUrlTargetList,
 } from '../constant/index.js'
@@ -33,7 +33,7 @@ const logIM = makeLogFunction({ module: 'incoming-message' })
 export async function onIncomingMessage (message, sender) {
   switch (message?.command) {
 
-    case EXTENSION_COMMAND_ID.TAB_IS_READY: {
+    case EXTENSION_MSG_ID.TAB_IS_READY: {
       const tabId = sender?.tab?.id;
       logIM('runtime.onMessage contentScriptReady 00', 'tabId', tabId, 'memo[\'activeTabId\']', memo['activeTabId']);
       logIM('#  runtime.onMessage contentScriptReady 00', message.url);
@@ -62,7 +62,7 @@ export async function onIncomingMessage (message, sender) {
 
       break
     }
-    case EXTENSION_COMMAND_ID.ADD_BOOKMARK: {
+    case EXTENSION_MSG_ID.ADD_BOOKMARK: {
       logIM('runtime.onMessage addBookmark');
       await addBookmark({
         url: message.url,
@@ -72,19 +72,19 @@ export async function onIncomingMessage (message, sender) {
 
       break
     }
-    case EXTENSION_COMMAND_ID.DELETE_BOOKMARK: {
+    case EXTENSION_MSG_ID.DELETE_BOOKMARK: {
       logIM('runtime.onMessage deleteBookmark');
 
       deleteBookmark(message.bkmId);
       break
     }
-    case EXTENSION_COMMAND_ID.SHOW_TAG_LIST: {
+    case EXTENSION_MSG_ID.SHOW_TAG_LIST: {
       logIM('runtime.onMessage SHOW_RECENT_LIST');
       await switchShowRecentList(message.value)
 
       break
     }
-    case EXTENSION_COMMAND_ID.FIX_TAG: {
+    case EXTENSION_MSG_ID.FIX_TAG: {
       logIM('runtime.onMessage fixTag');
       await fixTag({
         parentId: message.parentId, 
@@ -101,7 +101,7 @@ export async function onIncomingMessage (message, sender) {
 
       break
     }
-    case EXTENSION_COMMAND_ID.UNFIX_TAG: {
+    case EXTENSION_MSG_ID.UNFIX_TAG: {
       logIM('runtime.onMessage unfixTag');
       await unfixTag(message.parentId)
 
@@ -115,7 +115,7 @@ export async function onIncomingMessage (message, sender) {
 
       break
     }
-    case EXTENSION_COMMAND_ID.ADD_RECENT_TAG: {
+    case EXTENSION_MSG_ID.ADD_RECENT_TAG: {
       logIM('runtime.onMessage ADD_RECENT_TAG');
       await addRecentTagFromView(message.bookmarkId)
 
@@ -129,12 +129,12 @@ export async function onIncomingMessage (message, sender) {
 
       break
     }
-    case EXTENSION_COMMAND_ID.OPTIONS_ASKS_DATA: {
+    case EXTENSION_MSG_ID.OPTIONS_ASKS_DATA: {
       logIM('runtime.onMessage OPTIONS_ASKS_DATA');
 
       const settings = await extensionSettings.get();
       chrome.runtime.sendMessage({
-        command: EXTENSION_COMMAND_ID.DATA_FOR_OPTIONS,
+        command: EXTENSION_MSG_ID.DATA_FOR_OPTIONS,
         clearUrlTargetList,
         STORAGE_KEY,
         settings,
@@ -142,13 +142,13 @@ export async function onIncomingMessage (message, sender) {
 
       break
     }
-    case EXTENSION_COMMAND_ID.OPTIONS_ASKS_SAVE: {
+    case EXTENSION_MSG_ID.OPTIONS_ASKS_SAVE: {
       logIM('runtime.onMessage OPTIONS_ASKS_SAVE');
       await extensionSettings.update(message.updateObj)
 
       break
     }
-    case EXTENSION_COMMAND_ID.OPTIONS_ASKS_FLAT_BOOKMARKS: {
+    case EXTENSION_MSG_ID.OPTIONS_ASKS_FLAT_BOOKMARKS: {
       logIM('runtime.onMessage OPTIONS_ASKS_FLAT_BOOKMARKS');
 
       let success
@@ -161,13 +161,13 @@ export async function onIncomingMessage (message, sender) {
       }
       
       chrome.runtime.sendMessage({
-        command: EXTENSION_COMMAND_ID.FLAT_BOOKMARKS_RESULT,
+        command: EXTENSION_MSG_ID.FLAT_BOOKMARKS_RESULT,
         success,
       });
 
       break
     }
-    case EXTENSION_COMMAND_ID.ADD_BOOKMARK_FROM_SELECTION_EXT: {
+    case EXTENSION_MSG_ID.ADD_BOOKMARK_FROM_SELECTION_EXT: {
       logIM('runtime.onMessage ADD_BOOKMARK_FROM_SELECTION_EXT', message.selection);
 
       await addBookmarkFromSelection({

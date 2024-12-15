@@ -6,7 +6,7 @@ import {
 } from '../api/structure/index.js'
 import {
   updateActiveTab,
-} from '../api/tabs-api.js'
+} from '../api/tabs.api.js'
 
 const logTC = makeLogFunction({ module: 'tabs.controller' })
 

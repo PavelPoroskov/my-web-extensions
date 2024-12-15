@@ -1,6 +1,6 @@
 import { findOrCreateFolder } from '../folder.api.js'
 import { addBookmark } from './addBookmark.js'
-import { CONTENT_SCRIPT_COMMAND_ID } from '../../constant/index.js'
+import { CONTENT_SCRIPT_MSG_ID } from '../../constant/index.js'
 
 export async function startAddBookmarkFromSelection() {
   const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
@@ -8,7 +8,7 @@ export async function startAddBookmarkFromSelection() {
 
   if (activeTab?.id) {
       const msg = {
-        command: CONTENT_SCRIPT_COMMAND_ID.ADD_BOOKMARK_FROM_SELECTION_PAGE,
+        command: CONTENT_SCRIPT_MSG_ID.ADD_BOOKMARK_FROM_SELECTION_PAGE,
       }
       // logCU('addBookmarkFromSelection() sendMessage', activeTab.id, msg)
       await chrome.tabs.sendMessage(activeTab.id, msg)

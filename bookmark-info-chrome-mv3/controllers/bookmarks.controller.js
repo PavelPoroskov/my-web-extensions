@@ -9,7 +9,7 @@ import {
 } from '../api/structure/index.js'
 import {
   debouncedUpdateActiveTab,
-} from '../api/tabs-api.js'
+} from '../api/tabs.api.js'
 import {
   IS_BROWSER_CHROME,
   IS_BROWSER_FIREFOX,

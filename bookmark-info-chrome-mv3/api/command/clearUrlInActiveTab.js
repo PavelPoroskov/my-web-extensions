@@ -1,5 +1,5 @@
 import {
-  CONTENT_SCRIPT_COMMAND_ID,
+  CONTENT_SCRIPT_MSG_ID,
 } from '../../constant/index.js'
 import {
   removeAnchorAndSearchParams,
@@ -12,7 +12,7 @@ const logCU = makeLogFunction({ module: 'clearUrlInActiveTab' })
 
 export async function changeUrlInTab({ tabId, url }) {
   const msg = {
-    command: CONTENT_SCRIPT_COMMAND_ID.CHANGE_URL,
+    command: CONTENT_SCRIPT_MSG_ID.CHANGE_URL,
     url,
   }
   logCU('clearUrlInTab () sendMessage', tabId, msg)

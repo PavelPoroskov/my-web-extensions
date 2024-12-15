@@ -30,7 +30,7 @@
     "default_popup": "popup/popup.html"
   },
   "commands": {
-    "add-bkm-from-selection": {
+    "ADD_BOOKMARK_FROM_SELECTION_KBD": {
       "suggested_key": { "default": "Ctrl+Shift+L" },
       "description": "Bookmark page. Get folder name from selection/clipboard"
     }

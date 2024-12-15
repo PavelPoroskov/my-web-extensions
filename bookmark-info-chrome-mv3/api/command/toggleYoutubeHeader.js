@@ -1,5 +1,5 @@
 import {
-  CONTENT_SCRIPT_COMMAND_ID,
+  CONTENT_SCRIPT_MSG_ID,
 } from '../../constant/index.js'
 
 export async function toggleYoutubeHeader() {
@@ -8,7 +8,7 @@ export async function toggleYoutubeHeader() {
 
   if (activeTab?.id) {
     const msg = {
-      command: CONTENT_SCRIPT_COMMAND_ID.TOGGLE_YOUTUBE_HEADER,
+      command: CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER,
     }
     await chrome.tabs.sendMessage(activeTab.id, msg)
       .catch(() => {

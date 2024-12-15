@@ -10,8 +10,8 @@ const log = SHOW_LOG ? console.log : () => {};
   }
   window.hasRun = true;
 
-  // TODO-DOUBLE remove duplication in EXTENSION_COMMAND_ID: command-id.js and content-scripts.js
-  const EXTENSION_COMMAND_ID = {
+  // TODO-DOUBLE remove duplication in EXTENSION_MSG_ID: message-id.js and content-scripts.js
+  const EXTENSION_MSG_ID = {
     DELETE_BOOKMARK: 'DELETE_BOOKMARK',
     ADD_BOOKMARK: 'ADD_BOOKMARK',
     FIX_TAG: 'FIX_TAG',
@@ -21,8 +21,8 @@ const log = SHOW_LOG ? console.log : () => {};
     ADD_RECENT_TAG: 'ADD_RECENT_TAG',
     ADD_BOOKMARK_FROM_SELECTION_EXT: 'ADD_BOOKMARK_FROM_SELECTION_EXT',
   }
-  // TODO-DOUBLE remove duplication in CONTENT_SCRIPT_COMMAND_ID: command-id.js and content-scripts.js
-  const CONTENT_SCRIPT_COMMAND_ID = {
+  // TODO-DOUBLE remove duplication in CONTENT_SCRIPT_MSG_ID: message-id.js and content-scripts.js
+  const CONTENT_SCRIPT_MSG_ID = {
     BOOKMARK_INFO: 'BOOKMARK_INFO',
     // HISTORY_INFO: 'HISTORY_INFO',
     // TAGS_INFO: 'TAGS_INFO',
@@ -329,7 +329,7 @@ ${semanticTagsStyle}
 
     if (bkmid) {
       await chrome.runtime.sendMessage({
-        command: EXTENSION_COMMAND_ID.ADD_RECENT_TAG,
+        command: EXTENSION_MSG_ID.ADD_RECENT_TAG,
         bookmarkId: bkmid,
       });
     }
@@ -343,7 +343,7 @@ ${semanticTagsStyle}
 
     if (bkmId) {
       await chrome.runtime.sendMessage({
-        command: EXTENSION_COMMAND_ID.DELETE_BOOKMARK,
+        command: EXTENSION_MSG_ID.DELETE_BOOKMARK,
         bkmId,
       });
 
@@ -362,7 +362,7 @@ ${semanticTagsStyle}
 
     showInHtmlSingleTaskQueue.addUpdate({ isShowTagList: !before })
     await chrome.runtime.sendMessage({
-      command: EXTENSION_COMMAND_ID.SHOW_TAG_LIST,
+      command: EXTENSION_MSG_ID.SHOW_TAG_LIST,
       value: !before,
     });
   }
@@ -378,7 +378,7 @@ ${semanticTagsStyle}
 
       if (bkm?.id) {
         await chrome.runtime.sendMessage({
-          command: EXTENSION_COMMAND_ID.DELETE_BOOKMARK,
+          command: EXTENSION_MSG_ID.DELETE_BOOKMARK,
           bkmId: bkm.id,
         });
         // optimistic ui
@@ -386,7 +386,7 @@ ${semanticTagsStyle}
         showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
       } else {
         await chrome.runtime.sendMessage({
-          command: EXTENSION_COMMAND_ID.ADD_BOOKMARK,
+          command: EXTENSION_MSG_ID.ADD_BOOKMARK,
           parentId,
           url: document.location.href,
           title: document.title,
@@ -416,7 +416,7 @@ ${semanticTagsStyle}
       const fullMessage = showInHtmlSingleTaskQueue.getState()
       const recentTag = fullMessage.tagList.find((item) => item.parentId === parentId)
       await chrome.runtime.sendMessage({
-        command: EXTENSION_COMMAND_ID.FIX_TAG,
+        command: EXTENSION_MSG_ID.FIX_TAG,
         parentId,
         title: recentTag.title,
       });
@@ -429,7 +429,7 @@ ${semanticTagsStyle}
 
     if (parentId) {
       await chrome.runtime.sendMessage({
-        command: EXTENSION_COMMAND_ID.UNFIX_TAG,
+        command: EXTENSION_MSG_ID.UNFIX_TAG,
         parentId,
       });
     }
@@ -825,15 +825,15 @@ ${semanticTagsStyle}
   chrome.runtime.onMessage.addListener((message) => {
     log('chrome.runtime.onMessage: ', message);
     switch (message.command) {
-      // case CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO: 
-      // case CONTENT_SCRIPT_COMMAND_ID.TAGS_INFO: 
-      case CONTENT_SCRIPT_COMMAND_ID.BOOKMARK_INFO: {
+      // case CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO: 
+      // case CONTENT_SCRIPT_MSG_ID.TAGS_INFO: 
+      case CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO: {
         showInHtmlSingleTaskQueue.addUpdate(message)
         options.isHideHeaderForYoutube = message.isHideHeaderForYoutube || false
         toggleYoutubePageHeader({ nTry: 30 })
         break
       }
-      case CONTENT_SCRIPT_COMMAND_ID.CHANGE_URL: {
+      case CONTENT_SCRIPT_MSG_ID.CHANGE_URL: {
         log('content-script:', message.url);
         const newUrl = message.url
         
@@ -845,17 +845,17 @@ ${semanticTagsStyle}
         
         break
       }
-      case CONTENT_SCRIPT_COMMAND_ID.TOGGLE_YOUTUBE_HEADER: {
+      case CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER: {
         cToggleYoutubePageHeader += 1
         toggleYoutubePageHeader({ nTry: 1 })
         break
       }
-      case CONTENT_SCRIPT_COMMAND_ID.ADD_BOOKMARK_FROM_SELECTION_PAGE: {
+      case CONTENT_SCRIPT_MSG_ID.ADD_BOOKMARK_FROM_SELECTION_PAGE: {
         const selection = document.getSelection().toString() 
 
         if (selection) {
           chrome.runtime.sendMessage({
-            command: EXTENSION_COMMAND_ID.ADD_BOOKMARK_FROM_SELECTION_EXT,
+            command: EXTENSION_MSG_ID.ADD_BOOKMARK_FROM_SELECTION_EXT,
             url: document.location.href,
             title: document.title,
             selection,
@@ -891,7 +891,7 @@ ${semanticTagsStyle}
     try {
       log('before send contentScriptReady');
       await chrome.runtime.sendMessage({
-        command: EXTENSION_COMMAND_ID.TAB_IS_READY,
+        command: EXTENSION_MSG_ID.TAB_IS_READY,
         url: document.location.href,
       });
       log('after send contentScriptReady');
