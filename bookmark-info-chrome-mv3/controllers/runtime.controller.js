@@ -16,7 +16,7 @@ import {
 import { initExtension } from '../api/init-extension.js'
 import {
   makeLogFunction,
-} from '../api/log-api.js'
+} from '../api/log.api.js'
 
 const logRC = makeLogFunction({ module: 'runtime.controller' })
 

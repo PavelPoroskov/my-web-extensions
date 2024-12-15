@@ -3,7 +3,7 @@ import {
 } from '../api/command/index.js'
 import {
   makeLogFunction,
-} from '../api/log-api.js'
+} from '../api/log.api.js'
 
 const logCC = makeLogFunction({ module: 'commands.controller' })
 

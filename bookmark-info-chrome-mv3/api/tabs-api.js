@@ -1,6 +1,6 @@
 import {
   makeLogFunction,
-} from '../api/log-api.js'
+} from '../api/log.api.js'
 import {
   debounce,
   isSupportedProtocol,

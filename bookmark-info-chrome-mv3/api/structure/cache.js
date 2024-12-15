@@ -1,7 +1,7 @@
 
 import {
   makeLogFunction,
-} from '../log-api.js'
+} from '../log.api.js'
 
 const logC = makeLogFunction({ module: 'cache' })
 

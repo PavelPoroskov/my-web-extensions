@@ -1,4 +1,4 @@
-import { logModuleMap } from './log-api-config.js'
+import { logModuleMap } from './log.api.config.js'
 
 const makeLogWithTime = () => {
   let startTime;

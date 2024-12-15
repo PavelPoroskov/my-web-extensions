@@ -8,7 +8,7 @@ import {
 } from './text.api.js';
 import {
     makeLogFunction,
-} from './log-api.js'
+} from './log.api.js'
 
 const logFA = makeLogFunction({ module: 'folder.api' })
 

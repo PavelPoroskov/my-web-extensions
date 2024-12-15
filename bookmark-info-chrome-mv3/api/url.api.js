@@ -3,7 +3,7 @@ import {
 } from './url.api.config.js'
 import {
   makeLogFunction,
-} from '../api/log-api.js'
+} from '../api/log.api.js'
 
 const logUA = makeLogFunction({ module: 'url.api' })
 

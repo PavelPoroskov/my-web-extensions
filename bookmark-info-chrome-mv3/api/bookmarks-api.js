@@ -9,7 +9,7 @@ import {
 } from '../constant/index.js'
 import {
   makeLogFunction,
-} from '../api/log-api.js'
+} from '../api/log.api.js'
 
 const logBA = makeLogFunction({ module: 'bookmarks-api' })
 

@@ -6,7 +6,7 @@ import {
 } from '../url.api.js'
 import {
   makeLogFunction,
-} from '../log-api.js'
+} from '../log.api.js'
 
 const logCU = makeLogFunction({ module: 'clearUrlInActiveTab' })
 

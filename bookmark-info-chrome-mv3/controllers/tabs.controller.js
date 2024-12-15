@@ -1,6 +1,6 @@
 import {
   makeLogFunction,
-} from '../api/log-api.js'
+} from '../api/log.api.js'
 import {
   memo,
 } from '../api/structure/index.js'

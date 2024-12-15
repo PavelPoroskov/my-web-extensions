@@ -7,7 +7,7 @@ import {
   moveToFlatFolderStructure,
   switchShowRecentList,
   unfixTag,
-  clearUrlInTab,
+  changeUrlInTab,
 } from '../api/command/index.js'
 import {
   extensionSettings,
@@ -23,7 +23,7 @@ import {
 } from '../constant/index.js'
 import {
   makeLogFunction,
-} from '../api/log-api.js'
+} from '../api/log.api.js'
 import {
   removeQueryParamsIfTarget,
 } from '../api/url.api.js'
@@ -47,7 +47,7 @@ export async function onIncomingMessage (message, sender) {
           ({ cleanUrl } = removeQueryParamsIfTarget(url));
           
           if (url !== cleanUrl) {
-            await clearUrlInTab({ tabId, url: cleanUrl })
+            await changeUrlInTab({ tabId, url: cleanUrl })
           }
         }
 

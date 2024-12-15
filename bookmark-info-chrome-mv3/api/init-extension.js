@@ -11,7 +11,7 @@ import {
 } from './structure/index.js'
 import {
   makeLogFunction,
-} from './log-api.js'
+} from './log.api.js'
 
 const logIX = makeLogFunction({ module: 'init-extension' })
 
