@@ -195,6 +195,10 @@ ${semanticTagsStyle}
     display:block;
   }
 }
+.bkm-info--empty {
+  color: transparent;
+  background-color: transparent;
+}
 .bkm-info--history {
   color: white;
   background-color: fuchsia;
@@ -342,21 +346,24 @@ ${semanticTagsStyle}
     const bkmId = event?.target?.dataset?.bkmid || event?.target?.parentNode?.dataset?.bkmid;
 
     if (bkmId) {
+      // optimistic ui
+      const fullState = showInHtmlSingleTaskQueue.getState()
+      const bookmarkInfoList = fullState.bookmarkInfoList || []
+
+      const findIndex = bookmarkInfoList.findIndex((item) => item.id == bkmId)
+      if (-1 < findIndex) {
+        const newBookmarkInfoList = bookmarkInfoList.with(findIndex, { optimisticDel: true })
+        showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
+      }
+
       await chrome.runtime.sendMessage({
         command: EXTENSION_MSG_ID.DELETE_BOOKMARK,
         bkmId,
       });
-
-      // optimistic ui
-      const fullState = showInHtmlSingleTaskQueue.getState()
-      const bookmarkInfoList = fullState.bookmarkInfoList || []
-      const newBookmarkInfoList = bookmarkInfoList.filter((item) => item.id != bkmId)
-      showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
     }
   }
 
   async function toggleTagList() {
-    log('toggleTagList');
     const fullMessage = showInHtmlSingleTaskQueue.getState()
     const before = !!fullMessage.isShowTagList
 
@@ -367,8 +374,7 @@ ${semanticTagsStyle}
     });
   }
 
-  async function bookmarkFromTag(event) {
-    log('addBookmark 00');
+  async function toggleTag(event) {
     const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
 
     if (parentId) {
@@ -377,21 +383,20 @@ ${semanticTagsStyle}
       const bkm = bookmarkInfoList.find((item) => item.parentId === parentId)
 
       if (bkm?.id) {
+        // epic error
+        // const findIndex = bookmarkInfoList.findIndex((item) => item.id != bkm.id)
+        const findIndex = bookmarkInfoList.findIndex((item) => item.id == bkm.id)
+        if (-1 < findIndex) {
+          const newBookmarkInfoList = bookmarkInfoList.with(findIndex, { optimisticDel: true })
+          optimisticDelFromTagList += 1
+          // log('bookmarkFromTag 11 +optimisticDelFromTagList', optimisticDelFromTagList);
+          showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
+        }
         await chrome.runtime.sendMessage({
           command: EXTENSION_MSG_ID.DELETE_BOOKMARK,
           bkmId: bkm.id,
         });
-        // optimistic ui
-        const newBookmarkInfoList = bookmarkInfoList.filter((item) => item.id != bkm.id)
-        showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
       } else {
-        await chrome.runtime.sendMessage({
-          command: EXTENSION_MSG_ID.ADD_BOOKMARK,
-          parentId,
-          url: document.location.href,
-          title: document.title,
-        });
-
         // optimistic ui
         const tagList = fullState.tagList || []
         const tag = tagList.find((item) => item.parentId === parentId)
@@ -401,9 +406,19 @@ ${semanticTagsStyle}
             title: document.title, 
             fullPathList: [tag.title], 
             parentId,
+            optimisticAdd: true,
           })
+          if (optimisticAddFromTagList < optimisticDelFromTagList) {
+            optimisticAddFromTagList += 1
+          }
           showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })  
         }
+        await chrome.runtime.sendMessage({
+          command: EXTENSION_MSG_ID.ADD_BOOKMARK,
+          parentId,
+          url: document.location.href,
+          title: document.title,
+        });
       }
     }
   }
@@ -437,7 +452,7 @@ ${semanticTagsStyle}
 
 
   function showBookmarkInfo(input) {
-    const bookmarkInfoList = input.bookmarkInfoList || []
+    const bookmarkInfoList = (input.bookmarkInfoList || []).filter(({ optimisticDel }) => !optimisticDel)
     const visitList = input.visitList || []
     const isShowTitle = input.isShowTitle || false
     const inTagList = input.tagList || []
@@ -470,7 +485,11 @@ ${semanticTagsStyle}
       
       drawList.push({ type: 'bookmark', value, bkmIndex: index })
     })
-
+    const emptySlots = Math.max(0, optimisticDelFromTagList - optimisticAddFromTagList)
+    for (let iEmpty = 0; iEmpty < emptySlots; iEmpty += 1) {
+      drawList.push({ type: 'emptySlot' })
+    }
+  
     if (visitList.length > 0) {
       const prevVisit = visitList
         .toReversed()
@@ -589,6 +608,16 @@ ${semanticTagsStyle}
   
           break
         }
+        case 'emptySlot': {
+          const divLabel = document.createElement('div');
+          divLabel.classList.add('bkm-info--label', 'bkm-info--empty');
+          const textNode = document.createTextNode('|');
+          divLabel.appendChild(textNode);
+  
+          divLabelContainer.appendChild(divLabel);
+  
+          break
+        }
         case 'history': {
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--history');
@@ -616,7 +645,7 @@ ${semanticTagsStyle}
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag', 'bkm-info--recent');
           divLabel.setAttribute('data-parentid', parentId);
-          divLabel.addEventListener('click', bookmarkFromTag);
+          divLabel.addEventListener('click', toggleTag);
 
           divLabel.classList.toggle('bkm-info--used-tag', isUsed);
           divLabel.classList.toggle('bkm-info--last-tag', isLast);
@@ -646,7 +675,7 @@ ${semanticTagsStyle}
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag', 'bkm-info--fixed');
           divLabel.setAttribute('data-parentid', parentId);
-          divLabel.addEventListener('click', bookmarkFromTag);
+          divLabel.addEventListener('click', toggleTag);
 
           divLabel.classList.toggle('bkm-info--used-tag', isUsed);
           divLabel.classList.toggle('bkm-info--last-tag', isLast);
@@ -828,7 +857,40 @@ ${semanticTagsStyle}
       // case CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO: 
       // case CONTENT_SCRIPT_MSG_ID.TAGS_INFO: 
       case CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO: {
+        const fullState = showInHtmlSingleTaskQueue.getState()
+        const bookmarkInfoListBefore = (fullState.bookmarkInfoList || []).filter(({ optimisticAdd }) => !optimisticAdd)
+
         showInHtmlSingleTaskQueue.addUpdate(message)
+        const bookmarkInfoList = message.bookmarkInfoList || []
+        const diff = bookmarkInfoList.length - bookmarkInfoListBefore.length
+
+        if (diff > 0) {
+          if (diff > optimisticAddFromTagList - optimisticToStorageAdd) {
+            optimisticDelFromTagList = 0
+            optimisticAddFromTagList = 0
+            optimisticToStorageDel = 0
+            optimisticToStorageAdd = 0      
+          } else {
+            if (optimisticAddFromTagList - optimisticToStorageAdd > 0) {
+              const part = Math.min(diff, optimisticAddFromTagList - optimisticToStorageAdd);
+              optimisticToStorageAdd += part  
+            }
+          }
+        }
+        if (diff < 0) {
+          if (-diff > optimisticDelFromTagList - optimisticToStorageDel) {
+            optimisticDelFromTagList = 0
+            optimisticAddFromTagList = 0
+            optimisticToStorageDel = 0
+            optimisticToStorageAdd = 0      
+          } else {
+            if (optimisticDelFromTagList - optimisticToStorageDel > 0) {
+              const part = Math.min(-diff, optimisticDelFromTagList - optimisticToStorageDel);
+              optimisticToStorageDel += part  
+            }
+          }
+        }
+
         options.isHideHeaderForYoutube = message.isHideHeaderForYoutube || false
         toggleYoutubePageHeader({ nTry: 30 })
         break
@@ -900,9 +962,18 @@ ${semanticTagsStyle}
     }
   }
 
+  let optimisticDelFromTagList = 0
+  let optimisticAddFromTagList = 0
+  let optimisticToStorageDel = 0
+  let optimisticToStorageAdd = 0
+
   // we will receive bookmark-info from tab.onactivated
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
+      optimisticDelFromTagList = 0
+      optimisticAddFromTagList = 0
+      optimisticToStorageDel = 0
+      optimisticToStorageAdd = 0
       sendTabIsReady()
     }
   });
