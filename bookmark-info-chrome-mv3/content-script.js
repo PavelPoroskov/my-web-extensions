@@ -282,38 +282,6 @@ ${semanticTagsStyle}
     )
   };
   
-  const dayMS = 86400000;
-  const hourMS = 3600000;
-  const minMS = 60000;
-
-  function formatPrevVisit (inMS) {
-    
-    const dif = Date.now() - inMS;
-
-    let result = ''
-    const days = Math.floor(dif / dayMS)
-
-    if (days > 0) {
-      result = `D ${days}`
-    } else {
-      const hours = Math.floor(dif / hourMS)
-
-      if (hours > 0) {
-        result = `h ${hours}`
-      } else {
-        const mins = Math.floor(dif / minMS)
-
-        if (mins > 0) {
-          result = `m ${mins}`
-        } else {
-          result = 'm 0'
-        }
-      }
-    }
-
-    return result
-  }
-
   let storedTagLength = 8;
   let storedIsHideSemanticHtmlTagsOnPrinting = false;
 
@@ -453,7 +421,7 @@ ${semanticTagsStyle}
 
   function showBookmarkInfo(input) {
     const bookmarkInfoList = (input.bookmarkInfoList || []).filter(({ optimisticDel }) => !optimisticDel)
-    const visitList = input.visitList || []
+    const visitString = input.visitString || []
     const isShowTitle = input.isShowTitle || false
     const inTagList = input.tagList || []
     const isShowTagList = input.isShowTagList || false
@@ -490,13 +458,8 @@ ${semanticTagsStyle}
       drawList.push({ type: 'emptySlot' })
     }
   
-    if (visitList.length > 0) {
-      const prevVisit = visitList
-        .toReversed()
-        .map((i) => formatPrevVisit(i))
-        .flatMap((value, index, array) => index === 0 || value !== array[index - 1] ? [value]: [])
-        .join(", ") 
-      drawList.push({ type: 'history', value: prevVisit })
+    if (visitString) {
+      drawList.push({ type: 'history', value: visitString })
     }
 
     if (tagList.length > 0) {

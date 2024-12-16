@@ -60,7 +60,7 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
 
   if (isShowVisits) {
     visitsData = {
-      visitList: visitInfo.visitList,
+      visitString: visitInfo.visitString,
     }  
   }
 

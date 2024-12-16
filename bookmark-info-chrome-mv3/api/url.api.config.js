@@ -38,13 +38,13 @@ export const clearUrlTargetList = [
     removeSearchParamList: [
       'ref_',
     ],
-    // removeAllSearchParamForPath: [
-    //   '/title/',
-    //   '/list/',
-    //   '/imdbpicks/',
-    //   '/interest/',
-    //   '/',
-    // ],
+    removeAllSearchParamForPath: [
+      '/title/',
+      '/list/',
+      '/imdbpicks/',
+      '/interest/',
+      '/',
+    ],
   },
   {
     hostname: 'linkedin.com',  

@@ -4,6 +4,7 @@ import {
 import {
   browserStartTime,
 } from './structure/index.js';
+import { normalizeUrl } from './url.api.js'
 
 const dayMS = 86400000;
 const hourMS = 3600000;
@@ -105,26 +106,25 @@ async function getVisitListForUrlList(urlList) {
 }
 
 async function getPreviousVisitList(url) {
-  if (url) {
-    const historyItemList = (await chrome.history.search({
-      text: url,
-      maxResults: 10,
-    }))
-      .filter((i) => i.url && i.url.startsWith(url))
+  const historyItemList = (await chrome.history.search({
+    text: url,
+    maxResults: 10,
+  }))
+    .filter((i) => i.url && i.url.startsWith(url))
 
-    return getVisitListForUrlList(historyItemList.map(i => i.url))
-  } else {
-    return getVisitListForUrl(url)
-  }
+  return getVisitListForUrlList(historyItemList.map(i => i.url))
 }
 
 export async function getHistoryInfo({ url }) {
-  let visitList;
-  
-  const allVisitList = await getPreviousVisitList(url);
-  visitList = filterTimeList(allVisitList)
+  const normalizedUrl = normalizeUrl(url);
+  const allVisitList = await getPreviousVisitList(normalizedUrl);
+  const visitList = filterTimeList(allVisitList)
 
   return {
-    visitList,
+    visitString: visitList
+      .toReversed()
+      .map((i) => formatPrevVisit(i))
+      .flatMap((value, index, array) => index === 0 || value !== array[index - 1] ? [value]: [])
+      .join(", ")
   };
 }
