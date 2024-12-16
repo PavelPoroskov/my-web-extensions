@@ -223,68 +223,79 @@ class CacheWithLimit {
   SESSION: 'SESSION',
 }
 
-const STORAGE_KEY_PROTO = {
+const USER_OPTION_META = {
   CLEAR_URL_ON_PAGE_OPEN: {
     default: true,
-    isUserOption: true,
   },
   SHOW_PREVIOUS_VISIT: {
     default: false,
-    isUserOption: true,
   },
   SHOW_BOOKMARK_TITLE: {
     default: false,
-    isUserOption: true,
   },
-  ADD_BOOKMARK_IS_ON: {
+  // TODO rename ADD_BOOKMARK_IS_ON -> TAG_LIST_USE
+  TAG_LIST_USE: {
     default: true,
-    isUserOption: true,
   },
-  ADD_BOOKMARK_LIST_SHOW: {
-    default: false,
-    storage: STORAGE_TYPE.SESSION,
-  },
-  ADD_BOOKMARK_LIST_LIMIT: {
+  // TODO rename ADD_BOOKMARK_LIST_LIMIT -> TAG_LIST_LIST_LENGTH
+  TAG_LIST_LIST_LENGTH: {
     default: 35,
-    isUserOption: true,
   },
-  ADD_BOOKMARK_TAG_LENGTH: {
+  // TODO rename ADD_BOOKMARK_TAG_LENGTH -> TAG_LIST_TAG_LENGTH
+  TAG_LIST_TAG_LENGTH: {
     default: 15,
-    isUserOption: true,
   },
-  ADD_BOOKMARK_HIGHLIGHT_LAST: {
-    default: 5,
-    isUserOption: true,
+  // TODO rename ADD_BOOKMARK_HIGHLIGHT_LAST -> TAG_LIST_HIGHLIGHT_LAST
+  TAG_LIST_HIGHLIGHT_LAST: {
+    default: 7,
   },
-  ADD_BOOKMARK_SESSION_STARTED: {
-    storage: STORAGE_TYPE.SESSION,
+  // TODO rename FORCE_FLAT_FOLDER_STRUCTURE -> USE_FLAT_FOLDER_STRUCTURE
+  USE_FLAT_FOLDER_STRUCTURE: {
     default: false,
   },
-  ADD_BOOKMARK_RECENT_MAP: {
+  HIDE_PAGE_HEADER_FOR_YOUTUBE: {
+    default: false,
+  },
+  HIDE_TAG_HEADER_ON_PRINTING: {
+    default: false,
+  },
+}
+
+const INTERNAL_VALUES_META = {
+  // TODO rename ADD_BOOKMARK_LIST_SHOW -> TAG_LIST_IS_OPEN
+  TAG_LIST_IS_OPEN: {
+    default: false,
+    storage: STORAGE_TYPE.SESSION,
+  },
+  // TODO rename ADD_BOOKMARK_SESSION_STARTED -> TAG_LIST_SESSION_STARTED
+  TAG_LIST_SESSION_STARTED: {
+    default: false,
+    storage: STORAGE_TYPE.SESSION,
+  },
+  // TODO rename ADD_BOOKMARK_RECENT_MAP -> TAG_LIST_RECENT_MAP
+  TAG_LIST_RECENT_MAP: {
     default: {},
   },
-  ADD_BOOKMARK_FIXED_MAP: {
+  // TODO rename ADD_BOOKMARK_FIXED_MAP -> TAG_LIST_FIXED_MAP
+  TAG_LIST_FIXED_MAP: {
     default: {},
   },
   BROWSER_START_TIME: {
     storage: STORAGE_TYPE.SESSION,
   },
-  FORCE_FLAT_FOLDER_STRUCTURE: {
-    default: false,
-    isUserOption: true,
-  },
-  HIDE_PAGE_HEADER_FOR_YOUTUBE: {
-    default: false,
-    isUserOption: true,
-  },
-  HIDE_TAG_HEADER_ON_PRINTING: {
-    default: false,
-    isUserOption: true,
-  },
 }
 
+const userOptionSet = new Set(Object.keys(USER_OPTION_META))
+const internalValuesSet = new Set(Object.keys(INTERNAL_VALUES_META))
+const intersectSet = userOptionSet.intersection(internalValuesSet)
+
+if (intersectSet.size > 0) {
+  throw new Error(`User options and internal keys has intersection: ${Array.from(intersectSet.keys())}`)
+}
+
+// it is used inside getOptions()/setOptions() only
 const STORAGE_KEY_META = Object.fromEntries(
-  Object.entries(STORAGE_KEY_PROTO)
+  Object.entries({ ...USER_OPTION_META, ...INTERNAL_VALUES_META })
     .map(([key, obj]) => [key, {
       ...obj,
       storageKey: obj.storageKey || key,
@@ -292,17 +303,22 @@ const STORAGE_KEY_META = Object.fromEntries(
     }])
 )
 
-const USER_OPTION_KEY_LIST = Object.entries(STORAGE_KEY_META)
-  .filter(([, { isUserOption }]) => isUserOption)
-  .map(([key]) => key)
+// it is used to read one option value in program code
+const USER_OPTION = Object.fromEntries(
+  Object.keys(USER_OPTION_META).map((key) => [key, key])
+)
+// it is used in extensionSettings to read ALL user options from storage to program
+const USER_OPTION_KEY_LIST = Object.keys(USER_OPTION_META)
 
+// it is used in storage controller to detect user options was changed
 const USER_OPTION_STORAGE_KEY_LIST = USER_OPTION_KEY_LIST.map((key) => STORAGE_KEY_META[key].storageKey)
 
-const STORAGE_KEY = Object.fromEntries(
-  Object.keys(STORAGE_KEY_META).map((key) => [key, key])
+const INTERNAL_VALUES = Object.fromEntries(
+  Object.keys(INTERNAL_VALUES_META).map((key) => [key, key])
 )
 
-const ADD_BOOKMARK_LIST_MAX = 50
+// rename ADD_BOOKMARK_LIST_MAX -> TAG_LIST_MAX_LIST_LENGTH
+const TAG_LIST_MAX_LIST_LENGTH = 50
 const logSA = makeLogFunction({ module: 'storage.api' })
 
 async function setOptions(obj) {
@@ -472,13 +488,13 @@ class BrowserStartTime {
     return this._isActual
   }
   async getStartTime() {
-    const storedSession = await getOptions(STORAGE_KEY.BROWSER_START_TIME)
+    const storedSession = await getOptions(INTERNAL_VALUES.BROWSER_START_TIME)
     logBST('storedSession', storedSession)
 
     let result
 
-    if (storedSession[STORAGE_KEY.BROWSER_START_TIME]) {
-      result = storedSession[STORAGE_KEY.BROWSER_START_TIME]
+    if (storedSession[INTERNAL_VALUES.BROWSER_START_TIME]) {
+      result = storedSession[INTERNAL_VALUES.BROWSER_START_TIME]
     } else {
       // I get start for service-worker now.
       //    It is correct if this web-extension was installed in the previous browser session
@@ -486,7 +502,7 @@ class BrowserStartTime {
       //  tab with minimal tabId
       result = performance.timeOrigin
       await setOptions({
-        [STORAGE_KEY.BROWSER_START_TIME]: this._profileStartTimeMS
+        [INTERNAL_VALUES.BROWSER_START_TIME]: this._profileStartTimeMS
       })
     }
 
@@ -769,7 +785,7 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
   _fixedTagObj = {}
   _tagList = []
   LIST_LIMIT
-  FORCE_FLAT_FOLDER_STRUCTURE
+  USE_FLAT_FOLDER_STRUCTURE
   HIGHLIGHT_LAST
 
   changeCount = 0
@@ -790,39 +806,39 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
   async readFromStorage() {
     const settings = await extensionSettings.get()
 
-    if (!settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+    if (!settings[USER_OPTION.TAG_LIST_USE]) {
       return
     }
 
-    this.LIST_LIMIT = settings[STORAGE_KEY.ADD_BOOKMARK_LIST_LIMIT]
-    this.FORCE_FLAT_FOLDER_STRUCTURE = settings[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]
-    this.HIGHLIGHT_LAST = settings[STORAGE_KEY.ADD_BOOKMARK_HIGHLIGHT_LAST]
+    this.LIST_LIMIT = settings[USER_OPTION.TAG_LIST_LIST_LENGTH]
+    this.USE_FLAT_FOLDER_STRUCTURE = settings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]
+    this.HIGHLIGHT_LAST = settings[USER_OPTION.TAG_LIST_HIGHLIGHT_LAST]
 
     const savedObj = await getOptions([
-      STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED,
-      STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP,
-      STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP,
+      INTERNAL_VALUES.TAG_LIST_SESSION_STARTED,
+      INTERNAL_VALUES.TAG_LIST_RECENT_MAP,
+      INTERNAL_VALUES.TAG_LIST_FIXED_MAP,
     ]);
 
     let actualRecentTagObj = {}
-    if (!savedObj[STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]) {
-      actualRecentTagObj = await getRecentTagObj(ADD_BOOKMARK_LIST_MAX)
+    if (!savedObj[INTERNAL_VALUES.TAG_LIST_SESSION_STARTED]) {
+      actualRecentTagObj = await getRecentTagObj(TAG_LIST_MAX_LIST_LENGTH)
     }
 
     this._recentTagObj = {
-      ...savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP],
+      ...savedObj[INTERNAL_VALUES.TAG_LIST_RECENT_MAP],
       ...actualRecentTagObj,
     }
-    this._fixedTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]
+    this._fixedTagObj = savedObj[INTERNAL_VALUES.TAG_LIST_FIXED_MAP]
 
-    if (!savedObj[STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]) {
-      const isFlatStructure = this.FORCE_FLAT_FOLDER_STRUCTURE
+    if (!savedObj[INTERNAL_VALUES.TAG_LIST_SESSION_STARTED]) {
+      const isFlatStructure = this.USE_FLAT_FOLDER_STRUCTURE
       this._recentTagObj = await filterRecentTagObj(this._recentTagObj, isFlatStructure)
       this._fixedTagObj = await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
       await setOptions({
-        [STORAGE_KEY.ADD_BOOKMARK_SESSION_STARTED]: true,
-        [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
-        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,
+        [INTERNAL_VALUES.TAG_LIST_SESSION_STARTED]: true,
+        [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj,
+        [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj,
       })
     }
 
@@ -830,11 +846,11 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
   }
   async filterTagListForFlatFolderStructure() {
     const savedObj = await getOptions([
-      STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP,
-      STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP,
+      INTERNAL_VALUES.TAG_LIST_RECENT_MAP,
+      INTERNAL_VALUES.TAG_LIST_FIXED_MAP,
     ]);
-    this._recentTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]
-    this._fixedTagObj = savedObj[STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]
+    this._recentTagObj = savedObj[INTERNAL_VALUES.TAG_LIST_RECENT_MAP]
+    this._fixedTagObj = savedObj[INTERNAL_VALUES.TAG_LIST_FIXED_MAP]
 
     const isFlatStructure = true
     // console.log('filterTagListForFlatFolderStructure ', this._fixedTagObj)
@@ -844,8 +860,8 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
     this.markUpdates()
 
     await setOptions({
-      [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
-      [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj,
+      [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj,
+      [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj,
     })
   }
   refillList() {
@@ -895,7 +911,7 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
     }
 
     // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
-    if (this.FORCE_FLAT_FOLDER_STRUCTURE) {
+    if (this.USE_FLAT_FOLDER_STRUCTURE) {
       // if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
       //   return
       // }
@@ -919,15 +935,15 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
     if (folderNode.id in this._fixedTagObj) {
       this._fixedTagObj[folderNode.id] = folderNode.title
       fixedTagUpdate = {
-        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
+        [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
       }
     }
 
-    if (ADD_BOOKMARK_LIST_MAX + 10 < Object.keys(this._recentTagObj).length) {
+    if (TAG_LIST_MAX_LIST_LENGTH + 10 < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
         .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
         .sort((a,b) => -(a.dateAdded - b.dateAdded))
-        .slice(ADD_BOOKMARK_LIST_MAX)
+        .slice(TAG_LIST_MAX_LIST_LENGTH)
         .map(({ parentId }) => parentId)
 
         redundantIdList.forEach((id) => {
@@ -937,7 +953,7 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
 
     this.markUpdates()
     setOptions({
-      [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj,
+      [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj,
       ...fixedTagUpdate,
     })
   }
@@ -960,7 +976,7 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
     if (isInFixedList) {
       delete this._fixedTagObj[id] 
       fixedTagUpdate = {
-        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
+        [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
       }
     }
 
@@ -970,7 +986,7 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
     if (isInRecentList) {
       delete this._recentTagObj[id]
       recentTagUpdate = {
-        [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
+        [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj
       }
     }
 
@@ -989,7 +1005,7 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
   //   if (isInFixedList) {
   //     this._fixedTagObj[id] = title
   //     fixedTagUpdate = {
-  //       [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
+  //       [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
   //     }
   //   }
 
@@ -999,7 +1015,7 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
   //   if (isInRecentList) {
   //     this._recentTagObj[id].title = title
   //     recentTagUpdate = {
-  //       [STORAGE_KEY.ADD_BOOKMARK_RECENT_MAP]: this._recentTagObj
+  //       [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj
   //     }
   //   }
 
@@ -1021,7 +1037,7 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
 
       this.markUpdates()
       await setOptions({
-        [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
+        [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
       })
     }
   }
@@ -1030,7 +1046,7 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
 
     this.markUpdates()
     await setOptions({
-      [STORAGE_KEY.ADD_BOOKMARK_FIXED_MAP]: this._fixedTagObj
+      [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
     })
   }
 }
@@ -1051,15 +1067,15 @@ const tagList = new TagList()
   // },
   // {
   //   hostname: 'djinni.co',
-  //   paths: [
+  //   removeAllSearchParamForPath: [
   //     '/my/profile/',
   //     '/jobs/',
   //   ] 
   // },
   {
     hostname: 'frontendmasters.com',
-    paths: [
-      '/courses/',
+    removeAllSearchParamForPath: [
+      '/courses/:id/',
     ] 
   },
   {
@@ -1068,17 +1084,16 @@ const tagList = new TagList()
       'hhtmFrom',
       'hhtmFromLabel',
     ],
-    paths: [
-      '/vacancy/',
+    removeAllSearchParamForPath: [
+      '/vacancy/:id',
     ],
   },
   {
     hostname: 'imdb.com',  
-    // TODO remove only selected query params: ref=
     removeSearchParamList: [
       'ref_',
     ],
-    paths: [
+    removeAllSearchParamForPath: [
       '/title/',
       '/list/',
       '/imdbpicks/',
@@ -1088,34 +1103,84 @@ const tagList = new TagList()
   },
   {
     hostname: 'linkedin.com',  
-    paths: [
+    removeAllSearchParamForPath: [
       '/jobs/view/',
       '/posts/'
     ] 
   },
   {
     hostname: 'udemy.com',  
-    paths: [
-      '/course/',
+    removeAllSearchParamForPath: [
+      '/course/:id/',
     ] 
   },
 ]
 const logUA = makeLogFunction({ module: 'url.api' })
 
 const targetHostSettingsMap = new Map(
-  clearUrlTargetList.map(({ hostname, paths, removeSearchParamList }) => [
-    hostname, 
-    { 
-      paths, 
-      removeSearchParamList: removeSearchParamList || [] 
-    }
+  clearUrlTargetList.map((item) => [
+    item.hostname, 
+    item,
   ])
 )
 
 const getHostBase = (str) => str.split('.').slice(-2).join('.')
 
-const removeQueryParamsIfTarget = (url) => {
-  logUA('removeQueryParamsIfTarget () 00', url)
+const isPathnameMatch = ({ pathname, patternList }) => {
+  logUA('isPathnameMatch () 00', pathname)
+  logUA('isPathnameMatch () 00', patternList)
+
+  const pathToList = (pathname) => {
+    let list = pathname.split(/(\/)/)
+  
+    if (list.at(0) === '') {
+      list = list.slice(1)
+    }  
+    if (list.at(-1) === '') {
+      list = list.slice(0, -1)
+    }  
+    if (list.at(-1) === '/') {
+      list = list.slice(0, -1)
+    }  
+  
+    return list
+  }
+  const isPartsEqual = (patternPart, pathPart) => {
+    let result
+
+    if (patternPart.startsWith(':')) {
+      result = pathPart && pathPart != '/'
+    } else {
+      result = pathPart === patternPart
+    } 
+    logUA('isPartsEqual () 11', patternPart, pathPart, result)
+  
+    return result
+  }
+  
+  let isMath = false
+  const pathAsList = pathToList(pathname)
+  logUA('isPathnameMatch () 11 pathAsList', pathAsList)
+
+  let i = 0
+  while (!isMath && i < patternList.length) {
+    const pattern = patternList[i]
+    const patternAsList = pathToList(pattern)
+    logUA('isPathnameMatch () 11 patternAsList', patternAsList)
+
+    isMath = patternAsList.length > 0 && pathAsList.length === patternAsList.length 
+      && patternAsList.every((patternPart, patternIndex) => isPartsEqual(patternPart, pathAsList[patternIndex])
+    )
+    i += 1
+  }
+
+  return isMath
+}
+
+const isNotEmptyArray = (ar) => Array.isArray(ar) && ar.length > 0
+
+const normalizeUrl = (url) => {
+  logUA('getNormalizedUrl () 00', url)
   let cleanUrl = url
   let isPattern = false
 
@@ -1125,9 +1190,15 @@ const removeQueryParamsIfTarget = (url) => {
     const targetHostSettings = targetHostSettingsMap.get(getHostBase(hostname))
 
     if (targetHostSettings) {
-      const { paths: targetPathList, removeSearchParamList } = targetHostSettings
+      const { removeAllSearchParamForPath, removeSearchParamList } = targetHostSettings
 
-      if (removeSearchParamList.length > 0) {
+      if (isNotEmptyArray(removeAllSearchParamForPath)) {
+        if (isPathnameMatch({ pathname, patternList: removeAllSearchParamForPath })) {
+          // remove all query params
+          isPattern = true
+          oLink.search = ''
+        }
+      } else if (isNotEmptyArray(removeSearchParamList)) {
         // remove query params by list
         const oSearchParams = oLink.searchParams;
         const isHasThisSearchParams = removeSearchParamList.some((searchParam) => oSearchParams.get(searchParam) !== null)
@@ -1140,15 +1211,10 @@ const removeQueryParamsIfTarget = (url) => {
           oLink.search = oSearchParams.size > 0
             ? `?${oSearchParams.toString()}`
             : ''
-          cleanUrl = oLink.toString();  
         }
-      } else if (targetPathList.some((targetPath) => pathname.startsWith(targetPath))) {
-        // remove all query params
-        isPattern = true
-        oLink.search = ''
-
-        cleanUrl = oLink.toString();  
       }
+
+      cleanUrl = oLink.toString();  
     }
   
   /* eslint-disable no-unused-vars */
@@ -1158,12 +1224,9 @@ const removeQueryParamsIfTarget = (url) => {
   }
   /* eslint-enable no-unused-vars */
 
-  logUA('removeQueryParamsIfTarget () 99 cleanUrl', isPattern, cleanUrl)
+  logUA('getNormalizedUrl () 99 cleanUrl', isPattern, cleanUrl)
 
-  return {
-    cleanUrl,
-    isPattern,
-  }
+  return cleanUrl
 }
 
 function removeAnchorAndSearchParams(link) {
@@ -1179,20 +1242,6 @@ function removeAnchorAndSearchParams(link) {
     return link
   }
 }
-
-// let testStr = "https://www.linkedin.com/jobs/view/3920634940/?alternateChannel=search&refId=dvaqme%2FfxHehSAa5o4nVnA%3D%3D&trackingId=8%2FZKaGcTAInuTTH4NyKDoA%3D%3D"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
-
-// testStr = "https://www.youtube.com/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
-
-// testStr = "https://youtube.com/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
-
-// testStr = "https://youtu.be/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
-//
-// https://career.proxify.io/apply?uuid=566c933b-432e-64e0-b317-dd4390d6a74e&step=AdditionalInformation
 const logBA = makeLogFunction({ module: 'bookmarks.api' })
 
 const getParentIdList = (bookmarkList) => {
@@ -1257,7 +1306,23 @@ async function addBookmarkParentInfo(bookmarkList, bookmarkByIdMap) {
 }
 
 async function getBookmarkInfo(url) {
-  const bookmarkList = await browser.bookmarks.search({ url });
+  const bkmListForUrl = await browser.bookmarks.search({ url });
+  logBA('getBookmarkInfo () 11 search({ url })', bkmListForUrl.length, bkmListForUrl)
+
+  const normalizedUrl = normalizeUrl(url);
+  const bkmListForSubstring = await browser.bookmarks.search(normalizedUrl);
+  logBA('getBookmarkInfo () 22 search(normalizedUrl)', bkmListForSubstring.length, bkmListForSubstring)
+
+  const bookmarkList = bkmListForUrl.map((item) => ({ ...item, source: 'original url' }))
+  const yetSet = new Set(bkmListForUrl.map(({ id }) => id))
+  bkmListForSubstring.forEach((bkm) => {
+    if (!yetSet.has(bkm.id) && bkm.url && bkm.url.startsWith(normalizedUrl)) {
+      bookmarkList.push({
+        ...bkm,
+        source: 'substring',
+      })
+    }
+  })
 
   if (bookmarkList.length == 0) {
     return [];
@@ -1265,15 +1330,20 @@ async function getBookmarkInfo(url) {
 
   await addBookmarkParentInfo(bookmarkList, memo.bkmFolderById)
 
+  logBA('getBookmarkInfo () 33 bookmarkList', bookmarkList.length, bookmarkList)
   return bookmarkList
     .map((bookmarkItem) => {
       const fullPathList = getFullPath(bookmarkItem.parentId, memo.bkmFolderById)
+      if (bookmarkItem.source === 'substring') {
+        fullPathList[fullPathList.length - 1] = `url* ${fullPathList[fullPathList.length - 1]}`
+      }
 
       return {
         id: bookmarkItem.id,
         fullPathList,
         title: bookmarkItem.title,
         parentId: bookmarkItem.parentId,
+        // source: bookmarkItem.source
       }
     });
 }
@@ -1406,27 +1476,26 @@ async function getVisitListForUrlList(urlList) {
 }
 
 async function getPreviousVisitList(url) {
-  if (url) {
-    const historyItemList = (await browser.history.search({
-      text: url,
-      maxResults: 10,
-    }))
-      .filter((i) => i.url && i.url.startsWith(url))
+  const historyItemList = (await browser.history.search({
+    text: url,
+    maxResults: 10,
+  }))
+    .filter((i) => i.url && i.url.startsWith(url))
 
-    return getVisitListForUrlList(historyItemList.map(i => i.url))
-  } else {
-    return getVisitListForUrl(url)
-  }
+  return getVisitListForUrlList(historyItemList.map(i => i.url))
 }
 
 async function getHistoryInfo({ url }) {
-  let visitList;
-  
-  const allVisitList = await getPreviousVisitList(url);
-  visitList = filterTimeList(allVisitList)
+  const normalizedUrl = normalizeUrl(url);
+  const allVisitList = await getPreviousVisitList(normalizedUrl);
+  const visitList = filterTimeList(allVisitList)
 
   return {
-    visitList,
+    visitString: visitList
+      .toReversed()
+      .map((i) => formatPrevVisit(i))
+      .flatMap((value, index, array) => index === 0 || value !== array[index - 1] ? [value]: [])
+      .join(", ")
   };
 }
 const logIX = makeLogFunction({ module: 'init-extension' })
@@ -1455,7 +1524,7 @@ async function createContextMenu(settings) {
     title: 'close bookmarked tabs',
   });
 
-  if (settings[STORAGE_KEY.HIDE_PAGE_HEADER_FOR_YOUTUBE]) {
+  if (settings[USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE]) {
     browser.menus.create({
       id: CONTEXT_MENU_CMD_ID.TOGGLE_YOUTUBE_HEADER,
       contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
@@ -1527,46 +1596,37 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
   await initExtension({ debugCaller: 'updateTab ()' })
   const settings = await extensionSettings.get()
 
-  let actualUrl = url
-
-  if (settings[STORAGE_KEY.CLEAR_URL_ON_PAGE_OPEN]) {
-    const { cleanUrl } = removeQueryParamsIfTarget(url)
-
-    if (url !== cleanUrl) {
-      actualUrl = cleanUrl
-    }
-  } 
-
   let visitsData
-  const isShowVisits = settings[STORAGE_KEY.SHOW_PREVIOUS_VISIT]
+  const isShowVisits = settings[USER_OPTION.SHOW_PREVIOUS_VISIT]
 
   const [
     bookmarkInfo,
     visitInfo,
   ] = await Promise.all([
-    getBookmarkInfoUni({ url: actualUrl, useCache }),
-    isShowVisits && getHistoryInfo({ url: actualUrl }),
+    getBookmarkInfoUni({ url, useCache }),
+    isShowVisits && getHistoryInfo({ url }),
   ])
+  logTA(`updateTab () 11 bookmarkInfo.bookmarkInfoList`, bookmarkInfo.bookmarkInfoList);
 
   if (isShowVisits) {
     visitsData = {
-      visitList: visitInfo.visitList,
+      visitString: visitInfo.visitString,
     }  
   }
 
   const message = {
     command: CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO,
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
-    isShowTitle: settings[STORAGE_KEY.SHOW_BOOKMARK_TITLE],
+    isShowTitle: settings[USER_OPTION.SHOW_BOOKMARK_TITLE],
     // visits history
     ...visitsData,
     // recent list
     tagList: tagList.list,
-    isShowTagList: settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW],
-    tagLength: settings[STORAGE_KEY.ADD_BOOKMARK_TAG_LENGTH],
+    isShowTagList: settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN],
+    tagLength: settings[USER_OPTION.TAG_LIST_TAG_LENGTH],
     // page settings
-    isHideSemanticHtmlTagsOnPrinting: settings[STORAGE_KEY.HIDE_TAG_HEADER_ON_PRINTING],
-    isHideHeaderForYoutube: settings[STORAGE_KEY.HIDE_PAGE_HEADER_FOR_YOUTUBE],
+    isHideSemanticHtmlTagsOnPrinting: settings[USER_OPTION.HIDE_TAG_HEADER_ON_PRINTING],
+    isHideHeaderForYoutube: settings[USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE],
   }
   logTA('updateTab () sendMessage', tabId, message);
   await browser.tabs.sendMessage(tabId, message)
@@ -2357,7 +2417,7 @@ async function mergeSubFolder(parentId) {
     );
     
     await Promise.all(moveTaskList.map(
-        ({ fromNode }) => browser.bookmarks.removeTree(fromNode.id)
+        ({ fromNode }) => browser.bookmarks.remove(fromNode.id)
     ))
 }
 
@@ -2417,7 +2477,7 @@ async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
   );
 
   await Promise.all(folderList.map(
-    ({ id }) => browser.bookmarks.removeTree(id)
+    ({ id }) => browser.bookmarks.remove(id)
   ))
 }
 
@@ -2716,11 +2776,11 @@ async function removeFromUrlAnchorAndSearchParamsInActiveTab() {
 async function clearUrlOnPageOpen({ tabId, url }) {
   const settings = await extensionSettings.get()
 
-  if (settings[STORAGE_KEY.CLEAR_URL_ON_PAGE_OPEN]) {
-    const { cleanUrl } = removeQueryParamsIfTarget(url);
+  if (settings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN]) {
+    const normalizedUrl = normalizeUrl(url);
     
-    if (url !== cleanUrl) {
-      await changeUrlInTab({ tabId, url: cleanUrl })
+    if (url !== normalizedUrl) {
+      await changeUrlInTab({ tabId, url: normalizedUrl })
     }
   }  
 }
@@ -2889,7 +2949,7 @@ async function closeDuplicateTabs() {
 }
 async function moveToFlatFolderStructure() {
   await extensionSettings.update({
-    [STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]: true,
+    [USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]: true,
   })
   // await tagList.filterTagListForFlatFolderStructure()
 
@@ -2898,7 +2958,7 @@ async function closeDuplicateTabs() {
 }
 async function switchShowRecentList(isShow) {
   await extensionSettings.update({
-    [STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW]: isShow
+    [INTERNAL_VALUES.TAG_LIST_IS_OPEN]: isShow
   })
 }
 async function unfixTag(parentId) {
@@ -2937,11 +2997,11 @@ const bookmarksController = {
         await browser.bookmarks.move(bookmarkId, { index: 0 })
       }
 
-      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+      if (settings[USER_OPTION.TAG_LIST_USE]) {
         await tagList.addRecentTagFromBkm(node)
       }
     } else {
-      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+      if (settings[USER_OPTION.TAG_LIST_USE]) {
         await tagList.addRecentTagFromFolder(node)
       }
     }
@@ -2963,7 +3023,7 @@ const bookmarksController = {
     } else {
       memo.bkmFolderById.delete(bookmarkId);
 
-      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON] && changeInfo.title) {
+      if (settings[USER_OPTION.TAG_LIST_USE] && changeInfo.title) {
         // await tagList.updateTag(bookmarkId, changeInfo.title)
         await tagList.addRecentTagFromFolder(node)
       }
@@ -3002,7 +3062,7 @@ const bookmarksController = {
     
     if (node.url) {
       if (parentId !== oldParentId) {
-        if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+        if (settings[USER_OPTION.TAG_LIST_USE]) {
           await tagList.addRecentTagFromBkm(node);
 
           let isReplaceMoveToCreate = false
@@ -3014,7 +3074,7 @@ const bookmarksController = {
             const childrenList = await browser.bookmarks.getChildren(parentId)
             const lastIndex = childrenList.length - 1
 
-            // isReplaceMoveToCreate = index == lastIndex && settings[STORAGE_KEY.ADD_BOOKMARK_LIST_SHOW] 
+            // isReplaceMoveToCreate = index == lastIndex && settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN] 
             isReplaceMoveToCreate = index == lastIndex
           }
 
@@ -3025,23 +3085,16 @@ const bookmarksController = {
             logBC('bookmark.onMoved 22');
 
             const { url, title } = node
-            ignoreBkmControllerApiActionSet.addIgnoreRemove(bookmarkId)
-            await browser.bookmarks.remove(bookmarkId)
-            const oldBkm = {
-              parentId: oldParentId,
-              title,
-              url,
-              index: oldIndex,
-            }
+            ignoreBkmControllerApiActionSet.addIgnoreMove(bookmarkId)
+            await browser.bookmarks.move(bookmarkId, { parentId: oldParentId, index: oldIndex })
+    
             const newBkm = {
               parentId,
               title,
               url,
               index: 0,
             }
-            ignoreBkmControllerApiActionSet.addIgnoreCreate(oldBkm)
             ignoreBkmControllerApiActionSet.addIgnoreCreate(newBkm)
-            await browser.bookmarks.create(oldBkm)
             await browser.bookmarks.create(newBkm)
           }
         }
@@ -3066,7 +3119,7 @@ const bookmarksController = {
     if (!node.url) {
       memo.bkmFolderById.delete(bookmarkId);
 
-      if (settings[STORAGE_KEY.ADD_BOOKMARK_IS_ON]) {
+      if (settings[USER_OPTION.TAG_LIST_USE]) {
         await tagList.removeTag(bookmarkId)
       }
     }
@@ -3218,7 +3271,7 @@ async function onIncomingMessage (message, sender) {
       browser.runtime.sendMessage({
         command: EXTENSION_MSG_ID.DATA_FOR_OPTIONS,
         clearUrlTargetList,
-        STORAGE_KEY,
+        USER_OPTION,
         settings,
       });
 
@@ -3274,10 +3327,10 @@ const runtimeController = {
     });
 
     const savedObj = await getOptions([
-      STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE,
+      USER_OPTION.USE_FLAT_FOLDER_STRUCTURE,
     ]);
 
-    if (savedObj[STORAGE_KEY.FORCE_FLAT_FOLDER_STRUCTURE]) {
+    if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
       await flatBookmarks()
     }
   },
