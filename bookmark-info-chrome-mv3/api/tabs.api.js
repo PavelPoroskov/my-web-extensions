@@ -12,9 +12,6 @@ import {
   getHistoryInfo,
 } from './history.api.js'
 import {
-  removeQueryParamsIfTarget,
-} from './url.api.js'
-import {
   USER_OPTION,
   INTERNAL_VALUES,
 } from './storage.api.config.js'
@@ -49,17 +46,6 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
   await initExtension({ debugCaller: 'updateTab ()' })
   const settings = await extensionSettings.get()
 
-  let actualUrl = url
-
-  // TODO no need condition here, other clean than for open
-  if (settings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN]) {
-    const { cleanUrl } = removeQueryParamsIfTarget(url)
-
-    if (url !== cleanUrl) {
-      actualUrl = cleanUrl
-    }
-  } 
-
   let visitsData
   const isShowVisits = settings[USER_OPTION.SHOW_PREVIOUS_VISIT]
 
@@ -67,9 +53,10 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
     bookmarkInfo,
     visitInfo,
   ] = await Promise.all([
-    getBookmarkInfoUni({ url: actualUrl, useCache }),
-    isShowVisits && getHistoryInfo({ url: actualUrl }),
+    getBookmarkInfoUni({ url, useCache }),
+    isShowVisits && getHistoryInfo({ url }),
   ])
+  logTA(`updateTab () 11 bookmarkInfo.bookmarkInfoList`, bookmarkInfo.bookmarkInfoList);
 
   if (isShowVisits) {
     visitsData = {

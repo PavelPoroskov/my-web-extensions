@@ -8,19 +8,69 @@ import {
 const logUA = makeLogFunction({ module: 'url.api' })
 
 const targetHostSettingsMap = new Map(
-  clearUrlTargetList.map(({ hostname, paths, removeSearchParamList }) => [
-    hostname, 
-    { 
-      paths, 
-      removeSearchParamList: removeSearchParamList || [] 
-    }
+  clearUrlTargetList.map((item) => [
+    item.hostname, 
+    item,
   ])
 )
 
 const getHostBase = (str) => str.split('.').slice(-2).join('.')
 
-export const removeQueryParamsIfTarget = (url) => {
-  logUA('removeQueryParamsIfTarget () 00', url)
+const isPathnameMatch = ({ pathname, patternList }) => {
+  logUA('isPathnameMatch () 00', pathname)
+  logUA('isPathnameMatch () 00', patternList)
+
+  const pathToList = (pathname) => {
+    let list = pathname.split(/(\/)/)
+  
+    if (list.at(0) === '') {
+      list = list.slice(1)
+    }  
+    if (list.at(-1) === '') {
+      list = list.slice(0, -1)
+    }  
+    if (list.at(-1) === '/') {
+      list = list.slice(0, -1)
+    }  
+  
+    return list
+  }
+  const isPartsEqual = (patternPart, pathPart) => {
+    let result
+
+    if (patternPart.startsWith(':')) {
+      result = pathPart && pathPart != '/'
+    } else {
+      result = pathPart === patternPart
+    } 
+    logUA('isPartsEqual () 11', patternPart, pathPart, result)
+  
+    return result
+  }
+  
+  let isMath = false
+  const pathAsList = pathToList(pathname)
+  logUA('isPathnameMatch () 11 pathAsList', pathAsList)
+
+  let i = 0
+  while (!isMath && i < patternList.length) {
+    const pattern = patternList[i]
+    const patternAsList = pathToList(pattern)
+    logUA('isPathnameMatch () 11 patternAsList', patternAsList)
+
+    isMath = patternAsList.length > 0 && pathAsList.length === patternAsList.length 
+      && patternAsList.every((patternPart, patternIndex) => isPartsEqual(patternPart, pathAsList[patternIndex])
+    )
+    i += 1
+  }
+
+  return isMath
+}
+
+const isNotEmptyArray = (ar) => Array.isArray(ar) && ar.length > 0
+
+export const normalizeUrl = (url) => {
+  logUA('getNormalizedUrl () 00', url)
   let cleanUrl = url
   let isPattern = false
 
@@ -30,9 +80,15 @@ export const removeQueryParamsIfTarget = (url) => {
     const targetHostSettings = targetHostSettingsMap.get(getHostBase(hostname))
 
     if (targetHostSettings) {
-      const { paths: targetPathList, removeSearchParamList } = targetHostSettings
+      const { removeAllSearchParamForPath, removeSearchParamList } = targetHostSettings
 
-      if (removeSearchParamList.length > 0) {
+      if (isNotEmptyArray(removeAllSearchParamForPath)) {
+        if (isPathnameMatch({ pathname, patternList: removeAllSearchParamForPath })) {
+          // remove all query params
+          isPattern = true
+          oLink.search = ''
+        }
+      } else if (isNotEmptyArray(removeSearchParamList)) {
         // remove query params by list
         const oSearchParams = oLink.searchParams;
         const isHasThisSearchParams = removeSearchParamList.some((searchParam) => oSearchParams.get(searchParam) !== null)
@@ -45,15 +101,10 @@ export const removeQueryParamsIfTarget = (url) => {
           oLink.search = oSearchParams.size > 0
             ? `?${oSearchParams.toString()}`
             : ''
-          cleanUrl = oLink.toString();  
         }
-      } else if (targetPathList.some((targetPath) => pathname.startsWith(targetPath))) {
-        // remove all query params
-        isPattern = true
-        oLink.search = ''
-
-        cleanUrl = oLink.toString();  
       }
+
+      cleanUrl = oLink.toString();  
     }
   
   /* eslint-disable no-unused-vars */
@@ -63,12 +114,9 @@ export const removeQueryParamsIfTarget = (url) => {
   }
   /* eslint-enable no-unused-vars */
 
-  logUA('removeQueryParamsIfTarget () 99 cleanUrl', isPattern, cleanUrl)
+  logUA('getNormalizedUrl () 99 cleanUrl', isPattern, cleanUrl)
 
-  return {
-    cleanUrl,
-    isPattern,
-  }
+  return cleanUrl
 }
 
 export function removeAnchorAndSearchParams(link) {
@@ -84,17 +132,3 @@ export function removeAnchorAndSearchParams(link) {
     return link
   }
 }
-
-// let testStr = "https://www.linkedin.com/jobs/view/3920634940/?alternateChannel=search&refId=dvaqme%2FfxHehSAa5o4nVnA%3D%3D&trackingId=8%2FZKaGcTAInuTTH4NyKDoA%3D%3D"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
-
-// testStr = "https://www.youtube.com/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
-
-// testStr = "https://youtube.com/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
-
-// testStr = "https://youtu.be/watch?v=YuJ6SasIS_E&t=356s"
-// console.log('test ', removeQueryParamsIfTarget(testStr))
-//
-// https://career.proxify.io/apply?uuid=566c933b-432e-64e0-b317-dd4390d6a74e&step=AdditionalInformation

@@ -8,7 +8,7 @@ import {
   makeLogFunction,
 } from '../log.api.js'
 import {
-  removeQueryParamsIfTarget,
+  normalizeUrl,
 } from '../url.api.js'
 import {
   extensionSettings,
@@ -48,10 +48,10 @@ export async function clearUrlOnPageOpen({ tabId, url }) {
   const settings = await extensionSettings.get()
 
   if (settings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN]) {
-    const { cleanUrl } = removeQueryParamsIfTarget(url);
+    const normalizedUrl = normalizeUrl(url);
     
-    if (url !== cleanUrl) {
-      await changeUrlInTab({ tabId, url: cleanUrl })
+    if (url !== normalizedUrl) {
+      await changeUrlInTab({ tabId, url: normalizedUrl })
     }
   }  
 }

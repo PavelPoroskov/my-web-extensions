@@ -10,6 +10,7 @@ import {
 import {
   makeLogFunction,
 } from '../api/log.api.js'
+import { normalizeUrl } from './url.api.js'
 
 const logBA = makeLogFunction({ module: 'bookmarks.api' })
 
@@ -75,7 +76,23 @@ async function addBookmarkParentInfo(bookmarkList, bookmarkByIdMap) {
 }
 
 async function getBookmarkInfo(url) {
-  const bookmarkList = await chrome.bookmarks.search({ url });
+  const bkmListForUrl = await chrome.bookmarks.search({ url });
+  logBA('getBookmarkInfo () 11 search({ url })', bkmListForUrl.length, bkmListForUrl)
+
+  const normalizedUrl = normalizeUrl(url);
+  const bkmListForSubstring = await chrome.bookmarks.search(normalizedUrl);
+  logBA('getBookmarkInfo () 22 search(normalizedUrl)', bkmListForSubstring.length, bkmListForSubstring)
+
+  const bookmarkList = bkmListForUrl.map((item) => ({ ...item, source: 'original url' }))
+  const yetSet = new Set(bkmListForUrl.map(({ id }) => id))
+  bkmListForSubstring.forEach((bkm) => {
+    if (!yetSet.has(bkm.id)) {
+      bookmarkList.push({
+        ...bkm,
+        source: 'substring',
+      })
+    }
+  })
 
   if (bookmarkList.length == 0) {
     return [];
@@ -83,15 +100,20 @@ async function getBookmarkInfo(url) {
 
   await addBookmarkParentInfo(bookmarkList, memo.bkmFolderById)
 
+  logBA('getBookmarkInfo () 33 bookmarkList', bookmarkList.length, bookmarkList)
   return bookmarkList
     .map((bookmarkItem) => {
       const fullPathList = getFullPath(bookmarkItem.parentId, memo.bkmFolderById)
+      if (bookmarkItem.source === 'substring') {
+        fullPathList[fullPathList.length - 1] = `url* ${fullPathList[fullPathList.length - 1]}`
+      }
 
       return {
         id: bookmarkItem.id,
         fullPathList,
         title: bookmarkItem.title,
         parentId: bookmarkItem.parentId,
+        // source: bookmarkItem.source
       }
     });
 }

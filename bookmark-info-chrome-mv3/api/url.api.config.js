@@ -12,15 +12,15 @@ export const clearUrlTargetList = [
   // },
   // {
   //   hostname: 'djinni.co',
-  //   paths: [
+  //   removeAllSearchParamForPath: [
   //     '/my/profile/',
   //     '/jobs/',
   //   ] 
   // },
   {
     hostname: 'frontendmasters.com',
-    paths: [
-      '/courses/',
+    removeAllSearchParamForPath: [
+      '/courses/:id/',
     ] 
   },
   {
@@ -29,35 +29,34 @@ export const clearUrlTargetList = [
       'hhtmFrom',
       'hhtmFromLabel',
     ],
-    paths: [
-      '/vacancy/',
+    removeAllSearchParamForPath: [
+      '/vacancy/:id',
     ],
   },
   {
     hostname: 'imdb.com',  
-    // TODO remove only selected query params: ref=
     removeSearchParamList: [
       'ref_',
     ],
-    paths: [
-      '/title/',
-      '/list/',
-      '/imdbpicks/',
-      '/interest/',
-      '/',
-    ],
+    // removeAllSearchParamForPath: [
+    //   '/title/',
+    //   '/list/',
+    //   '/imdbpicks/',
+    //   '/interest/',
+    //   '/',
+    // ],
   },
   {
     hostname: 'linkedin.com',  
-    paths: [
+    removeAllSearchParamForPath: [
       '/jobs/view/',
       '/posts/'
     ] 
   },
   {
     hostname: 'udemy.com',  
-    paths: [
-      '/course/',
+    removeAllSearchParamForPath: [
+      '/course/:id/',
     ] 
   },
 ]
