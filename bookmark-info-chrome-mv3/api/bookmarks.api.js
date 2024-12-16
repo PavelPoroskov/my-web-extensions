@@ -86,7 +86,7 @@ async function getBookmarkInfo(url) {
   const bookmarkList = bkmListForUrl.map((item) => ({ ...item, source: 'original url' }))
   const yetSet = new Set(bkmListForUrl.map(({ id }) => id))
   bkmListForSubstring.forEach((bkm) => {
-    if (!yetSet.has(bkm.id)) {
+    if (!yetSet.has(bkm.id) && bkm.url && bkm.url.startsWith(normalizedUrl)) {
       bookmarkList.push({
         ...bkm,
         source: 'substring',
