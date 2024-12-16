@@ -127,23 +127,16 @@ export const bookmarksController = {
             logBC('bookmark.onMoved 22');
 
             const { url, title } = node
-            ignoreBkmControllerApiActionSet.addIgnoreRemove(bookmarkId)
-            await chrome.bookmarks.remove(bookmarkId)
-            const oldBkm = {
-              parentId: oldParentId,
-              title,
-              url,
-              index: oldIndex,
-            }
+            ignoreBkmControllerApiActionSet.addIgnoreMove(bookmarkId)
+            await chrome.bookmarks.move(bookmarkId, { parentId: oldParentId, index: oldIndex })
+    
             const newBkm = {
               parentId,
               title,
               url,
               index: 0,
             }
-            ignoreBkmControllerApiActionSet.addIgnoreCreate(oldBkm)
             ignoreBkmControllerApiActionSet.addIgnoreCreate(newBkm)
-            await chrome.bookmarks.create(oldBkm)
             await chrome.bookmarks.create(newBkm)
           }
         }
