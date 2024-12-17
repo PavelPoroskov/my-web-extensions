@@ -10,6 +10,7 @@ const logModuleList = [
   // 'debounceQueue',
   // 'extensionSettings',
   // 'folder.api',
+  // 'history.api',
   // 'incoming-message',
   // 'init-extension',
   // 'memo',

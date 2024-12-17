@@ -531,7 +531,7 @@ ${semanticTagsStyle}
 
       switch (type) {
         case 'bookmark': {
-          const { id, fullPathList } = value
+          const { id, fullPathList, source, url } = value
           const [folderName] = fullPathList.slice(-1)
           const restPathList = fullPathList.slice(0, -1)
           const restPath = restPathList.concat('').join('/ ')
@@ -539,8 +539,15 @@ ${semanticTagsStyle}
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
               
-          const textNode = document.createTextNode(folderName);
-          divLabel.appendChild(textNode);
+          if (source === 'substring') {
+            const textNode = document.createTextNode(`url*: ${folderName}`);
+            divLabel.appendChild(textNode);
+            divLabel.setAttribute('data-restpath', `url*: ${url}`);
+          } else {
+            const textNode = document.createTextNode(folderName);
+            divLabel.appendChild(textNode);
+            divLabel.setAttribute('data-restpath', restPath);
+          }
     
           divLabel.addEventListener('click', onBookmarkLabelClick);
           // TODO sanitize: remove ",<,>
@@ -551,7 +558,6 @@ ${semanticTagsStyle}
           // divLabel.setAttribute('data-restpath', sanitizedFullPath);
           //
           // Symbols ( " > < ) don't break html and displayed as text.
-          divLabel.setAttribute('data-restpath', restPath);
           divLabel.setAttribute('data-bkmid', id);
     
           const divDelBtn = document.createElement('div');

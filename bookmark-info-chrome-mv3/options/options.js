@@ -19,7 +19,7 @@ async function delegateSaveOptions(updateObj) {
 
 function formatTargetList (clearUrlTargetList) { 
   return clearUrlTargetList.toSorted().map(
-  ({ hostname, removeAllSearchParamForPath }) => `${hostname}{${removeAllSearchParamForPath.toSorted().join(',')}}`
+    ({ hostname, removeAllSearchParamForPath }) => `${hostname}{${(removeAllSearchParamForPath || []).toSorted().join(',')}}`
   )
 }
 

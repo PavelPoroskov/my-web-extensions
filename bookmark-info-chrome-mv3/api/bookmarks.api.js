@@ -9,12 +9,17 @@ import {
 } from '../constant/index.js'
 import {
   makeLogFunction,
-} from '../api/log.api.js'
-import { normalizeUrl } from './url.api.js'
+} from './log.api.js'
+import { 
+  getRequiredSearchParamsForSearch,
+  getUrlForSearchWithPathname, 
+  isPathnameMatchForSearch,
+  isSearchParamsMatchForSearch,
+} from './url.api.js'
 
 const logBA = makeLogFunction({ module: 'bookmarks.api' })
 
-const getParentIdList = (bookmarkList) => {
+const getParentIdList = (bookmarkList = []) => {
   const parentIdList = bookmarkList
     .map((bookmarkItem) => bookmarkItem.parentId)
     .filter(Boolean)
@@ -78,25 +83,30 @@ async function addBookmarkParentInfo(bookmarkList, bookmarkByIdMap) {
 async function getBookmarkInfo(url) {
   const bkmListForUrl = await chrome.bookmarks.search({ url });
   logBA('getBookmarkInfo () 11 search({ url })', bkmListForUrl.length, bkmListForUrl)
-
-  const normalizedUrl = normalizeUrl(url);
-  const bkmListForSubstring = await chrome.bookmarks.search(normalizedUrl);
-  logBA('getBookmarkInfo () 22 search(normalizedUrl)', bkmListForSubstring.length, bkmListForSubstring)
-
   const bookmarkList = bkmListForUrl.map((item) => ({ ...item, source: 'original url' }))
+
+  // 1 < pathname.length : it is not root path
+  //    for https://www.youtube.com/watch?v=qqqqq other conditions than 1 < pathname.length
+  // urlForSearch !== url : original url has search params, ending /, index[.xxxx]
+  //  original url can be normalized yet, but I want get url with search params, ending /, index[.xxxx]
+
+  const urlForSearch = getUrlForSearchWithPathname(url);
+  const requiredSearchParams = getRequiredSearchParamsForSearch(url)
+  const { pathname: pathnameForSearch } = new URL(urlForSearch);
+
+  const bkmListForSubstring = await chrome.bookmarks.search(urlForSearch);
+  logBA('getBookmarkInfo () 22 search(normalizedUrl)', bkmListForSubstring.length, bkmListForSubstring)  
   const yetSet = new Set(bkmListForUrl.map(({ id }) => id))
+
   bkmListForSubstring.forEach((bkm) => {
-    if (!yetSet.has(bkm.id) && bkm.url && bkm.url.startsWith(normalizedUrl)) {
+    if (!yetSet.has(bkm.id) && bkm.url && isPathnameMatchForSearch({ url: bkm.url, pathnameForSearch })
+      && isSearchParamsMatchForSearch({ url: bkm.url, requiredSearchParams })) {
       bookmarkList.push({
         ...bkm,
         source: 'substring',
       })
     }
-  })
-
-  if (bookmarkList.length == 0) {
-    return [];
-  }
+  })  
 
   await addBookmarkParentInfo(bookmarkList, memo.bkmFolderById)
 
@@ -104,16 +114,14 @@ async function getBookmarkInfo(url) {
   return bookmarkList
     .map((bookmarkItem) => {
       const fullPathList = getFullPath(bookmarkItem.parentId, memo.bkmFolderById)
-      if (bookmarkItem.source === 'substring') {
-        fullPathList[fullPathList.length - 1] = `url* ${fullPathList[fullPathList.length - 1]}`
-      }
-
+      
       return {
         id: bookmarkItem.id,
         fullPathList,
         title: bookmarkItem.title,
         parentId: bookmarkItem.parentId,
-        // source: bookmarkItem.source
+        source: bookmarkItem.source,
+        url: bookmarkItem.url,
       }
     });
 }

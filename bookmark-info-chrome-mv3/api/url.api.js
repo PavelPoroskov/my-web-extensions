@@ -16,7 +16,7 @@ const targetHostSettingsMap = new Map(
 
 const getHostBase = (str) => str.split('.').slice(-2).join('.')
 
-const isPathnameMatch = ({ pathname, patternList }) => {
+const isPathnameMatchForPattern = ({ pathname, patternList }) => {
   logUA('isPathnameMatch () 00', pathname)
   logUA('isPathnameMatch () 00', patternList)
 
@@ -69,42 +69,41 @@ const isPathnameMatch = ({ pathname, patternList }) => {
 
 const isNotEmptyArray = (ar) => Array.isArray(ar) && ar.length > 0
 
-export const normalizeUrl = (url) => {
+export const removeQueryParamsIfTarget = (url) => {
   logUA('getNormalizedUrl () 00', url)
   let cleanUrl = url
-  let isPattern = false
 
   try {
-    const oLink = new URL(url);
-    const { hostname, pathname } = oLink;
+    const oUrl = new URL(url);
+    const { hostname, pathname } = oUrl;
     const targetHostSettings = targetHostSettingsMap.get(getHostBase(hostname))
 
     if (targetHostSettings) {
       const { removeAllSearchParamForPath, removeSearchParamList } = targetHostSettings
-
-      if (isNotEmptyArray(removeAllSearchParamForPath)) {
-        if (isPathnameMatch({ pathname, patternList: removeAllSearchParamForPath })) {
-          // remove all query params
-          isPattern = true
-          oLink.search = ''
-        }
-      } else if (isNotEmptyArray(removeSearchParamList)) {
+ 
+      if (isNotEmptyArray(removeSearchParamList)) {
         // remove query params by list
-        const oSearchParams = oLink.searchParams;
+        const oSearchParams = oUrl.searchParams;
         const isHasThisSearchParams = removeSearchParamList.some((searchParam) => oSearchParams.get(searchParam) !== null)
 
         if (isHasThisSearchParams) {
           removeSearchParamList.forEach((searchParam) => {
             oSearchParams.delete(searchParam)
           })
-          isPattern = true
-          oLink.search = oSearchParams.size > 0
+          oUrl.search = oSearchParams.size > 0
             ? `?${oSearchParams.toString()}`
             : ''
+        }         
+      }
+
+      if (isNotEmptyArray(removeAllSearchParamForPath)) {
+        if (isPathnameMatchForPattern({ pathname, patternList: removeAllSearchParamForPath })) {
+          // remove all search params
+          oUrl.search = ''
         }
       }
 
-      cleanUrl = oLink.toString();  
+      cleanUrl = oUrl.toString();  
     }
   
   /* eslint-disable no-unused-vars */
@@ -114,21 +113,117 @@ export const normalizeUrl = (url) => {
   }
   /* eslint-enable no-unused-vars */
 
-  logUA('getNormalizedUrl () 99 cleanUrl', isPattern, cleanUrl)
+  logUA('getNormalizedUrl () 99 cleanUrl', cleanUrl)
 
   return cleanUrl
 }
 
-export function removeAnchorAndSearchParams(link) {
+function removeAnchorFromPathname(pathname) {
+  const [pathnameNoAnchor] = pathname.split('#')
+
+  return pathnameNoAnchor
+}
+
+export function removeAnchorAndSearchParams(url) {
   try {
-    const oLink = new URL(link);
-    oLink.search = ''
-    const resNoSearchParams = oLink.toString()
-    const [resNoAnchor] = resNoSearchParams.split('#')
+    const oUrl = new URL(url);
+    oUrl.search = ''
+    oUrl.pathname = removeAnchorFromPathname(oUrl.pathname)
   
-    return resNoAnchor;  
+    return oUrl.toString();  
   // eslint-disable-next-line no-unused-vars
   } catch (e) {
-    return link
+    return url
   }
+}
+
+function removeIndexFromPathname(pathname) {
+  let list = pathname.split(/(\/)/)
+  const last = list.at(-1)
+
+  if (last.startsWith('index.') || last === 'index') {
+    list = list.slice(0, -1)
+  }
+
+  return list.join('')
+}
+
+function removeLastSlashFromPathname(pathname) {
+  return pathname.length > 1 && pathname.endsWith('/')
+    ? pathname.slice(0, -1)
+    : pathname
+}
+
+export const getPathnameForSearch = (pathname) => {
+  let lPathname = pathname
+
+  // no anchor
+  lPathname = removeAnchorFromPathname(lPathname)
+  // no index in pathname
+  lPathname = removeIndexFromPathname(lPathname)
+  lPathname = removeLastSlashFromPathname(lPathname)
+
+  return lPathname
+}
+
+export const getUrlForSearchWithPathname = (url) => {
+  try {
+    const oUrl = new URL(url);
+    // no search params, but keep important params (https://www.youtube.com/watch?v=n85w)
+    oUrl.search = ''
+    oUrl.pathname = getPathnameForSearch(oUrl.pathname)
+  
+    return oUrl.toString();  
+  // eslint-disable-next-line no-unused-vars
+  } catch (e) {
+    return url
+  }
+}
+
+export function isPathnameMatchForSearch({ url, pathnameForSearch }) {
+  const oUrl = new URL(url);
+  const normalizedPathname = getPathnameForSearch(oUrl.pathname);
+
+  return normalizedPathname === pathnameForSearch
+}
+
+export const getRequiredSearchParamsForSearch = (url) => {
+  let requiredSearchParams
+
+  try {
+    const oUrl = new URL(url);
+    const { hostname } = oUrl;
+    const targetHostSettings = targetHostSettingsMap.get(getHostBase(hostname))
+
+    if (targetHostSettings) {
+      const { importantSearchParamList } = targetHostSettings
+ 
+      if (isNotEmptyArray(importantSearchParamList)) {
+        const oSearchParams = oUrl.searchParams;
+        requiredSearchParams = {}
+        importantSearchParamList.forEach((searchParam) => {
+          requiredSearchParams[searchParam] = oSearchParams.get(searchParam)
+        })
+      }
+    }
+  
+  /* eslint-disable no-unused-vars */
+  // eslint-disable-next-line no-empty
+  } catch (_e) {
+    
+  }
+
+  return requiredSearchParams
+}
+
+export function isSearchParamsMatchForSearch({ url, requiredSearchParams }) {
+  if (!requiredSearchParams) {
+    return true
+  }
+
+  const oUrl = new URL(url);
+  const oSearchParams = oUrl.searchParams;
+
+  return Object.keys(requiredSearchParams)
+    .every((key) => oSearchParams.get(key) === requiredSearchParams[key])
 }

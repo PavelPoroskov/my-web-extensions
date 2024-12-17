@@ -4,14 +4,24 @@ import {
 import {
   browserStartTime,
 } from './structure/index.js';
-import { normalizeUrl } from './url.api.js'
+import { 
+  getRequiredSearchParamsForSearch,
+  getUrlForSearchWithPathname, 
+  isPathnameMatchForSearch,
+  isSearchParamsMatchForSearch,
+} from './url.api.js'
+import {
+  makeLogFunction,
+} from './log.api.js'
+
+const logHA = makeLogFunction({ module: 'history.api' })
 
 const dayMS = 86400000;
 const hourMS = 3600000;
 const minMS = 60000;
 
 function formatPrevVisit (inMS) {
-  
+
   const dif = Date.now() - inMS;
 
   let result = ''
@@ -106,25 +116,41 @@ async function getVisitListForUrlList(urlList) {
 }
 
 async function getPreviousVisitList(url) {
+  const urlForSearch = getUrlForSearchWithPathname(url);
+  const requiredSearchParams = getRequiredSearchParamsForSearch(url)
+  const { pathname: pathnameForSearch } = new URL(urlForSearch);
+
   const historyItemList = (await chrome.history.search({
-    text: url,
+    text: urlForSearch,
     maxResults: 10,
   }))
-    .filter((i) => i.url && i.url.startsWith(url))
+    .filter(
+      (i) => i.url 
+        && isPathnameMatchForSearch({ url: i.url, pathnameForSearch }) 
+        && isSearchParamsMatchForSearch({ url: i.url, requiredSearchParams })
+    )
 
   return getVisitListForUrlList(historyItemList.map(i => i.url))
 }
 
 export async function getHistoryInfo({ url }) {
-  const normalizedUrl = normalizeUrl(url);
-  const allVisitList = await getPreviousVisitList(normalizedUrl);
-  const visitList = filterTimeList(allVisitList)
+  logHA('getHistoryInfo () 00', url)
+  const allVisitList = await getPreviousVisitList(url);
+  logHA('getHistoryInfo () 11 allVisitList', allVisitList)
+  const groupedList = allVisitList.flatMap((value, index, array) => index === 0 || array[index - 1] - value  > 60000 ? [value]: [])
+  logHA('getHistoryInfo () 22 groupedList', groupedList)
+  const filteredList = filterTimeList(groupedList)
+  logHA('getHistoryInfo () 33 filteredList', filteredList)
+
+  const visitString = filteredList
+    .toReversed()
+    .map((i) => formatPrevVisit(i))
+    .flatMap((value, index, array) => index === 0 || value !== array[index - 1] ? [value]: [])
+    .join(", ")
+  
+  logHA('getHistoryInfo () 44 visitString', visitString)
 
   return {
-    visitString: visitList
-      .toReversed()
-      .map((i) => formatPrevVisit(i))
-      .flatMap((value, index, array) => index === 0 || value !== array[index - 1] ? [value]: [])
-      .join(", ")
+    visitString
   };
 }

@@ -38,19 +38,26 @@ export const clearUrlTargetList = [
     removeSearchParamList: [
       'ref_',
     ],
-    removeAllSearchParamForPath: [
-      '/title/',
-      '/list/',
-      '/imdbpicks/',
-      '/interest/',
-      '/',
+    // removeAllSearchParamForPath: [
+    //   '/title/',
+    //   '/list/',
+    //   '/imdbpicks/',
+    //   '/interest/',
+    //   '/',
+    // ],
+    importantSearchParamList: [
+      'season', // https://www.imdb.com/title/tt8111088/episodes/?season=3&ref_=tt_eps_sn_3
     ],
   },
+  // TODO the same
+  // https://www.linkedin.com/jobs/collections/recommended/?currentJobId=4096094176
+  // https://www.linkedin.com/jobs/view/4096094176/?alternateChannel=search&refId=WYo23okoaVDvmJkLoaclcg%3D%3D&trackingId=bTIytUCJN%2BDpKjaalPv4gg%3D%3D
+  // https://www.linkedin.com/jobs/search/?currentJobId=4096094176&geoId=106686604&origin=JOBS_HOME_LOCATION_AUTOCOMPLETE&refresh=true
   {
     hostname: 'linkedin.com',  
     removeAllSearchParamForPath: [
-      '/jobs/view/',
-      '/posts/'
+      '/jobs/view/:id/',
+      '/posts/:id/'
     ] 
   },
   {
@@ -59,4 +66,35 @@ export const clearUrlTargetList = [
       '/course/:id/',
     ] 
   },
+  {
+    hostname: 'youtube.com',  
+    hostnameAliasList: ['youtu.be'],  
+    importantSearchParamList: [
+      'v', // https://www.youtube.com/watch?v=qqqqq
+    ],
+  },
+  // TODO domain has 3 parts
+  {
+    hostname: 'www.google.com',  
+    importantSearchParamList: [
+      'q', // https://www.google.com/search?q=react-native
+    ],
+  },  
+  {
+    hostname: 'forcoder.net',  
+    importantSearchParamList: [
+      's', // https://forcoder.net/?s=CQRS
+    ],
+  },
 ]
+
+// all articles of author
+// https://dev.to/codewithsadee
+//  https://dev.to/:author
+//
+// article
+// https://dev.to/codewithsadee/build-deploy-a-stunning-saas-landing-page-with-react-tailwind-51p0
+//  https://dev.to/:author/:slug
+//
+// https://www.youtube.com/watch?v=qqqqq
+//  // https://www.youtube.com/watch?v=:slug
