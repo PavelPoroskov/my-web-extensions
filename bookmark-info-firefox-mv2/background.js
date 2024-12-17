@@ -75,6 +75,7 @@ const KEYBOARD_CMD_ID = {
   // 'debounceQueue',
   // 'extensionSettings',
   // 'folder.api',
+  // 'history.api',
   // 'incoming-message',
   // 'init-extension',
   // 'memo',
@@ -1093,19 +1094,26 @@ const tagList = new TagList()
     removeSearchParamList: [
       'ref_',
     ],
-    removeAllSearchParamForPath: [
-      '/title/',
-      '/list/',
-      '/imdbpicks/',
-      '/interest/',
-      '/',
+    // removeAllSearchParamForPath: [
+    //   '/title/',
+    //   '/list/',
+    //   '/imdbpicks/',
+    //   '/interest/',
+    //   '/',
+    // ],
+    importantSearchParamList: [
+      'season', // https://www.imdb.com/title/tt8111088/episodes/?season=3&ref_=tt_eps_sn_3
     ],
   },
+  // TODO the same
+  // https://www.linkedin.com/jobs/collections/recommended/?currentJobId=4096094176
+  // https://www.linkedin.com/jobs/view/4096094176/?alternateChannel=search&refId=WYo23okoaVDvmJkLoaclcg%3D%3D&trackingId=bTIytUCJN%2BDpKjaalPv4gg%3D%3D
+  // https://www.linkedin.com/jobs/search/?currentJobId=4096094176&geoId=106686604&origin=JOBS_HOME_LOCATION_AUTOCOMPLETE&refresh=true
   {
     hostname: 'linkedin.com',  
     removeAllSearchParamForPath: [
-      '/jobs/view/',
-      '/posts/'
+      '/jobs/view/:id/',
+      '/posts/:id/'
     ] 
   },
   {
@@ -1114,7 +1122,38 @@ const tagList = new TagList()
       '/course/:id/',
     ] 
   },
+  {
+    hostname: 'youtube.com',  
+    hostnameAliasList: ['youtu.be'],  
+    importantSearchParamList: [
+      'v', // https://www.youtube.com/watch?v=qqqqq
+    ],
+  },
+  // TODO domain has 3 parts
+  {
+    hostname: 'www.google.com',  
+    importantSearchParamList: [
+      'q', // https://www.google.com/search?q=react-native
+    ],
+  },  
+  {
+    hostname: 'forcoder.net',  
+    importantSearchParamList: [
+      's', // https://forcoder.net/?s=CQRS
+    ],
+  },
 ]
+
+// all articles of author
+// https://dev.to/codewithsadee
+//  https://dev.to/:author
+//
+// article
+// https://dev.to/codewithsadee/build-deploy-a-stunning-saas-landing-page-with-react-tailwind-51p0
+//  https://dev.to/:author/:slug
+//
+// https://www.youtube.com/watch?v=qqqqq
+//  // https://www.youtube.com/watch?v=:slug
 const logUA = makeLogFunction({ module: 'url.api' })
 
 const targetHostSettingsMap = new Map(
@@ -1126,7 +1165,7 @@ const targetHostSettingsMap = new Map(
 
 const getHostBase = (str) => str.split('.').slice(-2).join('.')
 
-const isPathnameMatch = ({ pathname, patternList }) => {
+const isPathnameMatchForPattern = ({ pathname, patternList }) => {
   logUA('isPathnameMatch () 00', pathname)
   logUA('isPathnameMatch () 00', patternList)
 
@@ -1179,42 +1218,41 @@ const isPathnameMatch = ({ pathname, patternList }) => {
 
 const isNotEmptyArray = (ar) => Array.isArray(ar) && ar.length > 0
 
-const normalizeUrl = (url) => {
+const removeQueryParamsIfTarget = (url) => {
   logUA('getNormalizedUrl () 00', url)
   let cleanUrl = url
-  let isPattern = false
 
   try {
-    const oLink = new URL(url);
-    const { hostname, pathname } = oLink;
+    const oUrl = new URL(url);
+    const { hostname, pathname } = oUrl;
     const targetHostSettings = targetHostSettingsMap.get(getHostBase(hostname))
 
     if (targetHostSettings) {
       const { removeAllSearchParamForPath, removeSearchParamList } = targetHostSettings
-
-      if (isNotEmptyArray(removeAllSearchParamForPath)) {
-        if (isPathnameMatch({ pathname, patternList: removeAllSearchParamForPath })) {
-          // remove all query params
-          isPattern = true
-          oLink.search = ''
-        }
-      } else if (isNotEmptyArray(removeSearchParamList)) {
+ 
+      if (isNotEmptyArray(removeSearchParamList)) {
         // remove query params by list
-        const oSearchParams = oLink.searchParams;
+        const oSearchParams = oUrl.searchParams;
         const isHasThisSearchParams = removeSearchParamList.some((searchParam) => oSearchParams.get(searchParam) !== null)
 
         if (isHasThisSearchParams) {
           removeSearchParamList.forEach((searchParam) => {
             oSearchParams.delete(searchParam)
           })
-          isPattern = true
-          oLink.search = oSearchParams.size > 0
+          oUrl.search = oSearchParams.size > 0
             ? `?${oSearchParams.toString()}`
             : ''
+        }         
+      }
+
+      if (isNotEmptyArray(removeAllSearchParamForPath)) {
+        if (isPathnameMatchForPattern({ pathname, patternList: removeAllSearchParamForPath })) {
+          // remove all search params
+          oUrl.search = ''
         }
       }
 
-      cleanUrl = oLink.toString();  
+      cleanUrl = oUrl.toString();  
     }
   
   /* eslint-disable no-unused-vars */
@@ -1224,27 +1262,123 @@ const normalizeUrl = (url) => {
   }
   /* eslint-enable no-unused-vars */
 
-  logUA('getNormalizedUrl () 99 cleanUrl', isPattern, cleanUrl)
+  logUA('getNormalizedUrl () 99 cleanUrl', cleanUrl)
 
   return cleanUrl
 }
 
-function removeAnchorAndSearchParams(link) {
+function removeAnchorFromPathname(pathname) {
+  const [pathnameNoAnchor] = pathname.split('#')
+
+  return pathnameNoAnchor
+}
+
+function removeAnchorAndSearchParams(url) {
   try {
-    const oLink = new URL(link);
-    oLink.search = ''
-    const resNoSearchParams = oLink.toString()
-    const [resNoAnchor] = resNoSearchParams.split('#')
+    const oUrl = new URL(url);
+    oUrl.search = ''
+    oUrl.pathname = removeAnchorFromPathname(oUrl.pathname)
   
-    return resNoAnchor;  
+    return oUrl.toString();  
   // eslint-disable-next-line no-unused-vars
   } catch (e) {
-    return link
+    return url
   }
+}
+
+function removeIndexFromPathname(pathname) {
+  let list = pathname.split(/(\/)/)
+  const last = list.at(-1)
+
+  if (last.startsWith('index.') || last === 'index') {
+    list = list.slice(0, -1)
+  }
+
+  return list.join('')
+}
+
+function removeLastSlashFromPathname(pathname) {
+  return pathname.length > 1 && pathname.endsWith('/')
+    ? pathname.slice(0, -1)
+    : pathname
+}
+
+const getPathnameForSearch = (pathname) => {
+  let lPathname = pathname
+
+  // no anchor
+  lPathname = removeAnchorFromPathname(lPathname)
+  // no index in pathname
+  lPathname = removeIndexFromPathname(lPathname)
+  lPathname = removeLastSlashFromPathname(lPathname)
+
+  return lPathname
+}
+
+const getUrlForSearchWithPathname = (url) => {
+  try {
+    const oUrl = new URL(url);
+    // no search params, but keep important params (https://www.youtube.com/watch?v=n85w)
+    oUrl.search = ''
+    oUrl.pathname = getPathnameForSearch(oUrl.pathname)
+  
+    return oUrl.toString();  
+  // eslint-disable-next-line no-unused-vars
+  } catch (e) {
+    return url
+  }
+}
+
+function isPathnameMatchForSearch({ url, pathnameForSearch }) {
+  const oUrl = new URL(url);
+  const normalizedPathname = getPathnameForSearch(oUrl.pathname);
+
+  return normalizedPathname === pathnameForSearch
+}
+
+const getRequiredSearchParamsForSearch = (url) => {
+  let requiredSearchParams
+
+  try {
+    const oUrl = new URL(url);
+    const { hostname } = oUrl;
+    const targetHostSettings = targetHostSettingsMap.get(getHostBase(hostname))
+
+    if (targetHostSettings) {
+      const { importantSearchParamList } = targetHostSettings
+ 
+      if (isNotEmptyArray(importantSearchParamList)) {
+        const oSearchParams = oUrl.searchParams;
+        requiredSearchParams = {}
+        importantSearchParamList.forEach((searchParam) => {
+          requiredSearchParams[searchParam] = oSearchParams.get(searchParam)
+        })
+      }
+    }
+  
+  /* eslint-disable no-unused-vars */
+  // eslint-disable-next-line no-empty
+  } catch (_e) {
+    
+  }
+
+  return requiredSearchParams
+}
+
+function isSearchParamsMatchForSearch({ url, requiredSearchParams }) {
+  if (!requiredSearchParams) {
+    return true
+  }
+
+  const oUrl = new URL(url);
+  const oSearchParams = oUrl.searchParams;
+
+  return Object.keys(requiredSearchParams)
+    .every((key) => oSearchParams.get(key) === requiredSearchParams[key])
 }
 const logBA = makeLogFunction({ module: 'bookmarks.api' })
 
-const getParentIdList = (bookmarkList) => {
+const getParentIdList = (bookmarkList = []) => {
   const parentIdList = bookmarkList
     .map((bookmarkItem) => bookmarkItem.parentId)
     .filter(Boolean)
@@ -1308,25 +1442,30 @@ async function addBookmarkParentInfo(bookmarkList, bookmarkByIdMap) {
 async function getBookmarkInfo(url) {
   const bkmListForUrl = await browser.bookmarks.search({ url });
   logBA('getBookmarkInfo () 11 search({ url })', bkmListForUrl.length, bkmListForUrl)
-
-  const normalizedUrl = normalizeUrl(url);
-  const bkmListForSubstring = await browser.bookmarks.search(normalizedUrl);
-  logBA('getBookmarkInfo () 22 search(normalizedUrl)', bkmListForSubstring.length, bkmListForSubstring)
-
   const bookmarkList = bkmListForUrl.map((item) => ({ ...item, source: 'original url' }))
+
+  // 1 < pathname.length : it is not root path
+  //    for https://www.youtube.com/watch?v=qqqqq other conditions than 1 < pathname.length
+  // urlForSearch !== url : original url has search params, ending /, index[.xxxx]
+  //  original url can be normalized yet, but I want get url with search params, ending /, index[.xxxx]
+
+  const urlForSearch = getUrlForSearchWithPathname(url);
+  const requiredSearchParams = getRequiredSearchParamsForSearch(url)
+  const { pathname: pathnameForSearch } = new URL(urlForSearch);
+
+  const bkmListForSubstring = await browser.bookmarks.search(urlForSearch);
+  logBA('getBookmarkInfo () 22 search(normalizedUrl)', bkmListForSubstring.length, bkmListForSubstring)  
   const yetSet = new Set(bkmListForUrl.map(({ id }) => id))
+
   bkmListForSubstring.forEach((bkm) => {
-    if (!yetSet.has(bkm.id) && bkm.url && bkm.url.startsWith(normalizedUrl)) {
+    if (!yetSet.has(bkm.id) && bkm.url && isPathnameMatchForSearch({ url: bkm.url, pathnameForSearch })
+      && isSearchParamsMatchForSearch({ url: bkm.url, requiredSearchParams })) {
       bookmarkList.push({
         ...bkm,
         source: 'substring',
       })
     }
-  })
-
-  if (bookmarkList.length == 0) {
-    return [];
-  }
+  })  
 
   await addBookmarkParentInfo(bookmarkList, memo.bkmFolderById)
 
@@ -1334,16 +1473,14 @@ async function getBookmarkInfo(url) {
   return bookmarkList
     .map((bookmarkItem) => {
       const fullPathList = getFullPath(bookmarkItem.parentId, memo.bkmFolderById)
-      if (bookmarkItem.source === 'substring') {
-        fullPathList[fullPathList.length - 1] = `url* ${fullPathList[fullPathList.length - 1]}`
-      }
-
+      
       return {
         id: bookmarkItem.id,
         fullPathList,
         title: bookmarkItem.title,
         parentId: bookmarkItem.parentId,
-        // source: bookmarkItem.source
+        source: bookmarkItem.source,
+        url: bookmarkItem.url,
       }
     });
 }
@@ -1376,12 +1513,14 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
     source,
   };
 }
-const dayMS = 86400000;
+const logHA = makeLogFunction({ module: 'history.api' })
+
+const dayMS = 86400000;
 const hourMS = 3600000;
 const minMS = 60000;
 
 function formatPrevVisit (inMS) {
-  
+
   const dif = Date.now() - inMS;
 
   let result = ''
@@ -1476,26 +1615,42 @@ async function getVisitListForUrlList(urlList) {
 }
 
 async function getPreviousVisitList(url) {
+  const urlForSearch = getUrlForSearchWithPathname(url);
+  const requiredSearchParams = getRequiredSearchParamsForSearch(url)
+  const { pathname: pathnameForSearch } = new URL(urlForSearch);
+
   const historyItemList = (await browser.history.search({
-    text: url,
+    text: urlForSearch,
     maxResults: 10,
   }))
-    .filter((i) => i.url && i.url.startsWith(url))
+    .filter(
+      (i) => i.url 
+        && isPathnameMatchForSearch({ url: i.url, pathnameForSearch }) 
+        && isSearchParamsMatchForSearch({ url: i.url, requiredSearchParams })
+    )
 
   return getVisitListForUrlList(historyItemList.map(i => i.url))
 }
 
 async function getHistoryInfo({ url }) {
-  const normalizedUrl = normalizeUrl(url);
-  const allVisitList = await getPreviousVisitList(normalizedUrl);
-  const visitList = filterTimeList(allVisitList)
+  logHA('getHistoryInfo () 00', url)
+  const allVisitList = await getPreviousVisitList(url);
+  logHA('getHistoryInfo () 11 allVisitList', allVisitList)
+  const groupedList = allVisitList.flatMap((value, index, array) => index === 0 || array[index - 1] - value  > 60000 ? [value]: [])
+  logHA('getHistoryInfo () 22 groupedList', groupedList)
+  const filteredList = filterTimeList(groupedList)
+  logHA('getHistoryInfo () 33 filteredList', filteredList)
+
+  const visitString = filteredList
+    .toReversed()
+    .map((i) => formatPrevVisit(i))
+    .flatMap((value, index, array) => index === 0 || value !== array[index - 1] ? [value]: [])
+    .join(", ")
+  
+  logHA('getHistoryInfo () 44 visitString', visitString)
 
   return {
-    visitString: visitList
-      .toReversed()
-      .map((i) => formatPrevVisit(i))
-      .flatMap((value, index, array) => index === 0 || value !== array[index - 1] ? [value]: [])
-      .join(", ")
+    visitString
   };
 }
 const logIX = makeLogFunction({ module: 'init-extension' })
@@ -2777,10 +2932,10 @@ async function clearUrlOnPageOpen({ tabId, url }) {
   const settings = await extensionSettings.get()
 
   if (settings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN]) {
-    const normalizedUrl = normalizeUrl(url);
+    const cleanUrl = removeQueryParamsIfTarget(url);
     
-    if (url !== normalizedUrl) {
-      await changeUrlInTab({ tabId, url: normalizedUrl })
+    if (url !== cleanUrl) {
+      await changeUrlInTab({ tabId, url: cleanUrl })
     }
   }  
 }
