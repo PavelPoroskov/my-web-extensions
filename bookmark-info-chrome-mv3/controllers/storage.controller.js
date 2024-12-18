@@ -1,6 +1,6 @@
 import {
   USER_OPTION_STORAGE_KEY_LIST,
-} from '../constant/index.js'
+} from '../api/storage.api.config.js'
 import {
   extensionSettings,
 } from '../api/structure/index.js'

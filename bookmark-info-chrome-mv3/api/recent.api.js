@@ -40,10 +40,12 @@ async function getRecentList(nItems) {
     .filter(([, { isSourceFolder }]) => !isSourceFolder)
     .map(([id]) => id)
 
-  const unknownFolderList = await chrome.bookmarks.get(unknownIdList)
-  unknownFolderList.forEach(({ id, title }) => {
-    folderByIdMap[id].title = title
-  })
+  if (unknownIdList.length > 0) {
+    const unknownFolderList = await chrome.bookmarks.get(unknownIdList)
+    unknownFolderList.forEach(({ id, title }) => {
+      folderByIdMap[id].title = title
+    })
+  }
 
   return Object.entries(folderByIdMap)
     .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
@@ -54,7 +56,7 @@ async function getRecentList(nItems) {
 export async function getRecentTagObj(nItems) {
   let list = await getRecentList(nItems * 4)
 
-  if (list.length < nItems) {
+  if (0 < list.length && list.length < nItems) {
     list = await getRecentList(nItems * 10)
   }
 

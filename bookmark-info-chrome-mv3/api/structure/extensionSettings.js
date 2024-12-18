@@ -6,7 +6,7 @@ import {
 } from '../storage.api.js'
 import {
   USER_OPTION_KEY_LIST,
-} from '../../constant/index.js';
+} from '../storage.api.config.js';
 
 const logES = makeLogFunction({ module: 'extensionSettings' })
 
