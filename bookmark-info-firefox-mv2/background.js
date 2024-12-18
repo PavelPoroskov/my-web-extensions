@@ -707,10 +707,12 @@ async function getRecentList(nItems) {
     .filter(([, { isSourceFolder }]) => !isSourceFolder)
     .map(([id]) => id)
 
-  const unknownFolderList = await browser.bookmarks.get(unknownIdList)
-  unknownFolderList.forEach(({ id, title }) => {
-    folderByIdMap[id].title = title
-  })
+  if (unknownIdList.length > 0) {
+    const unknownFolderList = await browser.bookmarks.get(unknownIdList)
+    unknownFolderList.forEach(({ id, title }) => {
+      folderByIdMap[id].title = title
+    })
+  }
 
   return Object.entries(folderByIdMap)
     .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
@@ -721,7 +723,7 @@ async function getRecentList(nItems) {
 async function getRecentTagObj(nItems) {
   let list = await getRecentList(nItems * 4)
 
-  if (list.length < nItems) {
+  if (0 < list.length && list.length < nItems) {
     list = await getRecentList(nItems * 10)
   }
 
@@ -1255,12 +1257,12 @@ const removeQueryParamsIfTarget = (url) => {
       cleanUrl = oUrl.toString();  
     }
   
-  /* eslint-disable no-unused-vars */
+  // eslint-disable-next-line no-unused-vars
+  } catch (_e) 
   // eslint-disable-next-line no-empty
-  } catch (_e) {
+  {
     
   }
-  /* eslint-enable no-unused-vars */
 
   logUA('getNormalizedUrl () 99 cleanUrl', cleanUrl)
 
@@ -1356,9 +1358,10 @@ const getRequiredSearchParamsForSearch = (url) => {
       }
     }
   
-  /* eslint-disable no-unused-vars */
+  // eslint-disable-next-line no-unused-vars
+  } catch (_e) 
   // eslint-disable-next-line no-empty
-  } catch (_e) {
+  {
     
   }
 
@@ -2898,6 +2901,10 @@ async function addBookmarkFromSelection({ url, title, selection }) {
   await addBookmark({ url, title, parentId: folder.id })
 }
 async function addRecentTagFromView(bookmarkId) {
+  if (!bookmarkId) {
+    return
+  }
+  
   const [bkmNode] = await browser.bookmarks.get(bookmarkId)
   await tagList.addRecentTagFromBkm(bkmNode)
 }
