@@ -106,12 +106,12 @@ export const removeQueryParamsIfTarget = (url) => {
       cleanUrl = oUrl.toString();  
     }
   
-  /* eslint-disable no-unused-vars */
+  // eslint-disable-next-line no-unused-vars
+  } catch (_e) 
   // eslint-disable-next-line no-empty
-  } catch (_e) {
+  {
     
   }
-  /* eslint-enable no-unused-vars */
 
   logUA('getNormalizedUrl () 99 cleanUrl', cleanUrl)
 
@@ -207,9 +207,10 @@ export const getRequiredSearchParamsForSearch = (url) => {
       }
     }
   
-  /* eslint-disable no-unused-vars */
+  // eslint-disable-next-line no-unused-vars
+  } catch (_e) 
   // eslint-disable-next-line no-empty
-  } catch (_e) {
+  {
     
   }
 
