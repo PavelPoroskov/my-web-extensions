@@ -1,35 +1,29 @@
 import {
-  clearUrlTargetList 
+  USER_OPTION 
+} from './storage.api.config.js'
+import {
+  getHostSettings 
 } from './url.api.config.js'
 import {
   makeLogFunction,
-} from '../api/log.api.js'
+} from './log.api.js'
+import {
+  isNotEmptyArray,
+} from './common.api.js'
+import {
+  extensionSettings,
+} from './structure/index.js'
 
 const logUA = makeLogFunction({ module: 'url.api' })
-
-const targetHostSettingsMap = new Map(
-  clearUrlTargetList.map((item) => [
-    item.hostname, 
-    item,
-  ])
-)
-
-const getHostBase = (str) => str.split('.').slice(-2).join('.')
 
 const isPathnameMatchForPattern = ({ pathname, patternList }) => {
   logUA('isPathnameMatch () 00', pathname)
   logUA('isPathnameMatch () 00', patternList)
 
   const pathToList = (pathname) => {
-    let list = pathname.split(/(\/)/)
+    let list = pathname.split(/(\/)/).filter(Boolean)
   
-    if (list.at(0) === '') {
-      list = list.slice(1)
-    }  
-    if (list.at(-1) === '') {
-      list = list.slice(0, -1)
-    }  
-    if (list.at(-1) === '/') {
+    if (1 < list.length && list.at(-1) === '/') {
       list = list.slice(0, -1)
     }  
   
@@ -67,23 +61,24 @@ const isPathnameMatchForPattern = ({ pathname, patternList }) => {
   return isMath
 }
 
-const isNotEmptyArray = (ar) => Array.isArray(ar) && ar.length > 0
-
 export const removeQueryParamsIfTarget = (url) => {
-  logUA('getNormalizedUrl () 00', url)
+  logUA('removeQueryParamsIfTarget () 00', url)
   let cleanUrl = url
 
   try {
-    const oUrl = new URL(url);
-    const { hostname, pathname } = oUrl;
-    const targetHostSettings = targetHostSettingsMap.get(getHostBase(hostname))
+    const targetHostSettings = getHostSettings(url)
+    logUA('removeQueryParamsIfTarget () 11 targetHostSettings', targetHostSettings)
 
     if (targetHostSettings) {
       const { removeAllSearchParamForPath, removeSearchParamList } = targetHostSettings
+      logUA('removeQueryParamsIfTarget () 22 removeSearchParamList', removeSearchParamList)
  
+      const oUrl = new URL(url);
+      const { pathname, searchParams: oSearchParams } = oUrl;
+
       if (isNotEmptyArray(removeSearchParamList)) {
+        logUA('removeQueryParamsIfTarget () 33 isNotEmptyArray(removeSearchParamList)')
         // remove query params by list
-        const oSearchParams = oUrl.searchParams;
         const isHasThisSearchParams = removeSearchParamList.some((searchParam) => oSearchParams.get(searchParam) !== null)
 
         if (isHasThisSearchParams) {
@@ -113,7 +108,7 @@ export const removeQueryParamsIfTarget = (url) => {
     
   }
 
-  logUA('getNormalizedUrl () 99 cleanUrl', cleanUrl)
+  logUA('removeQueryParamsIfTarget () 99 cleanUrl', cleanUrl)
 
   return cleanUrl
 }
@@ -155,69 +150,25 @@ function removeLastSlashFromPathname(pathname) {
 }
 
 export const getPathnameForSearch = (pathname) => {
-  let lPathname = pathname
+  let mPathname = pathname
 
   // no anchor
-  lPathname = removeAnchorFromPathname(lPathname)
+  mPathname = removeAnchorFromPathname(mPathname)
   // no index in pathname
-  lPathname = removeIndexFromPathname(lPathname)
-  lPathname = removeLastSlashFromPathname(lPathname)
+  mPathname = removeIndexFromPathname(mPathname)
+  mPathname = removeLastSlashFromPathname(mPathname)
 
-  return lPathname
+  return mPathname
 }
 
-export const getUrlForSearchWithPathname = (url) => {
-  try {
-    const oUrl = new URL(url);
-    // no search params, but keep important params (https://www.youtube.com/watch?v=n85w)
-    oUrl.search = ''
-    oUrl.pathname = getPathnameForSearch(oUrl.pathname)
-  
-    return oUrl.toString();  
-  // eslint-disable-next-line no-unused-vars
-  } catch (e) {
-    return url
-  }
-}
-
-export function isPathnameMatchForSearch({ url, pathnameForSearch }) {
+function isPathnameMatchForSearch({ url, pathnameForSearch }) {
   const oUrl = new URL(url);
   const normalizedPathname = getPathnameForSearch(oUrl.pathname);
 
   return normalizedPathname === pathnameForSearch
 }
 
-export const getRequiredSearchParamsForSearch = (url) => {
-  let requiredSearchParams
-
-  try {
-    const oUrl = new URL(url);
-    const { hostname } = oUrl;
-    const targetHostSettings = targetHostSettingsMap.get(getHostBase(hostname))
-
-    if (targetHostSettings) {
-      const { importantSearchParamList } = targetHostSettings
- 
-      if (isNotEmptyArray(importantSearchParamList)) {
-        const oSearchParams = oUrl.searchParams;
-        requiredSearchParams = {}
-        importantSearchParamList.forEach((searchParam) => {
-          requiredSearchParams[searchParam] = oSearchParams.get(searchParam)
-        })
-      }
-    }
-  
-  // eslint-disable-next-line no-unused-vars
-  } catch (_e) 
-  // eslint-disable-next-line no-empty
-  {
-    
-  }
-
-  return requiredSearchParams
-}
-
-export function isSearchParamsMatchForSearch({ url, requiredSearchParams }) {
+function isSearchParamsMatchForSearch({ url, requiredSearchParams }) {
   if (!requiredSearchParams) {
     return true
   }
@@ -227,4 +178,57 @@ export function isSearchParamsMatchForSearch({ url, requiredSearchParams }) {
 
   return Object.keys(requiredSearchParams)
     .every((key) => oSearchParams.get(key) === requiredSearchParams[key])
+}
+
+export async function startPartialUrlSearch(url) {
+  const settings = await extensionSettings.get()
+  if (!settings[USER_OPTION.USE_PARTIAL_URL_SEARCH]) {
+    return {
+      isSearchAvailable: false,
+    }
+  }
+
+  logUA('startPartialUrlSearch () 00', url)
+
+  try {
+    const targetHostSettings = getHostSettings(url)
+    logUA('startPartialUrlSearch targetHostSettings', !!targetHostSettings, targetHostSettings)
+  
+    if (!targetHostSettings) {
+      return {
+        isSearchAvailable: false,
+      }
+    }
+  
+    const oUrl = new URL(url);
+    oUrl.search = ''
+    oUrl.pathname = getPathnameForSearch(oUrl.pathname)
+    const urlForSearch = oUrl.toString();  
+
+    let requiredSearchParams
+    const { importantSearchParamList } = targetHostSettings
+
+    if (isNotEmptyArray(importantSearchParamList)) {
+      const oSearchParams = oUrl.searchParams;
+      requiredSearchParams = {}
+      importantSearchParamList.forEach((searchParam) => {
+        requiredSearchParams[searchParam] = oSearchParams.get(searchParam)
+      })
+    }
+
+    const { pathname: pathnameForSearch } = new URL(urlForSearch);
+
+    return {
+      isSearchAvailable: true,
+      urlForSearch,
+      isUrlMatchToPartialUrlSearch: (testUrl) => isPathnameMatchForSearch({ url: testUrl, pathnameForSearch })
+        && isSearchParamsMatchForSearch({ url: testUrl, requiredSearchParams })
+    }
+  // eslint-disable-next-line no-unused-vars
+  } catch (_e) 
+  {
+    return {
+      isSearchAvailable: false,
+    }
+  }  
 }

@@ -1,4 +1,13 @@
-export const clearUrlTargetList = [
+import {
+  makeLogFunction,
+} from './log.api.js'
+import {
+  isNotEmptyArray,
+} from './common.api.js'
+
+const logUAC = makeLogFunction({ module: 'url.api.config' })
+
+const HOST_URL_SETTINGS = [
   // TODO-NEXT if we clean url on open then we loose check-in, check-out dates
   //    need search bookmark for clean url
   //    strategy01: clean url on open
@@ -18,6 +27,12 @@ export const clearUrlTargetList = [
   //   ] 
   // },
   {
+    hostname: 'forcoder.net',  
+    searchParamList: [
+      's', // https://forcoder.net/?s=CQRS
+    ],
+  },
+  {
     hostname: 'frontendmasters.com',
     removeAllSearchParamForPath: [
       '/courses/:id/',
@@ -25,19 +40,18 @@ export const clearUrlTargetList = [
   },
   {
     hostname: 'hh.ru',  
-    removeSearchParamList: [
-      'hhtmFrom',
-      'hhtmFromLabel',
-    ],
     removeAllSearchParamForPath: [
       '/vacancy/:id',
+    ],
+    searchParamList: [
+      ['hhtmFrom'], 
+      ['hhtmFromLabel'],
+      'text',
+      'professional_role',
     ],
   },
   {
     hostname: 'imdb.com',  
-    removeSearchParamList: [
-      'ref_',
-    ],
     // removeAllSearchParamForPath: [
     //   '/title/',
     //   '/list/',
@@ -45,7 +59,9 @@ export const clearUrlTargetList = [
     //   '/interest/',
     //   '/',
     // ],
-    importantSearchParamList: [
+    //
+    searchParamList: [
+      ['ref_'],
       'season', // https://www.imdb.com/title/tt8111088/episodes/?season=3&ref_=tt_eps_sn_3
     ],
   },
@@ -61,29 +77,40 @@ export const clearUrlTargetList = [
     ] 
   },
   {
+    hostname: 'opennet.ru',  
+    searchParamList: [
+      'num',
+    ],
+  },  
+  {
+    hostname: 'thepiratebay.org',  
+    searchParamList: [
+      'q',
+    ],
+  },  
+  {
+    hostname: 'torrentgalaxy.to',  
+    searchParamList: [
+      'cat',
+    ],
+  },
+  {
     hostname: 'udemy.com',  
     removeAllSearchParamForPath: [
       '/course/:id/',
     ] 
   },
   {
-    hostname: 'youtube.com',  
-    hostnameAliasList: ['youtu.be'],  
-    importantSearchParamList: [
-      'v', // https://www.youtube.com/watch?v=qqqqq
-    ],
-  },
-  // TODO domain has 3 parts
-  {
     hostname: 'www.google.com',  
-    importantSearchParamList: [
+    searchParamList: [
       'q', // https://www.google.com/search?q=react-native
     ],
   },  
   {
-    hostname: 'forcoder.net',  
-    importantSearchParamList: [
-      's', // https://forcoder.net/?s=CQRS
+    hostname: 'youtube.com',  
+    hostnameAliasList: ['youtu.be'],  
+    searchParamList: [
+      'v', // https://www.youtube.com/watch?v=qqqqq
     ],
   },
 ]
@@ -98,3 +125,60 @@ export const clearUrlTargetList = [
 //
 // https://www.youtube.com/watch?v=qqqqq
 //  // https://www.youtube.com/watch?v=:slug
+
+logUAC('HOST_URL_SETTINGS', HOST_URL_SETTINGS.length, HOST_URL_SETTINGS)
+const HOST_URL_SETTINGS_LIST = HOST_URL_SETTINGS.map((item) => {
+  const searchParamList = item.searchParamList || []
+  const importantSearchParamList = searchParamList
+    .filter((searchParmName) => typeof searchParmName == 'string')
+    .filter(Boolean)
+
+  const removeSearchParamList = searchParamList
+    .filter((searchParm) => isNotEmptyArray(searchParm))
+    .map((searchParm) => searchParm[0])
+    .filter(Boolean)
+
+  return {
+    ...item,
+    removeSearchParamList,
+    importantSearchParamList,
+  }
+})
+
+logUAC('HOST_URL_SETTINGS_LIST', HOST_URL_SETTINGS_LIST.length, HOST_URL_SETTINGS_LIST)
+const HOST_URL_SETTINGS_MAP = new Map(
+  HOST_URL_SETTINGS_LIST.map((item) => [item.hostname, item]),
+)
+  
+export const getHostSettings = (url) => {
+  logUAC('getHostSettings 00', url)
+  const oUrl = new URL(url);
+  const { hostname } = oUrl;
+  logUAC('getHostSettings 11', hostname)
+  logUAC('HOST_URL_SETTINGS_MAP', HOST_URL_SETTINGS_MAP)
+
+  let targetHostSettings = HOST_URL_SETTINGS_MAP.get(hostname)
+  logUAC('targetHostSettings 22', targetHostSettings)
+
+  if (!targetHostSettings) {
+    const [firstPart, ...restPart] = hostname.split('.')
+    logUAC('targetHostSettings 33', firstPart, restPart.join('.'))
+
+    if (firstPart == 'www') {
+      targetHostSettings = HOST_URL_SETTINGS_MAP.get(restPart.join('.'))
+      logUAC('targetHostSettings 44', targetHostSettings)
+    } else {
+      targetHostSettings = HOST_URL_SETTINGS_MAP.get(`www.${hostname}`)
+      logUAC('targetHostSettings 55', targetHostSettings)
+    }
+  }
+
+  return targetHostSettings
+}
+
+export const HOST_LIST_FOR_PAGE_OPTIONS = HOST_URL_SETTINGS_LIST
+  .toSorted()
+  .filter(({ removeSearchParamList, removeAllSearchParamForPath }) => isNotEmptyArray(removeSearchParamList) || isNotEmptyArray(removeAllSearchParamForPath))
+  .map(
+    ({ hostname, removeAllSearchParamForPath }) => `${hostname}{${(removeAllSearchParamForPath || []).toSorted().join(',')}}`
+  )

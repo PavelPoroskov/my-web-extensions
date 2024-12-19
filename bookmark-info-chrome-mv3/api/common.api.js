@@ -24,3 +24,5 @@ export function debounce(func, timeout = 300){
     );
   };
 }
+
+export const isNotEmptyArray = (ar) => Array.isArray(ar) && ar.length > 0

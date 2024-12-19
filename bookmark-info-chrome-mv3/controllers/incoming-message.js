@@ -23,7 +23,7 @@ import {
   USER_OPTION,
 } from '../api/storage.api.config.js'
 import {
-  clearUrlTargetList,
+  HOST_LIST_FOR_PAGE_OPTIONS,
 } from '../api/url.api.config.js'
 import {
   makeLogFunction,
@@ -125,7 +125,7 @@ export async function onIncomingMessage (message, sender) {
       const settings = await extensionSettings.get();
       chrome.runtime.sendMessage({
         command: EXTENSION_MSG_ID.DATA_FOR_OPTIONS,
-        clearUrlTargetList,
+        HOST_LIST_FOR_PAGE_OPTIONS,
         USER_OPTION,
         settings,
       });

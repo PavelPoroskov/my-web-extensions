@@ -13,23 +13,18 @@ const USER_OPTION_META = {
   SHOW_BOOKMARK_TITLE: {
     default: false,
   },
-  // TODO rename ADD_BOOKMARK_IS_ON -> TAG_LIST_USE
   TAG_LIST_USE: {
     default: true,
   },
-  // TODO rename ADD_BOOKMARK_LIST_LIMIT -> TAG_LIST_LIST_LENGTH
   TAG_LIST_LIST_LENGTH: {
     default: 35,
   },
-  // TODO rename ADD_BOOKMARK_TAG_LENGTH -> TAG_LIST_TAG_LENGTH
   TAG_LIST_TAG_LENGTH: {
     default: 15,
   },
-  // TODO rename ADD_BOOKMARK_HIGHLIGHT_LAST -> TAG_LIST_HIGHLIGHT_LAST
   TAG_LIST_HIGHLIGHT_LAST: {
     default: 7,
   },
-  // TODO rename FORCE_FLAT_FOLDER_STRUCTURE -> USE_FLAT_FOLDER_STRUCTURE
   USE_FLAT_FOLDER_STRUCTURE: {
     default: false,
   },
@@ -39,24 +34,23 @@ const USER_OPTION_META = {
   HIDE_TAG_HEADER_ON_PRINTING: {
     default: false,
   },
+  USE_PARTIAL_URL_SEARCH: {
+    default: false,
+  },
 }
 
 const INTERNAL_VALUES_META = {
-  // TODO rename ADD_BOOKMARK_LIST_SHOW -> TAG_LIST_IS_OPEN
   TAG_LIST_IS_OPEN: {
     default: false,
     storage: STORAGE_TYPE.SESSION,
   },
-  // TODO rename ADD_BOOKMARK_SESSION_STARTED -> TAG_LIST_SESSION_STARTED
   TAG_LIST_SESSION_STARTED: {
     default: false,
     storage: STORAGE_TYPE.SESSION,
   },
-  // TODO rename ADD_BOOKMARK_RECENT_MAP -> TAG_LIST_RECENT_MAP
   TAG_LIST_RECENT_MAP: {
     default: {},
   },
-  // TODO rename ADD_BOOKMARK_FIXED_MAP -> TAG_LIST_FIXED_MAP
   TAG_LIST_FIXED_MAP: {
     default: {},
   },

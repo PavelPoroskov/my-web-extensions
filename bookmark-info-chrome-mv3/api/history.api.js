@@ -5,10 +5,7 @@ import {
   browserStartTime,
 } from './structure/index.js';
 import { 
-  getRequiredSearchParamsForSearch,
-  getUrlForSearchWithPathname, 
-  isPathnameMatchForSearch,
-  isSearchParamsMatchForSearch,
+  startPartialUrlSearch,
 } from './url.api.js'
 import {
   makeLogFunction,
@@ -116,19 +113,29 @@ async function getVisitListForUrlList(urlList) {
 }
 
 async function getPreviousVisitList(url) {
-  const urlForSearch = getUrlForSearchWithPathname(url);
-  const requiredSearchParams = getRequiredSearchParamsForSearch(url)
-  const { pathname: pathnameForSearch } = new URL(urlForSearch);
+  const {
+    isSearchAvailable,
+    urlForSearch,
+    isUrlMatchToPartialUrlSearch,
+  } = await startPartialUrlSearch(url)
 
-  const historyItemList = (await chrome.history.search({
-    text: urlForSearch,
-    maxResults: 10,
-  }))
-    .filter(
-      (i) => i.url 
-        && isPathnameMatchForSearch({ url: i.url, pathnameForSearch }) 
-        && isSearchParamsMatchForSearch({ url: i.url, requiredSearchParams })
-    )
+  let historyItemList
+
+  if (isSearchAvailable) {
+    historyItemList = (await chrome.history.search({
+      text: urlForSearch,
+      maxResults: 10,
+    }))
+      .filter(
+        (i) => i.url && isUrlMatchToPartialUrlSearch(i.url)
+      )
+  } else {
+    historyItemList = (await chrome.history.search({
+      text: url,
+      maxResults: 10,
+    }))
+      .filter((i) => i.url && i.url.startsWith(url))
+  }
 
   return getVisitListForUrlList(historyItemList.map(i => i.url))
 }

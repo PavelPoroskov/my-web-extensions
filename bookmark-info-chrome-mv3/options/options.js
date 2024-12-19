@@ -17,12 +17,6 @@ async function delegateSaveOptions(updateObj) {
   });
 }
 
-function formatTargetList (clearUrlTargetList) { 
-  return clearUrlTargetList.toSorted().map(
-    ({ hostname, removeAllSearchParamForPath }) => `${hostname}{${(removeAllSearchParamForPath || []).toSorted().join(',')}}`
-  )
-}
-
 function makeSaveCheckboxHandler(optionId) {
   return async function saveCheckboxHandler(event) {
     event.preventDefault();
@@ -76,7 +70,7 @@ function restoreOptions(settings) {
   optionId = 'CLEAR_URL_LIST';
   domId = `#${optionId}`
   element = document.querySelector(domId)
-  element.value = formatTargetList(clearUrlTargetList).join('\n');
+  element.value = HOST_LIST_FOR_PAGE_OPTIONS.join('\n');
 
   optionId = USER_OPTION.SHOW_BOOKMARK_TITLE;
   domId = `#${optionId}`
@@ -150,9 +144,15 @@ function restoreOptions(settings) {
   element = document.querySelector(domId)
   element.checked = settings[optionId];
   element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
+
+  optionId = USER_OPTION.USE_PARTIAL_URL_SEARCH;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.checked = settings[optionId];
+  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 }
 
-let clearUrlTargetList
+let HOST_LIST_FOR_PAGE_OPTIONS
 let USER_OPTION
 
 chrome.runtime.onMessage.addListener(async (message) => {
@@ -160,7 +160,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
   switch (message?.command) {
     case EXTENSION_MSG_ID.DATA_FOR_OPTIONS: {
       // console.log('option in DATA_FOR_OPTIONS')
-      clearUrlTargetList = message.clearUrlTargetList
+      HOST_LIST_FOR_PAGE_OPTIONS = message.HOST_LIST_FOR_PAGE_OPTIONS
       USER_OPTION = message.USER_OPTION
       restoreOptions(message.settings)
       break

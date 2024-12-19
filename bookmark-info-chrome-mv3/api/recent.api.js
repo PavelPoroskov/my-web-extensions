@@ -6,7 +6,7 @@ import {
 } from './special-folder.api.js'
 import {
   makeLogFunction,
-} from '../api/log.api.js'
+} from './log.api.js'
 
 const logRA = makeLogFunction({ module: 'recent.api' })
 
