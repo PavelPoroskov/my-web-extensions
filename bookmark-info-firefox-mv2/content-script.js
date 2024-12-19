@@ -430,7 +430,11 @@ ${semanticTagsStyle}
     
     log('showBookmarkInfo 00');
 
-    const usedParentIdSet = new Set(bookmarkInfoList.map(({ parentId }) => parentId))
+    const usedParentIdSet = new Set(
+      bookmarkInfoList
+        .filter(({ source }) => source !== 'substring')
+        .map(({ parentId }) => parentId)
+    )
     const tagList = inTagList.map(({ parentId, title, isFixed, isLast}) => ({
       parentId,
       title, 
