@@ -113,17 +113,12 @@ export const removeQueryParamsIfTarget = (url) => {
   return cleanUrl
 }
 
-function removeAnchorFromPathname(pathname) {
-  const [pathnameNoAnchor] = pathname.split('#')
-
-  return pathnameNoAnchor
-}
-
 export function removeAnchorAndSearchParams(url) {
+  logUA('removeAnchorAndSearchParams () 00', url)
   try {
     const oUrl = new URL(url);
     oUrl.search = ''
-    oUrl.pathname = removeAnchorFromPathname(oUrl.pathname)
+    oUrl.hash = ''
   
     return oUrl.toString();  
   // eslint-disable-next-line no-unused-vars
@@ -152,8 +147,6 @@ function removeLastSlashFromPathname(pathname) {
 export const getPathnameForSearch = (pathname) => {
   let mPathname = pathname
 
-  // no anchor
-  mPathname = removeAnchorFromPathname(mPathname)
   // no index in pathname
   mPathname = removeIndexFromPathname(mPathname)
   mPathname = removeLastSlashFromPathname(mPathname)
@@ -202,6 +195,7 @@ export async function startPartialUrlSearch(url) {
   
     const oUrl = new URL(url);
     oUrl.search = ''
+    oUrl.hash = ''
     oUrl.pathname = getPathnameForSearch(oUrl.pathname)
     const urlForSearch = oUrl.toString();  
 

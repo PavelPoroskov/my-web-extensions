@@ -16,7 +16,7 @@ const logCMC = makeLogFunction({ module: 'contextMenu.controller' })
 
 export const contextMenusController = {
   async onClicked (OnClickData) {
-    logCMC('contextMenus.onClicked <- EVENT');
+    logCMC('contextMenus.onClicked', OnClickData.menuItemId);
 
     switch (OnClickData.menuItemId) {
       case CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_SELECTION_MENU: {

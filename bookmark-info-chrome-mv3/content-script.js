@@ -873,6 +873,7 @@ ${semanticTagsStyle}
         const newUrl = message.url
         
         if (document.location.href.startsWith(newUrl)) {
+          log('content-script 22');
           //document.location.href = newUrl
           //window.history.pushState(newUrl)
           window.history.replaceState(null, "", newUrl);
