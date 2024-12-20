@@ -12,7 +12,7 @@ import {
 } from './log.api.js'
 import { 
   startPartialUrlSearch,
-} from './url.api.js'
+} from './url-search.api.js'
 
 const logBA = makeLogFunction({ module: 'bookmarks.api' })
 

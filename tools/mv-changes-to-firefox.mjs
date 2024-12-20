@@ -28,6 +28,7 @@ createFileForFirefox(
       'api/structure/tagList.js',
       'api/structure/index.js',
     'api/url.api.config.js',
+    'api/url-search.api.js',
     'api/url.api.js',
     'api/bookmarks.api.js',
     'api/history.api.js',

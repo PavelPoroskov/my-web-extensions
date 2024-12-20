@@ -3,6 +3,7 @@ const logModuleList = [
   // 'bookmarks.controller',
   // 'browserStartTime',
   // 'cache',
+  // 'url-search.api',
   // 'url.api.config',
   // 'url.api',
   // 'clearUrlInActiveTab',
