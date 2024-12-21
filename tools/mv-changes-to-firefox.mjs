@@ -30,6 +30,7 @@ createFileForFirefox(
     'api/url.api.config.js',
     'api/url-search.api.js',
     'api/url.api.js',
+    'api/clear-url.api.js',
     'api/bookmarks.api.js',
     'api/history.api.js',
     'api/init-extension.js',

@@ -1,7 +1,4 @@
 import {
-  makeLogFunction,
-} from './log.api.js'
-import {
   debounce,
   isSupportedProtocol,
 } from './common.api.js'
@@ -24,24 +21,30 @@ import {
   CONTENT_SCRIPT_MSG_ID,
 } from '../constant/index.js'
 import { initExtension } from './init-extension.js'
+import {
+  makeLogFunction,
+} from './log.api.js'
 
 const logTA = makeLogFunction({ module: 'tabs.api' })
 
-async function updateTab({ tabId, debugCaller, useCache=false }) {
-  let url
+async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
+  logTA(`UPDATE-TAB () 00 <- ${debugCaller}`, tabId);
+  let url = inUrl
 
-  try {
-    const Tab = await chrome.tabs.get(tabId);
-    url = Tab?.url
-  } catch (er) {
-    logTA('IGNORING. tab was deleted', er);
+  if (!url) {
+    try {
+      const Tab = await chrome.tabs.get(tabId);
+      url = Tab?.url
+    } catch (er) {
+      logTA('IGNORING. tab was deleted', er);
+    }  
   }
 
   if (!(url && isSupportedProtocol(url))) {
     return
   }
 
-  logTA(`updateTab () 00 <- ${debugCaller}`, tabId, url);
+  logTA('UPDATE-TAB () 11', url);
 
   await initExtension({ debugCaller: 'updateTab ()' })
   const settings = await extensionSettings.get()
@@ -56,7 +59,7 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
     getBookmarkInfoUni({ url, useCache }),
     isShowVisits && getHistoryInfo({ url }),
   ])
-  logTA(`updateTab () 11 bookmarkInfo.bookmarkInfoList`, bookmarkInfo.bookmarkInfoList);
+  logTA(`UPDATE-TAB () 22 bookmarkInfo.bookmarkInfoList`, bookmarkInfo.bookmarkInfoList);
 
   if (isShowVisits) {
     visitsData = {
@@ -78,7 +81,7 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
     isHideSemanticHtmlTagsOnPrinting: settings[USER_OPTION.HIDE_TAG_HEADER_ON_PRINTING],
     isHideHeaderForYoutube: settings[USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE],
   }
-  logTA('updateTab () sendMessage', tabId, message);
+  logTA('UPDATE-TAB () 99 sendMessage', tabId, message);
   await chrome.tabs.sendMessage(tabId, message)
     // eslint-disable-next-line no-unused-vars
     .catch((er) => {
@@ -107,15 +110,14 @@ export function debouncedUpdateActiveTab({ debugCaller } = {}) {
   }
 }
 
-export async function updateActiveTab({ debugCaller, useCache } = {}) {
+export async function updateActiveTab({ tabId, url, useCache, debugCaller } = {}) {
   // stop debounced
   debouncedUpdateTab({ isStop: true })
 
-  if (memo.activeTabId) {
-    updateTab({
-      tabId: memo.activeTabId,
-      useCache,
-      debugCaller: `updateActiveTab () <- ${debugCaller}`,
-    })
-  }
+  updateTab({
+    tabId,
+    url,
+    useCache,
+    debugCaller: `updateActiveTab () <- ${debugCaller}`,
+  })
 }

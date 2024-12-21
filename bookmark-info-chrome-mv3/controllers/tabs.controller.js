@@ -7,6 +7,9 @@ import {
 import {
   updateActiveTab,
 } from '../api/tabs.api.js'
+import {
+  clearUrlOnPageOpen,
+} from '../api/clear-url.api.js'
 
 const logTC = makeLogFunction({ module: 'tabs.controller' })
 
@@ -15,7 +18,8 @@ export const tabsController = {
   //   logTC('tabs.onCreated', index, id, url);
   // },
   async onUpdated(tabId, changeInfo, Tab) {
-    logTC('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
+    // logTC('tabs.onUpdated 00', 'tabId', tabId, 'Tab.index', Tab.index);
+    // logTC('tabs.onUpdated 00 ------changeInfo', changeInfo);
 
     // if (changeInfo?.url) {
     //   if (tabId === memo.activeTabId) {
@@ -27,17 +31,24 @@ export const tabsController = {
 
     switch (changeInfo?.status) {
       case ('complete'): {
-        logTC('tabs.onUpdated complete', tabId, Tab);
+        logTC('tabs.onUpdated complete 00', 'tabId', tabId, 'memo.activeTabId', memo.activeTabId);
+        logTC('tabs.onUpdated complete 00 -------Tab',Tab);
         
         if (tabId === memo.activeTabId) {
-          logTC('tabs.onUpdated complete chrome.tabs.update');
-
+          logTC('tabs.onUpdated complete 11 tabId === memo.activeTabId');
           // we here after message page-is-ready. that message triggers update. not necessary to update here
-          if (Tab.url !== memo.activeTabUrl) {
-            memo.activeTabUrl = Tab.url
+          // no message ready in chrome, in the tab click on url
+          const url = Tab.url
+
+          if (url !== memo.activeTabUrl) {
+            logTC('tabs.onUpdated complete 22 Tab.url !== memo.activeTabUrl');
+            memo.activeTabUrl = url
+            const cleanUrl = await clearUrlOnPageOpen({ tabId, url })
             updateActiveTab({
-              debugCaller: 'tabs.onUpdated complete'
-            });
+              tabId,
+              url: cleanUrl,
+              debugCaller: 'tabs.onUpdated complete',
+            })       
           }
         }
     
@@ -56,6 +67,7 @@ export const tabsController = {
     memo.activeTabId = tabId;
 
     updateActiveTab({
+      tabId,
       debugCaller: 'tabs.onActivated'
     });
 

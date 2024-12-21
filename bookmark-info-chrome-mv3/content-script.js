@@ -1,9 +1,8 @@
 let SHOW_LOG = false
 // SHOW_LOG = true
 const log = SHOW_LOG ? console.log : () => {};
-
 (async function() {
-  log('IN content-script');
+  log('IN content-script 00');
 
   if (window.hasRun) {
     return;
@@ -479,7 +478,6 @@ ${semanticTagsStyle}
       }
     }
 
-
     let rootDiv = document.getElementById(bkmInfoRootId);
 
     if (!rootDiv) {
@@ -902,20 +900,6 @@ ${semanticTagsStyle}
     }
   });
 
-  function fullscreenchanged() {
-    let rootDiv = document.getElementById(bkmInfoRootId);
-
-    if (rootDiv) {
-      if (document.fullscreenElement) {
-        rootDiv.style = 'display:none;';      
-      } else {
-        rootDiv.style = 'display:block;';
-      }
-    }
-  }
-  
-  document.addEventListener("fullscreenchange", fullscreenchanged);
-
   let isMsgReadyWasSend = false
 
   async function sendTabIsReady() {
@@ -941,7 +925,17 @@ ${semanticTagsStyle}
   let optimisticToStorageDel = 0
   let optimisticToStorageAdd = 0
 
-  // we will receive bookmark-info from tab.onactivated
+  document.addEventListener("fullscreenchange", () => {
+    let rootDiv = document.getElementById(bkmInfoRootId);
+
+    if (rootDiv) {
+      if (document.fullscreenElement) {
+        rootDiv.style = 'display:none;';      
+      } else {
+        rootDiv.style = 'display:block;';
+      }
+    }
+  });
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
       optimisticDelFromTagList = 0
@@ -951,7 +945,7 @@ ${semanticTagsStyle}
       sendTabIsReady()
     }
   });
-
+  
   if (!document.hidden) {
     sendTabIsReady()
   }

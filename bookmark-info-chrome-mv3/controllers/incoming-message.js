@@ -7,7 +7,6 @@ import {
   moveToFlatFolderStructure,
   switchShowRecentList,
   unfixTag,
-  clearUrlOnPageOpen,
 } from '../api/command/index.js'
 import {
   extensionSettings,
@@ -16,6 +15,9 @@ import {
 import {
   updateActiveTab,
 } from '../api/tabs.api.js'
+import {
+  clearUrlOnPageOpen,
+} from '../api/clear-url.api.js'
 import {
   EXTENSION_MSG_ID,
 } from '../constant/index.js'
@@ -34,6 +36,7 @@ const logIM = makeLogFunction({ module: 'incoming-message' })
 export async function onIncomingMessage (message, sender) {
   switch (message?.command) {
 
+    // IT IS ONLY when new tab load first url
     case EXTENSION_MSG_ID.TAB_IS_READY: {
       const tabId = sender?.tab?.id;
       const url = message.url
@@ -41,13 +44,14 @@ export async function onIncomingMessage (message, sender) {
       logIM('#  runtime.onMessage contentScriptReady 00', url);
 
       if (tabId && tabId == memo.activeTabId) {
-        await clearUrlOnPageOpen({ tabId, url })
-
-        memo.activeTabUrl = url
         logIM('runtime.onMessage contentScriptReady 11 updateTab', 'tabId', tabId, 'memo[\'activeTabId\']', memo['activeTabId']);
+        memo.activeTabUrl = url
+        const cleanUrl = await clearUrlOnPageOpen({ tabId, url })
         updateActiveTab({
+          tabId,
+          url: cleanUrl,
           debugCaller: 'runtime.onMessage contentScriptReady',
-        })
+        })               
       }
 
       break
@@ -84,6 +88,7 @@ export async function onIncomingMessage (message, sender) {
       const tabId = sender?.tab?.id;
       if (tabId == memo.activeTabId) {
         updateActiveTab({
+          tabId,
           debugCaller: 'runtime.onMessage fixTag',
           useCache: true,
         })
@@ -98,6 +103,7 @@ export async function onIncomingMessage (message, sender) {
       const tabId = sender?.tab?.id;
       if (tabId == memo.activeTabId) {
         updateActiveTab({
+          tabId,
           debugCaller: 'runtime.onMessage unfixTag',
           useCache: true,
         })
@@ -112,6 +118,7 @@ export async function onIncomingMessage (message, sender) {
       // const tabId = sender?.tab?.id;
       // if (tabId == memo.activeTabId) {
       //   updateActiveTab({
+      //     tabId,      
       //     debugCaller: 'runtime.onMessage ADD_RECENT_TAG',
       //     useCache: true,
       //   })
