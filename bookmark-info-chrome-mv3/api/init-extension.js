@@ -33,7 +33,7 @@ export async function createContextMenu(settings) {
   chrome.contextMenus.create({
     id: CONTEXT_MENU_CMD_ID.CLEAR_URL,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'clear url from anchor and all search params',
+    title: 'clear url from hash and all search params',
   });
   chrome.contextMenus.create({
     id: CONTEXT_MENU_CMD_ID.GET_URL_FROM_URL,
