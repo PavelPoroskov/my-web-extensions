@@ -50,7 +50,6 @@ createFileForFirefox(
     'bookmark-list-ops/index.js',
 
     'api/command/addBookmark.js',
-    'api/command/addBookmarkFromSelection.js',
     'api/command/addRecentTagFromView.js',
     'api/command/clearUrlInActiveTab.js',
     'api/command/closeBookmarkedTabs.js',
