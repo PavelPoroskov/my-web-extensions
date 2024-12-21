@@ -43,7 +43,9 @@ const CONTENT_SCRIPT_MSG_ID = {
   TAGS_INFO: 'TAGS_INFO',
   CHANGE_URL: 'CHANGE_URL',
   TOGGLE_YOUTUBE_HEADER: 'TOGGLE_YOUTUBE_HEADER',
+  ADD_BOOKMARK_FROM_INPUT_PAGE: 'ADD_BOOKMARK_FROM_INPUT_PAGE',
   ADD_BOOKMARK_FROM_SELECTION_PAGE: 'ADD_BOOKMARK_FROM_SELECTION_PAGE',
+  REPLACE_URL: 'REPLACE_URL',
 }
 const BASE_ID = 'BKM_INF';
 
@@ -53,9 +55,12 @@ const CONTEXT_MENU_CMD_ID = {
   CLEAR_URL: `${BASE_ID}_CLEAR_URL`,
   TOGGLE_YOUTUBE_HEADER: `${BASE_ID}_TOGGLE_YOUTUBE_HEADER`,
   ADD_BOOKMARK_FROM_SELECTION_MENU: `${BASE_ID}_ADD_BOOKMARK_FROM_SELECTION_MENU`,
+  ADD_BOOKMARK_FROM_INPUT_MENU: `${BASE_ID}_ADD_BOOKMARK_FROM_INPUT_MENU`,
+  GET_URL_FROM_URL: `${BASE_ID}_GET_URL_FROM_URL`,
 };
 
 const KEYBOARD_CMD_ID = {
+  ADD_BOOKMARK_FROM_INPUT_KBD: `ADD_BOOKMARK_FROM_INPUT_KBD`,
   ADD_BOOKMARK_FROM_SELECTION_KBD: `ADD_BOOKMARK_FROM_SELECTION_KBD`,
 };
 const SOURCE = {
@@ -68,6 +73,7 @@ const KEYBOARD_CMD_ID = {
   // 'bookmarks.controller',
   // 'browserStartTime',
   // 'cache',
+  // 'url-search.api',
   // 'url.api.config',
   // 'url.api',
   // 'clearUrlInActiveTab',
@@ -77,6 +83,7 @@ const KEYBOARD_CMD_ID = {
   // 'extensionSettings',
   // 'folder.api',
   // 'history.api',
+  // 'getUrlFromUrl',
   // 'incoming-message',
   // 'init-extension',
   // 'memo',
@@ -1174,7 +1181,7 @@ const HOST_URL_SETTINGS = [
 // https://www.youtube.com/watch?v=qqqqq
 //  // https://www.youtube.com/watch?v=:slug
 
-logUAC('HOST_URL_SETTINGS', HOST_URL_SETTINGS.length, HOST_URL_SETTINGS)
+// logUAC('HOST_URL_SETTINGS', HOST_URL_SETTINGS.length, HOST_URL_SETTINGS)
 const HOST_URL_SETTINGS_LIST = HOST_URL_SETTINGS.map((item) => {
   const searchParamList = item.searchParamList || []
   const importantSearchParamList = searchParamList
@@ -1193,7 +1200,7 @@ const HOST_URL_SETTINGS_LIST = HOST_URL_SETTINGS.map((item) => {
   }
 })
 
-logUAC('HOST_URL_SETTINGS_LIST', HOST_URL_SETTINGS_LIST.length, HOST_URL_SETTINGS_LIST)
+// logUAC('HOST_URL_SETTINGS_LIST', HOST_URL_SETTINGS_LIST.length, HOST_URL_SETTINGS_LIST)
 const HOST_URL_SETTINGS_MAP = new Map(
   HOST_URL_SETTINGS_LIST.map((item) => [item.hostname, item]),
 )
@@ -1203,10 +1210,10 @@ const getHostSettings = (url) => {
   const oUrl = new URL(url);
   const { hostname } = oUrl;
   logUAC('getHostSettings 11', hostname)
-  logUAC('HOST_URL_SETTINGS_MAP', HOST_URL_SETTINGS_MAP)
+  // logUAC('HOST_URL_SETTINGS_MAP', HOST_URL_SETTINGS_MAP)
 
   let targetHostSettings = HOST_URL_SETTINGS_MAP.get(hostname)
-  logUAC('targetHostSettings 22', targetHostSettings)
+  logUAC('targetHostSettings 22 hostname', targetHostSettings)
 
   if (!targetHostSettings) {
     const [firstPart, ...restPart] = hostname.split('.')
@@ -1221,6 +1228,13 @@ const getHostSettings = (url) => {
     }
   }
 
+  if (!targetHostSettings) {
+    const baseDomain = hostname.split('.').slice(-2).join('.')
+
+    targetHostSettings = HOST_URL_SETTINGS_MAP.get(baseDomain)
+    logUAC('targetHostSettings 66 baseDomain', baseDomain, targetHostSettings)
+  }
+
   return targetHostSettings
 }
 
@@ -1230,6 +1244,107 @@ const HOST_LIST_FOR_PAGE_OPTIONS = HOST_URL_SETTINGS_LIST
   .map(
     ({ hostname, removeAllSearchParamForPath }) => `${hostname}{${(removeAllSearchParamForPath || []).toSorted().join(',')}}`
   )
+const logUS = makeLogFunction({ module: 'url-search.api' })
+
+function removeIndexFromPathname(pathname) {
+    let list = pathname.split(/(\/)/)
+    const last = list.at(-1)
+  
+    if (last.startsWith('index.') || last === 'index') {
+      list = list.slice(0, -1)
+    }
+  
+    return list.join('')
+  }
+  
+  function removeLastSlashFromPathname(pathname) {
+    return pathname.length > 1 && pathname.endsWith('/')
+      ? pathname.slice(0, -1)
+      : pathname
+  }
+  
+  const getPathnameForSearch = (pathname) => {
+    let mPathname = pathname
+  
+    // no index in pathname
+    mPathname = removeIndexFromPathname(mPathname)
+    mPathname = removeLastSlashFromPathname(mPathname)
+  
+    return mPathname
+  }
+  
+  function isPathnameMatchForSearch({ url, pathnameForSearch }) {
+    const oUrl = new URL(url);
+    const normalizedPathname = getPathnameForSearch(oUrl.pathname);
+  
+    return normalizedPathname === pathnameForSearch
+  }
+  
+  function isSearchParamsMatchForSearch({ url, requiredSearchParams }) {
+    if (!requiredSearchParams) {
+      return true
+    }
+  
+    const oUrl = new URL(url);
+    const oSearchParams = oUrl.searchParams;
+  
+    return Object.keys(requiredSearchParams)
+      .every((key) => oSearchParams.get(key) === requiredSearchParams[key])
+  }
+  
+  async function startPartialUrlSearch(url) {
+    const settings = await extensionSettings.get()
+    if (!settings[USER_OPTION.USE_PARTIAL_URL_SEARCH]) {
+      return {
+        isSearchAvailable: false,
+      }
+    }
+  
+    logUS('startPartialUrlSearch () 00', url)
+  
+    try {
+      const targetHostSettings = getHostSettings(url)
+      logUS('startPartialUrlSearch targetHostSettings', !!targetHostSettings, targetHostSettings)
+    
+      if (!targetHostSettings) {
+        return {
+          isSearchAvailable: false,
+        }
+      }
+    
+      const oUrl = new URL(url);
+      oUrl.search = ''
+      oUrl.hash = ''
+      oUrl.pathname = getPathnameForSearch(oUrl.pathname)
+      const urlForSearch = oUrl.toString();  
+  
+      let requiredSearchParams
+      const { importantSearchParamList } = targetHostSettings
+  
+      if (isNotEmptyArray(importantSearchParamList)) {
+        const oSearchParams = oUrl.searchParams;
+        requiredSearchParams = {}
+        importantSearchParamList.forEach((searchParam) => {
+          requiredSearchParams[searchParam] = oSearchParams.get(searchParam)
+        })
+      }
+  
+      const { pathname: pathnameForSearch } = new URL(urlForSearch);
+  
+      return {
+        isSearchAvailable: true,
+        urlForSearch,
+        isUrlMatchToPartialUrlSearch: (testUrl) => isPathnameMatchForSearch({ url: testUrl, pathnameForSearch })
+          && isSearchParamsMatchForSearch({ url: testUrl, requiredSearchParams })
+      }
+    // eslint-disable-next-line no-unused-vars
+    } catch (_e) 
+    {
+      return {
+        isSearchAvailable: false,
+      }
+    }  
+  }
 const logUA = makeLogFunction({ module: 'url.api' })
 
 const isPathnameMatchForPattern = ({ pathname, patternList }) => {
@@ -1329,17 +1444,12 @@ const removeQueryParamsIfTarget = (url) => {
   return cleanUrl
 }
 
-function removeAnchorFromPathname(pathname) {
-  const [pathnameNoAnchor] = pathname.split('#')
-
-  return pathnameNoAnchor
-}
-
 function removeAnchorAndSearchParams(url) {
+  logUA('removeAnchorAndSearchParams () 00', url)
   try {
     const oUrl = new URL(url);
     oUrl.search = ''
-    oUrl.pathname = removeAnchorFromPathname(oUrl.pathname)
+    oUrl.hash = ''
   
     return oUrl.toString();  
   // eslint-disable-next-line no-unused-vars
@@ -1347,106 +1457,33 @@ function removeAnchorAndSearchParams(url) {
     return url
   }
 }
+const logCUA = makeLogFunction({ module: 'clear-url.api' })
 
-function removeIndexFromPathname(pathname) {
-  let list = pathname.split(/(\/)/)
-  const last = list.at(-1)
-
-  if (last.startsWith('index.') || last === 'index') {
-    list = list.slice(0, -1)
+async function changeUrlInTab({ tabId, url }) {
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.CHANGE_URL,
+    url,
   }
-
-  return list.join('')
+  logCUA('clearUrlInTab () sendMessage', tabId, msg)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logCUA('clearUrlInTab () IGNORE', err)
+    })
 }
 
-function removeLastSlashFromPathname(pathname) {
-  return pathname.length > 1 && pathname.endsWith('/')
-    ? pathname.slice(0, -1)
-    : pathname
-}
-
-const getPathnameForSearch = (pathname) => {
-  let mPathname = pathname
-
-  // no anchor
-  mPathname = removeAnchorFromPathname(mPathname)
-  // no index in pathname
-  mPathname = removeIndexFromPathname(mPathname)
-  mPathname = removeLastSlashFromPathname(mPathname)
-
-  return mPathname
-}
-
-function isPathnameMatchForSearch({ url, pathnameForSearch }) {
-  const oUrl = new URL(url);
-  const normalizedPathname = getPathnameForSearch(oUrl.pathname);
-
-  return normalizedPathname === pathnameForSearch
-}
-
-function isSearchParamsMatchForSearch({ url, requiredSearchParams }) {
-  if (!requiredSearchParams) {
-    return true
-  }
-
-  const oUrl = new URL(url);
-  const oSearchParams = oUrl.searchParams;
-
-  return Object.keys(requiredSearchParams)
-    .every((key) => oSearchParams.get(key) === requiredSearchParams[key])
-}
-
-async function startPartialUrlSearch(url) {
+async function clearUrlOnPageOpen({ tabId, url }) {
+  let cleanUrl
   const settings = await extensionSettings.get()
-  if (!settings[USER_OPTION.USE_PARTIAL_URL_SEARCH]) {
-    return {
-      isSearchAvailable: false,
-    }
-  }
 
-  logUA('startPartialUrlSearch () 00', url)
-
-  try {
-    const targetHostSettings = getHostSettings(url)
-    logUA('startPartialUrlSearch targetHostSettings', !!targetHostSettings, targetHostSettings)
-  
-    if (!targetHostSettings) {
-      return {
-        isSearchAvailable: false,
-      }
-    }
-  
-    const oUrl = new URL(url);
-    oUrl.search = ''
-    oUrl.pathname = getPathnameForSearch(oUrl.pathname)
-    const urlForSearch = oUrl.toString();  
-
-    let requiredSearchParams
-    const { importantSearchParamList } = targetHostSettings
-
-    if (isNotEmptyArray(importantSearchParamList)) {
-      const oSearchParams = oUrl.searchParams;
-      requiredSearchParams = {}
-      importantSearchParamList.forEach((searchParam) => {
-        requiredSearchParams[searchParam] = oSearchParams.get(searchParam)
-      })
-    }
-
-    const { pathname: pathnameForSearch } = new URL(urlForSearch);
-
-    return {
-      isSearchAvailable: true,
-      urlForSearch,
-      isUrlMatchToPartialUrlSearch: (testUrl) => isPathnameMatchForSearch({ url: testUrl, pathnameForSearch })
-        && isSearchParamsMatchForSearch({ url: testUrl, requiredSearchParams })
-    }
-  // eslint-disable-next-line no-unused-vars
-  } catch (_e) 
-  {
-    return {
-      isSearchAvailable: false,
+  if (settings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN]) {
+    cleanUrl = removeQueryParamsIfTarget(url);
+    
+    if (url !== cleanUrl) {
+      await changeUrlInTab({ tabId, url: cleanUrl })
     }
   }  
+
+  return cleanUrl || url
 }
 const logBA = makeLogFunction({ module: 'bookmarks.api' })
 
@@ -1752,9 +1789,19 @@ async function createContextMenu(settings) {
     title: 'add bookmark, selection as a tag',
   });  
   browser.menus.create({
+    id: CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_INPUT_MENU,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'add bookmark, tag from input',
+  });
+  browser.menus.create({
     id: CONTEXT_MENU_CMD_ID.CLEAR_URL,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'clear url from anchor and all search params',
+    title: 'clear url from hash and all search params',
+  });
+  browser.menus.create({
+    id: CONTEXT_MENU_CMD_ID.GET_URL_FROM_URL,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'get url from url',
   });
   browser.menus.create({
     id: CONTEXT_MENU_CMD_ID.CLOSE_DUPLICATE,
@@ -1820,21 +1867,24 @@ async function initExtension({ debugCaller='' }) {
 }
 const logTA = makeLogFunction({ module: 'tabs.api' })
 
-async function updateTab({ tabId, debugCaller, useCache=false }) {
-  let url
+async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
+  logTA(`UPDATE-TAB () 00 <- ${debugCaller}`, tabId);
+  let url = inUrl
 
-  try {
-    const Tab = await browser.tabs.get(tabId);
-    url = Tab?.url
-  } catch (er) {
-    logTA('IGNORING. tab was deleted', er);
+  if (!url) {
+    try {
+      const Tab = await browser.tabs.get(tabId);
+      url = Tab?.url
+    } catch (er) {
+      logTA('IGNORING. tab was deleted', er);
+    }  
   }
 
   if (!(url && isSupportedProtocol(url))) {
     return
   }
 
-  logTA(`updateTab () 00 <- ${debugCaller}`, tabId, url);
+  logTA('UPDATE-TAB () 11', url);
 
   await initExtension({ debugCaller: 'updateTab ()' })
   const settings = await extensionSettings.get()
@@ -1849,7 +1899,7 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
     getBookmarkInfoUni({ url, useCache }),
     isShowVisits && getHistoryInfo({ url }),
   ])
-  logTA(`updateTab () 11 bookmarkInfo.bookmarkInfoList`, bookmarkInfo.bookmarkInfoList);
+  logTA(`UPDATE-TAB () 22 bookmarkInfo.bookmarkInfoList`, bookmarkInfo.bookmarkInfoList);
 
   if (isShowVisits) {
     visitsData = {
@@ -1871,7 +1921,7 @@ async function updateTab({ tabId, debugCaller, useCache=false }) {
     isHideSemanticHtmlTagsOnPrinting: settings[USER_OPTION.HIDE_TAG_HEADER_ON_PRINTING],
     isHideHeaderForYoutube: settings[USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE],
   }
-  logTA('updateTab () sendMessage', tabId, message);
+  logTA('UPDATE-TAB () 99 sendMessage', tabId, message);
   await browser.tabs.sendMessage(tabId, message)
     // eslint-disable-next-line no-unused-vars
     .catch((er) => {
@@ -1900,17 +1950,16 @@ function debouncedUpdateActiveTab({ debugCaller } = {}) {
   }
 }
 
-async function updateActiveTab({ debugCaller, useCache } = {}) {
+async function updateActiveTab({ tabId, url, useCache, debugCaller } = {}) {
   // stop debounced
   debouncedUpdateTab({ isStop: true })
 
-  if (memo.activeTabId) {
-    updateTab({
-      tabId: memo.activeTabId,
-      useCache,
-      debugCaller: `updateActiveTab () <- ${debugCaller}`,
-    })
-  }
+  updateTab({
+    tabId,
+    url,
+    useCache,
+    debugCaller: `updateActiveTab () <- ${debugCaller}`,
+  })
 }
 const pluralRules = [];
 const singularRules = [];
@@ -2409,6 +2458,43 @@ async function findFolder(title) {
     if (!foundItem) {
         const bookmarkList = await browser.bookmarks.search(title);
         logFA('findFolder 33 search(title)', bookmarkList.length, bookmarkList)
+
+        let i = 0
+        while (!foundItem && i < bookmarkList.length) {
+            const checkItem = bookmarkList[i]
+            if (!checkItem.url && normalizeTitle(checkItem.title) === normalizedTitle) {
+                foundItem = checkItem
+            }
+            i += 1
+        }
+    }
+
+    const trimmedTitle = title.trim()
+    const lowTitle = trimmedTitle.toLowerCase()
+    const lastWord = trimmedTitle.split(' ').at(-1)
+
+    if (!foundItem && lowTitle.endsWith('.js') && normalizedTitle.endsWith('.js')) {
+        const modifiedTitle = `${lowTitle.slice(0, -3)}js`
+        const modifiedNormalizedTitle = `${normalizedTitle.slice(0, -3)}js`
+        
+        const bookmarkList = await browser.bookmarks.search(modifiedTitle);
+        logFA('findFolder 44 search(title)', bookmarkList.length, bookmarkList)
+
+        let i = 0
+        while (!foundItem && i < bookmarkList.length) {
+            const checkItem = bookmarkList[i]
+            if (!checkItem.url && normalizeTitle(checkItem.title) === modifiedNormalizedTitle) {
+                foundItem = checkItem
+            }
+            i += 1
+        }
+    }
+
+    if (!foundItem && lastWord.length > 5) {
+        const modifiedTitle = lowTitle.slice(0, -3)
+        
+        const bookmarkList = await browser.bookmarks.search(modifiedTitle);
+        logFA('findFolder 44 search(title)', bookmarkList.length, bookmarkList)
 
         let i = 0
         while (!foundItem && i < bookmarkList.length) {
@@ -2961,7 +3047,8 @@ async function sortFolders() {
     url
   })
 }
-async function startAddBookmarkFromSelection() {
+
+async function startAddBookmarkFromSelection() {
   const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
   const [activeTab] = tabs;
 
@@ -2985,6 +3072,22 @@ async function addBookmarkFromSelection({ url, title, selection }) {
   const folder = await findOrCreateFolder(selection)
   await addBookmark({ url, title, parentId: folder.id })
 }
+
+async function startAddBookmarkFromInput() {
+  const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+  const [activeTab] = tabs;
+
+  if (activeTab?.id) {
+      const msg = {
+        command: CONTENT_SCRIPT_MSG_ID.ADD_BOOKMARK_FROM_INPUT_PAGE,
+      }
+      // logCU('addBookmarkFromSelection() sendMessage', activeTab.id, msg)
+      await browser.tabs.sendMessage(activeTab.id, msg)
+        // .catch((err) => {
+        //   logCU('startAddBookmarkFromSelection() IGNORE', err)
+        // })
+  }
+}
 async function addRecentTagFromView(bookmarkId) {
   if (!bookmarkId) {
     return
@@ -2995,41 +3098,19 @@ async function addBookmarkFromSelection({ url, title, selection }) {
 }
 const logCU = makeLogFunction({ module: 'clearUrlInActiveTab' })
 
-async function changeUrlInTab({ tabId, url }) {
-  const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.CHANGE_URL,
-    url,
-  }
-  logCU('clearUrlInTab () sendMessage', tabId, msg)
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logCU('clearUrlInTab () IGNORE', err)
-    })
-}
-
 async function removeFromUrlAnchorAndSearchParamsInActiveTab() {
+  logCU('removeFromUrlAnchorAndSearchParamsInActiveTab () 00')
   const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
   const [activeTab] = tabs;
 
   if (activeTab?.id && activeTab?.url) {
     const cleanUrl = removeAnchorAndSearchParams(activeTab.url);
+    logCU('removeFromUrlAnchorAndSearchParamsInActiveTab () 22 cleanUrl', cleanUrl)
 
     if (activeTab.url !== cleanUrl) {
       await changeUrlInTab({ tabId: activeTab.id, url: cleanUrl })
     }
   }
-}
-
-async function clearUrlOnPageOpen({ tabId, url }) {
-  const settings = await extensionSettings.get()
-
-  if (settings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN]) {
-    const cleanUrl = removeQueryParamsIfTarget(url);
-    
-    if (url !== cleanUrl) {
-      await changeUrlInTab({ tabId, url: cleanUrl })
-    }
-  }  
 }
 async function isHasBookmark(url) {
   const bookmarks = await browser.bookmarks.search({ url });
@@ -3193,6 +3274,60 @@ async function closeDuplicateTabs() {
     parentId,
     title,
   })
+}
+const logUU = makeLogFunction({ module: 'getUrlFromUrl' })
+
+async function replaceUrlInTab({ tabId, url }) {
+  logUU('replaceUrlInTab () 00', tabId, url)
+
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.REPLACE_URL,
+    url,
+  }
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch(() => {
+    })
+}
+
+async function getUrlFromUrl() {
+  logUU('getUrlFromUrl () 00')
+
+  const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+  const [activeTab] = tabs;
+
+  if (activeTab?.id && activeTab?.url) {
+    let resultUrl
+    const oUrl = new URL(activeTab.url)
+    logUU('getUrlFromUrl () 11 oUrl', oUrl)
+    const { hostname } = oUrl
+    const baseDomain = hostname.split('.').slice(-2).join('.')
+
+    try {
+      switch (baseDomain) {
+        case '9gag.com': {
+          let param = oUrl.hash
+          const testUrl = param.split('#').at(1)
+          const o = new URL(testUrl)
+
+          if (o) {
+            resultUrl = testUrl
+          }
+
+          break
+        }
+      }
+      // eslint-disable-next-line no-unused-vars
+    } catch (e) 
+    // eslint-disable-next-line no-empty 
+    {
+
+    }
+
+    if (resultUrl) {
+      logUU('getUrlFromUrl () 99 call replaceUrlInTab ()')
+      await replaceUrlInTab({ tabId: activeTab.id, url: resultUrl })
+    }
+  }
 }
 async function moveToFlatFolderStructure() {
   await extensionSettings.update({
@@ -3384,6 +3519,10 @@ const commandsController = {
     logCC('commandsController.onCommand', command);
 
     switch (command) {
+      case KEYBOARD_CMD_ID.ADD_BOOKMARK_FROM_INPUT_KBD: {
+        startAddBookmarkFromInput()
+        break;
+      }
       case KEYBOARD_CMD_ID.ADD_BOOKMARK_FROM_SELECTION_KBD: {
         startAddBookmarkFromSelection()
         break;
@@ -3395,9 +3534,13 @@ const commandsController = {
 
 const contextMenusController = {
   async onClicked (OnClickData) {
-    logCMC('contextMenus.onClicked <- EVENT');
+    logCMC('contextMenus.onClicked 00', OnClickData.menuItemId);
 
     switch (OnClickData.menuItemId) {
+      case CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_INPUT_MENU: {
+        startAddBookmarkFromInput()
+        break;
+      }
       case CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_SELECTION_MENU: {
         startAddBookmarkFromSelection()
         break;
@@ -3414,6 +3557,11 @@ const contextMenusController = {
         removeFromUrlAnchorAndSearchParamsInActiveTab()
         break;
       }
+      case CONTEXT_MENU_CMD_ID.GET_URL_FROM_URL: {
+        logCMC('contextMenus.onClicked 11 CONTEXT_MENU_CMD_ID.GET_URL_FROM_URL')
+        getUrlFromUrl();
+        break;
+      }
       case CONTEXT_MENU_CMD_ID.TOGGLE_YOUTUBE_HEADER: {
         toggleYoutubeHeader()
         break;
@@ -3426,6 +3574,7 @@ const contextMenusController = {
 async function onIncomingMessage (message, sender) {
   switch (message?.command) {
 
+    // IT IS ONLY when new tab load first url
     case EXTENSION_MSG_ID.TAB_IS_READY: {
       const tabId = sender?.tab?.id;
       const url = message.url
@@ -3433,13 +3582,14 @@ async function onIncomingMessage (message, sender) {
       logIM('#  runtime.onMessage contentScriptReady 00', url);
 
       if (tabId && tabId == memo.activeTabId) {
-        await clearUrlOnPageOpen({ tabId, url })
-
-        memo.activeTabUrl = url
         logIM('runtime.onMessage contentScriptReady 11 updateTab', 'tabId', tabId, 'memo[\'activeTabId\']', memo['activeTabId']);
+        memo.activeTabUrl = url
+        const cleanUrl = await clearUrlOnPageOpen({ tabId, url })
         updateActiveTab({
+          tabId,
+          url: cleanUrl,
           debugCaller: 'runtime.onMessage contentScriptReady',
-        })
+        })               
       }
 
       break
@@ -3476,6 +3626,7 @@ async function onIncomingMessage (message, sender) {
       const tabId = sender?.tab?.id;
       if (tabId == memo.activeTabId) {
         updateActiveTab({
+          tabId,
           debugCaller: 'runtime.onMessage fixTag',
           useCache: true,
         })
@@ -3490,6 +3641,7 @@ async function onIncomingMessage (message, sender) {
       const tabId = sender?.tab?.id;
       if (tabId == memo.activeTabId) {
         updateActiveTab({
+          tabId,
           debugCaller: 'runtime.onMessage unfixTag',
           useCache: true,
         })
@@ -3504,6 +3656,7 @@ async function onIncomingMessage (message, sender) {
       // const tabId = sender?.tab?.id;
       // if (tabId == memo.activeTabId) {
       //   updateActiveTab({
+      //     tabId,      
       //     debugCaller: 'runtime.onMessage ADD_RECENT_TAG',
       //     useCache: true,
       //   })
@@ -3621,7 +3774,8 @@ const tabsController = {
   //   logTC('tabs.onCreated', index, id, url);
   // },
   async onUpdated(tabId, changeInfo, Tab) {
-    logTC('tabs.onUpdated 00', Tab.index, tabId, changeInfo);
+    // logTC('tabs.onUpdated 00', 'tabId', tabId, 'Tab.index', Tab.index);
+    // logTC('tabs.onUpdated 00 ------changeInfo', changeInfo);
 
     // if (changeInfo?.url) {
     //   if (tabId === memo.activeTabId) {
@@ -3633,17 +3787,24 @@ const tabsController = {
 
     switch (changeInfo?.status) {
       case ('complete'): {
-        logTC('tabs.onUpdated complete', tabId, Tab);
+        logTC('tabs.onUpdated complete 00', 'tabId', tabId, 'memo.activeTabId', memo.activeTabId);
+        logTC('tabs.onUpdated complete 00 -------Tab',Tab);
         
         if (tabId === memo.activeTabId) {
-          logTC('tabs.onUpdated complete browser.tabs.update');
-
+          logTC('tabs.onUpdated complete 11 tabId === memo.activeTabId');
           // we here after message page-is-ready. that message triggers update. not necessary to update here
-          if (Tab.url !== memo.activeTabUrl) {
-            memo.activeTabUrl = Tab.url
+          // no message ready in chrome, in the tab click on url
+          const url = Tab.url
+
+          if (url !== memo.activeTabUrl) {
+            logTC('tabs.onUpdated complete 22 Tab.url !== memo.activeTabUrl');
+            memo.activeTabUrl = url
+            const cleanUrl = await clearUrlOnPageOpen({ tabId, url })
             updateActiveTab({
-              debugCaller: 'tabs.onUpdated complete'
-            });
+              tabId,
+              url: cleanUrl,
+              debugCaller: 'tabs.onUpdated complete',
+            })       
           }
         }
     
@@ -3662,6 +3823,7 @@ const tabsController = {
     memo.activeTabId = tabId;
 
     updateActiveTab({
+      tabId,
       debugCaller: 'tabs.onActivated'
     });
 

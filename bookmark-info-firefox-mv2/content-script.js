@@ -1,9 +1,8 @@
 let SHOW_LOG = false
 // SHOW_LOG = true
 const log = SHOW_LOG ? console.log : () => {};
-
 (async function() {
-  log('IN content-script');
+  log('IN content-script 00');
 
   if (window.hasRun) {
     return;
@@ -28,7 +27,9 @@ const log = SHOW_LOG ? console.log : () => {};
     // TAGS_INFO: 'TAGS_INFO',
     CHANGE_URL: 'CHANGE_URL',
     TOGGLE_YOUTUBE_HEADER: 'TOGGLE_YOUTUBE_HEADER',
+    ADD_BOOKMARK_FROM_INPUT_PAGE: 'ADD_BOOKMARK_FROM_INPUT_PAGE',
     ADD_BOOKMARK_FROM_SELECTION_PAGE: 'ADD_BOOKMARK_FROM_SELECTION_PAGE',
+    REPLACE_URL: 'REPLACE_URL',
   }
 
   // TODO-DOUBLE remove duplication BROWSER in browser-specific.js and content-scripts.js
@@ -479,7 +480,6 @@ ${semanticTagsStyle}
       }
     }
 
-
     let rootDiv = document.getElementById(bkmInfoRootId);
 
     if (!rootDiv) {
@@ -869,10 +869,11 @@ ${semanticTagsStyle}
         break
       }
       case CONTENT_SCRIPT_MSG_ID.CHANGE_URL: {
-        log('content-script:', message.url);
+        log('content-script: CHANGE_URL', message.url);
         const newUrl = message.url
         
         if (document.location.href.startsWith(newUrl)) {
+          log('content-script 22');
           //document.location.href = newUrl
           //window.history.pushState(newUrl)
           window.history.replaceState(null, "", newUrl);
@@ -880,9 +881,28 @@ ${semanticTagsStyle}
         
         break
       }
+      case CONTENT_SCRIPT_MSG_ID.REPLACE_URL: {
+        log('content-script: REPLACE_URL ', message.url);
+        document.location.href = message.url
+        
+        break
+      }
       case CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER: {
         cToggleYoutubePageHeader += 1
         toggleYoutubePageHeader({ nTry: 1 })
+        break
+      }
+      case CONTENT_SCRIPT_MSG_ID.ADD_BOOKMARK_FROM_INPUT_PAGE: {
+        const selection = window.prompt("Enter folder for your bookmark") 
+
+        if (selection) {
+          browser.runtime.sendMessage({
+            command: EXTENSION_MSG_ID.ADD_BOOKMARK_FROM_SELECTION_EXT,
+            url: document.location.href,
+            title: document.title,
+            selection,
+          });  
+        }
         break
       }
       case CONTENT_SCRIPT_MSG_ID.ADD_BOOKMARK_FROM_SELECTION_PAGE: {
@@ -900,20 +920,6 @@ ${semanticTagsStyle}
       }
     }
   });
-
-  function fullscreenchanged() {
-    let rootDiv = document.getElementById(bkmInfoRootId);
-
-    if (rootDiv) {
-      if (document.fullscreenElement) {
-        rootDiv.style = 'display:none;';      
-      } else {
-        rootDiv.style = 'display:block;';
-      }
-    }
-  }
-  
-  document.addEventListener("fullscreenchange", fullscreenchanged);
 
   let isMsgReadyWasSend = false
 
@@ -940,7 +946,17 @@ ${semanticTagsStyle}
   let optimisticToStorageDel = 0
   let optimisticToStorageAdd = 0
 
-  // we will receive bookmark-info from tab.onactivated
+  document.addEventListener("fullscreenchange", () => {
+    let rootDiv = document.getElementById(bkmInfoRootId);
+
+    if (rootDiv) {
+      if (document.fullscreenElement) {
+        rootDiv.style = 'display:none;';      
+      } else {
+        rootDiv.style = 'display:block;';
+      }
+    }
+  });
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
       optimisticDelFromTagList = 0
@@ -950,7 +966,7 @@ ${semanticTagsStyle}
       sendTabIsReady()
     }
   });
-
+  
   if (!document.hidden) {
     sendTabIsReady()
   }
