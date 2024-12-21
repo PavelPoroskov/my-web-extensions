@@ -82,7 +82,7 @@ const log = SHOW_LOG ? console.log : () => {};
   z-index: 2147483646;
   background-color: transparent;
   font-size: 14px;
-  font-family: sans-serif;
+  font-family: sans-serif !important;
   font-weight: normal;
   user-select: none;
   max-height: 100vh;
@@ -103,7 +103,7 @@ ${semanticTagsStyle}
   display: flex;
   position: relative;
   line-height: inherit;
-  font-family: inherit;
+  font-family: inherit !important;
   margin: inherit;
   justify-content: flex-end;
 }
@@ -111,7 +111,7 @@ ${semanticTagsStyle}
   display: flex;
   position: relative;
   line-height: inherit;
-  font-family: inherit;
+  font-family: inherit !important;
   margin: inherit;
   justify-content: flex-end;
 }
@@ -123,7 +123,7 @@ ${semanticTagsStyle}
   color: black;
   padding-right: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
   line-height: inherit;
-  font-family: inherit;
+  font-family: inherit !important;
   margin: inherit;
   width: fit-content;
   text-wrap: nowrap;
@@ -140,14 +140,14 @@ ${semanticTagsStyle}
   justify-items: center;
   display: none;
   line-height: inherit;
-  font-family: inherit;
+  font-family: inherit !important;
   margin: inherit;
 }
 .bkm-info--btn-letter {
   color: white;
   font-size: 10px;
   line-height: 1;
-  font-family: inherit;
+  font-family: inherit !important;
   margin: inherit;
 }
 .bkm-info--btn:active {
@@ -228,7 +228,7 @@ ${semanticTagsStyle}
   padding-right: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
   text-wrap: nowrap;
   line-height: inherit;
-  font-family: inherit;
+  font-family: inherit !important;
   margin: inherit;
 }
 .bkm-info--fixed {
