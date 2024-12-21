@@ -28,6 +28,7 @@ const log = SHOW_LOG ? console.log : () => {};
     CHANGE_URL: 'CHANGE_URL',
     TOGGLE_YOUTUBE_HEADER: 'TOGGLE_YOUTUBE_HEADER',
     ADD_BOOKMARK_FROM_SELECTION_PAGE: 'ADD_BOOKMARK_FROM_SELECTION_PAGE',
+    REPLACE_URL: 'REPLACE_URL',
   }
 
   // TODO-DOUBLE remove duplication BROWSER in browser-specific.js and content-scripts.js
@@ -867,7 +868,7 @@ ${semanticTagsStyle}
         break
       }
       case CONTENT_SCRIPT_MSG_ID.CHANGE_URL: {
-        log('content-script:', message.url);
+        log('content-script: CHANGE_URL', message.url);
         const newUrl = message.url
         
         if (document.location.href.startsWith(newUrl)) {
@@ -876,6 +877,12 @@ ${semanticTagsStyle}
           //window.history.pushState(newUrl)
           window.history.replaceState(null, "", newUrl);
         }
+        
+        break
+      }
+      case CONTENT_SCRIPT_MSG_ID.REPLACE_URL: {
+        log('content-script: REPLACE_URL ', message.url);
+        document.location.href = message.url
         
         break
       }

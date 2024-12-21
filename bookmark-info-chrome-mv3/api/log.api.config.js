@@ -13,6 +13,7 @@ const logModuleList = [
   // 'extensionSettings',
   // 'folder.api',
   // 'history.api',
+  // 'getUrlFromUrl',
   // 'incoming-message',
   // 'init-extension',
   // 'memo',

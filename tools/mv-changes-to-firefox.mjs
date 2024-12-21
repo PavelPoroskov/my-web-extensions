@@ -57,6 +57,7 @@ createFileForFirefox(
     'api/command/closeDuplicateTabs.js',
     'api/command/deleteBookmark.js',
     'api/command/fixTag.js',
+    'api/command/getUrlFromUrl.js',
     'api/command/moveToFlatFolderStructure.js',
     'api/command/switchShowRecentList.js',
     'api/command/unfixTag.js',

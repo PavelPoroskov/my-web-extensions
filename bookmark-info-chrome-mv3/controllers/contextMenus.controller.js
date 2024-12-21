@@ -7,6 +7,7 @@ import {
   closeDuplicateTabs,
   startAddBookmarkFromSelection,
   toggleYoutubeHeader,
+  getUrlFromUrl,
 } from '../api/command/index.js'
 import {
   makeLogFunction,
@@ -16,7 +17,7 @@ const logCMC = makeLogFunction({ module: 'contextMenu.controller' })
 
 export const contextMenusController = {
   async onClicked (OnClickData) {
-    logCMC('contextMenus.onClicked', OnClickData.menuItemId);
+    logCMC('contextMenus.onClicked 00', OnClickData.menuItemId);
 
     switch (OnClickData.menuItemId) {
       case CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_SELECTION_MENU: {
@@ -33,6 +34,11 @@ export const contextMenusController = {
       }
       case CONTEXT_MENU_CMD_ID.CLEAR_URL: {
         removeFromUrlAnchorAndSearchParamsInActiveTab()
+        break;
+      }
+      case CONTEXT_MENU_CMD_ID.GET_URL_FROM_URL: {
+        logCMC('contextMenus.onClicked 11 CONTEXT_MENU_CMD_ID.GET_URL_FROM_URL')
+        getUrlFromUrl();
         break;
       }
       case CONTEXT_MENU_CMD_ID.TOGGLE_YOUTUBE_HEADER: {

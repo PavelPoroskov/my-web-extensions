@@ -31,6 +31,11 @@ export async function createContextMenu(settings) {
     title: 'clear url from anchor and all search params',
   });
   chrome.contextMenus.create({
+    id: CONTEXT_MENU_CMD_ID.GET_URL_FROM_URL,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'get url from url',
+  });
+  chrome.contextMenus.create({
     id: CONTEXT_MENU_CMD_ID.CLOSE_DUPLICATE,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'close duplicate tabs',
