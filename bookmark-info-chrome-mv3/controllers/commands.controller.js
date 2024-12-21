@@ -1,4 +1,5 @@
 import {
+  startAddBookmarkFromInput,
   startAddBookmarkFromSelection,
 } from '../api/command/index.js'
 import {
@@ -15,6 +16,10 @@ export const commandsController = {
     logCC('commandsController.onCommand', command);
 
     switch (command) {
+      case KEYBOARD_CMD_ID.ADD_BOOKMARK_FROM_INPUT_KBD: {
+        startAddBookmarkFromInput()
+        break;
+      }
       case KEYBOARD_CMD_ID.ADD_BOOKMARK_FROM_SELECTION_KBD: {
         startAddBookmarkFromSelection()
         break;

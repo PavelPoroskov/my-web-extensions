@@ -27,6 +27,7 @@ const log = SHOW_LOG ? console.log : () => {};
     // TAGS_INFO: 'TAGS_INFO',
     CHANGE_URL: 'CHANGE_URL',
     TOGGLE_YOUTUBE_HEADER: 'TOGGLE_YOUTUBE_HEADER',
+    ADD_BOOKMARK_FROM_INPUT_PAGE: 'ADD_BOOKMARK_FROM_INPUT_PAGE',
     ADD_BOOKMARK_FROM_SELECTION_PAGE: 'ADD_BOOKMARK_FROM_SELECTION_PAGE',
     REPLACE_URL: 'REPLACE_URL',
   }
@@ -889,6 +890,19 @@ ${semanticTagsStyle}
       case CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER: {
         cToggleYoutubePageHeader += 1
         toggleYoutubePageHeader({ nTry: 1 })
+        break
+      }
+      case CONTENT_SCRIPT_MSG_ID.ADD_BOOKMARK_FROM_INPUT_PAGE: {
+        const selection = window.prompt("Enter folder for your bookmark") 
+
+        if (selection) {
+          chrome.runtime.sendMessage({
+            command: EXTENSION_MSG_ID.ADD_BOOKMARK_FROM_SELECTION_EXT,
+            url: document.location.href,
+            title: document.title,
+            selection,
+          });  
+        }
         break
       }
       case CONTENT_SCRIPT_MSG_ID.ADD_BOOKMARK_FROM_SELECTION_PAGE: {

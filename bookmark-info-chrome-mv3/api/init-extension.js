@@ -26,6 +26,11 @@ export async function createContextMenu(settings) {
     title: 'add bookmark, selection as a tag',
   });  
   chrome.contextMenus.create({
+    id: CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_INPUT_MENU,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'add bookmark, tag from input',
+  });
+  chrome.contextMenus.create({
     id: CONTEXT_MENU_CMD_ID.CLEAR_URL,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'clear url from anchor and all search params',

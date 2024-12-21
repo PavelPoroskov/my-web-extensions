@@ -40,3 +40,19 @@ export async function addBookmarkFromSelection({ url, title, selection }) {
   const folder = await findOrCreateFolder(selection)
   await addBookmark({ url, title, parentId: folder.id })
 }
+
+export async function startAddBookmarkFromInput() {
+  const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  const [activeTab] = tabs;
+
+  if (activeTab?.id) {
+      const msg = {
+        command: CONTENT_SCRIPT_MSG_ID.ADD_BOOKMARK_FROM_INPUT_PAGE,
+      }
+      // logCU('addBookmarkFromSelection() sendMessage', activeTab.id, msg)
+      await chrome.tabs.sendMessage(activeTab.id, msg)
+        // .catch((err) => {
+        //   logCU('startAddBookmarkFromSelection() IGNORE', err)
+        // })
+  }
+}

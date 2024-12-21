@@ -5,6 +5,7 @@ import {
   removeFromUrlAnchorAndSearchParamsInActiveTab,
   closeBookmarkedTabs,
   closeDuplicateTabs,
+  startAddBookmarkFromInput,
   startAddBookmarkFromSelection,
   toggleYoutubeHeader,
   getUrlFromUrl,
@@ -20,6 +21,10 @@ export const contextMenusController = {
     logCMC('contextMenus.onClicked 00', OnClickData.menuItemId);
 
     switch (OnClickData.menuItemId) {
+      case CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_INPUT_MENU: {
+        startAddBookmarkFromInput()
+        break;
+      }
       case CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_SELECTION_MENU: {
         startAddBookmarkFromSelection()
         break;
