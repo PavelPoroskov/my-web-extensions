@@ -126,7 +126,7 @@ const HOST_URL_SETTINGS = [
 // https://www.youtube.com/watch?v=qqqqq
 //  // https://www.youtube.com/watch?v=:slug
 
-logUAC('HOST_URL_SETTINGS', HOST_URL_SETTINGS.length, HOST_URL_SETTINGS)
+// logUAC('HOST_URL_SETTINGS', HOST_URL_SETTINGS.length, HOST_URL_SETTINGS)
 const HOST_URL_SETTINGS_LIST = HOST_URL_SETTINGS.map((item) => {
   const searchParamList = item.searchParamList || []
   const importantSearchParamList = searchParamList
@@ -145,7 +145,7 @@ const HOST_URL_SETTINGS_LIST = HOST_URL_SETTINGS.map((item) => {
   }
 })
 
-logUAC('HOST_URL_SETTINGS_LIST', HOST_URL_SETTINGS_LIST.length, HOST_URL_SETTINGS_LIST)
+// logUAC('HOST_URL_SETTINGS_LIST', HOST_URL_SETTINGS_LIST.length, HOST_URL_SETTINGS_LIST)
 const HOST_URL_SETTINGS_MAP = new Map(
   HOST_URL_SETTINGS_LIST.map((item) => [item.hostname, item]),
 )
@@ -155,10 +155,10 @@ export const getHostSettings = (url) => {
   const oUrl = new URL(url);
   const { hostname } = oUrl;
   logUAC('getHostSettings 11', hostname)
-  logUAC('HOST_URL_SETTINGS_MAP', HOST_URL_SETTINGS_MAP)
+  // logUAC('HOST_URL_SETTINGS_MAP', HOST_URL_SETTINGS_MAP)
 
   let targetHostSettings = HOST_URL_SETTINGS_MAP.get(hostname)
-  logUAC('targetHostSettings 22', targetHostSettings)
+  logUAC('targetHostSettings 22 hostname', targetHostSettings)
 
   if (!targetHostSettings) {
     const [firstPart, ...restPart] = hostname.split('.')
@@ -171,6 +171,13 @@ export const getHostSettings = (url) => {
       targetHostSettings = HOST_URL_SETTINGS_MAP.get(`www.${hostname}`)
       logUAC('targetHostSettings 55', targetHostSettings)
     }
+  }
+
+  if (!targetHostSettings) {
+    const baseDomain = hostname.split('.').slice(-2).join('.')
+
+    targetHostSettings = HOST_URL_SETTINGS_MAP.get(baseDomain)
+    logUAC('targetHostSettings 66 baseDomain', baseDomain, targetHostSettings)
   }
 
   return targetHostSettings
