@@ -35,11 +35,11 @@
   },
   "commands": {
     "ADD_BOOKMARK_FROM_INPUT_KBD": {
-      "suggested_key": { "default": "Ctrl+Shift+K" },
+      "suggested_key": { "default": "Ctrl+Shift+Comma" },
       "description": "Bookmark page. Get folder name from input"
     },
     "ADD_BOOKMARK_FROM_SELECTION_KBD": {
-      "suggested_key": { "default": "Ctrl+Shift+L" },
+      "suggested_key": { "default": "Ctrl+Shift+Period" },
       "description": "Bookmark page. Get folder name from selection"
     }
   },
