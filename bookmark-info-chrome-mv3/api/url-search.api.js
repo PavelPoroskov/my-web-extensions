@@ -76,11 +76,11 @@ function removeIndexFromPathname(pathname) {
       const targetHostSettings = getHostSettings(url)
       logUS('startPartialUrlSearch targetHostSettings', !!targetHostSettings, targetHostSettings)
     
-      if (!targetHostSettings) {
-        return {
-          isSearchAvailable: false,
-        }
-      }
+      // if (!targetHostSettings) {
+      //   return {
+      //     isSearchAvailable: false,
+      //   }
+      // }
     
       const oUrl = new URL(url);
       oUrl.search = ''
@@ -89,14 +89,16 @@ function removeIndexFromPathname(pathname) {
       const urlForSearch = oUrl.toString();  
   
       let requiredSearchParams
-      const { importantSearchParamList } = targetHostSettings
+      if (targetHostSettings) {
+        const { importantSearchParamList } = targetHostSettings
   
-      if (isNotEmptyArray(importantSearchParamList)) {
-        const oSearchParams = oUrl.searchParams;
-        requiredSearchParams = {}
-        importantSearchParamList.forEach((searchParam) => {
-          requiredSearchParams[searchParam] = oSearchParams.get(searchParam)
-        })
+        if (isNotEmptyArray(importantSearchParamList)) {
+          const oSearchParams = oUrl.searchParams;
+          requiredSearchParams = {}
+          importantSearchParamList.forEach((searchParam) => {
+            requiredSearchParams[searchParam] = oSearchParams.get(searchParam)
+          })
+        }
       }
   
       const { pathname: pathnameForSearch } = new URL(urlForSearch);
