@@ -18,8 +18,8 @@ import {
   tagList,
 } from './structure/index.js'
 import {
-  CONTENT_SCRIPT_MSG_ID,
-} from '../constant/index.js'
+  updateBookmarkInfoInPage,
+} from './content-script.api.js'
 import { initExtension } from './init-extension.js'
 import {
   makeLogFunction,
@@ -67,8 +67,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     }  
   }
 
-  const message = {
-    command: CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO,
+  const data = {
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     isShowTitle: settings[USER_OPTION.SHOW_BOOKMARK_TITLE],
     // visits history
@@ -81,12 +80,8 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     isHideSemanticHtmlTagsOnPrinting: settings[USER_OPTION.HIDE_TAG_HEADER_ON_PRINTING],
     isHideHeaderForYoutube: settings[USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE],
   }
-  logTA('UPDATE-TAB () 99 sendMessage', tabId, message);
-  await chrome.tabs.sendMessage(tabId, message)
-    // eslint-disable-next-line no-unused-vars
-    .catch((er) => {
-      // logTA('Failed to send bookmarkInfoTo to tab', tabId, ' Ignoring ', er)
-    })
+  logTA('UPDATE-TAB () 99 sendMessage', tabId, data);
+  await updateBookmarkInfoInPage({ tabId, data })
 }
 
 function updateTabTask(options) {

@@ -1,5 +1,8 @@
 import { findOrCreateFolder } from '../folder.api.js'
-import { CONTENT_SCRIPT_MSG_ID } from '../../constant/index.js'
+import { 
+  getUserInputInPage,
+  getSelectionInPage,
+} from '../content-script.api.js'
 
 export async function addBookmark({ url, title, parentId }) {
   const bookmarkList = await chrome.bookmarks.search({ url });
@@ -21,24 +24,8 @@ export async function startAddBookmarkFromSelection() {
   const [activeTab] = tabs;
 
   if (activeTab?.id) {
-      const msg = {
-        command: CONTENT_SCRIPT_MSG_ID.ADD_BOOKMARK_FROM_SELECTION_PAGE,
-      }
-      // logCU('addBookmarkFromSelection() sendMessage', activeTab.id, msg)
-      await chrome.tabs.sendMessage(activeTab.id, msg)
-        // .catch((err) => {
-        //   logCU('startAddBookmarkFromSelection() IGNORE', err)
-        // })
+    await getSelectionInPage(activeTab.id)
   }
-}
-
-export async function addBookmarkFromSelection({ url, title, selection }) {
-  if (selection.length > 40) {
-    return
-  }
-
-  const folder = await findOrCreateFolder(selection)
-  await addBookmark({ url, title, parentId: folder.id })
 }
 
 export async function startAddBookmarkFromInput() {
@@ -46,13 +33,15 @@ export async function startAddBookmarkFromInput() {
   const [activeTab] = tabs;
 
   if (activeTab?.id) {
-      const msg = {
-        command: CONTENT_SCRIPT_MSG_ID.ADD_BOOKMARK_FROM_INPUT_PAGE,
-      }
-      // logCU('addBookmarkFromSelection() sendMessage', activeTab.id, msg)
-      await chrome.tabs.sendMessage(activeTab.id, msg)
-        // .catch((err) => {
-        //   logCU('startAddBookmarkFromSelection() IGNORE', err)
-        // })
+    await getUserInputInPage(activeTab.id)
   }
+}
+
+export async function addBookmarkFolderByName({ url, title, folderName }) {
+  if (folderName.length > 40) {
+    return
+  }
+
+  const folder = await findOrCreateFolder(folderName)
+  await addBookmark({ url, title, parentId: folder.id })
 }

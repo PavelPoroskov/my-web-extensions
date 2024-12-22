@@ -13,12 +13,12 @@ const log = SHOW_LOG ? console.log : () => {};
   const EXTENSION_MSG_ID = {
     DELETE_BOOKMARK: 'DELETE_BOOKMARK',
     ADD_BOOKMARK: 'ADD_BOOKMARK',
+    ADD_BOOKMARK_FOLDER_BY_NAME: 'ADD_BOOKMARK_FOLDER_BY_NAME',
     FIX_TAG: 'FIX_TAG',
     UNFIX_TAG: 'UNFIX_TAG',
     TAB_IS_READY: 'TAB_IS_READY',
     SHOW_TAG_LIST: 'SHOW_TAG_LIST',
     ADD_RECENT_TAG: 'ADD_RECENT_TAG',
-    ADD_BOOKMARK_FROM_SELECTION_EXT: 'ADD_BOOKMARK_FROM_SELECTION_EXT',
   }
   // TODO-DOUBLE remove duplication in CONTENT_SCRIPT_MSG_ID: message-id.js and content-scripts.js
   const CONTENT_SCRIPT_MSG_ID = {
@@ -27,8 +27,8 @@ const log = SHOW_LOG ? console.log : () => {};
     // TAGS_INFO: 'TAGS_INFO',
     CHANGE_URL: 'CHANGE_URL',
     TOGGLE_YOUTUBE_HEADER: 'TOGGLE_YOUTUBE_HEADER',
-    ADD_BOOKMARK_FROM_INPUT_PAGE: 'ADD_BOOKMARK_FROM_INPUT_PAGE',
-    ADD_BOOKMARK_FROM_SELECTION_PAGE: 'ADD_BOOKMARK_FROM_SELECTION_PAGE',
+    GET_USER_INPUT: 'GET_USER_INPUT',
+    GET_SELECTION: 'GET_SELECTION',
     REPLACE_URL: 'REPLACE_URL',
   }
 
@@ -892,28 +892,28 @@ ${semanticTagsStyle}
         toggleYoutubePageHeader({ nTry: 1 })
         break
       }
-      case CONTENT_SCRIPT_MSG_ID.ADD_BOOKMARK_FROM_INPUT_PAGE: {
-        const selection = window.prompt("Enter folder for your bookmark") 
+      case CONTENT_SCRIPT_MSG_ID.GET_SELECTION: {
+        const folderName = document.getSelection().toString() 
 
-        if (selection) {
+        if (folderName) {
           chrome.runtime.sendMessage({
-            command: EXTENSION_MSG_ID.ADD_BOOKMARK_FROM_SELECTION_EXT,
+            command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
             url: document.location.href,
             title: document.title,
-            selection,
+            folderName,
           });  
         }
         break
       }
-      case CONTENT_SCRIPT_MSG_ID.ADD_BOOKMARK_FROM_SELECTION_PAGE: {
-        const selection = document.getSelection().toString() 
+      case CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT: {
+        const folderName = window.prompt("Enter folder for your bookmark") 
 
-        if (selection) {
+        if (folderName) {
           chrome.runtime.sendMessage({
-            command: EXTENSION_MSG_ID.ADD_BOOKMARK_FROM_SELECTION_EXT,
+            command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
             url: document.location.href,
             title: document.title,
-            selection,
+            folderName,
           });  
         }
         break

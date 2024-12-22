@@ -1,6 +1,6 @@
 import {
   addBookmark,
-  addBookmarkFromSelection,
+  addBookmarkFolderByName,
   addRecentTagFromView,
   deleteBookmark,
   fixTag,
@@ -164,13 +164,13 @@ export async function onIncomingMessage (message, sender) {
 
       break
     }
-    case EXTENSION_MSG_ID.ADD_BOOKMARK_FROM_SELECTION_EXT: {
-      logIM('runtime.onMessage ADD_BOOKMARK_FROM_SELECTION_EXT', message.selection);
+    case EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME: {
+      logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', message.folderName);
 
-      await addBookmarkFromSelection({
+      await addBookmarkFolderByName({
         url: message.url,
         title: message.title,
-        selection: message.selection,
+        folderName: message.folderName,
       })
 
       break

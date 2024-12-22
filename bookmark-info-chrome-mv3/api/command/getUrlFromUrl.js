@@ -1,23 +1,11 @@
 import {
-  CONTENT_SCRIPT_MSG_ID,
-} from '../../constant/index.js'
+  replaceUrlInTab,
+} from '../content-script.api.js'
 import {
   makeLogFunction,
 } from '../log.api.js'
 
 const logUU = makeLogFunction({ module: 'getUrlFromUrl' })
-
-async function replaceUrlInTab({ tabId, url }) {
-  logUU('replaceUrlInTab () 00', tabId, url)
-
-  const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.REPLACE_URL,
-    url,
-  }
-  await chrome.tabs.sendMessage(tabId, msg)
-    .catch(() => {
-    })
-}
 
 export async function getUrlFromUrl() {
   logUU('getUrlFromUrl () 00')

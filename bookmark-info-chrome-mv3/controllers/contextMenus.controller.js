@@ -2,7 +2,7 @@ import {
   CONTEXT_MENU_CMD_ID,
 } from '../constant/index.js';
 import {
-  removeFromUrlAnchorAndSearchParamsInActiveTab,
+  removeFromUrlHashAndSearchParamsInActiveTab,
   closeBookmarkedTabs,
   closeDuplicateTabs,
   startAddBookmarkFromInput,
@@ -38,7 +38,7 @@ export const contextMenusController = {
         break;
       }
       case CONTEXT_MENU_CMD_ID.CLEAR_URL: {
-        removeFromUrlAnchorAndSearchParamsInActiveTab()
+        removeFromUrlHashAndSearchParamsInActiveTab()
         break;
       }
       case CONTEXT_MENU_CMD_ID.GET_URL_FROM_URL: {
