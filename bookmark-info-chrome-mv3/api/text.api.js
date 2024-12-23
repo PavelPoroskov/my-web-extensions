@@ -13,6 +13,11 @@ export const normalizeTitle = (title) => {
         .replace(/\s+/, ' ')
         .toLowerCase()
 
+    // fix error: singular('node.js) => 'node.j'
+    if ((trimmedTitle.endsWith('js') || trimmedTitle.endsWith('css'))) {
+        return trimmedTitle
+    }
+
     const wordList = trimmedTitle.split(' ')
     const lastWord = wordList.at(-1)
     const singularLastWord = singular(lastWord)

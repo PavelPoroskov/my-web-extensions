@@ -79,6 +79,8 @@ async function findFolderInSubtree({ normalizedTitle, parentId }) {
 //  onStart, merge will be
 async function findFolder(title) {
     logFA('findFolder 00 title', title)
+    const normalizedTitle = normalizeTitle(title)
+    logFA('findFolder 00 normalizedTitle', normalizedTitle)
     let foundItem
 
     const bookmarkList = await chrome.bookmarks.search({ title });
@@ -92,10 +94,31 @@ async function findFolder(title) {
         i += 1
     }
 
-    const normalizedTitle = normalizeTitle(title)
-    logFA('findFolder 22 normalizedTitle', normalizedTitle)
+    const trimmedTitle = title.trim()
+    const lowTitle = trimmedTitle.toLowerCase()
+
+    if (!foundItem && lowTitle.endsWith('.js')) {
+        const modifiedTitle = `${lowTitle.slice(0, -3)}js`
+        const modifiedNormalizedTitle = normalizeTitle(modifiedTitle)
+        
+        const bookmarkList = await chrome.bookmarks.search(modifiedTitle);
+        logFA('findFolder 22 search(title) modifiedTitle, modifiedNormalizedTitle', modifiedTitle, modifiedNormalizedTitle)
+        logFA('findFolder 22 search(title)', bookmarkList.length, bookmarkList)
+
+        let i = 0
+        while (!foundItem && i < bookmarkList.length) {
+            const checkItem = bookmarkList[i]
+            if (!checkItem.url && normalizeTitle(checkItem.title) === modifiedNormalizedTitle) {
+                foundItem = checkItem
+            }
+            i += 1
+        }
+    }
+
 
     if (!foundItem) {
+        logFA('findFolder 33 normalizedTitle', normalizedTitle)
+    
         const bookmarkList = await chrome.bookmarks.search(title);
         logFA('findFolder 33 search(title)', bookmarkList.length, bookmarkList)
 
@@ -109,31 +132,15 @@ async function findFolder(title) {
         }
     }
 
-    const trimmedTitle = title.trim()
-    const lowTitle = trimmedTitle.toLowerCase()
-    const lastWord = trimmedTitle.split(' ').at(-1)
-
-    if (!foundItem && lowTitle.endsWith('.js') && normalizedTitle.endsWith('.js')) {
-        const modifiedTitle = `${lowTitle.slice(0, -3)}js`
-        const modifiedNormalizedTitle = `${normalizedTitle.slice(0, -3)}js`
-        
-        const bookmarkList = await chrome.bookmarks.search(modifiedTitle);
-        logFA('findFolder 44 search(title)', bookmarkList.length, bookmarkList)
-
-        let i = 0
-        while (!foundItem && i < bookmarkList.length) {
-            const checkItem = bookmarkList[i]
-            if (!checkItem.url && normalizeTitle(checkItem.title) === modifiedNormalizedTitle) {
-                foundItem = checkItem
-            }
-            i += 1
-        }
-    }
+    const trimmedTitle2 = title.trim()
+    const lowTitle2 = trimmedTitle2.toLowerCase()
+    const lastWord = lowTitle2.split(' ').at(-1)
 
     if (!foundItem && lastWord.length > 5) {
-        const modifiedTitle = lowTitle.slice(0, -3)
+        const modifiedTitle = lowTitle2.slice(0, -3)
         
         const bookmarkList = await chrome.bookmarks.search(modifiedTitle);
+        logFA('findFolder 44 search(title) modifiedTitle', modifiedTitle)
         logFA('findFolder 44 search(title)', bookmarkList.length, bookmarkList)
 
         let i = 0
@@ -148,12 +155,12 @@ async function findFolder(title) {
 
     if (!foundItem) {
         foundItem = await findFolderInSubtree({ normalizedTitle, parentId: OTHER_BOOKMARKS_FOLDER_ID })
-        logFA('findFolder 44 OTHER_BOOKMARKS_FOLDER_ID', foundItem)
+        logFA('findFolder 55 OTHER_BOOKMARKS_FOLDER_ID', foundItem)
     }
 
     if (!foundItem) {
         foundItem = await findFolderInSubtree({ normalizedTitle, parentId: BOOKMARKS_BAR_FOLDER_ID })
-        logFA('findFolder 55 BOOKMARKS_BAR_FOLDER_ID', foundItem)
+        logFA('findFolder 66 BOOKMARKS_BAR_FOLDER_ID', foundItem)
     }
 
     return foundItem
