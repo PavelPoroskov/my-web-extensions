@@ -403,12 +403,21 @@ ${semanticTagsStyle}
     const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
 
     if (parentId) {
-      const fullMessage = showInHtmlSingleTaskQueue.getState()
-      const recentTag = fullMessage.tagList.find((item) => item.parentId === parentId)
+      const fullState = showInHtmlSingleTaskQueue.getState()
+      const tagList = fullState.tagList || []
+
+      let tag
+      const findIndex = tagList.findIndex((item) => item.parentId == parentId)
+      if (-1 < findIndex) {
+        tag = tagList[findIndex]
+        const newTagList = tagList.with(findIndex, { ...tag, isFixed: true })
+        showInHtmlSingleTaskQueue.addUpdate({ tagList: newTagList })
+      }
+
       await chrome.runtime.sendMessage({
         command: EXTENSION_MSG_ID.FIX_TAG,
         parentId,
-        title: recentTag.title,
+        title: tag?.title,
       });
     }
   }
@@ -418,6 +427,17 @@ ${semanticTagsStyle}
     const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
 
     if (parentId) {
+      const fullState = showInHtmlSingleTaskQueue.getState()
+      const tagList = fullState.tagList || []
+
+      let tag
+      const findIndex = tagList.findIndex((item) => item.parentId == parentId)
+      if (-1 < findIndex) {
+        tag = tagList[findIndex]
+        const newTagList = tagList.with(findIndex, { ...tag, isFixed: false })
+        showInHtmlSingleTaskQueue.addUpdate({ tagList: newTagList })
+      }
+
       await chrome.runtime.sendMessage({
         command: EXTENSION_MSG_ID.UNFIX_TAG,
         parentId,
