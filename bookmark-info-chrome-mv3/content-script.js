@@ -52,7 +52,7 @@ const log = SHOW_LOG ? console.log : () => {};
     Object.entries(BROWSER_SPECIFIC_OPTIONS)
       .map(([option, obj]) => [option, obj[BROWSER]])
   );
-  
+
   const bkmInfoRootId = 'bkm-info--root';
   const bkmInfoStyle1Id = 'bkm-info--style1';
   const bkmInfoStyle2Id = 'bkm-info--style2';
@@ -181,7 +181,7 @@ ${semanticTagsStyle}
   content: attr(data-restpath);
   text-wrap: nowrap;
   position:absolute;
-  right:100%;  
+  right:100%;
   background: lightgray;
   color: black;
   display:none;
@@ -282,7 +282,7 @@ ${semanticTagsStyle}
 `
     )
   };
-  
+
   let storedTagLength = 8;
   let storedIsHideSemanticHtmlTagsOnPrinting = false;
 
@@ -292,7 +292,7 @@ ${semanticTagsStyle}
     if (rootDiv) {
       while (rootDiv.lastChild) {
         rootDiv.removeChild(rootDiv.lastChild);
-      }  
+      }
     }
   }
 
@@ -370,17 +370,17 @@ ${semanticTagsStyle}
         const tagList = fullState.tagList || []
         const tag = tagList.find((item) => item.parentId === parentId)
         if (tag) {
-          const newBookmarkInfoList = bookmarkInfoList.concat({ 
-            id: '', 
-            title: document.title, 
-            fullPathList: [tag.title], 
+          const newBookmarkInfoList = bookmarkInfoList.concat({
+            id: '',
+            title: document.title,
+            fullPathList: [tag.title],
             parentId,
             optimisticAdd: true,
           })
           if (optimisticAddFromTagList < optimisticDelFromTagList) {
             optimisticAddFromTagList += 1
           }
-          showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })  
+          showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
         }
         await chrome.runtime.sendMessage({
           command: EXTENSION_MSG_ID.ADD_BOOKMARK,
@@ -428,7 +428,7 @@ ${semanticTagsStyle}
     const isShowTagList = input.isShowTagList || false
     const tagLength = input.tagLength || 8
     const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting || false
-    
+
     log('showBookmarkInfo 00');
 
     const usedParentIdSet = new Set(
@@ -438,7 +438,7 @@ ${semanticTagsStyle}
     )
     const tagList = inTagList.map(({ parentId, title, isFixed, isLast}) => ({
       parentId,
-      title, 
+      title,
       isFixed,
       isLast,
       isUsed: usedParentIdSet.has(parentId)
@@ -451,18 +451,18 @@ ${semanticTagsStyle}
 
       if (isShowTitle && title) {
         if (title !== prevTitle) {
-          drawList.push({ type: 'title', value: title })        
+          drawList.push({ type: 'title', value: title })
           prevTitle = title
-        }  
+        }
       }
-      
+
       drawList.push({ type: 'bookmark', value, bkmIndex: index })
     })
     const emptySlots = Math.max(0, optimisticDelFromTagList - optimisticAddFromTagList)
     for (let iEmpty = 0; iEmpty < emptySlots; iEmpty += 1) {
       drawList.push({ type: 'emptySlot' })
     }
-  
+
     if (visitString) {
       drawList.push({ type: 'history', value: visitString })
     }
@@ -492,8 +492,8 @@ ${semanticTagsStyle}
       rootDiv = document.createElement('div');
       rootDiv.setAttribute('id', bkmInfoRootId);
 
-      document.body.insertAdjacentElement('afterbegin', rootStyle);    
-      
+      document.body.insertAdjacentElement('afterbegin', rootStyle);
+
       const rootStyle2 = document.createElement('style');
       rootStyle2.setAttribute('id', bkmInfoStyle2Id);
       const textNodeStyle2 = document.createTextNode(
@@ -504,8 +504,8 @@ ${semanticTagsStyle}
       );
       rootStyle2.appendChild(textNodeStyle2);
 
-      rootStyle.insertAdjacentElement('afterend', rootStyle2);     
-      rootStyle2.insertAdjacentElement('afterend', rootDiv);    
+      rootStyle.insertAdjacentElement('afterend', rootStyle2);
+      rootStyle2.insertAdjacentElement('afterend', rootDiv);
     } else {
       if (tagLength !== storedTagLength || isHideSemanticHtmlTagsOnPrinting !== storedIsHideSemanticHtmlTagsOnPrinting) {
         storedTagLength = tagLength
@@ -539,10 +539,10 @@ ${semanticTagsStyle}
           const [folderName] = fullPathList.slice(-1)
           const restPathList = fullPathList.slice(0, -1)
           const restPath = restPathList.concat('').join('/ ')
-    
+
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
-              
+
           if (source === 'substring') {
             const textNode = document.createTextNode(`url*: ${folderName}`);
             divLabel.appendChild(textNode);
@@ -552,7 +552,7 @@ ${semanticTagsStyle}
             divLabel.appendChild(textNode);
             divLabel.setAttribute('data-restpath', restPath);
           }
-    
+
           divLabel.addEventListener('click', onBookmarkLabelClick);
           // TODO sanitize: remove ",<,>
           // const sanitizedFullPath = fullPath
@@ -563,22 +563,22 @@ ${semanticTagsStyle}
           //
           // Symbols ( " > < ) don't break html and displayed as text.
           divLabel.setAttribute('data-bkmid', id);
-    
+
           const divDelBtn = document.createElement('div');
           divDelBtn.setAttribute('data-bkmid', id);
           divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-del');
-    
+
           const divDelBtnLetter = document.createElement('div');
           divDelBtnLetter.classList.add('bkm-info--btn-letter');
           const textNodeDel = document.createTextNode('X');
           divDelBtnLetter.appendChild(textNodeDel);
-          
+
           divDelBtn.appendChild(divDelBtnLetter);
           divDelBtn.addEventListener('click', deleteBookmark);
-    
+
           divLabelContainer.appendChild(divLabel);
           divLabelContainer.appendChild(divDelBtn);
-  
+
           break
         }
         case 'emptySlot': {
@@ -586,9 +586,9 @@ ${semanticTagsStyle}
           divLabel.classList.add('bkm-info--label', 'bkm-info--empty');
           const textNode = document.createTextNode('|');
           divLabel.appendChild(textNode);
-  
+
           divLabelContainer.appendChild(divLabel);
-  
+
           break
         }
         case 'history': {
@@ -597,9 +597,9 @@ ${semanticTagsStyle}
           divLabel.addEventListener('click', hideBookmarks);
           const textNode = document.createTextNode(`${value}`);
           divLabel.appendChild(textNode);
-  
+
           divLabelContainer.appendChild(divLabel);
-  
+
           break
         }
         case 'separator': {
@@ -630,12 +630,12 @@ ${semanticTagsStyle}
           divFixBtn.setAttribute('data-parentid', parentId);
           divFixBtn.classList.add('bkm-info--btn', 'bkm-info--btn-fix');
           divFixBtn.addEventListener('click', fixTag);
-    
+
           const divFixBtnLetter = document.createElement('div');
           divFixBtnLetter.classList.add('bkm-info--btn-letter');
           const textNodeFix = document.createTextNode('⊙');
           divFixBtnLetter.appendChild(textNodeFix);
-          divFixBtn.appendChild(divFixBtnLetter);    
+          divFixBtn.appendChild(divFixBtnLetter);
 
           divLabelContainer.appendChild(divFixBtn);
           divLabelContainer.appendChild(divLabel);
@@ -660,13 +660,13 @@ ${semanticTagsStyle}
           divFixBtn.setAttribute('data-parentid', parentId);
           divFixBtn.classList.add('bkm-info--btn', 'bkm-info--btn-unfix');
           divFixBtn.addEventListener('click', unfixTag);
-    
+
           const divFixBtnLetter = document.createElement('div');
           divFixBtnLetter.classList.add('bkm-info--btn-letter');
           const textNodeFix = document.createTextNode('X');
           divFixBtnLetter.appendChild(textNodeFix);
-          
-          divFixBtn.appendChild(divFixBtnLetter);    
+
+          divFixBtn.appendChild(divFixBtnLetter);
 
           divLabelContainer.appendChild(divFixBtn);
           divLabelContainer.appendChild(divLabel);
@@ -679,13 +679,13 @@ ${semanticTagsStyle}
           divLabel.addEventListener('click', hideBookmarks);
           const textNode = document.createTextNode(`${value} :title`);
           divLabel.appendChild(textNode);
-  
+
           divLabelContainer.appendChild(divLabel);
-  
+
           break
         }
       }
-      
+
       const divRow = document.createElement('div');
       divRow.classList.add('bkm-info--row');
       divRow.appendChild(divLabelContainer);
@@ -770,8 +770,8 @@ ${semanticTagsStyle}
       const isShowNow = !ytDiv.style.display
       const isShowNeed = cToggleYoutubePageHeader % 2 == 1
       log('isHideHeaderForYoutube 11', {
-        'ytDiv.style.display': ytDiv.style.display, 
-        isShowNow, 
+        'ytDiv.style.display': ytDiv.style.display,
+        isShowNow,
         isShowNeed
       });
 
@@ -788,7 +788,7 @@ ${semanticTagsStyle}
           ytHeaderPadding = ytDiv2.style['padding-top']
           ytDiv2.style = 'padding-top: 48px;'
         }
-      }  
+      }
     }
   }
 
@@ -798,7 +798,7 @@ ${semanticTagsStyle}
     if (isHideHeaderForYoutube) {
       const isYoutubePage = document.location.hostname.endsWith('youtube.com')
       const isChannel = isYoutubePage && (
-        document.location.pathname.startsWith('/@') 
+        document.location.pathname.startsWith('/@')
         || document.location.pathname.startsWith('/c/')
       )
 
@@ -815,11 +815,11 @@ ${semanticTagsStyle}
             ytTimerId = setTimeout(
               () => {
                 toggleYoutubePageHeader({ nTry: restNTry })
-              }, 
+              },
               200,
-            )  
+            )
           }
-        }  
+        }
       }
     }
   }
@@ -827,8 +827,8 @@ ${semanticTagsStyle}
   chrome.runtime.onMessage.addListener((message) => {
     log('chrome.runtime.onMessage: ', message);
     switch (message.command) {
-      // case CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO: 
-      // case CONTENT_SCRIPT_MSG_ID.TAGS_INFO: 
+      // case CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO:
+      // case CONTENT_SCRIPT_MSG_ID.TAGS_INFO:
       case CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO: {
         const fullState = showInHtmlSingleTaskQueue.getState()
         const bookmarkInfoListBefore = (fullState.bookmarkInfoList || []).filter(({ optimisticAdd }) => !optimisticAdd)
@@ -842,11 +842,11 @@ ${semanticTagsStyle}
             optimisticDelFromTagList = 0
             optimisticAddFromTagList = 0
             optimisticToStorageDel = 0
-            optimisticToStorageAdd = 0      
+            optimisticToStorageAdd = 0
           } else {
             if (optimisticAddFromTagList - optimisticToStorageAdd > 0) {
               const part = Math.min(diff, optimisticAddFromTagList - optimisticToStorageAdd);
-              optimisticToStorageAdd += part  
+              optimisticToStorageAdd += part
             }
           }
         }
@@ -855,11 +855,11 @@ ${semanticTagsStyle}
             optimisticDelFromTagList = 0
             optimisticAddFromTagList = 0
             optimisticToStorageDel = 0
-            optimisticToStorageAdd = 0      
+            optimisticToStorageAdd = 0
           } else {
             if (optimisticDelFromTagList - optimisticToStorageDel > 0) {
               const part = Math.min(-diff, optimisticDelFromTagList - optimisticToStorageDel);
-              optimisticToStorageDel += part  
+              optimisticToStorageDel += part
             }
           }
         }
@@ -871,20 +871,20 @@ ${semanticTagsStyle}
       case CONTENT_SCRIPT_MSG_ID.CHANGE_URL: {
         log('content-script: CHANGE_URL', message.url);
         const newUrl = message.url
-        
+
         if (document.location.href.startsWith(newUrl)) {
           log('content-script 22');
           //document.location.href = newUrl
           //window.history.pushState(newUrl)
           window.history.replaceState(null, "", newUrl);
         }
-        
+
         break
       }
       case CONTENT_SCRIPT_MSG_ID.REPLACE_URL: {
         log('content-script: REPLACE_URL ', message.url);
         document.location.href = message.url
-        
+
         break
       }
       case CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER: {
@@ -893,29 +893,39 @@ ${semanticTagsStyle}
         break
       }
       case CONTENT_SCRIPT_MSG_ID.GET_SELECTION: {
-        const folderName = document.getSelection().toString() 
-
-        if (folderName) {
-          chrome.runtime.sendMessage({
-            command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
-            url: document.location.href,
-            title: document.title,
-            folderName,
-          });  
+        const selection = document.getSelection().toString()
+        if (!selection) {
+          break
         }
+        const folderName = selection.trim()
+        if (!folderName) {
+          break
+        }
+
+        chrome.runtime.sendMessage({
+          command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
+          url: document.location.href,
+          title: document.title,
+          folderName,
+        });
         break
       }
       case CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT: {
-        const folderName = window.prompt("Enter folder for your bookmark") 
-
-        if (folderName) {
-          chrome.runtime.sendMessage({
-            command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
-            url: document.location.href,
-            title: document.title,
-            folderName,
-          });  
+        const userInput = window.prompt("Enter folder for your bookmark")
+        if (!userInput) {
+          break
         }
+        const folderName = userInput.trim()
+        if (!folderName) {
+          break
+        }
+
+        chrome.runtime.sendMessage({
+          command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
+          url: document.location.href,
+          title: document.title,
+          folderName,
+        });
         break
       }
     }
@@ -951,7 +961,7 @@ ${semanticTagsStyle}
 
     if (rootDiv) {
       if (document.fullscreenElement) {
-        rootDiv.style = 'display:none;';      
+        rootDiv.style = 'display:none;';
       } else {
         rootDiv.style = 'display:block;';
       }
@@ -966,7 +976,7 @@ ${semanticTagsStyle}
       sendTabIsReady()
     }
   });
-  
+
   if (!document.hidden) {
     sendTabIsReady()
   }

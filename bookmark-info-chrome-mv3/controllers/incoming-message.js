@@ -51,7 +51,7 @@ export async function onIncomingMessage (message, sender) {
           tabId,
           url: cleanUrl,
           debugCaller: 'runtime.onMessage contentScriptReady',
-        })               
+        })
       }
 
       break
@@ -81,7 +81,7 @@ export async function onIncomingMessage (message, sender) {
     case EXTENSION_MSG_ID.FIX_TAG: {
       logIM('runtime.onMessage fixTag');
       await fixTag({
-        parentId: message.parentId, 
+        parentId: message.parentId,
         title: message.title,
       })
 
@@ -118,7 +118,7 @@ export async function onIncomingMessage (message, sender) {
       // const tabId = sender?.tab?.id;
       // if (tabId == memo.activeTabId) {
       //   updateActiveTab({
-      //     tabId,      
+      //     tabId,
       //     debugCaller: 'runtime.onMessage ADD_RECENT_TAG',
       //     useCache: true,
       //   })
@@ -156,7 +156,7 @@ export async function onIncomingMessage (message, sender) {
       } catch (e) {
         logIM('IGNORE Error on flatting bookmarks', e);
       }
-      
+
       chrome.runtime.sendMessage({
         command: EXTENSION_MSG_ID.FLAT_BOOKMARKS_RESULT,
         success,
@@ -166,13 +166,19 @@ export async function onIncomingMessage (message, sender) {
     }
     case EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME: {
       logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', message.folderName);
+      if (!message.folderName) {
+        break
+      }
+      const folderName = message.folderName.trim()
+      if (!folderName) {
+        break
+      }
 
       await addBookmarkFolderByName({
         url: message.url,
         title: message.title,
-        folderName: message.folderName,
+        folderName: folderName,
       })
-
       break
     }
   }
