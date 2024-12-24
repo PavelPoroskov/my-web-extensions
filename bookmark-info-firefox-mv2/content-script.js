@@ -13,12 +13,12 @@ const log = SHOW_LOG ? console.log : () => {};
   const EXTENSION_MSG_ID = {
     DELETE_BOOKMARK: 'DELETE_BOOKMARK',
     ADD_BOOKMARK: 'ADD_BOOKMARK',
+    ADD_BOOKMARK_FOLDER_BY_NAME: 'ADD_BOOKMARK_FOLDER_BY_NAME',
     FIX_TAG: 'FIX_TAG',
     UNFIX_TAG: 'UNFIX_TAG',
     TAB_IS_READY: 'TAB_IS_READY',
     SHOW_TAG_LIST: 'SHOW_TAG_LIST',
     ADD_RECENT_TAG: 'ADD_RECENT_TAG',
-    ADD_BOOKMARK_FROM_SELECTION_EXT: 'ADD_BOOKMARK_FROM_SELECTION_EXT',
   }
   // TODO-DOUBLE remove duplication in CONTENT_SCRIPT_MSG_ID: message-id.js and content-scripts.js
   const CONTENT_SCRIPT_MSG_ID = {
@@ -27,8 +27,8 @@ const log = SHOW_LOG ? console.log : () => {};
     // TAGS_INFO: 'TAGS_INFO',
     CHANGE_URL: 'CHANGE_URL',
     TOGGLE_YOUTUBE_HEADER: 'TOGGLE_YOUTUBE_HEADER',
-    ADD_BOOKMARK_FROM_INPUT_PAGE: 'ADD_BOOKMARK_FROM_INPUT_PAGE',
-    ADD_BOOKMARK_FROM_SELECTION_PAGE: 'ADD_BOOKMARK_FROM_SELECTION_PAGE',
+    GET_USER_INPUT: 'GET_USER_INPUT',
+    GET_SELECTION: 'GET_SELECTION',
     REPLACE_URL: 'REPLACE_URL',
   }
 
@@ -52,7 +52,7 @@ const log = SHOW_LOG ? console.log : () => {};
     Object.entries(BROWSER_SPECIFIC_OPTIONS)
       .map(([option, obj]) => [option, obj[BROWSER]])
   );
-  
+
   const bkmInfoRootId = 'bkm-info--root';
   const bkmInfoStyle1Id = 'bkm-info--style1';
   const bkmInfoStyle2Id = 'bkm-info--style2';
@@ -82,7 +82,7 @@ const log = SHOW_LOG ? console.log : () => {};
   z-index: 2147483646;
   background-color: transparent;
   font-size: 14px;
-  font-family: sans-serif;
+  font-family: sans-serif !important;
   font-weight: normal;
   user-select: none;
   max-height: 100vh;
@@ -103,7 +103,7 @@ ${semanticTagsStyle}
   display: flex;
   position: relative;
   line-height: inherit;
-  font-family: inherit;
+  font-family: inherit !important;
   margin: inherit;
   justify-content: flex-end;
 }
@@ -111,7 +111,7 @@ ${semanticTagsStyle}
   display: flex;
   position: relative;
   line-height: inherit;
-  font-family: inherit;
+  font-family: inherit !important;
   margin: inherit;
   justify-content: flex-end;
 }
@@ -123,7 +123,7 @@ ${semanticTagsStyle}
   color: black;
   padding-right: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
   line-height: inherit;
-  font-family: inherit;
+  font-family: inherit !important;
   margin: inherit;
   width: fit-content;
   text-wrap: nowrap;
@@ -140,14 +140,14 @@ ${semanticTagsStyle}
   justify-items: center;
   display: none;
   line-height: inherit;
-  font-family: inherit;
+  font-family: inherit !important;
   margin: inherit;
 }
 .bkm-info--btn-letter {
   color: white;
   font-size: 10px;
   line-height: 1;
-  font-family: inherit;
+  font-family: inherit !important;
   margin: inherit;
 }
 .bkm-info--btn:active {
@@ -181,7 +181,7 @@ ${semanticTagsStyle}
   content: attr(data-restpath);
   text-wrap: nowrap;
   position:absolute;
-  right:100%;  
+  right:100%;
   background: lightgray;
   color: black;
   display:none;
@@ -228,7 +228,7 @@ ${semanticTagsStyle}
   padding-right: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
   text-wrap: nowrap;
   line-height: inherit;
-  font-family: inherit;
+  font-family: inherit !important;
   margin: inherit;
 }
 .bkm-info--fixed {
@@ -282,7 +282,7 @@ ${semanticTagsStyle}
 `
     )
   };
-  
+
   let storedTagLength = 8;
   let storedIsHideSemanticHtmlTagsOnPrinting = false;
 
@@ -292,7 +292,7 @@ ${semanticTagsStyle}
     if (rootDiv) {
       while (rootDiv.lastChild) {
         rootDiv.removeChild(rootDiv.lastChild);
-      }  
+      }
     }
   }
 
@@ -344,43 +344,49 @@ ${semanticTagsStyle}
   }
 
   async function toggleTag(event) {
-    const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
+    const parentId = event?.target?.dataset?.parentid;
+    const isUsed = event?.target?.dataset?.isused;
+    // log('toggleTag () 00', 'isUsed', isUsed, 'parentId', parentId)
 
     if (parentId) {
       const fullState = showInHtmlSingleTaskQueue.getState()
       const bookmarkInfoList = fullState.bookmarkInfoList || []
-      const bkm = bookmarkInfoList.find((item) => item.parentId === parentId)
 
-      if (bkm?.id) {
-        // epic error
-        // const findIndex = bookmarkInfoList.findIndex((item) => item.id != bkm.id)
-        const findIndex = bookmarkInfoList.findIndex((item) => item.id == bkm.id)
-        if (-1 < findIndex) {
-          const newBookmarkInfoList = bookmarkInfoList.with(findIndex, { optimisticDel: true })
-          optimisticDelFromTagList += 1
-          // log('bookmarkFromTag 11 +optimisticDelFromTagList', optimisticDelFromTagList);
-          showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
+      if (isUsed) {
+        const bkm = bookmarkInfoList.find((item) => item.parentId === parentId)
+
+        if (bkm?.id) {
+          // epic error
+          // const findIndex = bookmarkInfoList.findIndex((item) => item.id != bkm.id)
+          const findIndex = bookmarkInfoList.findIndex((item) => item.id == bkm.id)
+          if (-1 < findIndex) {
+            const newBookmarkInfoList = bookmarkInfoList.with(findIndex, { optimisticDel: true })
+            optimisticDelFromTagList += 1
+            // log('bookmarkFromTag 11 +optimisticDelFromTagList', optimisticDelFromTagList);
+            showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
+          }
+
+          await browser.runtime.sendMessage({
+            command: EXTENSION_MSG_ID.DELETE_BOOKMARK,
+            bkmId: bkm.id,
+          });
         }
-        await browser.runtime.sendMessage({
-          command: EXTENSION_MSG_ID.DELETE_BOOKMARK,
-          bkmId: bkm.id,
-        });
       } else {
         // optimistic ui
         const tagList = fullState.tagList || []
         const tag = tagList.find((item) => item.parentId === parentId)
         if (tag) {
-          const newBookmarkInfoList = bookmarkInfoList.concat({ 
-            id: '', 
-            title: document.title, 
-            fullPathList: [tag.title], 
+          const newBookmarkInfoList = bookmarkInfoList.concat({
+            id: '',
+            title: document.title,
+            fullPathList: [tag.title],
             parentId,
             optimisticAdd: true,
           })
           if (optimisticAddFromTagList < optimisticDelFromTagList) {
             optimisticAddFromTagList += 1
           }
-          showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })  
+          showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
         }
         await browser.runtime.sendMessage({
           command: EXTENSION_MSG_ID.ADD_BOOKMARK,
@@ -397,12 +403,21 @@ ${semanticTagsStyle}
     const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
 
     if (parentId) {
-      const fullMessage = showInHtmlSingleTaskQueue.getState()
-      const recentTag = fullMessage.tagList.find((item) => item.parentId === parentId)
+      const fullState = showInHtmlSingleTaskQueue.getState()
+      const tagList = fullState.tagList || []
+
+      let tag
+      const findIndex = tagList.findIndex((item) => item.parentId == parentId)
+      if (-1 < findIndex) {
+        tag = tagList[findIndex]
+        const newTagList = tagList.with(findIndex, { ...tag, isFixed: true })
+        showInHtmlSingleTaskQueue.addUpdate({ tagList: newTagList })
+      }
+
       await browser.runtime.sendMessage({
         command: EXTENSION_MSG_ID.FIX_TAG,
         parentId,
-        title: recentTag.title,
+        title: tag?.title,
       });
     }
   }
@@ -412,6 +427,17 @@ ${semanticTagsStyle}
     const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
 
     if (parentId) {
+      const fullState = showInHtmlSingleTaskQueue.getState()
+      const tagList = fullState.tagList || []
+
+      let tag
+      const findIndex = tagList.findIndex((item) => item.parentId == parentId)
+      if (-1 < findIndex) {
+        tag = tagList[findIndex]
+        const newTagList = tagList.with(findIndex, { ...tag, isFixed: false })
+        showInHtmlSingleTaskQueue.addUpdate({ tagList: newTagList })
+      }
+
       await browser.runtime.sendMessage({
         command: EXTENSION_MSG_ID.UNFIX_TAG,
         parentId,
@@ -428,7 +454,7 @@ ${semanticTagsStyle}
     const isShowTagList = input.isShowTagList || false
     const tagLength = input.tagLength || 8
     const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting || false
-    
+
     log('showBookmarkInfo 00');
 
     const usedParentIdSet = new Set(
@@ -438,7 +464,7 @@ ${semanticTagsStyle}
     )
     const tagList = inTagList.map(({ parentId, title, isFixed, isLast}) => ({
       parentId,
-      title, 
+      title,
       isFixed,
       isLast,
       isUsed: usedParentIdSet.has(parentId)
@@ -451,18 +477,21 @@ ${semanticTagsStyle}
 
       if (isShowTitle && title) {
         if (title !== prevTitle) {
-          drawList.push({ type: 'title', value: title })        
+          drawList.push({ type: 'title', value: title })
           prevTitle = title
-        }  
+        }
       }
-      
+
       drawList.push({ type: 'bookmark', value, bkmIndex: index })
     })
-    const emptySlots = Math.max(0, optimisticDelFromTagList - optimisticAddFromTagList)
+    const emptySlotsForDel = Math.max(0, optimisticDelFromTagList - optimisticAddFromTagList)
+    const emptySlotsForAdd = Math.max(0, 2 - bookmarkInfoList.length - emptySlotsForDel)
+    const emptySlots = emptySlotsForAdd + emptySlotsForDel
+
     for (let iEmpty = 0; iEmpty < emptySlots; iEmpty += 1) {
       drawList.push({ type: 'emptySlot' })
     }
-  
+
     if (visitString) {
       drawList.push({ type: 'history', value: visitString })
     }
@@ -492,8 +521,8 @@ ${semanticTagsStyle}
       rootDiv = document.createElement('div');
       rootDiv.setAttribute('id', bkmInfoRootId);
 
-      document.body.insertAdjacentElement('afterbegin', rootStyle);    
-      
+      document.body.insertAdjacentElement('afterbegin', rootStyle);
+
       const rootStyle2 = document.createElement('style');
       rootStyle2.setAttribute('id', bkmInfoStyle2Id);
       const textNodeStyle2 = document.createTextNode(
@@ -504,8 +533,8 @@ ${semanticTagsStyle}
       );
       rootStyle2.appendChild(textNodeStyle2);
 
-      rootStyle.insertAdjacentElement('afterend', rootStyle2);     
-      rootStyle2.insertAdjacentElement('afterend', rootDiv);    
+      rootStyle.insertAdjacentElement('afterend', rootStyle2);
+      rootStyle2.insertAdjacentElement('afterend', rootDiv);
     } else {
       if (tagLength !== storedTagLength || isHideSemanticHtmlTagsOnPrinting !== storedIsHideSemanticHtmlTagsOnPrinting) {
         storedTagLength = tagLength
@@ -539,10 +568,10 @@ ${semanticTagsStyle}
           const [folderName] = fullPathList.slice(-1)
           const restPathList = fullPathList.slice(0, -1)
           const restPath = restPathList.concat('').join('/ ')
-    
+
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
-              
+
           if (source === 'substring') {
             const textNode = document.createTextNode(`url*: ${folderName}`);
             divLabel.appendChild(textNode);
@@ -552,7 +581,7 @@ ${semanticTagsStyle}
             divLabel.appendChild(textNode);
             divLabel.setAttribute('data-restpath', restPath);
           }
-    
+
           divLabel.addEventListener('click', onBookmarkLabelClick);
           // TODO sanitize: remove ",<,>
           // const sanitizedFullPath = fullPath
@@ -563,22 +592,22 @@ ${semanticTagsStyle}
           //
           // Symbols ( " > < ) don't break html and displayed as text.
           divLabel.setAttribute('data-bkmid', id);
-    
+
           const divDelBtn = document.createElement('div');
           divDelBtn.setAttribute('data-bkmid', id);
           divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-del');
-    
+
           const divDelBtnLetter = document.createElement('div');
           divDelBtnLetter.classList.add('bkm-info--btn-letter');
           const textNodeDel = document.createTextNode('X');
           divDelBtnLetter.appendChild(textNodeDel);
-          
+
           divDelBtn.appendChild(divDelBtnLetter);
           divDelBtn.addEventListener('click', deleteBookmark);
-    
+
           divLabelContainer.appendChild(divLabel);
           divLabelContainer.appendChild(divDelBtn);
-  
+
           break
         }
         case 'emptySlot': {
@@ -586,9 +615,9 @@ ${semanticTagsStyle}
           divLabel.classList.add('bkm-info--label', 'bkm-info--empty');
           const textNode = document.createTextNode('|');
           divLabel.appendChild(textNode);
-  
+
           divLabelContainer.appendChild(divLabel);
-  
+
           break
         }
         case 'history': {
@@ -597,9 +626,9 @@ ${semanticTagsStyle}
           divLabel.addEventListener('click', hideBookmarks);
           const textNode = document.createTextNode(`${value}`);
           divLabel.appendChild(textNode);
-  
+
           divLabelContainer.appendChild(divLabel);
-  
+
           break
         }
         case 'separator': {
@@ -621,6 +650,7 @@ ${semanticTagsStyle}
           divLabel.addEventListener('click', toggleTag);
 
           divLabel.classList.toggle('bkm-info--used-tag', isUsed);
+          divLabel.setAttribute('data-isused', isUsed ? '1' : '');
           divLabel.classList.toggle('bkm-info--last-tag', isLast);
 
           const textNodeLabel = document.createTextNode(`${title}`);
@@ -630,12 +660,12 @@ ${semanticTagsStyle}
           divFixBtn.setAttribute('data-parentid', parentId);
           divFixBtn.classList.add('bkm-info--btn', 'bkm-info--btn-fix');
           divFixBtn.addEventListener('click', fixTag);
-    
+
           const divFixBtnLetter = document.createElement('div');
           divFixBtnLetter.classList.add('bkm-info--btn-letter');
           const textNodeFix = document.createTextNode('⊙');
           divFixBtnLetter.appendChild(textNodeFix);
-          divFixBtn.appendChild(divFixBtnLetter);    
+          divFixBtn.appendChild(divFixBtnLetter);
 
           divLabelContainer.appendChild(divFixBtn);
           divLabelContainer.appendChild(divLabel);
@@ -651,6 +681,7 @@ ${semanticTagsStyle}
           divLabel.addEventListener('click', toggleTag);
 
           divLabel.classList.toggle('bkm-info--used-tag', isUsed);
+          divLabel.setAttribute('data-isused', isUsed ? '1' : '');
           divLabel.classList.toggle('bkm-info--last-tag', isLast);
 
           const textNodeLabel = document.createTextNode(`${title}`);
@@ -660,13 +691,13 @@ ${semanticTagsStyle}
           divFixBtn.setAttribute('data-parentid', parentId);
           divFixBtn.classList.add('bkm-info--btn', 'bkm-info--btn-unfix');
           divFixBtn.addEventListener('click', unfixTag);
-    
+
           const divFixBtnLetter = document.createElement('div');
           divFixBtnLetter.classList.add('bkm-info--btn-letter');
           const textNodeFix = document.createTextNode('X');
           divFixBtnLetter.appendChild(textNodeFix);
-          
-          divFixBtn.appendChild(divFixBtnLetter);    
+
+          divFixBtn.appendChild(divFixBtnLetter);
 
           divLabelContainer.appendChild(divFixBtn);
           divLabelContainer.appendChild(divLabel);
@@ -679,13 +710,13 @@ ${semanticTagsStyle}
           divLabel.addEventListener('click', hideBookmarks);
           const textNode = document.createTextNode(`${value} :title`);
           divLabel.appendChild(textNode);
-  
+
           divLabelContainer.appendChild(divLabel);
-  
+
           break
         }
       }
-      
+
       const divRow = document.createElement('div');
       divRow.classList.add('bkm-info--row');
       divRow.appendChild(divLabelContainer);
@@ -770,8 +801,8 @@ ${semanticTagsStyle}
       const isShowNow = !ytDiv.style.display
       const isShowNeed = cToggleYoutubePageHeader % 2 == 1
       log('isHideHeaderForYoutube 11', {
-        'ytDiv.style.display': ytDiv.style.display, 
-        isShowNow, 
+        'ytDiv.style.display': ytDiv.style.display,
+        isShowNow,
         isShowNeed
       });
 
@@ -788,7 +819,7 @@ ${semanticTagsStyle}
           ytHeaderPadding = ytDiv2.style['padding-top']
           ytDiv2.style = 'padding-top: 48px;'
         }
-      }  
+      }
     }
   }
 
@@ -798,7 +829,7 @@ ${semanticTagsStyle}
     if (isHideHeaderForYoutube) {
       const isYoutubePage = document.location.hostname.endsWith('youtube.com')
       const isChannel = isYoutubePage && (
-        document.location.pathname.startsWith('/@') 
+        document.location.pathname.startsWith('/@')
         || document.location.pathname.startsWith('/c/')
       )
 
@@ -815,11 +846,11 @@ ${semanticTagsStyle}
             ytTimerId = setTimeout(
               () => {
                 toggleYoutubePageHeader({ nTry: restNTry })
-              }, 
+              },
               200,
-            )  
+            )
           }
-        }  
+        }
       }
     }
   }
@@ -827,8 +858,8 @@ ${semanticTagsStyle}
   browser.runtime.onMessage.addListener((message) => {
     log('browser.runtime.onMessage: ', message);
     switch (message.command) {
-      // case CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO: 
-      // case CONTENT_SCRIPT_MSG_ID.TAGS_INFO: 
+      // case CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO:
+      // case CONTENT_SCRIPT_MSG_ID.TAGS_INFO:
       case CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO: {
         const fullState = showInHtmlSingleTaskQueue.getState()
         const bookmarkInfoListBefore = (fullState.bookmarkInfoList || []).filter(({ optimisticAdd }) => !optimisticAdd)
@@ -842,11 +873,11 @@ ${semanticTagsStyle}
             optimisticDelFromTagList = 0
             optimisticAddFromTagList = 0
             optimisticToStorageDel = 0
-            optimisticToStorageAdd = 0      
+            optimisticToStorageAdd = 0
           } else {
             if (optimisticAddFromTagList - optimisticToStorageAdd > 0) {
               const part = Math.min(diff, optimisticAddFromTagList - optimisticToStorageAdd);
-              optimisticToStorageAdd += part  
+              optimisticToStorageAdd += part
             }
           }
         }
@@ -855,11 +886,11 @@ ${semanticTagsStyle}
             optimisticDelFromTagList = 0
             optimisticAddFromTagList = 0
             optimisticToStorageDel = 0
-            optimisticToStorageAdd = 0      
+            optimisticToStorageAdd = 0
           } else {
             if (optimisticDelFromTagList - optimisticToStorageDel > 0) {
               const part = Math.min(-diff, optimisticDelFromTagList - optimisticToStorageDel);
-              optimisticToStorageDel += part  
+              optimisticToStorageDel += part
             }
           }
         }
@@ -871,20 +902,20 @@ ${semanticTagsStyle}
       case CONTENT_SCRIPT_MSG_ID.CHANGE_URL: {
         log('content-script: CHANGE_URL', message.url);
         const newUrl = message.url
-        
+
         if (document.location.href.startsWith(newUrl)) {
           log('content-script 22');
           //document.location.href = newUrl
           //window.history.pushState(newUrl)
           window.history.replaceState(null, "", newUrl);
         }
-        
+
         break
       }
       case CONTENT_SCRIPT_MSG_ID.REPLACE_URL: {
         log('content-script: REPLACE_URL ', message.url);
         document.location.href = message.url
-        
+
         break
       }
       case CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER: {
@@ -892,30 +923,40 @@ ${semanticTagsStyle}
         toggleYoutubePageHeader({ nTry: 1 })
         break
       }
-      case CONTENT_SCRIPT_MSG_ID.ADD_BOOKMARK_FROM_INPUT_PAGE: {
-        const selection = window.prompt("Enter folder for your bookmark") 
-
-        if (selection) {
-          browser.runtime.sendMessage({
-            command: EXTENSION_MSG_ID.ADD_BOOKMARK_FROM_SELECTION_EXT,
-            url: document.location.href,
-            title: document.title,
-            selection,
-          });  
+      case CONTENT_SCRIPT_MSG_ID.GET_SELECTION: {
+        const selection = document.getSelection().toString()
+        if (!selection) {
+          break
         }
+        const folderName = selection.trim()
+        if (!folderName) {
+          break
+        }
+
+        browser.runtime.sendMessage({
+          command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
+          url: document.location.href,
+          title: document.title,
+          folderName,
+        });
         break
       }
-      case CONTENT_SCRIPT_MSG_ID.ADD_BOOKMARK_FROM_SELECTION_PAGE: {
-        const selection = document.getSelection().toString() 
-
-        if (selection) {
-          browser.runtime.sendMessage({
-            command: EXTENSION_MSG_ID.ADD_BOOKMARK_FROM_SELECTION_EXT,
-            url: document.location.href,
-            title: document.title,
-            selection,
-          });  
+      case CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT: {
+        const userInput = window.prompt("Enter folder for your bookmark")
+        if (!userInput) {
+          break
         }
+        const folderName = userInput.trim()
+        if (!folderName) {
+          break
+        }
+
+        browser.runtime.sendMessage({
+          command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
+          url: document.location.href,
+          title: document.title,
+          folderName,
+        });
         break
       }
     }
@@ -951,7 +992,7 @@ ${semanticTagsStyle}
 
     if (rootDiv) {
       if (document.fullscreenElement) {
-        rootDiv.style = 'display:none;';      
+        rootDiv.style = 'display:none;';
       } else {
         rootDiv.style = 'display:block;';
       }
@@ -966,7 +1007,7 @@ ${semanticTagsStyle}
       sendTabIsReady()
     }
   });
-  
+
   if (!document.hidden) {
     sendTabIsReady()
   }

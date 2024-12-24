@@ -22,6 +22,7 @@ const BROWSER_SPECIFIC = Object.fromEntries(
   // TODO remove duplication in EXTENSION_MSG_ID: message-id.js and content-scripts.js
   DELETE_BOOKMARK: 'DELETE_BOOKMARK',
   ADD_BOOKMARK: 'ADD_BOOKMARK',
+  ADD_BOOKMARK_FOLDER_BY_NAME: 'ADD_BOOKMARK_FOLDER_BY_NAME',
   FIX_TAG: 'FIX_TAG',
   UNFIX_TAG: 'UNFIX_TAG',
   TAB_IS_READY: 'TAB_IS_READY',
@@ -33,7 +34,6 @@ const BROWSER_SPECIFIC = Object.fromEntries(
   OPTIONS_ASKS_FLAT_BOOKMARKS: 'OPTIONS_ASKS_FLAT_BOOKMARKS',
   FLAT_BOOKMARKS_RESULT: 'FLAT_BOOKMARKS_RESULT',
   OPTIONS_ASKS_SAVE: 'OPTIONS_ASKS_SAVE',
-  ADD_BOOKMARK_FROM_SELECTION_EXT: 'ADD_BOOKMARK_FROM_SELECTION_EXT',
 }
 
 // TODO remove duplication in CONTENT_SCRIPT_MSG_ID: message-id.js and content-scripts.js
@@ -43,8 +43,8 @@ const CONTENT_SCRIPT_MSG_ID = {
   TAGS_INFO: 'TAGS_INFO',
   CHANGE_URL: 'CHANGE_URL',
   TOGGLE_YOUTUBE_HEADER: 'TOGGLE_YOUTUBE_HEADER',
-  ADD_BOOKMARK_FROM_INPUT_PAGE: 'ADD_BOOKMARK_FROM_INPUT_PAGE',
-  ADD_BOOKMARK_FROM_SELECTION_PAGE: 'ADD_BOOKMARK_FROM_SELECTION_PAGE',
+  GET_USER_INPUT: 'GET_USER_INPUT',
+  GET_SELECTION: 'GET_SELECTION',
   REPLACE_URL: 'REPLACE_URL',
 }
 const BASE_ID = 'BKM_INF';
@@ -73,17 +73,15 @@ const KEYBOARD_CMD_ID = {
   // 'bookmarks.controller',
   // 'browserStartTime',
   // 'cache',
-  // 'url-search.api',
-  // 'url.api.config',
-  // 'url.api',
   // 'clearUrlInActiveTab',
   // 'commands.controller',
+  // 'content-script.api',
   // 'contextMenu.controller',
   // 'debounceQueue',
   // 'extensionSettings',
   // 'folder.api',
-  // 'history.api',
   // 'getUrlFromUrl',
+  // 'history.api',
   // 'incoming-message',
   // 'init-extension',
   // 'memo',
@@ -93,6 +91,8 @@ const KEYBOARD_CMD_ID = {
   // 'storage.controller',
   // 'tabs.api',
   // 'tabs.controller',
+  // 'url-search.api',
+  // 'url.api.config',
   // 'windows.controller',
 ]
 const logModuleMap = Object.fromEntries(
@@ -1060,6 +1060,83 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
 
 const tagList = new TagList()
 
+const logCSA = makeLogFunction({ module: 'content-script.api' })
+
+async function changeUrlInTab({ tabId, url }) {
+  logCSA('changeUrlInTab () 00', tabId, url)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.CHANGE_URL,
+    url,
+  }
+  logCSA('changeUrlInTab () sendMessage', tabId, msg)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logCSA('changeUrlInTab () IGNORE', err)
+    })
+}
+
+async function replaceUrlInTab({ tabId, url }) {
+  logCSA('replaceUrlInTab () 00', tabId, url)
+
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.REPLACE_URL,
+    url,
+  }
+  logCSA('changeUrlInTab () sendMessage', tabId, msg)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logCSA('changeUrlInTab () IGNORE', err)
+    })
+}
+
+async function getSelectionInPage(tabId) {
+  logCSA('getSelectionInPage () 00', tabId)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.GET_SELECTION,
+  }
+  logCSA('getSelectionInPage () sendMessage', tabId)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logCSA('getSelectionInPage () IGNORE', err)
+    })
+}
+
+async function getUserInputInPage(tabId) {
+  logCSA('getUserInputInPage () 00', tabId)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT,
+  }
+  logCSA('getUserInputInPage () sendMessage', tabId)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logCSA('getUserInputInPage () IGNORE', err)
+    })
+}
+
+async function toggleYoutubeHeaderInPage(tabId) {
+  logCSA('toggleYoutubeHeaderInPage () 00', tabId)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER,
+  }
+  logCSA('toggleYoutubeHeaderInPage () sendMessage', tabId)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logCSA('toggleYoutubeHeaderInPage () IGNORE', err)
+    })
+}
+
+async function updateBookmarkInfoInPage({ tabId, data }) {
+  logCSA('updateBookmarkInfo () 00', tabId)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO,
+    ...data,
+  }
+  logCSA('updateBookmarkInfo () sendMessage', tabId)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logCSA('updateBookmarkInfo () IGNORE', err)
+    })
+}
 const logUAC = makeLogFunction({ module: 'url.api.config' })
 
 const HOST_URL_SETTINGS = [
@@ -1306,11 +1383,11 @@ function removeIndexFromPathname(pathname) {
       const targetHostSettings = getHostSettings(url)
       logUS('startPartialUrlSearch targetHostSettings', !!targetHostSettings, targetHostSettings)
     
-      if (!targetHostSettings) {
-        return {
-          isSearchAvailable: false,
-        }
-      }
+      // if (!targetHostSettings) {
+      //   return {
+      //     isSearchAvailable: false,
+      //   }
+      // }
     
       const oUrl = new URL(url);
       oUrl.search = ''
@@ -1319,14 +1396,16 @@ function removeIndexFromPathname(pathname) {
       const urlForSearch = oUrl.toString();  
   
       let requiredSearchParams
-      const { importantSearchParamList } = targetHostSettings
+      if (targetHostSettings) {
+        const { importantSearchParamList } = targetHostSettings
   
-      if (isNotEmptyArray(importantSearchParamList)) {
-        const oSearchParams = oUrl.searchParams;
-        requiredSearchParams = {}
-        importantSearchParamList.forEach((searchParam) => {
-          requiredSearchParams[searchParam] = oSearchParams.get(searchParam)
-        })
+        if (isNotEmptyArray(importantSearchParamList)) {
+          const oSearchParams = oUrl.searchParams;
+          requiredSearchParams = {}
+          importantSearchParamList.forEach((searchParam) => {
+            requiredSearchParams[searchParam] = oSearchParams.get(searchParam)
+          })
+        }
       }
   
       const { pathname: pathnameForSearch } = new URL(urlForSearch);
@@ -1345,11 +1424,11 @@ function removeIndexFromPathname(pathname) {
       }
     }  
   }
-const logUA = makeLogFunction({ module: 'url.api' })
+const logCUA = makeLogFunction({ module: 'clear-url.api' })
 
 const isPathnameMatchForPattern = ({ pathname, patternList }) => {
-  logUA('isPathnameMatch () 00', pathname)
-  logUA('isPathnameMatch () 00', patternList)
+  logCUA('isPathnameMatch () 00', pathname)
+  logCUA('isPathnameMatch () 00', patternList)
 
   const pathToList = (pathname) => {
     let list = pathname.split(/(\/)/).filter(Boolean)
@@ -1368,20 +1447,20 @@ const isPathnameMatchForPattern = ({ pathname, patternList }) => {
     } else {
       result = pathPart === patternPart
     } 
-    logUA('isPartsEqual () 11', patternPart, pathPart, result)
+    logCUA('isPartsEqual () 11', patternPart, pathPart, result)
   
     return result
   }
   
   let isMath = false
   const pathAsList = pathToList(pathname)
-  logUA('isPathnameMatch () 11 pathAsList', pathAsList)
+  logCUA('isPathnameMatch () 11 pathAsList', pathAsList)
 
   let i = 0
   while (!isMath && i < patternList.length) {
     const pattern = patternList[i]
     const patternAsList = pathToList(pattern)
-    logUA('isPathnameMatch () 11 patternAsList', patternAsList)
+    logCUA('isPathnameMatch () 11 patternAsList', patternAsList)
 
     isMath = patternAsList.length > 0 && pathAsList.length === patternAsList.length 
       && patternAsList.every((patternPart, patternIndex) => isPartsEqual(patternPart, pathAsList[patternIndex])
@@ -1393,22 +1472,22 @@ const isPathnameMatchForPattern = ({ pathname, patternList }) => {
 }
 
 const removeQueryParamsIfTarget = (url) => {
-  logUA('removeQueryParamsIfTarget () 00', url)
+  logCUA('removeQueryParamsIfTarget () 00', url)
   let cleanUrl = url
 
   try {
     const targetHostSettings = getHostSettings(url)
-    logUA('removeQueryParamsIfTarget () 11 targetHostSettings', targetHostSettings)
+    logCUA('removeQueryParamsIfTarget () 11 targetHostSettings', targetHostSettings)
 
     if (targetHostSettings) {
       const { removeAllSearchParamForPath, removeSearchParamList } = targetHostSettings
-      logUA('removeQueryParamsIfTarget () 22 removeSearchParamList', removeSearchParamList)
+      logCUA('removeQueryParamsIfTarget () 22 removeSearchParamList', removeSearchParamList)
  
       const oUrl = new URL(url);
       const { pathname, searchParams: oSearchParams } = oUrl;
 
       if (isNotEmptyArray(removeSearchParamList)) {
-        logUA('removeQueryParamsIfTarget () 33 isNotEmptyArray(removeSearchParamList)')
+        logCUA('removeQueryParamsIfTarget () 33 isNotEmptyArray(removeSearchParamList)')
         // remove query params by list
         const isHasThisSearchParams = removeSearchParamList.some((searchParam) => oSearchParams.get(searchParam) !== null)
 
@@ -1439,36 +1518,9 @@ const removeQueryParamsIfTarget = (url) => {
     
   }
 
-  logUA('removeQueryParamsIfTarget () 99 cleanUrl', cleanUrl)
+  logCUA('removeQueryParamsIfTarget () 99 cleanUrl', cleanUrl)
 
   return cleanUrl
-}
-
-function removeAnchorAndSearchParams(url) {
-  logUA('removeAnchorAndSearchParams () 00', url)
-  try {
-    const oUrl = new URL(url);
-    oUrl.search = ''
-    oUrl.hash = ''
-  
-    return oUrl.toString();  
-  // eslint-disable-next-line no-unused-vars
-  } catch (e) {
-    return url
-  }
-}
-const logCUA = makeLogFunction({ module: 'clear-url.api' })
-
-async function changeUrlInTab({ tabId, url }) {
-  const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.CHANGE_URL,
-    url,
-  }
-  logCUA('clearUrlInTab () sendMessage', tabId, msg)
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logCUA('clearUrlInTab () IGNORE', err)
-    })
 }
 
 async function clearUrlOnPageOpen({ tabId, url }) {
@@ -1907,8 +1959,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     }  
   }
 
-  const message = {
-    command: CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO,
+  const data = {
     bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
     isShowTitle: settings[USER_OPTION.SHOW_BOOKMARK_TITLE],
     // visits history
@@ -1921,12 +1972,8 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     isHideSemanticHtmlTagsOnPrinting: settings[USER_OPTION.HIDE_TAG_HEADER_ON_PRINTING],
     isHideHeaderForYoutube: settings[USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE],
   }
-  logTA('UPDATE-TAB () 99 sendMessage', tabId, message);
-  await browser.tabs.sendMessage(tabId, message)
-    // eslint-disable-next-line no-unused-vars
-    .catch((er) => {
-      // logTA('Failed to send bookmarkInfoTo to tab', tabId, ' Ignoring ', er)
-    })
+  logTA('UPDATE-TAB () 99 sendMessage', tabId, data);
+  await updateBookmarkInfoInPage({ tabId, data })
 }
 
 function updateTabTask(options) {
@@ -2358,6 +2405,11 @@ const normalizeTitle = (title) => {
         .replace(/\s+/, ' ')
         .toLowerCase()
 
+    // fix error: singular('node.js) => 'node.j'
+    if ((trimmedTitle.endsWith('js') || trimmedTitle.endsWith('css'))) {
+        return trimmedTitle
+    }
+
     const wordList = trimmedTitle.split(' ')
     const lastWord = wordList.at(-1)
     const singularLastWord = singular(lastWord)
@@ -2439,6 +2491,8 @@ async function findFolderInSubtree({ normalizedTitle, parentId }) {
 //  onStart, merge will be
 async function findFolder(title) {
     logFA('findFolder 00 title', title)
+    const normalizedTitle = normalizeTitle(title)
+    logFA('findFolder 00 normalizedTitle', normalizedTitle)
     let foundItem
 
     const bookmarkList = await browser.bookmarks.search({ title });
@@ -2452,10 +2506,31 @@ async function findFolder(title) {
         i += 1
     }
 
-    const normalizedTitle = normalizeTitle(title)
-    logFA('findFolder 22 normalizedTitle', normalizedTitle)
+    const trimmedTitle = title.trim()
+    const lowTitle = trimmedTitle.toLowerCase()
+
+    if (!foundItem && lowTitle.endsWith('.js')) {
+        const modifiedTitle = `${lowTitle.slice(0, -3)}js`
+        const modifiedNormalizedTitle = normalizeTitle(modifiedTitle)
+        
+        const bookmarkList = await browser.bookmarks.search(modifiedTitle);
+        logFA('findFolder 22 search(title) modifiedTitle, modifiedNormalizedTitle', modifiedTitle, modifiedNormalizedTitle)
+        logFA('findFolder 22 search(title)', bookmarkList.length, bookmarkList)
+
+        let i = 0
+        while (!foundItem && i < bookmarkList.length) {
+            const checkItem = bookmarkList[i]
+            if (!checkItem.url && normalizeTitle(checkItem.title) === modifiedNormalizedTitle) {
+                foundItem = checkItem
+            }
+            i += 1
+        }
+    }
+
 
     if (!foundItem) {
+        logFA('findFolder 33 normalizedTitle', normalizedTitle)
+    
         const bookmarkList = await browser.bookmarks.search(title);
         logFA('findFolder 33 search(title)', bookmarkList.length, bookmarkList)
 
@@ -2469,31 +2544,15 @@ async function findFolder(title) {
         }
     }
 
-    const trimmedTitle = title.trim()
-    const lowTitle = trimmedTitle.toLowerCase()
-    const lastWord = trimmedTitle.split(' ').at(-1)
-
-    if (!foundItem && lowTitle.endsWith('.js') && normalizedTitle.endsWith('.js')) {
-        const modifiedTitle = `${lowTitle.slice(0, -3)}js`
-        const modifiedNormalizedTitle = `${normalizedTitle.slice(0, -3)}js`
-        
-        const bookmarkList = await browser.bookmarks.search(modifiedTitle);
-        logFA('findFolder 44 search(title)', bookmarkList.length, bookmarkList)
-
-        let i = 0
-        while (!foundItem && i < bookmarkList.length) {
-            const checkItem = bookmarkList[i]
-            if (!checkItem.url && normalizeTitle(checkItem.title) === modifiedNormalizedTitle) {
-                foundItem = checkItem
-            }
-            i += 1
-        }
-    }
+    const trimmedTitle2 = title.trim()
+    const lowTitle2 = trimmedTitle2.toLowerCase()
+    const lastWord = lowTitle2.split(' ').at(-1)
 
     if (!foundItem && lastWord.length > 5) {
-        const modifiedTitle = lowTitle.slice(0, -3)
+        const modifiedTitle = lowTitle2.slice(0, -3)
         
         const bookmarkList = await browser.bookmarks.search(modifiedTitle);
+        logFA('findFolder 44 search(title) modifiedTitle', modifiedTitle)
         logFA('findFolder 44 search(title)', bookmarkList.length, bookmarkList)
 
         let i = 0
@@ -2508,12 +2567,12 @@ async function findFolder(title) {
 
     if (!foundItem) {
         foundItem = await findFolderInSubtree({ normalizedTitle, parentId: OTHER_BOOKMARKS_FOLDER_ID })
-        logFA('findFolder 44 OTHER_BOOKMARKS_FOLDER_ID', foundItem)
+        logFA('findFolder 55 OTHER_BOOKMARKS_FOLDER_ID', foundItem)
     }
 
     if (!foundItem) {
         foundItem = await findFolderInSubtree({ normalizedTitle, parentId: BOOKMARKS_BAR_FOLDER_ID })
-        logFA('findFolder 55 BOOKMARKS_BAR_FOLDER_ID', foundItem)
+        logFA('findFolder 66 BOOKMARKS_BAR_FOLDER_ID', foundItem)
     }
 
     return foundItem
@@ -3053,24 +3112,8 @@ async function startAddBookmarkFromSelection() {
   const [activeTab] = tabs;
 
   if (activeTab?.id) {
-      const msg = {
-        command: CONTENT_SCRIPT_MSG_ID.ADD_BOOKMARK_FROM_SELECTION_PAGE,
-      }
-      // logCU('addBookmarkFromSelection() sendMessage', activeTab.id, msg)
-      await browser.tabs.sendMessage(activeTab.id, msg)
-        // .catch((err) => {
-        //   logCU('startAddBookmarkFromSelection() IGNORE', err)
-        // })
+    await getSelectionInPage(activeTab.id)
   }
-}
-
-async function addBookmarkFromSelection({ url, title, selection }) {
-  if (selection.length > 40) {
-    return
-  }
-
-  const folder = await findOrCreateFolder(selection)
-  await addBookmark({ url, title, parentId: folder.id })
 }
 
 async function startAddBookmarkFromInput() {
@@ -3078,15 +3121,17 @@ async function startAddBookmarkFromInput() {
   const [activeTab] = tabs;
 
   if (activeTab?.id) {
-      const msg = {
-        command: CONTENT_SCRIPT_MSG_ID.ADD_BOOKMARK_FROM_INPUT_PAGE,
-      }
-      // logCU('addBookmarkFromSelection() sendMessage', activeTab.id, msg)
-      await browser.tabs.sendMessage(activeTab.id, msg)
-        // .catch((err) => {
-        //   logCU('startAddBookmarkFromSelection() IGNORE', err)
-        // })
+    await getUserInputInPage(activeTab.id)
   }
+}
+
+async function addBookmarkFolderByName({ url, title, folderName }) {
+  if (folderName.length > 40) {
+    return
+  }
+
+  const folder = await findOrCreateFolder(folderName)
+  await addBookmark({ url, title, parentId: folder.id })
 }
 async function addRecentTagFromView(bookmarkId) {
   if (!bookmarkId) {
@@ -3098,14 +3143,28 @@ async function startAddBookmarkFromInput() {
 }
 const logCU = makeLogFunction({ module: 'clearUrlInActiveTab' })
 
-async function removeFromUrlAnchorAndSearchParamsInActiveTab() {
-  logCU('removeFromUrlAnchorAndSearchParamsInActiveTab () 00')
+function removeHashAndSearchParams(url) {
+  logCU('removeHashAndSearchParams () 00', url)
+  try {
+    const oUrl = new URL(url);
+    oUrl.search = ''
+    oUrl.hash = ''
+  
+    return oUrl.toString();  
+  // eslint-disable-next-line no-unused-vars
+  } catch (e) {
+    return url
+  }
+}
+
+async function removeFromUrlHashAndSearchParamsInActiveTab() {
+  logCU('removeFromUrlHashAndSearchParamsInActiveTab () 00')
   const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
   const [activeTab] = tabs;
 
   if (activeTab?.id && activeTab?.url) {
-    const cleanUrl = removeAnchorAndSearchParams(activeTab.url);
-    logCU('removeFromUrlAnchorAndSearchParamsInActiveTab () 22 cleanUrl', cleanUrl)
+    const cleanUrl = removeHashAndSearchParams(activeTab.url);
+    logCU('removeFromUrlHashAndSearchParamsInActiveTab () 22 cleanUrl', cleanUrl)
 
     if (activeTab.url !== cleanUrl) {
       await changeUrlInTab({ tabId: activeTab.id, url: cleanUrl })
@@ -3277,18 +3336,6 @@ async function closeDuplicateTabs() {
 }
 const logUU = makeLogFunction({ module: 'getUrlFromUrl' })
 
-async function replaceUrlInTab({ tabId, url }) {
-  logUU('replaceUrlInTab () 00', tabId, url)
-
-  const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.REPLACE_URL,
-    url,
-  }
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch(() => {
-    })
-}
-
 async function getUrlFromUrl() {
   logUU('getUrlFromUrl () 00')
 
@@ -3351,13 +3398,7 @@ async function getUrlFromUrl() {
   const [activeTab] = tabs;
 
   if (activeTab?.id) {
-    const msg = {
-      command: CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER,
-    }
-    await browser.tabs.sendMessage(activeTab.id, msg)
-      .catch(() => {
-        // logCU('toggleYoutubeHeader() IGNORE', err)
-      })
+    await toggleYoutubeHeaderInPage(activeTab.id)
   }
 }
 
@@ -3554,7 +3595,7 @@ const contextMenusController = {
         break;
       }
       case CONTEXT_MENU_CMD_ID.CLEAR_URL: {
-        removeFromUrlAnchorAndSearchParamsInActiveTab()
+        removeFromUrlHashAndSearchParamsInActiveTab()
         break;
       }
       case CONTEXT_MENU_CMD_ID.GET_URL_FROM_URL: {
@@ -3589,7 +3630,7 @@ async function onIncomingMessage (message, sender) {
           tabId,
           url: cleanUrl,
           debugCaller: 'runtime.onMessage contentScriptReady',
-        })               
+        })
       }
 
       break
@@ -3619,7 +3660,7 @@ async function onIncomingMessage (message, sender) {
     case EXTENSION_MSG_ID.FIX_TAG: {
       logIM('runtime.onMessage fixTag');
       await fixTag({
-        parentId: message.parentId, 
+        parentId: message.parentId,
         title: message.title,
       })
 
@@ -3656,7 +3697,7 @@ async function onIncomingMessage (message, sender) {
       // const tabId = sender?.tab?.id;
       // if (tabId == memo.activeTabId) {
       //   updateActiveTab({
-      //     tabId,      
+      //     tabId,
       //     debugCaller: 'runtime.onMessage ADD_RECENT_TAG',
       //     useCache: true,
       //   })
@@ -3694,7 +3735,7 @@ async function onIncomingMessage (message, sender) {
       } catch (e) {
         logIM('IGNORE Error on flatting bookmarks', e);
       }
-      
+
       browser.runtime.sendMessage({
         command: EXTENSION_MSG_ID.FLAT_BOOKMARKS_RESULT,
         success,
@@ -3702,15 +3743,21 @@ async function onIncomingMessage (message, sender) {
 
       break
     }
-    case EXTENSION_MSG_ID.ADD_BOOKMARK_FROM_SELECTION_EXT: {
-      logIM('runtime.onMessage ADD_BOOKMARK_FROM_SELECTION_EXT', message.selection);
+    case EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME: {
+      logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', message.folderName);
+      if (!message.folderName) {
+        break
+      }
+      const folderName = message.folderName.trim()
+      if (!folderName) {
+        break
+      }
 
-      await addBookmarkFromSelection({
+      await addBookmarkFolderByName({
         url: message.url,
         title: message.title,
-        selection: message.selection,
+        folderName: folderName,
       })
-
       break
     }
   }
