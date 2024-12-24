@@ -14,20 +14,20 @@ const HOST_URL_SETTINGS = [
   //    strategy02: clean url on save
   //    strategy00: don't clear url, default
   // {
-  //   hostname: 'airbnb.com',  
+  //   hostname: 'airbnb.com',
   //   paths: [
   //     '/rooms/',
-  //   ] 
+  //   ]
   // },
   // {
   //   hostname: 'djinni.co',
   //   removeAllSearchParamForPath: [
   //     '/my/profile/',
   //     '/jobs/',
-  //   ] 
+  //   ]
   // },
   {
-    hostname: 'forcoder.net',  
+    hostname: 'forcoder.net',
     searchParamList: [
       's', // https://forcoder.net/?s=CQRS
     ],
@@ -36,22 +36,22 @@ const HOST_URL_SETTINGS = [
     hostname: 'frontendmasters.com',
     removeAllSearchParamForPath: [
       '/courses/:id/',
-    ] 
+    ]
   },
   {
-    hostname: 'hh.ru',  
+    hostname: 'hh.ru',
     removeAllSearchParamForPath: [
       '/vacancy/:id',
     ],
     searchParamList: [
-      ['hhtmFrom'], 
+      ['hhtmFrom'],
       ['hhtmFromLabel'],
       'text',
       'professional_role',
     ],
   },
   {
-    hostname: 'imdb.com',  
+    hostname: 'imdb.com',
     // removeAllSearchParamForPath: [
     //   '/title/',
     //   '/list/',
@@ -70,45 +70,49 @@ const HOST_URL_SETTINGS = [
   // https://www.linkedin.com/jobs/view/4096094176/?alternateChannel=search&refId=WYo23okoaVDvmJkLoaclcg%3D%3D&trackingId=bTIytUCJN%2BDpKjaalPv4gg%3D%3D
   // https://www.linkedin.com/jobs/search/?currentJobId=4096094176&geoId=106686604&origin=JOBS_HOME_LOCATION_AUTOCOMPLETE&refresh=true
   {
-    hostname: 'linkedin.com',  
+    hostname: 'linkedin.com',
     removeAllSearchParamForPath: [
       '/jobs/view/:id/',
       '/posts/:id/'
-    ] 
+    ]
   },
   {
-    hostname: 'opennet.ru',  
+    hostname: 'opennet.ru',
     searchParamList: [
       'num',
     ],
-  },  
+  },
   {
-    hostname: 'thepiratebay.org',  
+    hostname: 'thepiratebay.org',
     searchParamList: [
       'q',
     ],
-  },  
+  },
   {
-    hostname: 'torrentgalaxy.to',  
+    hostname: 'torrentgalaxy.to',
     searchParamList: [
       'cat',
     ],
   },
   {
-    hostname: 'udemy.com',  
+    hostname: 'udemy.com',
     removeAllSearchParamForPath: [
       '/course/:id/',
-    ] 
+    ]
   },
   {
-    hostname: 'www.google.com',  
+    hostname: 'www.google.com',
     searchParamList: [
       'q', // https://www.google.com/search?q=react-native
     ],
-  },  
+  },
   {
-    hostname: 'youtube.com',  
-    hostnameAliasList: ['youtu.be'],  
+    hostname: 'mail.google.com',
+    isHashRequired: true,
+  },
+  {
+    hostname: 'youtube.com',
+    hostnameAliasList: ['youtu.be'],
     searchParamList: [
       'v', // https://www.youtube.com/watch?v=qqqqq
     ],
@@ -149,7 +153,7 @@ const HOST_URL_SETTINGS_LIST = HOST_URL_SETTINGS.map((item) => {
 const HOST_URL_SETTINGS_MAP = new Map(
   HOST_URL_SETTINGS_LIST.map((item) => [item.hostname, item]),
 )
-  
+
 export const getHostSettings = (url) => {
   logUAC('getHostSettings 00', url)
   const oUrl = new URL(url);
