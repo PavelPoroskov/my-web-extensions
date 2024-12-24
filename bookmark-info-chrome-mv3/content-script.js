@@ -344,27 +344,33 @@ ${semanticTagsStyle}
   }
 
   async function toggleTag(event) {
-    const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
+    const parentId = event?.target?.dataset?.parentid;
+    const isUsed = event?.target?.dataset?.isused;
+    // log('toggleTag () 00', 'isUsed', isUsed, 'parentId', parentId)
 
     if (parentId) {
       const fullState = showInHtmlSingleTaskQueue.getState()
       const bookmarkInfoList = fullState.bookmarkInfoList || []
-      const bkm = bookmarkInfoList.find((item) => item.parentId === parentId)
 
-      if (bkm?.id) {
-        // epic error
-        // const findIndex = bookmarkInfoList.findIndex((item) => item.id != bkm.id)
-        const findIndex = bookmarkInfoList.findIndex((item) => item.id == bkm.id)
-        if (-1 < findIndex) {
-          const newBookmarkInfoList = bookmarkInfoList.with(findIndex, { optimisticDel: true })
-          optimisticDelFromTagList += 1
-          // log('bookmarkFromTag 11 +optimisticDelFromTagList', optimisticDelFromTagList);
-          showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
+      if (isUsed) {
+        const bkm = bookmarkInfoList.find((item) => item.parentId === parentId)
+
+        if (bkm?.id) {
+          // epic error
+          // const findIndex = bookmarkInfoList.findIndex((item) => item.id != bkm.id)
+          const findIndex = bookmarkInfoList.findIndex((item) => item.id == bkm.id)
+          if (-1 < findIndex) {
+            const newBookmarkInfoList = bookmarkInfoList.with(findIndex, { optimisticDel: true })
+            optimisticDelFromTagList += 1
+            // log('bookmarkFromTag 11 +optimisticDelFromTagList', optimisticDelFromTagList);
+            showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
+          }
+
+          await chrome.runtime.sendMessage({
+            command: EXTENSION_MSG_ID.DELETE_BOOKMARK,
+            bkmId: bkm.id,
+          });
         }
-        await chrome.runtime.sendMessage({
-          command: EXTENSION_MSG_ID.DELETE_BOOKMARK,
-          bkmId: bkm.id,
-        });
       } else {
         // optimistic ui
         const tagList = fullState.tagList || []
@@ -621,6 +627,7 @@ ${semanticTagsStyle}
           divLabel.addEventListener('click', toggleTag);
 
           divLabel.classList.toggle('bkm-info--used-tag', isUsed);
+          divLabel.setAttribute('data-isused', isUsed ? '1' : '');
           divLabel.classList.toggle('bkm-info--last-tag', isLast);
 
           const textNodeLabel = document.createTextNode(`${title}`);
@@ -651,6 +658,7 @@ ${semanticTagsStyle}
           divLabel.addEventListener('click', toggleTag);
 
           divLabel.classList.toggle('bkm-info--used-tag', isUsed);
+          divLabel.setAttribute('data-isused', isUsed ? '1' : '');
           divLabel.classList.toggle('bkm-info--last-tag', isLast);
 
           const textNodeLabel = document.createTextNode(`${title}`);
