@@ -484,7 +484,10 @@ ${semanticTagsStyle}
 
       drawList.push({ type: 'bookmark', value, bkmIndex: index })
     })
-    const emptySlots = Math.max(0, optimisticDelFromTagList - optimisticAddFromTagList)
+    const emptySlotsForDel = Math.max(0, optimisticDelFromTagList - optimisticAddFromTagList)
+    const emptySlotsForAdd = Math.max(0, 2 - bookmarkInfoList.length - emptySlotsForDel)
+    const emptySlots = emptySlotsForAdd + emptySlotsForDel
+
     for (let iEmpty = 0; iEmpty < emptySlots; iEmpty += 1) {
       drawList.push({ type: 'emptySlot' })
     }
