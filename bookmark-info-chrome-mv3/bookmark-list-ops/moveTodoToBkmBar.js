@@ -6,17 +6,20 @@ import {
   isStartWithTODO,
 } from '../api/text.api.js';
 
-async function moveFolderByName({ fromId, toId, isCondition }) {
+export async function moveFolderByName({ fromId, toId, isCondition }) {
     const childrenList = await chrome.bookmarks.getChildren(fromId)
-    const moveList = childrenList
+    let moveList = childrenList
       .filter(({ url }) => !url)
-      .filter(({ title }) => isCondition(title))
+
+    if (isCondition) {
+      moveList = moveList.filter(({ title }) => isCondition(title))
+    }
 
     await Promise.all(
       moveList.map(
         (node) => chrome.bookmarks.move(node.id, { parentId: toId })
       )
-    ) 
+    )
 }
 
 export async function moveTodoToBkmBar() {

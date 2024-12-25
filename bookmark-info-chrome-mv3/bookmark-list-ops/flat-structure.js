@@ -1,5 +1,7 @@
 import {
   getOrCreateUnclassifiedFolderId,
+  BOOKMARKS_MENU_FOLDER_ID,
+  OTHER_BOOKMARKS_FOLDER_ID,
 } from '../api/special-folder.api.js';
 import {
   tagList,
@@ -17,6 +19,7 @@ import {
   moveRootBookmarksToUnclassified,
 } from './moveRootBookmarks.js';
 import {
+  moveFolderByName,
   moveTodoToBkmBar,
 } from './moveTodoToBkmBar.js';
 import {
@@ -25,14 +28,23 @@ import {
 import {
   sortFolders,
 } from './sortFolders.js';
-
+import {
+  IS_BROWSER_FIREFOX,
+} from '../constant/index.js';
 
 export async function flatBookmarks() {
   tagList.blockTagList(true)
 
-  try {  
+  try {
     await getOrCreateUnclassifiedFolderId()
-  
+
+    if (IS_BROWSER_FIREFOX) {
+      await moveFolderByName({
+        fromId: BOOKMARKS_MENU_FOLDER_ID,
+        toId: OTHER_BOOKMARKS_FOLDER_ID,
+      })
+    }
+
     await flatFolders()
     await moveRootBookmarksToUnclassified()
     await moveNotDescriptiveFoldersToUnclassified()

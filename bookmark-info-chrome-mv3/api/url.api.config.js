@@ -27,6 +27,10 @@ const HOST_URL_SETTINGS = [
   //   ]
   // },
   {
+    hostname: '9gag.com',
+    isHashRequired: true,
+  },
+  {
     hostname: 'forcoder.net',
     searchParamList: [
       's', // https://forcoder.net/?s=CQRS
