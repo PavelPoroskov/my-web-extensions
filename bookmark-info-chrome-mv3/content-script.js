@@ -559,8 +559,7 @@ ${semanticTagsStyle}
     const beforeRawLength = rawNodeList.length;
 
     drawList.forEach(({ type, value, bkmIndex }, index) => {
-      const divLabelContainer = document.createElement('div');
-      divLabelContainer.classList.add('bkm-info--label-container');
+      let divRow
 
       switch (type) {
         case 'bookmark': {
@@ -605,8 +604,14 @@ ${semanticTagsStyle}
           divDelBtn.appendChild(divDelBtnLetter);
           divDelBtn.addEventListener('click', deleteBookmark);
 
+          const divLabelContainer = document.createElement('div');
+          divLabelContainer.classList.add('bkm-info--label-container');
           divLabelContainer.appendChild(divLabel);
           divLabelContainer.appendChild(divDelBtn);
+
+          divRow = document.createElement('div');
+          divRow.classList.add('bkm-info--row');
+          divRow.appendChild(divLabelContainer);
 
           break
         }
@@ -616,7 +621,13 @@ ${semanticTagsStyle}
           const textNode = document.createTextNode('|');
           divLabel.appendChild(textNode);
 
+          const divLabelContainer = document.createElement('div');
+          divLabelContainer.classList.add('bkm-info--label-container');
           divLabelContainer.appendChild(divLabel);
+
+          divRow = document.createElement('div');
+          divRow.classList.add('bkm-info--row');
+          divRow.appendChild(divLabelContainer);
 
           break
         }
@@ -627,7 +638,13 @@ ${semanticTagsStyle}
           const textNode = document.createTextNode(`${value}`);
           divLabel.appendChild(textNode);
 
+          const divLabelContainer = document.createElement('div');
+          divLabelContainer.classList.add('bkm-info--label-container');
           divLabelContainer.appendChild(divLabel);
+
+          divRow = document.createElement('div');
+          divRow.classList.add('bkm-info--row');
+          divRow.appendChild(divLabelContainer);
 
           break
         }
@@ -637,7 +654,14 @@ ${semanticTagsStyle}
           divLabel.addEventListener('click', toggleTagList);
           const textNode = document.createTextNode( isShowTagList ? '▴ hide' : '▾ add' );
           divLabel.appendChild(textNode);
+
+          const divLabelContainer = document.createElement('div');
+          divLabelContainer.classList.add('bkm-info--label-container');
           divLabelContainer.appendChild(divLabel);
+
+          divRow = document.createElement('div');
+          divRow.classList.add('bkm-info--row');
+          divRow.appendChild(divLabelContainer);
 
           break
         }
@@ -667,8 +691,14 @@ ${semanticTagsStyle}
           divFixBtnLetter.appendChild(textNodeFix);
           divFixBtn.appendChild(divFixBtnLetter);
 
+          const divLabelContainer = document.createElement('div');
+          divLabelContainer.classList.add('bkm-info--label-container');
           divLabelContainer.appendChild(divFixBtn);
           divLabelContainer.appendChild(divLabel);
+
+          divRow = document.createElement('div');
+          divRow.classList.add('bkm-info--row');
+          divRow.appendChild(divLabelContainer);
 
           break
         }
@@ -699,8 +729,14 @@ ${semanticTagsStyle}
 
           divFixBtn.appendChild(divFixBtnLetter);
 
+          const divLabelContainer = document.createElement('div');
+          divLabelContainer.classList.add('bkm-info--label-container');
           divLabelContainer.appendChild(divFixBtn);
           divLabelContainer.appendChild(divLabel);
+
+          divRow = document.createElement('div');
+          divRow.classList.add('bkm-info--row');
+          divRow.appendChild(divLabelContainer);
 
           break
         }
@@ -711,15 +747,17 @@ ${semanticTagsStyle}
           const textNode = document.createTextNode(`${value} :title`);
           divLabel.appendChild(textNode);
 
+          const divLabelContainer = document.createElement('div');
+          divLabelContainer.classList.add('bkm-info--label-container');
           divLabelContainer.appendChild(divLabel);
+
+          divRow = document.createElement('div');
+          divRow.classList.add('bkm-info--row');
+          divRow.appendChild(divLabelContainer);
 
           break
         }
       }
-
-      const divRow = document.createElement('div');
-      divRow.classList.add('bkm-info--row');
-      divRow.appendChild(divLabelContainer);
 
       if (index < beforeRawLength) {
         rootDiv.replaceChild(divRow, rawNodeList[index]);
