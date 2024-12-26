@@ -37,7 +37,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
       url = Tab?.url
     } catch (er) {
       logTA('IGNORING. tab was deleted', er);
-    }  
+    }
   }
 
   if (!(url && isSupportedProtocol(url))) {
@@ -59,16 +59,16 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     getBookmarkInfoUni({ url, useCache }),
     isShowVisits && getHistoryInfo({ url }),
   ])
-  logTA(`UPDATE-TAB () 22 bookmarkInfo.bookmarkInfoList`, bookmarkInfo.bookmarkInfoList);
+  logTA(`UPDATE-TAB () 22 bookmarkInfo.bookmarkList`, bookmarkInfo.bookmarkList);
 
   if (isShowVisits) {
     visitsData = {
       visitString: visitInfo.visitString,
-    }  
+    }
   }
 
   const data = {
-    bookmarkInfoList: bookmarkInfo.bookmarkInfoList,
+    bookmarkList: bookmarkInfo.bookmarkList,
     isShowTitle: settings[USER_OPTION.SHOW_BOOKMARK_TITLE],
     // visits history
     ...visitsData,

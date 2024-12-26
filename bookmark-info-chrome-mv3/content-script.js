@@ -317,12 +317,12 @@ ${semanticTagsStyle}
     if (bkmId) {
       // optimistic ui
       const fullState = showInHtmlSingleTaskQueue.getState()
-      const bookmarkInfoList = fullState.bookmarkInfoList || []
+      const bookmarkList = fullState.bookmarkList || []
 
-      const findIndex = bookmarkInfoList.findIndex((item) => item.id == bkmId)
+      const findIndex = bookmarkList.findIndex((item) => item.id == bkmId)
       if (-1 < findIndex) {
-        const newBookmarkInfoList = bookmarkInfoList.with(findIndex, { optimisticDel: true })
-        showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
+        const newBookmarkList = bookmarkList.with(findIndex, { optimisticDel: true })
+        showInHtmlSingleTaskQueue.addUpdate({ bookmarkList: newBookmarkList })
       }
 
       await chrome.runtime.sendMessage({
@@ -350,20 +350,20 @@ ${semanticTagsStyle}
 
     if (parentId) {
       const fullState = showInHtmlSingleTaskQueue.getState()
-      const bookmarkInfoList = fullState.bookmarkInfoList || []
+      const bookmarkList = fullState.bookmarkList || []
 
       if (isUsed) {
-        const bkm = bookmarkInfoList.find((item) => item.parentId === parentId)
+        const bkm = bookmarkList.find((item) => item.parentId === parentId)
 
         if (bkm?.id) {
           // epic error
-          // const findIndex = bookmarkInfoList.findIndex((item) => item.id != bkm.id)
-          const findIndex = bookmarkInfoList.findIndex((item) => item.id == bkm.id)
+          // const findIndex = bookmarkList.findIndex((item) => item.id != bkm.id)
+          const findIndex = bookmarkList.findIndex((item) => item.id == bkm.id)
           if (-1 < findIndex) {
-            const newBookmarkInfoList = bookmarkInfoList.with(findIndex, { optimisticDel: true })
+            const newBookmarkList = bookmarkList.with(findIndex, { optimisticDel: true })
             optimisticDelFromTagList += 1
             // log('bookmarkFromTag 11 +optimisticDelFromTagList', optimisticDelFromTagList);
-            showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
+            showInHtmlSingleTaskQueue.addUpdate({ bookmarkList: newBookmarkList })
           }
 
           await chrome.runtime.sendMessage({
@@ -376,7 +376,7 @@ ${semanticTagsStyle}
         const tagList = fullState.tagList || []
         const tag = tagList.find((item) => item.parentId === parentId)
         if (tag) {
-          const newBookmarkInfoList = bookmarkInfoList.concat({
+          const newBookmarkList = bookmarkList.concat({
             id: '',
             title: document.title,
             fullPathList: [tag.title],
@@ -386,7 +386,7 @@ ${semanticTagsStyle}
           if (optimisticAddFromTagList < optimisticDelFromTagList) {
             optimisticAddFromTagList += 1
           }
-          showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
+          showInHtmlSingleTaskQueue.addUpdate({ bookmarkList: newBookmarkList })
         }
         await chrome.runtime.sendMessage({
           command: EXTENSION_MSG_ID.ADD_BOOKMARK,
@@ -447,7 +447,7 @@ ${semanticTagsStyle}
 
 
   function showBookmarkInfo(input) {
-    const bookmarkInfoList = (input.bookmarkInfoList || []).filter(({ optimisticDel }) => !optimisticDel)
+    const bookmarkList = (input.bookmarkList || []).filter(({ optimisticDel }) => !optimisticDel)
     const visitString = input.visitString || []
     const isShowTitle = input.isShowTitle || false
     const inTagList = input.tagList || []
@@ -458,7 +458,7 @@ ${semanticTagsStyle}
     log('showBookmarkInfo 00');
 
     const usedParentIdSet = new Set(
-      bookmarkInfoList
+      bookmarkList
         .filter(({ source }) => source !== 'substring')
         .map(({ parentId }) => parentId)
     )
@@ -472,7 +472,7 @@ ${semanticTagsStyle}
 
     const drawList = []
     let prevTitle
-    bookmarkInfoList.forEach((value, index) => {
+    bookmarkList.forEach((value, index) => {
       const { title } = value
 
       if (isShowTitle && title) {
@@ -485,7 +485,7 @@ ${semanticTagsStyle}
       drawList.push({ type: 'bookmark', value, bkmIndex: index })
     })
     const emptySlotsForDel = Math.max(0, optimisticDelFromTagList - optimisticAddFromTagList)
-    const emptySlotsForAdd = Math.max(0, 2 - bookmarkInfoList.length - emptySlotsForDel)
+    const emptySlotsForAdd = Math.max(0, 2 - bookmarkList.length - emptySlotsForDel)
     const emptySlots = emptySlotsForAdd + emptySlotsForDel
 
     for (let iEmpty = 0; iEmpty < emptySlots; iEmpty += 1) {
@@ -900,11 +900,11 @@ ${semanticTagsStyle}
       // case CONTENT_SCRIPT_MSG_ID.TAGS_INFO:
       case CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO: {
         const fullState = showInHtmlSingleTaskQueue.getState()
-        const bookmarkInfoListBefore = (fullState.bookmarkInfoList || []).filter(({ optimisticAdd }) => !optimisticAdd)
+        const bookmarkListBefore = (fullState.bookmarkList || []).filter(({ optimisticAdd }) => !optimisticAdd)
 
         showInHtmlSingleTaskQueue.addUpdate(message)
-        const bookmarkInfoList = message.bookmarkInfoList || []
-        const diff = bookmarkInfoList.length - bookmarkInfoListBefore.length
+        const bookmarkList = message.bookmarkList || []
+        const diff = bookmarkList.length - bookmarkListBefore.length
 
         if (diff > 0) {
           if (diff > optimisticAddFromTagList - optimisticToStorageAdd) {

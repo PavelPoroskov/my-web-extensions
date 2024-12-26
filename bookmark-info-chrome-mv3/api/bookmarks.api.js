@@ -10,7 +10,7 @@ import {
 import {
   makeLogFunction,
 } from './log.api.js'
-import { 
+import {
   startPartialUrlSearch,
 } from './url-search.api.js'
 
@@ -44,7 +44,7 @@ async function addBookmarkParentInfo(bookmarkList, bookmarkByIdMap) {
 
   if (parentIdList.length === 0) {
     return
-  } 
+  }
 
   const knownParentIdList = [];
   const unknownParentIdList = [];
@@ -93,11 +93,11 @@ async function getBookmarkInfo(url) {
     urlForSearch,
     isUrlMatchToPartialUrlSearch,
   } = await startPartialUrlSearch(url)
-  logBA('getBookmarkInfo () 22 startPartialUrlSearch', { isSearchAvailable, urlForSearch })  
+  logBA('getBookmarkInfo () 22 startPartialUrlSearch', { isSearchAvailable, urlForSearch })
 
   if (isSearchAvailable) {
     const bkmListForSubstring = await chrome.bookmarks.search(urlForSearch);
-    logBA('getBookmarkInfo () 33 search(normalizedUrl)', bkmListForSubstring.length, bkmListForSubstring)  
+    logBA('getBookmarkInfo () 33 search(normalizedUrl)', bkmListForSubstring.length, bkmListForSubstring)
 
     const yetSet = new Set(bkmListForUrl.map(({ id }) => id))
 
@@ -108,7 +108,7 @@ async function getBookmarkInfo(url) {
           source: 'substring',
         })
       }
-    })    
+    })
   }
 
   await addBookmarkParentInfo(bookmarkList, memo.bkmFolderById)
@@ -117,7 +117,7 @@ async function getBookmarkInfo(url) {
   return bookmarkList
     .map((bookmarkItem) => {
       const fullPathList = getFullPath(bookmarkItem.parentId, memo.bkmFolderById)
-      
+
       return {
         id: bookmarkItem.id,
         fullPathList,
@@ -134,26 +134,26 @@ export async function getBookmarkInfoUni({ url, useCache=false }) {
     return;
   }
 
-  let bookmarkInfoList;
+  let bookmarkList;
   let source;
 
   if (useCache) {
-    bookmarkInfoList = memo.cacheUrlToInfo.get(url);
-    
-    if (bookmarkInfoList) {
+    bookmarkList = memo.cacheUrlToInfo.get(url);
+
+    if (bookmarkList) {
       source = SOURCE.CACHE;
       logBA('getBookmarkInfoUni OPTIMIZATION: from cache bookmarkInfo')
     }
-  } 
-  
-  if (!bookmarkInfoList) {
-    bookmarkInfoList = await getBookmarkInfo(url);
+  }
+
+  if (!bookmarkList) {
+    bookmarkList = await getBookmarkInfo(url);
     source = SOURCE.ACTUAL;
-    memo.cacheUrlToInfo.add(url, bookmarkInfoList);
+    memo.cacheUrlToInfo.add(url, bookmarkList);
   }
 
   return {
-    bookmarkInfoList,
+    bookmarkList,
     source,
   };
 }
