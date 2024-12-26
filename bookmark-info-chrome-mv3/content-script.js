@@ -447,7 +447,14 @@ ${semanticTagsStyle}
 
 
   function showBookmarkInfo(input) {
-    const bookmarkList = (input.bookmarkList || []).filter(({ optimisticDel }) => !optimisticDel)
+    const bookmarkList = (input.bookmarkList || [])
+      .filter(({ optimisticDel }) => !optimisticDel)
+      .filter(({ source }) => source !== 'substring')
+
+    const partialBookmarkList = (input.bookmarkList || [])
+      // .filter(({ optimisticDel }) => !optimisticDel)
+      .filter(({ source }) => source == 'substring')
+
     const visitString = input.visitString || []
     const isShowTitle = input.isShowTitle || false
     const inTagList = input.tagList || []
@@ -457,11 +464,7 @@ ${semanticTagsStyle}
 
     log('showBookmarkInfo 00');
 
-    const usedParentIdSet = new Set(
-      bookmarkList
-        .filter(({ source }) => source !== 'substring')
-        .map(({ parentId }) => parentId)
-    )
+    const usedParentIdSet = new Set(bookmarkList.map(({ parentId }) => parentId))
     const tagList = inTagList.map(({ parentId, title, isFixed, isLast}) => ({
       parentId,
       title,
@@ -483,6 +486,18 @@ ${semanticTagsStyle}
       }
 
       drawList.push({ type: 'bookmark', value, bkmIndex: index })
+    })
+    partialBookmarkList.forEach((value, index) => {
+      // const { title } = value
+
+      // if (isShowTitle && title) {
+      //   if (title !== prevTitle) {
+      //     drawList.push({ type: 'title', value: title })
+      //     prevTitle = title
+      //   }
+      // }
+
+      drawList.push({ type: 'partial-bookmark', value, bkmIndex: index + bookmarkList.length })
     })
     const emptySlotsForDel = Math.max(0, optimisticDelFromTagList - optimisticAddFromTagList)
     const emptySlotsForAdd = Math.max(0, 2 - bookmarkList.length - emptySlotsForDel)
@@ -563,23 +578,16 @@ ${semanticTagsStyle}
 
       switch (type) {
         case 'bookmark': {
-          const { id, fullPathList, source, url } = value
+          const { id, fullPathList } = value
           const [folderName] = fullPathList.slice(-1)
           const restPathList = fullPathList.slice(0, -1)
           const restPath = restPathList.concat('').join('/ ')
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
-
-          if (source === 'substring') {
-            const textNode = document.createTextNode(`url*: ${folderName}`);
-            divLabel.appendChild(textNode);
-            divLabel.setAttribute('data-restpath', `url*: ${url}`);
-          } else {
-            const textNode = document.createTextNode(folderName);
-            divLabel.appendChild(textNode);
-            divLabel.setAttribute('data-restpath', restPath);
-          }
+          const textNode = document.createTextNode(folderName);
+          divLabel.appendChild(textNode);
+          divLabel.setAttribute('data-restpath', restPath);
 
           divLabel.addEventListener('click', onBookmarkLabelClick);
           // TODO sanitize: remove ",<,>
@@ -608,6 +616,31 @@ ${semanticTagsStyle}
           divLabelContainer.classList.add('bkm-info--label-container');
           divLabelContainer.appendChild(divLabel);
           divLabelContainer.appendChild(divDelBtn);
+
+          divRow = document.createElement('div');
+          divRow.classList.add('bkm-info--row');
+          divRow.appendChild(divLabelContainer);
+
+          break
+        }
+        case 'partial-bookmark': {
+          // TODO? go to original bookmark
+          const { id, fullPathList, url } = value
+          const [folderName] = fullPathList.slice(-1)
+
+          const divLabel = document.createElement('div');
+          divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
+
+          const textNode = document.createTextNode(`url*: ${folderName}`);
+          divLabel.appendChild(textNode);
+          divLabel.setAttribute('data-restpath', `url*: ${url}`);
+
+          divLabel.addEventListener('click', onBookmarkLabelClick);
+          divLabel.setAttribute('data-bkmid', id);
+
+          const divLabelContainer = document.createElement('div');
+          divLabelContainer.classList.add('bkm-info--label-container');
+          divLabelContainer.appendChild(divLabel);
 
           divRow = document.createElement('div');
           divRow.classList.add('bkm-info--row');
