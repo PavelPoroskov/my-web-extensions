@@ -10,7 +10,7 @@ createFileForFirefox(
     'constant/id.js',
     'constant/optimization-cache.js',
     'constant/index.js',
-    
+
     'api/log.api.config.js',
     'api/log.api.js',
     'api/structure/extraMap.js',
@@ -21,7 +21,7 @@ createFileForFirefox(
     'api/structure/extensionSettings.js',
     'api/structure/browserStartTime.js',
     'api/structure/ignoreBkmControllerApiActionSet.js',
-    
+
     'api/common.api.js',
     'api/special-folder.api.js',
     'api/recent.api.js',
@@ -32,6 +32,7 @@ createFileForFirefox(
     'api/url-search.api.js',
     'api/clear-url.api.js',
     'api/bookmarks.api.js',
+    'api/create-bookmark.api.js',
     'api/history.api.js',
     'api/init-extension.js',
     'api/tabs.api.js',
