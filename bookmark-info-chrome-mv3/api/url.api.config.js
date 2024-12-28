@@ -90,6 +90,7 @@ const HOST_URL_SETTINGS = [
     hostname: 'thepiratebay.org',
     searchParamList: [
       'q',
+      'id',
     ],
   },
   {
