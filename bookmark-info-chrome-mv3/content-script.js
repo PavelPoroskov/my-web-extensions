@@ -902,6 +902,7 @@ ${semanticTagsStyle}
       const isChannel = isYoutubePage && (
         document.location.pathname.startsWith('/@')
         || document.location.pathname.startsWith('/c/')
+        || document.location.pathname.startsWith('/channel/')
       )
 
       if (isChannel) {
