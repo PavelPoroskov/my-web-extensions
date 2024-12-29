@@ -23,6 +23,7 @@ createFileForFirefox(
     'api/structure/ignoreBkmControllerApiActionSet.js',
 
     'api/common.api.js',
+    'api/bookmark.api.js',
     'api/special-folder.api.js',
     'api/recent.api.js',
       'api/structure/tagList.js',
@@ -32,7 +33,6 @@ createFileForFirefox(
     'api/url-search.api.js',
     'api/clear-url.api.js',
     'api/get-bookmarks.api.js',
-    'api/bookmark.api.js',
     'api/history.api.js',
     'api/init-extension.js',
     'api/tabs.api.js',

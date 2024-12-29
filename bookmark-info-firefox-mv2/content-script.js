@@ -317,12 +317,12 @@ ${semanticTagsStyle}
     if (bkmId) {
       // optimistic ui
       const fullState = showInHtmlSingleTaskQueue.getState()
-      const bookmarkInfoList = fullState.bookmarkInfoList || []
+      const bookmarkList = fullState.bookmarkList || []
 
-      const findIndex = bookmarkInfoList.findIndex((item) => item.id == bkmId)
+      const findIndex = bookmarkList.findIndex((item) => item.id == bkmId)
       if (-1 < findIndex) {
-        const newBookmarkInfoList = bookmarkInfoList.with(findIndex, { optimisticDel: true })
-        showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
+        const newBookmarkList = bookmarkList.with(findIndex, { optimisticDel: true })
+        showInHtmlSingleTaskQueue.addUpdate({ bookmarkList: newBookmarkList })
       }
 
       await browser.runtime.sendMessage({
@@ -350,20 +350,20 @@ ${semanticTagsStyle}
 
     if (parentId) {
       const fullState = showInHtmlSingleTaskQueue.getState()
-      const bookmarkInfoList = fullState.bookmarkInfoList || []
+      const bookmarkList = fullState.bookmarkList || []
 
       if (isUsed) {
-        const bkm = bookmarkInfoList.find((item) => item.parentId === parentId)
+        const bkm = bookmarkList.find((item) => item.parentId === parentId)
 
         if (bkm?.id) {
           // epic error
-          // const findIndex = bookmarkInfoList.findIndex((item) => item.id != bkm.id)
-          const findIndex = bookmarkInfoList.findIndex((item) => item.id == bkm.id)
+          // const findIndex = bookmarkList.findIndex((item) => item.id != bkm.id)
+          const findIndex = bookmarkList.findIndex((item) => item.id == bkm.id)
           if (-1 < findIndex) {
-            const newBookmarkInfoList = bookmarkInfoList.with(findIndex, { optimisticDel: true })
+            const newBookmarkList = bookmarkList.with(findIndex, { optimisticDel: true })
             optimisticDelFromTagList += 1
             // log('bookmarkFromTag 11 +optimisticDelFromTagList', optimisticDelFromTagList);
-            showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
+            showInHtmlSingleTaskQueue.addUpdate({ bookmarkList: newBookmarkList })
           }
 
           await browser.runtime.sendMessage({
@@ -376,7 +376,7 @@ ${semanticTagsStyle}
         const tagList = fullState.tagList || []
         const tag = tagList.find((item) => item.parentId === parentId)
         if (tag) {
-          const newBookmarkInfoList = bookmarkInfoList.concat({
+          const newBookmarkList = bookmarkList.concat({
             id: '',
             title: document.title,
             fullPathList: [tag.title],
@@ -386,7 +386,7 @@ ${semanticTagsStyle}
           if (optimisticAddFromTagList < optimisticDelFromTagList) {
             optimisticAddFromTagList += 1
           }
-          showInHtmlSingleTaskQueue.addUpdate({ bookmarkInfoList: newBookmarkInfoList })
+          showInHtmlSingleTaskQueue.addUpdate({ bookmarkList: newBookmarkList })
         }
         await browser.runtime.sendMessage({
           command: EXTENSION_MSG_ID.ADD_BOOKMARK,
@@ -447,7 +447,14 @@ ${semanticTagsStyle}
 
 
   function showBookmarkInfo(input) {
-    const bookmarkInfoList = (input.bookmarkInfoList || []).filter(({ optimisticDel }) => !optimisticDel)
+    const bookmarkList = (input.bookmarkList || [])
+      .filter(({ optimisticDel }) => !optimisticDel)
+      .filter(({ source }) => source !== 'substring')
+
+    const partialBookmarkList = (input.bookmarkList || [])
+      // .filter(({ optimisticDel }) => !optimisticDel)
+      .filter(({ source }) => source == 'substring')
+
     const visitString = input.visitString || []
     const isShowTitle = input.isShowTitle || false
     const inTagList = input.tagList || []
@@ -457,11 +464,7 @@ ${semanticTagsStyle}
 
     log('showBookmarkInfo 00');
 
-    const usedParentIdSet = new Set(
-      bookmarkInfoList
-        .filter(({ source }) => source !== 'substring')
-        .map(({ parentId }) => parentId)
-    )
+    const usedParentIdSet = new Set(bookmarkList.map(({ parentId }) => parentId))
     const tagList = inTagList.map(({ parentId, title, isFixed, isLast}) => ({
       parentId,
       title,
@@ -472,7 +475,7 @@ ${semanticTagsStyle}
 
     const drawList = []
     let prevTitle
-    bookmarkInfoList.forEach((value, index) => {
+    bookmarkList.forEach((value, index) => {
       const { title } = value
 
       if (isShowTitle && title) {
@@ -484,8 +487,20 @@ ${semanticTagsStyle}
 
       drawList.push({ type: 'bookmark', value, bkmIndex: index })
     })
+    partialBookmarkList.forEach((value, index) => {
+      // const { title } = value
+
+      // if (isShowTitle && title) {
+      //   if (title !== prevTitle) {
+      //     drawList.push({ type: 'title', value: title })
+      //     prevTitle = title
+      //   }
+      // }
+
+      drawList.push({ type: 'partial-bookmark', value, bkmIndex: index + bookmarkList.length })
+    })
     const emptySlotsForDel = Math.max(0, optimisticDelFromTagList - optimisticAddFromTagList)
-    const emptySlotsForAdd = Math.max(0, 2 - bookmarkInfoList.length - emptySlotsForDel)
+    const emptySlotsForAdd = Math.max(0, 2 - bookmarkList.length - emptySlotsForDel)
     const emptySlots = emptySlotsForAdd + emptySlotsForDel
 
     for (let iEmpty = 0; iEmpty < emptySlots; iEmpty += 1) {
@@ -559,28 +574,20 @@ ${semanticTagsStyle}
     const beforeRawLength = rawNodeList.length;
 
     drawList.forEach(({ type, value, bkmIndex }, index) => {
-      const divLabelContainer = document.createElement('div');
-      divLabelContainer.classList.add('bkm-info--label-container');
+      let divRow
 
       switch (type) {
         case 'bookmark': {
-          const { id, fullPathList, source, url } = value
+          const { id, fullPathList } = value
           const [folderName] = fullPathList.slice(-1)
           const restPathList = fullPathList.slice(0, -1)
           const restPath = restPathList.concat('').join('/ ')
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
-
-          if (source === 'substring') {
-            const textNode = document.createTextNode(`url*: ${folderName}`);
-            divLabel.appendChild(textNode);
-            divLabel.setAttribute('data-restpath', `url*: ${url}`);
-          } else {
-            const textNode = document.createTextNode(folderName);
-            divLabel.appendChild(textNode);
-            divLabel.setAttribute('data-restpath', restPath);
-          }
+          const textNode = document.createTextNode(folderName);
+          divLabel.appendChild(textNode);
+          divLabel.setAttribute('data-restpath', restPath);
 
           divLabel.addEventListener('click', onBookmarkLabelClick);
           // TODO sanitize: remove ",<,>
@@ -605,8 +612,39 @@ ${semanticTagsStyle}
           divDelBtn.appendChild(divDelBtnLetter);
           divDelBtn.addEventListener('click', deleteBookmark);
 
+          const divLabelContainer = document.createElement('div');
+          divLabelContainer.classList.add('bkm-info--label-container');
           divLabelContainer.appendChild(divLabel);
           divLabelContainer.appendChild(divDelBtn);
+
+          divRow = document.createElement('div');
+          divRow.classList.add('bkm-info--row');
+          divRow.appendChild(divLabelContainer);
+
+          break
+        }
+        case 'partial-bookmark': {
+          // TODO? go to original bookmark
+          const { id, fullPathList, url } = value
+          const [folderName] = fullPathList.slice(-1)
+
+          const divLabel = document.createElement('div');
+          divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
+
+          const textNode = document.createTextNode(`url*: ${folderName}`);
+          divLabel.appendChild(textNode);
+          divLabel.setAttribute('data-restpath', `url*: ${url}`);
+
+          divLabel.addEventListener('click', onBookmarkLabelClick);
+          divLabel.setAttribute('data-bkmid', id);
+
+          const divLabelContainer = document.createElement('div');
+          divLabelContainer.classList.add('bkm-info--label-container');
+          divLabelContainer.appendChild(divLabel);
+
+          divRow = document.createElement('div');
+          divRow.classList.add('bkm-info--row');
+          divRow.appendChild(divLabelContainer);
 
           break
         }
@@ -616,7 +654,14 @@ ${semanticTagsStyle}
           const textNode = document.createTextNode('|');
           divLabel.appendChild(textNode);
 
+          const divLabelContainer = document.createElement('div');
+          divLabelContainer.classList.add('bkm-info--label-container');
           divLabelContainer.appendChild(divLabel);
+
+          divRow = document.createElement('div');
+          divRow.classList.add('bkm-info--row');
+          divRow.addEventListener('click', hideBookmarks);
+          divRow.appendChild(divLabelContainer);
 
           break
         }
@@ -627,7 +672,13 @@ ${semanticTagsStyle}
           const textNode = document.createTextNode(`${value}`);
           divLabel.appendChild(textNode);
 
+          const divLabelContainer = document.createElement('div');
+          divLabelContainer.classList.add('bkm-info--label-container');
           divLabelContainer.appendChild(divLabel);
+
+          divRow = document.createElement('div');
+          divRow.classList.add('bkm-info--row');
+          divRow.appendChild(divLabelContainer);
 
           break
         }
@@ -637,7 +688,14 @@ ${semanticTagsStyle}
           divLabel.addEventListener('click', toggleTagList);
           const textNode = document.createTextNode( isShowTagList ? '▴ hide' : '▾ add' );
           divLabel.appendChild(textNode);
+
+          const divLabelContainer = document.createElement('div');
+          divLabelContainer.classList.add('bkm-info--label-container');
           divLabelContainer.appendChild(divLabel);
+
+          divRow = document.createElement('div');
+          divRow.classList.add('bkm-info--row');
+          divRow.appendChild(divLabelContainer);
 
           break
         }
@@ -667,8 +725,14 @@ ${semanticTagsStyle}
           divFixBtnLetter.appendChild(textNodeFix);
           divFixBtn.appendChild(divFixBtnLetter);
 
+          const divLabelContainer = document.createElement('div');
+          divLabelContainer.classList.add('bkm-info--label-container');
           divLabelContainer.appendChild(divFixBtn);
           divLabelContainer.appendChild(divLabel);
+
+          divRow = document.createElement('div');
+          divRow.classList.add('bkm-info--row');
+          divRow.appendChild(divLabelContainer);
 
           break
         }
@@ -699,8 +763,14 @@ ${semanticTagsStyle}
 
           divFixBtn.appendChild(divFixBtnLetter);
 
+          const divLabelContainer = document.createElement('div');
+          divLabelContainer.classList.add('bkm-info--label-container');
           divLabelContainer.appendChild(divFixBtn);
           divLabelContainer.appendChild(divLabel);
+
+          divRow = document.createElement('div');
+          divRow.classList.add('bkm-info--row');
+          divRow.appendChild(divLabelContainer);
 
           break
         }
@@ -711,15 +781,17 @@ ${semanticTagsStyle}
           const textNode = document.createTextNode(`${value} :title`);
           divLabel.appendChild(textNode);
 
+          const divLabelContainer = document.createElement('div');
+          divLabelContainer.classList.add('bkm-info--label-container');
           divLabelContainer.appendChild(divLabel);
+
+          divRow = document.createElement('div');
+          divRow.classList.add('bkm-info--row');
+          divRow.appendChild(divLabelContainer);
 
           break
         }
       }
-
-      const divRow = document.createElement('div');
-      divRow.classList.add('bkm-info--row');
-      divRow.appendChild(divLabelContainer);
 
       if (index < beforeRawLength) {
         rootDiv.replaceChild(divRow, rawNodeList[index]);
@@ -831,6 +903,7 @@ ${semanticTagsStyle}
       const isChannel = isYoutubePage && (
         document.location.pathname.startsWith('/@')
         || document.location.pathname.startsWith('/c/')
+        || document.location.pathname.startsWith('/channel/')
       )
 
       if (isChannel) {
@@ -862,11 +935,11 @@ ${semanticTagsStyle}
       // case CONTENT_SCRIPT_MSG_ID.TAGS_INFO:
       case CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO: {
         const fullState = showInHtmlSingleTaskQueue.getState()
-        const bookmarkInfoListBefore = (fullState.bookmarkInfoList || []).filter(({ optimisticAdd }) => !optimisticAdd)
+        const bookmarkListBefore = (fullState.bookmarkList || []).filter(({ optimisticAdd }) => !optimisticAdd)
 
         showInHtmlSingleTaskQueue.addUpdate(message)
-        const bookmarkInfoList = message.bookmarkInfoList || []
-        const diff = bookmarkInfoList.length - bookmarkInfoListBefore.length
+        const bookmarkList = message.bookmarkList || []
+        const diff = bookmarkList.length - bookmarkListBefore.length
 
         if (diff > 0) {
           if (diff > optimisticAddFromTagList - optimisticToStorageAdd) {
