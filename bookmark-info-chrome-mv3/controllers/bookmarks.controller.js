@@ -176,11 +176,6 @@ export const bookmarksController = {
     }
   },
   async onRemoved(bookmarkId, { node }) {
-    if (ignoreBkmControllerApiActionSet.hasIgnoreRemove(bookmarkId)) {
-      logBC('bookmark.onRemoved ignore', bookmarkId);
-      return
-    }
-
     logBC('bookmark.onRemoved <-', bookmarkId);
     const settings = await extensionSettings.get()
 

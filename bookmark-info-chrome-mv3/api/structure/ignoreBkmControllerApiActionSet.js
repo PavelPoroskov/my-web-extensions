@@ -1,57 +1,42 @@
 // ignore create from api to detect create from user
 class IgnoreBkmControllerApiActionSet {
-    constructor () {
-        this._innerSet = new Set();
+  constructor() {
+    this._innerSet = new Set();
+  }
+  addIgnoreCreate({ parentId, url, title }) {
+    const innerKey = url
+      ? `create#${parentId}#${url}`
+      : `create#${parentId}#${title}`
+
+    this._innerSet.add(innerKey)
+  }
+  hasIgnoreCreate({ parentId, url, title }) {
+    const innerKey = url
+      ? `create#${parentId}#${url}`
+      : `create#${parentId}#${title}`
+
+    const isHas = this._innerSet.has(innerKey)
+    if (isHas) {
+      this._innerSet.delete(innerKey)
     }
-    addIgnoreCreate({ parentId, url, title }) {
-        const innerKey = url 
-            ? `create#${parentId}#${url}`
-            : `create#${parentId}#${title}`
 
-        this._innerSet.add(innerKey)
+    return isHas
+  }
+  addIgnoreMove(bkmId) {
+    const innerKey = `move#${bkmId}`
+
+    this._innerSet.add(innerKey)
+  }
+  hasIgnoreMove(bkmId) {
+    const innerKey = `move#${bkmId}`
+
+    const isHas = this._innerSet.has(innerKey)
+    if (isHas) {
+      this._innerSet.delete(innerKey)
     }
-    hasIgnoreCreate({ parentId, url, title }) {
-        const innerKey = url 
-            ? `create#${parentId}#${url}`
-            : `create#${parentId}#${title}`
 
-        const isHas = this._innerSet.has(innerKey)
-        if (isHas) {
-            this._innerSet.delete(innerKey)
-        }
-
-        return isHas
-    }
-    addIgnoreRemove(bkmId) {
-        const innerKey = `remove#${bkmId}`
-
-        this._innerSet.add(innerKey)
-    }
-    hasIgnoreRemove(bkmId) {
-        const innerKey = `remove#${bkmId}`
-
-        const isHas = this._innerSet.has(innerKey)
-        if (isHas) {
-            this._innerSet.delete(innerKey)
-        }
-
-        return isHas
-    }
-    addIgnoreMove(bkmId) {
-        const innerKey = `move#${bkmId}`
-
-        this._innerSet.add(innerKey)
-    }
-    hasIgnoreMove(bkmId) {
-        const innerKey = `move#${bkmId}`
-
-        const isHas = this._innerSet.has(innerKey)
-        if (isHas) {
-            this._innerSet.delete(innerKey)
-        }
-
-        return isHas
-    }
+    return isHas
+  }
 }
 
 export const ignoreBkmControllerApiActionSet = new IgnoreBkmControllerApiActionSet()
