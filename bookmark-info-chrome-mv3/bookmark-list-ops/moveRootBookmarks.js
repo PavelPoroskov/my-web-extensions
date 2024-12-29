@@ -3,8 +3,8 @@ import {
   OTHER_BOOKMARKS_FOLDER_ID,
 } from '../api/special-folder.api.js';
 import {
-  ignoreBkmControllerApiActionSet,
-} from '../api/structure/ignoreBkmControllerApiActionSet.js';
+  moveBookmark,
+} from '../api/create-bookmark.api.js';
 
 async function moveRootBookmarks({ fromId, unclassifiedId }) {
   // console.log('### moveRootBookmarks 00,', fromId)
@@ -17,12 +17,10 @@ async function moveRootBookmarks({ fromId, unclassifiedId }) {
     .filter(({ url }) => !url.startsWith('place:'))
   // console.log('### moveRootBookmarks bkmList,', bkmList)
 
-  bkmList.forEach(({ id: bookmarkId }) => {
-    ignoreBkmControllerApiActionSet.addIgnoreMove(bookmarkId)
-  })
-
   await bkmList.reduce(
-    (promiseChain, bkm) => promiseChain.then(() => chrome.bookmarks.move(bkm.id, { parentId: unclassifiedId })),
+    (promiseChain, bkm) => promiseChain.then(
+      () => moveBookmark({ id: bkm.id, parentId: unclassifiedId })
+    ),
     Promise.resolve(),
   );
 }

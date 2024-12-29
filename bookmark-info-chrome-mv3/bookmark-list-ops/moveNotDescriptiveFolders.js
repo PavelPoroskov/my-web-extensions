@@ -5,20 +5,19 @@ import {
   OTHER_BOOKMARKS_FOLDER_ID,
 } from '../api/special-folder.api.js';
 import {
-  ignoreBkmControllerApiActionSet,
-} from '../api/structure/ignoreBkmControllerApiActionSet.js';
+  moveBookmark,
+} from '../api/create-bookmark.api.js';
 
 async function moveContentToStart(fromFolderId, toFolderId) {
   const nodeList = await chrome.bookmarks.getChildren(fromFolderId)
   const reversedNodeList = nodeList.toReversed()
 
-  reversedNodeList.forEach(({ id: bookmarkId }) => {
-    ignoreBkmControllerApiActionSet.addIgnoreMove(bookmarkId)
-  })
-
-  await Promise.all(reversedNodeList.map(
-    ({ id }) => chrome.bookmarks.move(id, { parentId: toFolderId, index: 0 }))
-  )
+  await reversedNodeList.reduce(
+    (promiseChain, node) => promiseChain.then(
+      () => moveBookmark({ id: node.id, parentId: toFolderId, index: 0 })
+    ),
+    Promise.resolve(),
+  );
 }
 
 async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
@@ -27,17 +26,19 @@ async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
     .filter(({ url }) => !url)
     .filter(({ title }) => !isDescriptiveFolderTitle(title))
 
-  // await Promise.all(folderList.map(
-  //   ({ id }) => moveContent(id, unclassifiedId)
-  // ))
   await folderList.reduce(
-    (promiseChain, folderNode) => promiseChain.then(() => moveContentToStart(folderNode.id, unclassifiedId)),
+    (promiseChain, folderNode) => promiseChain.then(
+      () => moveContentToStart(folderNode.id, unclassifiedId)
+    ),
     Promise.resolve(),
   );
 
-  await Promise.all(folderList.map(
-    ({ id }) => chrome.bookmarks.remove(id)
-  ))
+  await folderList.reduce(
+    (promiseChain, folderNode) => promiseChain.then(
+      () => chrome.bookmarks.remove(folderNode.id)
+    ),
+    Promise.resolve(),
+  );
 }
 
 export async function moveNotDescriptiveFoldersToUnclassified() {

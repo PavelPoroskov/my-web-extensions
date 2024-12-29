@@ -48,11 +48,12 @@ export async function removeDoubleBookmarks() {
   const doubleList = await getDoubles()
   // console.log('Double bookmarks:', doubleList.length)
 
-  await Promise.all(
-    doubleList.map(
-      (id) => chrome.bookmarks.remove(id)
-    )
-  )
+  await doubleList.reduce(
+    (promiseChain, bkmId) => promiseChain.then(
+      () => chrome.bookmarks.remove(bkmId)
+    ),
+    Promise.resolve(),
+  );
 
   return {
     nRemovedDoubles: doubleList.length

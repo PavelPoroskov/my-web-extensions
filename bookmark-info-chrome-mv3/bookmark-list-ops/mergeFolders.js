@@ -7,19 +7,18 @@ import {
   trimTitle,
 } from '../api/text.api.js';
 import {
-  ignoreBkmControllerApiActionSet,
-} from '../api/structure/ignoreBkmControllerApiActionSet.js';
+  moveBookmark,
+} from '../api/create-bookmark.api.js';
 
 async function moveContent(fromFolderId, toFolderId) {
   const nodeList = await chrome.bookmarks.getChildren(fromFolderId)
 
-  nodeList.forEach(({ id: bookmarkId }) => {
-    ignoreBkmControllerApiActionSet.addIgnoreMove(bookmarkId)
-  })
-
-  await Promise.all(nodeList.map(
-    ({ id }) => chrome.bookmarks.move(id, { parentId: toFolderId })
-  ))
+  await nodeList.reduce(
+    (promiseChain, node) => promiseChain.then(
+      () => moveBookmark({ id: node.id, parentId: toFolderId })
+    ),
+    Promise.resolve(),
+  );
 }
 
 async function mergeSubFolder(parentId) {
@@ -56,13 +55,18 @@ async function mergeSubFolder(parentId) {
   // console.log('### moveTaskList', moveTaskList.map(({ fromNode, toNode }) => `${fromNode.title} -> ${toNode.title}`))
 
   await moveTaskList.reduce(
-    (promiseChain, { fromNode, toNode }) => promiseChain.then(() => moveContent(fromNode.id, toNode.id)),
+    (promiseChain, { fromNode, toNode }) => promiseChain.then(
+      () => moveContent(fromNode.id, toNode.id)
+    ),
     Promise.resolve(),
   );
 
-  await Promise.all(moveTaskList.map(
-    ({ fromNode }) => chrome.bookmarks.remove(fromNode.id)
-  ))
+  await moveTaskList.reduce(
+    (promiseChain, { fromNode }) => promiseChain.then(
+      () => chrome.bookmarks.remove(fromNode.id)
+    ),
+    Promise.resolve(),
+  );
 }
 
 async function trimTitleInSubFolder(parentId) {
@@ -81,9 +85,12 @@ async function trimTitleInSubFolder(parentId) {
     }
   }
 
-  await Promise.all(renameTaskList.map(
-    ({ id, title }) => chrome.bookmarks.update(id, { title })
-  ))
+  await renameTaskList.reduce(
+    (promiseChain, { id, title }) => promiseChain.then(
+      () => chrome.bookmarks.update(id, { title })
+    ),
+    Promise.resolve(),
+  );
 }
 
 export async function mergeFolders() {

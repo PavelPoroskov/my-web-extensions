@@ -23,6 +23,9 @@ import {
 import {
   makeLogFunction,
 } from '../api/log.api.js'
+import {
+  moveBookmark,
+} from '../api/create-bookmark.api.js';
 
 const logBC = makeLogFunction({ module: 'bookmarks.controller' })
 
@@ -45,8 +48,7 @@ export const bookmarksController = {
 
     if (node.url) {
       if (node.index !== 0) {
-        ignoreBkmControllerApiActionSet.addIgnoreMove(bookmarkId)
-        await chrome.bookmarks.move(bookmarkId, { index: 0 })
+        await moveBookmark({ id: bookmarkId, index: 0 })
       }
 
       if (settings[USER_OPTION.TAG_LIST_USE]) {
@@ -130,8 +132,7 @@ export const bookmarksController = {
 
             if (isMoveOnly) {
               if (index !== 0) {
-                ignoreBkmControllerApiActionSet.addIgnoreMove(bookmarkId)
-                await chrome.bookmarks.move(bookmarkId, { index: 0 })
+                await moveBookmark({ id: bookmarkId, index: 0 })
               }
             } else {
               let isReplaceMoveToCreate = false
@@ -153,8 +154,7 @@ export const bookmarksController = {
                 logBC('bookmark.onMoved 22');
 
                 const { url, title } = node
-                ignoreBkmControllerApiActionSet.addIgnoreMove(bookmarkId)
-                await chrome.bookmarks.move(bookmarkId, { parentId: oldParentId, index: oldIndex })
+                await moveBookmark({ id: bookmarkId, parentId: oldParentId, index: oldIndex })
 
                 const newBkm = {
                   parentId,
