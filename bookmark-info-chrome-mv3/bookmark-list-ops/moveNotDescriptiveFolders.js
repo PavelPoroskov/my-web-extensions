@@ -6,7 +6,7 @@ import {
 } from '../api/special-folder.api.js';
 import {
   moveBookmark,
-} from '../api/create-bookmark.api.js';
+} from '../api/bookmark.api.js';
 
 async function moveContentToStart(fromFolderId, toFolderId) {
   const nodeList = await chrome.bookmarks.getChildren(fromFolderId)

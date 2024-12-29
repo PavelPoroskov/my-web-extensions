@@ -4,7 +4,7 @@ import {
 } from '../api/special-folder.api.js';
 import {
   moveBookmark,
-} from '../api/create-bookmark.api.js';
+} from '../api/bookmark.api.js';
 
 async function getMaxUsedSuffix() {
   function getFoldersFromTree(tree) {

@@ -7,7 +7,7 @@ import {
 } from '../api/text.api.js';
 import {
   moveBookmark,
-} from '../api/create-bookmark.api.js';
+} from '../api/bookmark.api.js';
 
 export async function moveFolderByName({ fromId, toId, isCondition }) {
   const childrenList = await chrome.bookmarks.getChildren(fromId)

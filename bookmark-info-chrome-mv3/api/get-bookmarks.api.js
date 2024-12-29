@@ -14,7 +14,7 @@ import {
   startPartialUrlSearch,
 } from './url-search.api.js'
 
-const logBA = makeLogFunction({ module: 'bookmarks.api' })
+const logGB = makeLogFunction({ module: 'get-bookmarks.api.js' })
 
 const getParentIdList = (bookmarkList = []) => {
   const parentIdList = bookmarkList
@@ -78,9 +78,9 @@ async function addBookmarkParentInfo(bookmarkList, bookmarkByIdMap) {
 }
 
 async function getBookmarkInfo(url) {
-  logBA('getBookmarkInfo () 00', url)
+  logGB('getBookmarkInfo () 00', url)
   const bkmListForUrl = await chrome.bookmarks.search({ url });
-  logBA('getBookmarkInfo () 11 search({ url })', bkmListForUrl.length, bkmListForUrl)
+  logGB('getBookmarkInfo () 11 search({ url })', bkmListForUrl.length, bkmListForUrl)
   const bookmarkList = bkmListForUrl.map((item) => ({ ...item, source: 'original url' }))
 
   // 1 < pathname.length : it is not root path
@@ -93,11 +93,11 @@ async function getBookmarkInfo(url) {
     urlForSearch,
     isUrlMatchToPartialUrlSearch,
   } = await startPartialUrlSearch(url)
-  logBA('getBookmarkInfo () 22 startPartialUrlSearch', { isSearchAvailable, urlForSearch })
+  logGB('getBookmarkInfo () 22 startPartialUrlSearch', { isSearchAvailable, urlForSearch })
 
   if (isSearchAvailable) {
     const bkmListForSubstring = await chrome.bookmarks.search(urlForSearch);
-    logBA('getBookmarkInfo () 33 search(normalizedUrl)', bkmListForSubstring.length, bkmListForSubstring)
+    logGB('getBookmarkInfo () 33 search(normalizedUrl)', bkmListForSubstring.length, bkmListForSubstring)
 
     const yetSet = new Set(bkmListForUrl.map(({ id }) => id))
 
@@ -113,7 +113,7 @@ async function getBookmarkInfo(url) {
 
   await addBookmarkParentInfo(bookmarkList, memo.bkmFolderById)
 
-  logBA('getBookmarkInfo () 99 bookmarkList', bookmarkList.length, bookmarkList)
+  logGB('getBookmarkInfo () 99 bookmarkList', bookmarkList.length, bookmarkList)
   return bookmarkList
     .map((bookmarkItem) => {
       const fullPathList = getFullPath(bookmarkItem.parentId, memo.bkmFolderById)
@@ -142,7 +142,7 @@ export async function getBookmarkInfoUni({ url, useCache=false }) {
 
     if (bookmarkList) {
       source = SOURCE.CACHE;
-      logBA('getBookmarkInfoUni OPTIMIZATION: from cache bookmarkInfo')
+      logGB('getBookmarkInfoUni OPTIMIZATION: from cache bookmarkInfo')
     }
   }
 

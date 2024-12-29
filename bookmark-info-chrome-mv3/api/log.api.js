@@ -14,7 +14,7 @@ const makeLogWithTime = () => {
     // const dif = (newLogTime - prevLogTime)/1000;
     const dif = (newLogTime - prevLogTime);
     prevLogTime = newLogTime;
-  
+
     const ar = Array.from(arguments);
     ar.unshift(`+${dif}`);
     console.log(...ar);
@@ -25,7 +25,7 @@ const logWithTime = makeLogWithTime();
 
 // eslint-disable-next-line no-unused-vars
 const makeLogWithPrefixAndTime = (prefix = '') => {
-  return function () {  
+  return function () {
     const ar = Array.from(arguments);
 
     if (prefix) {
@@ -44,7 +44,10 @@ export const makeLogFunction = ({ module }) => {
     return () => {}
   }
 
-  const prefix = module;
+  let prefix = module;
+  if (prefix.endsWith('.js')) {
+    prefix = prefix.slice(0, -3)
+  }
 
   return function () {
     const ar = Array.from(arguments);

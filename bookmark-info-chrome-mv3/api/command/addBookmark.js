@@ -1,5 +1,5 @@
 import { findOrCreateFolder } from '../folder.api.js'
-import { createBookmarkWithApi } from '../create-bookmark.api.js'
+import { createBookmarkWithApi } from '../bookmark.api.js'
 import {
   getUserInputInPage,
   getSelectionInPage,

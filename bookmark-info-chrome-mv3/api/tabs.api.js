@@ -4,7 +4,7 @@ import {
 } from './common.api.js'
 import {
   getBookmarkInfoUni,
-} from './bookmarks.api.js'
+} from './get-bookmarks.api.js'
 import {
   getHistoryInfo,
 } from './history.api.js'

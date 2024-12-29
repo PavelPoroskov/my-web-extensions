@@ -15,7 +15,8 @@ import {
 } from '../api/storage.api.config.js'
 import {
   isBookmarkCreatedWithApi,
-} from '../api/create-bookmark.api.js'
+  moveBookmark,
+} from '../api/bookmark.api.js'
 import {
   IS_BROWSER_CHROME,
   IS_BROWSER_FIREFOX,
@@ -23,9 +24,6 @@ import {
 import {
   makeLogFunction,
 } from '../api/log.api.js'
-import {
-  moveBookmark,
-} from '../api/create-bookmark.api.js';
 
 const logBC = makeLogFunction({ module: 'bookmarks.controller' })
 
