@@ -27,7 +27,7 @@ export const trimLowSingular = (title) => {
   return normalizedTitle
 }
 
-export const normalizeTitle = (title) => trimLowSingular(title.replaceAll('-', ' '))
+export const normalizeTitle = (title) => trimLowSingular(title.replaceAll('-', ''))
 
 export function isStartWithTODO(str) {
   return !!str && str.slice(0, 4).toLowerCase() === 'todo'
