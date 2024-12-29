@@ -6,6 +6,7 @@ import {
   isStartWithTODO,
   normalizeTitle,
   trimLow,
+  trimLowSingular,
 } from './text.api.js';
 import {
   makeLogFunction,
@@ -80,8 +81,6 @@ async function findFolderInSubtree({ normalizedTitle, parentId }) {
 //  onStart, merge will be
 async function findFolder(title) {
   logFA('findFolder 00 title', title)
-  const normalizedTitle = normalizeTitle(title)
-  logFA('findFolder 00 normalizedTitle', normalizedTitle)
   let foundItem
 
   const bookmarkList = await chrome.bookmarks.search({ title });
@@ -99,22 +98,60 @@ async function findFolder(title) {
   const lowTitle = trimLow(title)
 
   if (!foundItem && lowTitle.endsWith('.js')) {
-    const modifiedTitle = `${lowTitle.slice(0, -3)}js`
+    const noDotTitle = `${lowTitle.slice(0, -3)}js`
 
-    const bookmarkList = await chrome.bookmarks.search(modifiedTitle);
-    logFA('findFolder 22 search(title) modifiedTitle', modifiedTitle)
+    const bookmarkList = await chrome.bookmarks.search(noDotTitle);
+    logFA('findFolder 22 search(title) noDotTitle', noDotTitle)
     logFA('findFolder 22 search(title)', bookmarkList.length, bookmarkList)
 
     let i = 0
     while (!foundItem && i < bookmarkList.length) {
       const checkItem = bookmarkList[i]
-      if (!checkItem.url && trimLow(checkItem.title) === modifiedTitle) {
+      if (!checkItem.url && trimLow(checkItem.title) === noDotTitle) {
         foundItem = checkItem
       }
       i += 1
     }
   }
 
+
+  if (!foundItem) {
+    const noDashTitle = trimLowSingular(title.replaceAll('-', ''))
+    logFA('findFolder 333 noDashTitle', noDashTitle)
+
+    const bookmarkList = await chrome.bookmarks.search(noDashTitle);
+    logFA('findFolder 333 search(noDashTitle)', bookmarkList.length, bookmarkList)
+
+    let i = 0
+    while (!foundItem && i < bookmarkList.length) {
+      const checkItem = bookmarkList[i]
+      if (!checkItem.url && trimLowSingular(checkItem.title) === noDashTitle) {
+        foundItem = checkItem
+      }
+      i += 1
+    }
+  }
+
+  if (!foundItem) {
+    const dashToSpaceTitle = trimLowSingular(title.replaceAll('-', ' '))
+    logFA('findFolder 333 dashToSpaceTitle', dashToSpaceTitle)
+
+    const bookmarkList = await chrome.bookmarks.search(dashToSpaceTitle);
+    logFA('findFolder 333 search(dashToSpaceTitle)', bookmarkList.length, bookmarkList)
+
+    let i = 0
+    while (!foundItem && i < bookmarkList.length) {
+      const checkItem = bookmarkList[i]
+      if (!checkItem.url && trimLowSingular(checkItem.title) === dashToSpaceTitle) {
+        foundItem = checkItem
+      }
+      i += 1
+    }
+  }
+
+
+  const normalizedTitle = normalizeTitle(title)
+  logFA('findFolder 00 normalizedTitle', normalizedTitle)
 
   if (!foundItem) {
     logFA('findFolder 33 normalizedTitle', normalizedTitle)
@@ -131,6 +168,7 @@ async function findFolder(title) {
       i += 1
     }
   }
+
 
   const lowTitle2 = trimLow(title)
   const lastWord = lowTitle2.split(' ').at(-1)
