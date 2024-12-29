@@ -1,33 +1,36 @@
 import {
-    singular,
+  singular,
 } from './pluralize.js';
 
 export const trimTitle = (title) => title
+  .trim()
+  .replace(/\s+/, ' ')
+
+export const trimLow = (title) => {
+  const trimmedTitle = title
     .trim()
+    .replaceAll('-', ' ')
     .replace(/\s+/, ' ')
+    .toLowerCase()
 
-export const normalizeTitle = (title) => {  
-    const trimmedTitle = title
-        .trim()
-        .replaceAll('-', ' ')
-        .replace(/\s+/, ' ')
-        .toLowerCase()
-
-    // fix error: singular('node.js) => 'node.j'
-    if ((trimmedTitle.endsWith('js') || trimmedTitle.endsWith('css'))) {
-        return trimmedTitle
-    }
-
-    const wordList = trimmedTitle.split(' ')
-    const lastWord = wordList.at(-1)
-    const singularLastWord = singular(lastWord)
-    const normalizedWordList = wordList.with(-1, singularLastWord)
-    const normalizedTitle = normalizedWordList.join(' ')
-
-    return normalizedTitle
+  return trimmedTitle
 }
 
+export const trimLowSingular = (title) => {
+  const trimmedTitle = trimLow(title)
+
+  const wordList = trimmedTitle.split(' ')
+  const lastWord = wordList.at(-1)
+  const singularLastWord = singular(lastWord)
+  const normalizedWordList = wordList.with(-1, singularLastWord)
+  const normalizedTitle = normalizedWordList.join(' ')
+
+  return normalizedTitle
+}
+
+export const normalizeTitle = trimLowSingular
+
 export function isStartWithTODO(str) {
-    return !!str && str.slice(0, 4).toLowerCase() === 'todo'
+  return !!str && str.slice(0, 4).toLowerCase() === 'todo'
 }
 
