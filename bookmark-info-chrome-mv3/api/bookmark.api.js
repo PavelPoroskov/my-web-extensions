@@ -57,7 +57,7 @@ export async function createFolderIgnoreInController({
   return await chrome.bookmarks.create(options)
 }
 
-export async function moveBookmark({ id, parentId, index }) {
+export async function moveBookmarkIgnoreInController({ id, parentId, index }) {
   const options = {}
   if (parentId != undefined) {
     options.parentId = parentId

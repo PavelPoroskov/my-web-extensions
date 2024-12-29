@@ -16,7 +16,7 @@ import {
 import {
   createBookmarkIgnoreInController,
   isBookmarkCreatedWithApi,
-  moveBookmark,
+  moveBookmarkIgnoreInController,
 } from '../api/bookmark.api.js'
 import {
   IS_BROWSER_CHROME,
@@ -47,7 +47,7 @@ export const bookmarksController = {
 
     if (node.url) {
       if (node.index !== 0) {
-        await moveBookmark({ id: bookmarkId, index: 0 })
+        await moveBookmarkIgnoreInController({ id: bookmarkId, index: 0 })
       }
 
       if (settings[USER_OPTION.TAG_LIST_USE]) {
@@ -131,7 +131,7 @@ export const bookmarksController = {
 
             if (isMoveOnly) {
               if (index !== 0) {
-                await moveBookmark({ id: bookmarkId, index: 0 })
+                await moveBookmarkIgnoreInController({ id: bookmarkId, index: 0 })
               }
             } else {
               let isReplaceMoveToCreate = false
@@ -151,10 +151,9 @@ export const bookmarksController = {
 
               if (isReplaceMoveToCreate) {
                 logBC('bookmark.onMoved 22');
+                await moveBookmarkIgnoreInController({ id: bookmarkId, parentId: oldParentId, index: oldIndex })
 
                 const { url, title } = node
-                await moveBookmark({ id: bookmarkId, parentId: oldParentId, index: oldIndex })
-
                 const newBkm = {
                   parentId,
                   title,

@@ -6,7 +6,7 @@ import {
   isStartWithTODO,
 } from '../api/text.api.js';
 import {
-  moveBookmark,
+  moveBookmarkIgnoreInController,
 } from '../api/bookmark.api.js';
 
 export async function moveFolderByName({ fromId, toId, isCondition }) {
@@ -20,7 +20,7 @@ export async function moveFolderByName({ fromId, toId, isCondition }) {
 
   await moveList.reduce(
     (promiseChain, node) => promiseChain.then(
-      () => moveBookmark({ id: node.id, parentId: toId })
+      () => moveBookmarkIgnoreInController({ id: node.id, parentId: toId })
     ),
     Promise.resolve(),
   );

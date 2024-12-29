@@ -3,7 +3,7 @@ import {
   OTHER_BOOKMARKS_FOLDER_ID,
 } from '../api/special-folder.api.js';
 import {
-  moveBookmark,
+  moveBookmarkIgnoreInController,
 } from '../api/bookmark.api.js';
 
 async function getMaxUsedSuffix() {
@@ -127,7 +127,7 @@ async function flatChildren({ parentId, freeSuffix }) {
 
       if (bookmarkList.length > 0) {
         if (folderLevel > 0) {
-          await moveBookmark({ id: folderNode.id, parentId })
+          await moveBookmarkIgnoreInController({ id: folderNode.id, parentId })
 
           if (flatFolderNameSet.has(folderNode.title)) {
             const newTitle = `${folderNode.title} ${freeSuffix}`

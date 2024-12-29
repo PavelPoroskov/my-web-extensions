@@ -3,7 +3,7 @@ import {
   OTHER_BOOKMARKS_FOLDER_ID,
 } from '../api/special-folder.api.js';
 import {
-  moveBookmark,
+  moveBookmarkIgnoreInController,
 } from '../api/bookmark.api.js';
 
 async function sortChildren(parentId) {
@@ -24,7 +24,7 @@ async function sortChildren(parentId) {
     }
 
     if (nodeActual.index != index) {
-      await moveBookmark({ id: node.id, index })
+      await moveBookmarkIgnoreInController({ id: node.id, index })
 
       if (minMoveIndex == -1) {
         minMoveIndex = index
