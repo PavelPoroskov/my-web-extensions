@@ -660,6 +660,7 @@ ${semanticTagsStyle}
 
           divRow = document.createElement('div');
           divRow.classList.add('bkm-info--row');
+          divRow.addEventListener('click', hideBookmarks);
           divRow.appendChild(divLabelContainer);
 
           break
