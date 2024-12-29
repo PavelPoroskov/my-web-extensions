@@ -11,6 +11,9 @@ import {
 import {
   makeLogFunction,
 } from './log.api.js'
+import {
+  createFolderIgnoreInController
+} from './bookmark.api.js'
 
 const logFA = makeLogFunction({ module: 'folder.api' })
 
@@ -224,7 +227,7 @@ export async function findOrCreateFolder(title) {
       folderParams.index = findIndex.index
     }
 
-    folder = await chrome.bookmarks.create(folderParams)
+    folder = await createFolderIgnoreInController(folderParams)
   }
 
   return folder

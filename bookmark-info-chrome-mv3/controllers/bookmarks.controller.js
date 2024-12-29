@@ -14,6 +14,7 @@ import {
   USER_OPTION,
 } from '../api/storage.api.config.js'
 import {
+  createBookmarkIgnoreInController,
   isBookmarkCreatedWithApi,
   moveBookmark,
 } from '../api/bookmark.api.js'
@@ -160,8 +161,7 @@ export const bookmarksController = {
                   url,
                   index: 0,
                 }
-                ignoreBkmControllerApiActionSet.addIgnoreCreate(newBkm)
-                await chrome.bookmarks.create(newBkm)
+                await createBookmarkIgnoreInController(newBkm)
               }
             }
           }

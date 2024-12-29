@@ -26,6 +26,37 @@ export function isBookmarkCreatedWithApi({ parentId, url }) {
   return parentId == lastCreatedBkmParentId && url == lastCreatedBkmUrl
 }
 
+export async function createBookmarkIgnoreInController({
+  title,
+  url,
+  parentId,
+  index,
+}) {
+  const options = { url, parentId, title }
+  if (index != undefined) {
+    options.index = index
+  }
+
+  ignoreBkmControllerApiActionSet.addIgnoreCreate(options)
+
+  return await chrome.bookmarks.create(options)
+}
+
+export async function createFolderIgnoreInController({
+  title,
+  parentId,
+  index,
+}) {
+  const options = { parentId, title }
+  if (index != undefined) {
+    options.index = index
+  }
+
+  ignoreBkmControllerApiActionSet.addIgnoreCreate(options)
+
+  return await chrome.bookmarks.create(options)
+}
+
 export async function moveBookmark({ id, parentId, index }) {
   const options = {}
   if (parentId != undefined) {

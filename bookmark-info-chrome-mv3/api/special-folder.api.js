@@ -2,8 +2,8 @@ import {
   IS_BROWSER_FIREFOX,
 } from '../constant/index.js';
 import {
-  ignoreBkmControllerApiActionSet,
-} from './structure/ignoreBkmControllerApiActionSet.js';
+  createFolderIgnoreInController
+} from './bookmark.api.js'
 
 export const BOOKMARKS_BAR_FOLDER_ID = IS_BROWSER_FIREFOX ? 'toolbar_____' : '1'
 export const BOOKMARKS_MENU_FOLDER_ID = IS_BROWSER_FIREFOX ? 'menu________' : undefined
@@ -22,8 +22,7 @@ async function getOrCreateFolderByTitleInRoot(title) {
     parentId: OTHER_BOOKMARKS_FOLDER_ID,
     title
   }
-  ignoreBkmControllerApiActionSet.addIgnoreCreate(folder)
-  const newNode = await chrome.bookmarks.create(folder)
+  const newNode = await createFolderIgnoreInController(folder)
 
   return newNode.id
 }
