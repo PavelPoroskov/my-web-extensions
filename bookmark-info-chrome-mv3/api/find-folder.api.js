@@ -15,7 +15,7 @@ import {
   createFolderIgnoreInController
 } from './bookmark.api.js'
 
-const logFA = makeLogFunction({ module: 'folder.api' })
+const logFF = makeLogFunction({ module: 'find-folder.api.js' })
 
 function findFolderFrom({ normalizedTitle, startFolder }) {
   function traverseSubFolder(folderNode) {
@@ -38,11 +38,11 @@ function findFolderFrom({ normalizedTitle, startFolder }) {
 }
 
 async function findFolderInSubtree({ normalizedTitle, parentId }) {
-  logFA('findFolderInSubtree 00 normalizedTitle', normalizedTitle, parentId)
+  logFF('findFolderInSubtree 00 normalizedTitle', normalizedTitle, parentId)
   // search in direct children
   const firstLevelNodeList = await chrome.bookmarks.getChildren(parentId)
   let foundItem = firstLevelNodeList.find((node) => !node.url && normalizeTitle(node.title) === normalizedTitle)
-  logFA('findFolderInSubtree 11 firstLevelNodeList', foundItem)
+  logFF('findFolderInSubtree 11 firstLevelNodeList', foundItem)
 
   if (!foundItem) {
     // search in subfolders of direct children
@@ -63,7 +63,7 @@ async function findFolderInSubtree({ normalizedTitle, parentId }) {
       foundItem = findFolderFrom({ normalizedTitle, startFolder: allSecondLevelFolderList[i] })
       i += 1
     }
-    logFA('findFolderInSubtree 22 secondLevelFolderList', foundItem)
+    logFF('findFolderInSubtree 22 secondLevelFolderList', foundItem)
   }
 
   return foundItem
@@ -83,11 +83,11 @@ async function findFolderInSubtree({ normalizedTitle, parentId }) {
 //    filter folders
 //  onStart, merge will be
 async function findFolder(title) {
-  logFA('findFolder 00 title', title)
+  logFF('findFolder 00 title', title)
   let foundItem
 
   const bookmarkList = await chrome.bookmarks.search({ title });
-  logFA('findFolder 11 search({ title })', bookmarkList.length, bookmarkList)
+  logFF('findFolder 11 search({ title })', bookmarkList.length, bookmarkList)
   let i = 0
   while (!foundItem && i < bookmarkList.length) {
     const checkItem = bookmarkList[i]
@@ -104,8 +104,8 @@ async function findFolder(title) {
     const noDotTitle = `${lowTitle.slice(0, -3)}js`
 
     const bookmarkList = await chrome.bookmarks.search(noDotTitle);
-    logFA('findFolder 22 search(title) noDotTitle', noDotTitle)
-    logFA('findFolder 22 search(title)', bookmarkList.length, bookmarkList)
+    logFF('findFolder 22 search(title) noDotTitle', noDotTitle)
+    logFF('findFolder 22 search(title)', bookmarkList.length, bookmarkList)
 
     let i = 0
     while (!foundItem && i < bookmarkList.length) {
@@ -120,10 +120,10 @@ async function findFolder(title) {
 
   if (!foundItem) {
     const noDashTitle = trimLowSingular(title.replaceAll('-', ''))
-    logFA('findFolder 333 noDashTitle', noDashTitle)
+    logFF('findFolder 333 noDashTitle', noDashTitle)
 
     const bookmarkList = await chrome.bookmarks.search(noDashTitle);
-    logFA('findFolder 333 search(noDashTitle)', bookmarkList.length, bookmarkList)
+    logFF('findFolder 333 search(noDashTitle)', bookmarkList.length, bookmarkList)
 
     let i = 0
     while (!foundItem && i < bookmarkList.length) {
@@ -137,10 +137,10 @@ async function findFolder(title) {
 
   if (!foundItem) {
     const dashToSpaceTitle = trimLowSingular(title.replaceAll('-', ' '))
-    logFA('findFolder 333 dashToSpaceTitle', dashToSpaceTitle)
+    logFF('findFolder 333 dashToSpaceTitle', dashToSpaceTitle)
 
     const bookmarkList = await chrome.bookmarks.search(dashToSpaceTitle);
-    logFA('findFolder 333 search(dashToSpaceTitle)', bookmarkList.length, bookmarkList)
+    logFF('findFolder 333 search(dashToSpaceTitle)', bookmarkList.length, bookmarkList)
 
     let i = 0
     while (!foundItem && i < bookmarkList.length) {
@@ -154,13 +154,13 @@ async function findFolder(title) {
 
 
   const normalizedTitle = normalizeTitle(title)
-  logFA('findFolder 00 normalizedTitle', normalizedTitle)
+  logFF('findFolder 00 normalizedTitle', normalizedTitle)
 
   if (!foundItem) {
-    logFA('findFolder 33 normalizedTitle', normalizedTitle)
+    logFF('findFolder 33 normalizedTitle', normalizedTitle)
 
     const bookmarkList = await chrome.bookmarks.search(title);
-    logFA('findFolder 33 search(title)', bookmarkList.length, bookmarkList)
+    logFF('findFolder 33 search(title)', bookmarkList.length, bookmarkList)
 
     let i = 0
     while (!foundItem && i < bookmarkList.length) {
@@ -180,8 +180,8 @@ async function findFolder(title) {
     const modifiedTitle = lowTitle2.slice(0, -3)
 
     const bookmarkList = await chrome.bookmarks.search(modifiedTitle);
-    logFA('findFolder 44 search(title) modifiedTitle', modifiedTitle)
-    logFA('findFolder 44 search(title)', bookmarkList.length, bookmarkList)
+    logFF('findFolder 44 search(title) modifiedTitle', modifiedTitle)
+    logFF('findFolder 44 search(title)', bookmarkList.length, bookmarkList)
 
     let i = 0
     while (!foundItem && i < bookmarkList.length) {
@@ -195,12 +195,12 @@ async function findFolder(title) {
 
   if (!foundItem) {
     foundItem = await findFolderInSubtree({ normalizedTitle, parentId: OTHER_BOOKMARKS_FOLDER_ID })
-    logFA('findFolder 55 OTHER_BOOKMARKS_FOLDER_ID', foundItem)
+    logFF('findFolder 55 OTHER_BOOKMARKS_FOLDER_ID', foundItem)
   }
 
   if (!foundItem) {
     foundItem = await findFolderInSubtree({ normalizedTitle, parentId: BOOKMARKS_BAR_FOLDER_ID })
-    logFA('findFolder 66 BOOKMARKS_BAR_FOLDER_ID', foundItem)
+    logFF('findFolder 66 BOOKMARKS_BAR_FOLDER_ID', foundItem)
   }
 
   return foundItem
@@ -216,7 +216,7 @@ export async function findOrCreateFolder(title) {
 
     const firstLevelNodeList = await chrome.bookmarks.getChildren(parentId)
     const findIndex = firstLevelNodeList.find((node) => title.localeCompare(node.title) < 0)
-    logFA('findOrCreateFolder 11 findIndex', findIndex?.index, findIndex?.title)
+    logFF('findOrCreateFolder 11 findIndex', findIndex?.index, findIndex?.title)
 
     const folderParams = {
       parentId,

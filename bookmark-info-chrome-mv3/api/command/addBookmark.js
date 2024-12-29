@@ -1,4 +1,4 @@
-import { findOrCreateFolder } from '../folder.api.js'
+import { findOrCreateFolder } from '../find-folder.api.js'
 import { createBookmarkWithApi } from '../bookmark.api.js'
 import {
   getUserInputInPage,

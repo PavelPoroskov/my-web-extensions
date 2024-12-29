@@ -39,7 +39,7 @@ createFileForFirefox(
     'api/pluralize-rules.js',
     'api/pluralize.js',
     'api/text.api.js',
-    'api/folder.api.js',
+    'api/find-folder.api.js',
     'bookmark-list-ops/flatFolders.js',
     'bookmark-list-ops/mergeFolders.js',
     'bookmark-list-ops/moveNotDescriptiveFolders.js',
