@@ -174,11 +174,22 @@ export async function onIncomingMessage (message, sender) {
         break
       }
 
-      await addBookmarkFolderByName({
+      const isAddedNewBookmark = await addBookmarkFolderByName({
         url: message.url,
         title: message.title,
         folderName: folderName,
       })
+      if (!isAddedNewBookmark) {
+        // to remove optimistic add
+        const tabId = sender?.tab?.id;
+        if (tabId == memo.activeTabId) {
+          updateActiveTab({
+            tabId,
+            debugCaller: 'runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME',
+            useCache: true,
+          })
+        }
+      }
       break
     }
   }

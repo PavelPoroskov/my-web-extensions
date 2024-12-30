@@ -9,7 +9,7 @@ export async function addBookmark({ url, title, parentId }) {
   const bookmarkList = await chrome.bookmarks.search({ url });
   const isExist = bookmarkList.some((bkm) => bkm.parentId == parentId)
   if (isExist) {
-    return
+    return false
   }
 
   await createBookmarkWithApi({
@@ -18,6 +18,8 @@ export async function addBookmark({ url, title, parentId }) {
     title,
     url
   })
+
+  return true
 }
 
 export async function startAddBookmarkFromSelection() {
@@ -40,9 +42,9 @@ export async function startAddBookmarkFromInput() {
 
 export async function addBookmarkFolderByName({ url, title, folderName }) {
   if (folderName.length > 40) {
-    return
+    return false
   }
 
   const folder = await findOrCreateFolder(folderName)
-  await addBookmark({ url, title, parentId: folder.id })
+  return await addBookmark({ url, title, parentId: folder.id })
 }

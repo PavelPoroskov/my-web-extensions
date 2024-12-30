@@ -928,6 +928,34 @@ ${semanticTagsStyle}
     }
   }
 
+  function addBookmarkByFolderName({ folderName }) {
+    if (!folderName) {
+      return
+    }
+    const trimmedFolderName = folderName.trim()
+    if (!trimmedFolderName) {
+      return
+    }
+
+    const fullState = showInHtmlSingleTaskQueue.getState()
+    const bookmarkList = fullState.bookmarkList || []
+    const newBookmarkList = bookmarkList.concat({
+      id: '',
+      title: document.title,
+      fullPathList: [trimmedFolderName],
+      parentId: '',
+      optimisticAdd: true,
+    })
+    showInHtmlSingleTaskQueue.addUpdate({ bookmarkList: newBookmarkList })
+
+    chrome.runtime.sendMessage({
+      command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
+      url: document.location.href,
+      title: document.title,
+      folderName: trimmedFolderName,
+    });
+  }
+
   chrome.runtime.onMessage.addListener((message) => {
     log('chrome.runtime.onMessage: ', message);
     switch (message.command) {
@@ -998,38 +1026,12 @@ ${semanticTagsStyle}
       }
       case CONTENT_SCRIPT_MSG_ID.GET_SELECTION: {
         const selection = document.getSelection().toString()
-        if (!selection) {
-          break
-        }
-        const folderName = selection.trim()
-        if (!folderName) {
-          break
-        }
-
-        chrome.runtime.sendMessage({
-          command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
-          url: document.location.href,
-          title: document.title,
-          folderName,
-        });
+        addBookmarkByFolderName({ folderName: selection })
         break
       }
       case CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT: {
         const userInput = window.prompt("Enter folder for your bookmark")
-        if (!userInput) {
-          break
-        }
-        const folderName = userInput.trim()
-        if (!folderName) {
-          break
-        }
-
-        chrome.runtime.sendMessage({
-          command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
-          url: document.location.href,
-          title: document.title,
-          folderName,
-        });
+        addBookmarkByFolderName({ folderName: userInput })
         break
       }
     }
