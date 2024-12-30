@@ -5,38 +5,38 @@ export const STORAGE_TYPE = {
 
 const USER_OPTION_META = {
   CLEAR_URL_ON_PAGE_OPEN: {
-    default: true,
-  },
-  SHOW_PREVIOUS_VISIT: {
-    default: false,
-  },
-  SHOW_BOOKMARK_TITLE: {
-    default: false,
-  },
-  TAG_LIST_USE: {
-    default: true,
-  },
-  TAG_LIST_LIST_LENGTH: {
-    default: 35,
-  },
-  TAG_LIST_TAG_LENGTH: {
-    default: 15,
-  },
-  TAG_LIST_HIGHLIGHT_LAST: {
-    default: 7,
-  },
-  USE_FLAT_FOLDER_STRUCTURE: {
-    default: false,
+    default: true
   },
   HIDE_PAGE_HEADER_FOR_YOUTUBE: {
-    default: false,
+    default: false
   },
   HIDE_TAG_HEADER_ON_PRINTING: {
-    default: false,
+    default: false
+  },
+  SHOW_BOOKMARK_TITLE: {
+    default: false
+  },
+  SHOW_PREVIOUS_VISIT: {
+    default: false
+  },
+  TAG_LIST_HIGHLIGHT_LAST: {
+    default: 7
+  },
+  TAG_LIST_LIST_LENGTH: {
+    default: 35
+  },
+  TAG_LIST_TAG_LENGTH: {
+    default: 15
+  },
+  TAG_LIST_USE: {
+    default: true
+  },
+  USE_FLAT_FOLDER_STRUCTURE: {
+    default: false
   },
   USE_PARTIAL_URL_SEARCH: {
-    default: false,
-  },
+    default: false
+  }
 }
 
 const INTERNAL_VALUES_META = {
