@@ -3,6 +3,12 @@ export const STORAGE_TYPE = {
   SESSION: 'SESSION',
 }
 
+const TAG_LIST_OPEN_MODE = {
+  GLOBAL: 'GLOBAL',
+  PER_PAGE: 'PER_PAGE',
+  CLOSE_AFTER_ADD: 'CLOSE_AFTER_ADD',
+}
+
 const USER_OPTION_META = {
   CLEAR_URL_ON_PAGE_OPEN: {
     default: true
@@ -24,6 +30,9 @@ const USER_OPTION_META = {
   },
   TAG_LIST_LIST_LENGTH: {
     default: 35
+  },
+  TAG_LIST_OPEN_MODE: {
+    default: TAG_LIST_OPEN_MODE.PER_PAGE,
   },
   TAG_LIST_TAG_LENGTH: {
     default: 15

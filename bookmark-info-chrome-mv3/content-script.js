@@ -52,6 +52,11 @@ const log = SHOW_LOG ? console.log : () => {};
     Object.entries(BROWSER_SPECIFIC_OPTIONS)
       .map(([option, obj]) => [option, obj[BROWSER]])
   );
+  const TAG_LIST_OPEN_MODE = {
+    GLOBAL: 'GLOBAL',
+    PER_PAGE: 'PER_PAGE',
+    CLOSE_AFTER_ADD: 'CLOSE_AFTER_ADD',
+  }
 
   const bkmInfoRootId = 'bkm-info--root';
   const bkmInfoStyle1Id = 'bkm-info--style1';
@@ -334,13 +339,19 @@ ${semanticTagsStyle}
 
   async function toggleTagList() {
     const fullMessage = showInHtmlSingleTaskQueue.getState()
-    const before = !!fullMessage.isShowTagList
+    const tagListOpenMode = fullMessage.tagListOpenMode
 
-    showInHtmlSingleTaskQueue.addUpdate({ isShowTagList: !before })
-    await chrome.runtime.sendMessage({
-      command: EXTENSION_MSG_ID.SHOW_TAG_LIST,
-      value: !before,
-    });
+    if (tagListOpenMode == TAG_LIST_OPEN_MODE.GLOBAL) {
+      const before = !!fullMessage.isShowTagListGlobal
+      showInHtmlSingleTaskQueue.addUpdate({ isShowTagListGlobal: !before })
+      await chrome.runtime.sendMessage({
+        command: EXTENSION_MSG_ID.SHOW_TAG_LIST,
+        value: !before,
+      });
+    } else {
+      const before = !!fullMessage.isShowTagListLocal
+      showInHtmlSingleTaskQueue.addUpdate({ isShowTagListLocal: !before })
+    }
   }
 
   async function toggleTag(event) {
@@ -351,6 +362,7 @@ ${semanticTagsStyle}
     if (parentId) {
       const fullState = showInHtmlSingleTaskQueue.getState()
       const bookmarkList = fullState.bookmarkList || []
+      const tagListOpenMode = fullState.tagListOpenMode
 
       if (isUsed) {
         const bkm = bookmarkList.find((item) => item.parentId === parentId)
@@ -386,7 +398,17 @@ ${semanticTagsStyle}
           if (optimisticAddFromTagList < optimisticDelFromTagList) {
             optimisticAddFromTagList += 1
           }
-          showInHtmlSingleTaskQueue.addUpdate({ bookmarkList: newBookmarkList })
+
+          const update = { bookmarkList: newBookmarkList }
+          if (tagListOpenMode == TAG_LIST_OPEN_MODE.CLOSE_AFTER_ADD) {
+            update.isShowTagListLocal = false
+
+            optimisticDelFromTagList = 0
+            optimisticAddFromTagList = 0
+            optimisticToStorageDel = 0
+            optimisticToStorageAdd = 0
+          }
+          showInHtmlSingleTaskQueue.addUpdate(update)
         }
         await chrome.runtime.sendMessage({
           command: EXTENSION_MSG_ID.ADD_BOOKMARK,
@@ -394,6 +416,7 @@ ${semanticTagsStyle}
           url: document.location.href,
           title: document.title,
         });
+
       }
     }
   }
@@ -458,7 +481,12 @@ ${semanticTagsStyle}
     const visitString = input.visitString || []
     const isShowTitle = input.isShowTitle || false
     const inTagList = input.tagList || []
-    const isShowTagList = input.isShowTagList || false
+    const tagListOpenMode = input.tagListOpenMode
+    const isShowTagListLocal = input.isShowTagListLocal || false
+    const isShowTagListGlobal = input.isShowTagListGlobal || false
+    const isShowTagList = tagListOpenMode == TAG_LIST_OPEN_MODE.GLOBAL
+      ? isShowTagListGlobal
+      : isShowTagListLocal
     const tagLength = input.tagLength || 8
     const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting || false
 
@@ -1074,6 +1102,16 @@ ${semanticTagsStyle}
     }
   });
   document.addEventListener("visibilitychange", () => {
+    const fullState = showInHtmlSingleTaskQueue.getState()
+    const tagListOpenMode = fullState.tagListOpenMode
+    if (document.hidden) {
+      if (tagListOpenMode && tagListOpenMode != TAG_LIST_OPEN_MODE.GLOBAL
+        && fullState.isShowTagListLocal) {
+
+        showInHtmlSingleTaskQueue.addUpdate({ isShowTagListLocal: false })
+      }
+    }
+
     if (!document.hidden) {
       optimisticDelFromTagList = 0
       optimisticAddFromTagList = 0

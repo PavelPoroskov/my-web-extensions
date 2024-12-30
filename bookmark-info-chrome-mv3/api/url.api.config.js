@@ -7,25 +7,31 @@ import {
 
 const logUAC = makeLogFunction({ module: 'url.api.config' })
 
-const HOST_URL_SETTINGS = [
-  // TODO-NEXT if we clean url on open then we loose check-in, check-out dates
-  //    need search bookmark for clean url
-  //    strategy01: clean url on open
-  //    strategy02: clean url on save
-  //    strategy00: don't clear url, default
-  // {
-  //   hostname: 'airbnb.com',
-  //   paths: [
-  //     '/rooms/',
-  //   ]
-  // },
-  // {
-  //   hostname: 'djinni.co',
-  //   removeAllSearchParamForPath: [
-  //     '/my/profile/',
-  //     '/jobs/',
-  //   ]
-  // },
+// TODO-NEXT if we clean url on open then we loose check-in, check-out dates
+//    need search bookmark for clean url
+//    strategy01: clean url on open
+//    strategy02: clean url on save
+//    strategy00: don't clear url, default
+// {
+//   hostname: 'airbnb.com',
+//   paths: [
+//     '/rooms/',
+//   ]
+// },
+// {
+//   hostname: 'djinni.co',
+//   removeAllSearchParamForPath: [
+//     '/my/profile/',
+//     '/jobs/',
+//   ]
+// },
+
+// TODO the same
+// https://www.linkedin.com/jobs/collections/recommended/?currentJobId=4096094176
+// https://www.linkedin.com/jobs/view/4096094176/?alternateChannel=search&refId=WYo23okoaVDvmJkLoaclcg%3D%3D&trackingId=bTIytUCJN%2BDpKjaalPv4gg%3D%3D
+// https://www.linkedin.com/jobs/search/?currentJobId=4096094176&geoId=106686604&origin=JOBS_HOME_LOCATION_AUTOCOMPLETE&refresh=true
+
+ const HOST_URL_SETTINGS = [
   {
     hostname: '9gag.com',
     isHashRequired: true,
@@ -69,10 +75,6 @@ const HOST_URL_SETTINGS = [
       'season', // https://www.imdb.com/title/tt8111088/episodes/?season=3&ref_=tt_eps_sn_3
     ],
   },
-  // TODO the same
-  // https://www.linkedin.com/jobs/collections/recommended/?currentJobId=4096094176
-  // https://www.linkedin.com/jobs/view/4096094176/?alternateChannel=search&refId=WYo23okoaVDvmJkLoaclcg%3D%3D&trackingId=bTIytUCJN%2BDpKjaalPv4gg%3D%3D
-  // https://www.linkedin.com/jobs/search/?currentJobId=4096094176&geoId=106686604&origin=JOBS_HOME_LOCATION_AUTOCOMPLETE&refresh=true
   {
     hostname: 'linkedin.com',
     removeAllSearchParamForPath: [
@@ -120,6 +122,12 @@ const HOST_URL_SETTINGS = [
     hostnameAliasList: ['youtu.be'],
     searchParamList: [
       'v', // https://www.youtube.com/watch?v=qqqqq
+    ],
+  },
+  {
+    hostname: 'marketplace.visualstudio.com',
+    searchParamList: [
+      'itemName',
     ],
   },
 ]

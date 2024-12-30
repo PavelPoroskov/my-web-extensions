@@ -74,7 +74,8 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     ...visitsData,
     // recent list
     tagList: tagList.list,
-    isShowTagList: settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN],
+    tagListOpenMode: settings[USER_OPTION.TAG_LIST_OPEN_MODE],
+    isShowTagListGlobal: settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN],
     tagLength: settings[USER_OPTION.TAG_LIST_TAG_LENGTH],
     // page settings
     isHideSemanticHtmlTagsOnPrinting: settings[USER_OPTION.HIDE_TAG_HEADER_ON_PRINTING],

@@ -22,11 +22,11 @@ function makeSaveCheckboxHandler(optionId) {
     event.preventDefault();
 
     const element = document.querySelector(`#${optionId}`)
-  
+
     if (element) {
       await delegateSaveOptions({
         [optionId]: element.checked
-      })  
+      })
     }
   }
 }
@@ -36,26 +36,25 @@ function makeSaveInputHandler(optionId) {
     event.preventDefault();
 
     const element = document.querySelector(`#${optionId}`)
-  
+
     if (element) {
       await delegateSaveOptions({
         [optionId]: +element.value
-      })  
+      })
     }
   }
 }
 
-// eslint-disable-next-line no-unused-vars
 function makeSaveSelectHandler(optionId) {
   return async function saveSelectHandler(event) {
     event.preventDefault();
 
     const element = document.querySelector(`#${optionId}`)
-  
+
     if (element) {
       await delegateSaveOptions({
-        [optionId]: +element.value
-      })  
+        [optionId]: element.value
+      })
     }
   }
 }
@@ -107,6 +106,12 @@ function restoreOptions(settings) {
   element.addEventListener("input", (event) => {
     value.textContent = event.target.value;
   });
+
+  optionId = USER_OPTION.TAG_LIST_OPEN_MODE;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.value = settings[optionId];
+  element.addEventListener('change', makeSaveSelectHandler(optionId) );
 
   optionId = 'FLAT_BOOKMARKS';
   domId = `#${optionId}`
@@ -167,7 +172,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
     }
     case EXTENSION_MSG_ID.FLAT_BOOKMARKS_RESULT: {
       // console.log('option in FLAT_BOOKMARKS_RESULT', message.success)
-      const text = message.success 
+      const text = message.success
         ? 'Operation completed successfully'
         : 'Operation failed'
       const value = document.querySelector('#FLAT_BOOKMARKS_RESULT');
@@ -180,14 +185,13 @@ chrome.runtime.onMessage.addListener(async (message) => {
       const domId = `#${optionId}`
       const element = document.querySelector(domId)
       element.checked = element.checked || !!message.success;
-    
+
       await wait(50)
 
       break
     }
   }
 })
-//document.addEventListener('DOMContentLoaded', restoreOptions);
 document.addEventListener('DOMContentLoaded', async () => {
   await chrome.runtime.sendMessage({
     command: EXTENSION_MSG_ID.OPTIONS_ASKS_DATA,
