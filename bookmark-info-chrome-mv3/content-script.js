@@ -528,7 +528,7 @@ ${semanticTagsStyle}
       drawList.push({ type: 'partial-bookmark', value, bkmIndex: index + bookmarkList.length })
     })
     const emptySlotsForDel = Math.max(0, optimisticDelFromTagList - optimisticAddFromTagList)
-    const emptySlotsForAdd = Math.max(0, 2 - bookmarkList.length - emptySlotsForDel)
+    const emptySlotsForAdd = Math.max(0, 2 - bookmarkList.length - partialBookmarkList.length - emptySlotsForDel)
     const emptySlots = emptySlotsForAdd + emptySlotsForDel
 
     for (let iEmpty = 0; iEmpty < emptySlots; iEmpty += 1) {
