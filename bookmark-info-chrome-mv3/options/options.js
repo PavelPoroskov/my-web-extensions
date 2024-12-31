@@ -113,6 +113,12 @@ function restoreOptions(settings) {
   element.value = settings[optionId];
   element.addEventListener('change', makeSaveSelectHandler(optionId) );
 
+  optionId = USER_OPTION.TAG_LIST_PINNED_TAGS_POSITION;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.value = settings[optionId];
+  element.addEventListener('change', makeSaveSelectHandler(optionId) );
+
   optionId = 'FLAT_BOOKMARKS';
   domId = `#${optionId}`
   element = document.querySelector(domId)

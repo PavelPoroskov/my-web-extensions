@@ -15,6 +15,7 @@ import {
   USER_OPTION,
   INTERNAL_VALUES,
   TAG_LIST_MAX_LIST_LENGTH,
+  TAG_LIST_PINNED_TAGS_POSITION_OPTIONS,
 } from '../storage.api.config.js'
 import {
   extensionSettings,
@@ -54,6 +55,7 @@ class TagList {
     this.LIST_LIMIT = settings[USER_OPTION.TAG_LIST_LIST_LENGTH]
     this.USE_FLAT_FOLDER_STRUCTURE = settings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]
     this.HIGHLIGHT_LAST = settings[USER_OPTION.TAG_LIST_HIGHLIGHT_LAST]
+    this.TAG_LIST_PINNED_TAGS_POSITION = settings[USER_OPTION.TAG_LIST_PINNED_TAGS_POSITION]
 
     const savedObj = await getOptions([
       INTERNAL_VALUES.TAG_LIST_SESSION_STARTED,
@@ -137,10 +139,13 @@ class TagList {
         }))
     )
       .map((item) => ({ ...item, isLast: lastTagSet.has(item.parentId) }))
-
-    return fullList
       .filter(({ title }) => !!title)
-      .sort(({ title: a }, { title: b }) => a.localeCompare(b))
+
+    const resultList = this.TAG_LIST_PINNED_TAGS_POSITION == TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.TOP
+      ? fullList.sort((a, b) => -(+a.isFixed -b.isFixed) || a.title.localeCompare(b.title))
+      : fullList.sort((a, b) => a.title.localeCompare(b.title))
+
+    return resultList
   }
   async blockTagList(boolValue) {
     this.isTagListAvailable = !boolValue
