@@ -342,15 +342,15 @@ ${semanticTagsStyle}
     const tagListOpenMode = fullMessage.tagListOpenMode
 
     if (tagListOpenMode == TAG_LIST_OPEN_MODE.GLOBAL) {
-      const before = !!fullMessage.isShowTagListGlobal
-      showInHtmlSingleTaskQueue.addUpdate({ isShowTagListGlobal: !before })
+      const before = !!fullMessage.isTagListOpenGlobal
+      showInHtmlSingleTaskQueue.addUpdate({ isTagListOpenGlobal: !before })
       await chrome.runtime.sendMessage({
         command: EXTENSION_MSG_ID.SHOW_TAG_LIST,
         value: !before,
       });
     } else {
-      const before = !!fullMessage.isShowTagListLocal
-      showInHtmlSingleTaskQueue.addUpdate({ isShowTagListLocal: !before })
+      const before = !!fullMessage.isTagListOpenLocal
+      showInHtmlSingleTaskQueue.addUpdate({ isTagListOpenLocal: !before })
     }
   }
 
@@ -401,7 +401,7 @@ ${semanticTagsStyle}
 
           const update = { bookmarkList: newBookmarkList }
           if (tagListOpenMode == TAG_LIST_OPEN_MODE.CLOSE_AFTER_ADD) {
-            update.isShowTagListLocal = false
+            update.isTagListOpenLocal = false
 
             optimisticDelFromTagList = 0
             optimisticAddFromTagList = 0
@@ -482,11 +482,11 @@ ${semanticTagsStyle}
     const isShowTitle = input.isShowTitle || false
     const inTagList = input.tagList || []
     const tagListOpenMode = input.tagListOpenMode
-    const isShowTagListLocal = input.isShowTagListLocal || false
-    const isShowTagListGlobal = input.isShowTagListGlobal || false
-    const isShowTagList = tagListOpenMode == TAG_LIST_OPEN_MODE.GLOBAL
-      ? isShowTagListGlobal
-      : isShowTagListLocal
+    const isTagListOpenLocal = input.isTagListOpenLocal || false
+    const isTagListOpenGlobal = input.isTagListOpenGlobal || false
+    const isTagListOpen = tagListOpenMode == TAG_LIST_OPEN_MODE.GLOBAL
+      ? isTagListOpenGlobal
+      : isTagListOpenLocal
     const tagLength = input.tagLength || 8
     const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting || false
 
@@ -542,7 +542,7 @@ ${semanticTagsStyle}
     if (tagList.length > 0) {
       drawList.push({ type: 'separator' })
 
-      if (isShowTagList) {
+      if (isTagListOpen) {
         tagList.forEach(({ isFixed, isLast, parentId, title, isUsed }) => {
           drawList.push({
             type: isFixed ? 'fixedTag' : 'recentTag',
@@ -714,7 +714,7 @@ ${semanticTagsStyle}
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--separator');
           divLabel.addEventListener('click', toggleTagList);
-          const textNode = document.createTextNode( isShowTagList ? '▴ hide' : '▾ add' );
+          const textNode = document.createTextNode( isTagListOpen ? '▴ hide' : '▾ add' );
           divLabel.appendChild(textNode);
 
           const divLabelContainer = document.createElement('div');
@@ -1106,9 +1106,9 @@ ${semanticTagsStyle}
     const tagListOpenMode = fullState.tagListOpenMode
     if (document.hidden) {
       if (tagListOpenMode && tagListOpenMode != TAG_LIST_OPEN_MODE.GLOBAL
-        && fullState.isShowTagListLocal) {
+        && fullState.isTagListOpenLocal) {
 
-        showInHtmlSingleTaskQueue.addUpdate({ isShowTagListLocal: false })
+        showInHtmlSingleTaskQueue.addUpdate({ isTagListOpenLocal: false })
       }
     }
 

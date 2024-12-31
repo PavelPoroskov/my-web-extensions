@@ -50,11 +50,11 @@ export const bookmarksController = {
         await moveBookmarkIgnoreInController({ id: bookmarkId, index: 0 })
       }
 
-      if (settings[USER_OPTION.TAG_LIST_USE]) {
+      if (settings[USER_OPTION.USE_TAG_LIST]) {
         await tagList.addRecentTagFromBkm(node)
       }
     } else {
-      if (settings[USER_OPTION.TAG_LIST_USE]) {
+      if (settings[USER_OPTION.USE_TAG_LIST]) {
         await tagList.addRecentTagFromFolder(node)
       }
     }
@@ -76,7 +76,7 @@ export const bookmarksController = {
     } else {
       memo.bkmFolderById.delete(bookmarkId);
 
-      if (settings[USER_OPTION.TAG_LIST_USE] && changeInfo.title) {
+      if (settings[USER_OPTION.USE_TAG_LIST] && changeInfo.title) {
         // await tagList.updateTag(bookmarkId, changeInfo.title)
         await tagList.addRecentTagFromFolder(node)
       }
@@ -115,7 +115,7 @@ export const bookmarksController = {
 
     if (node.url) {
       if (parentId !== oldParentId) {
-        if (settings[USER_OPTION.TAG_LIST_USE]) {
+        if (settings[USER_OPTION.USE_TAG_LIST]) {
           await tagList.addRecentTagFromBkm(node);
 
           const isBookmarkWasCreatedManually = (
@@ -182,7 +182,7 @@ export const bookmarksController = {
     if (!node.url) {
       memo.bkmFolderById.delete(bookmarkId);
 
-      if (settings[USER_OPTION.TAG_LIST_USE]) {
+      if (settings[USER_OPTION.USE_TAG_LIST]) {
         await tagList.removeTag(bookmarkId)
       }
     }

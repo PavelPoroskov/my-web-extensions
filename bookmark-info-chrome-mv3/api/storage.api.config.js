@@ -37,15 +37,15 @@ const USER_OPTION_META = {
   TAG_LIST_TAG_LENGTH: {
     default: 15
   },
-  TAG_LIST_USE: {
-    default: true
-  },
   USE_FLAT_FOLDER_STRUCTURE: {
     default: false
   },
   USE_PARTIAL_URL_SEARCH: {
     default: false
-  }
+  },
+  USE_TAG_LIST: {
+    default: true
+  },
 }
 
 const INTERNAL_VALUES_META = {

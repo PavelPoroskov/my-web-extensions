@@ -47,7 +47,7 @@ class TagList {
   async readFromStorage() {
     const settings = await extensionSettings.get()
 
-    if (!settings[USER_OPTION.TAG_LIST_USE]) {
+    if (!settings[USER_OPTION.USE_TAG_LIST]) {
       return
     }
 
@@ -124,7 +124,7 @@ class TagList {
     const lastTagSet = new Set(
       lastTagList.map(({ parentId }) => parentId)
     )
-    
+
     const fullList = [].concat(
       recentTagList
         .map(({ parentId, title }) => ({ parentId, title, isFixed: false })),
@@ -162,7 +162,7 @@ class TagList {
         return
       }
     }
-  
+
     if (!isDescriptiveFolderTitle(folderNode.title)) {
       return
     }
@@ -215,7 +215,7 @@ class TagList {
     let fixedTagUpdate
 
     if (isInFixedList) {
-      delete this._fixedTagObj[id] 
+      delete this._fixedTagObj[id]
       fixedTagUpdate = {
         [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
       }
