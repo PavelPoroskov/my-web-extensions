@@ -108,7 +108,7 @@ class TagList {
     })
   }
   refillList() {
-    const recentTaLimit = Math.max(
+    const recentTagLimit = Math.max(
       this.LIST_LIMIT - Object.keys(this._fixedTagObj).length,
       0
     )
@@ -117,7 +117,7 @@ class TagList {
       .filter(([parentId]) => !(parentId in this._fixedTagObj))
       .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
       .sort((a,b) => -(a.dateAdded - b.dateAdded))
-      .slice(0, recentTaLimit)
+      .slice(0, recentTagLimit)
 
     const lastTagList = Object.entries(this._recentTagObj)
       .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))

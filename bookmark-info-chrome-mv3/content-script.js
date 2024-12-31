@@ -52,7 +52,7 @@ const log = SHOW_LOG ? console.log : () => {};
     Object.entries(BROWSER_SPECIFIC_OPTIONS)
       .map(([option, obj]) => [option, obj[BROWSER]])
   );
-  const TAG_LIST_OPEN_MODE = {
+  const TAG_LIST_OPEN_MODE_OPTIONS = {
     GLOBAL: 'GLOBAL',
     PER_PAGE: 'PER_PAGE',
     CLOSE_AFTER_ADD: 'CLOSE_AFTER_ADD',
@@ -341,7 +341,7 @@ ${semanticTagsStyle}
     const fullMessage = showInHtmlSingleTaskQueue.getState()
     const tagListOpenMode = fullMessage.tagListOpenMode
 
-    if (tagListOpenMode == TAG_LIST_OPEN_MODE.GLOBAL) {
+    if (tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL) {
       const before = !!fullMessage.isTagListOpenGlobal
       showInHtmlSingleTaskQueue.addUpdate({ isTagListOpenGlobal: !before })
       await chrome.runtime.sendMessage({
@@ -400,7 +400,7 @@ ${semanticTagsStyle}
           }
 
           const update = { bookmarkList: newBookmarkList }
-          if (tagListOpenMode == TAG_LIST_OPEN_MODE.CLOSE_AFTER_ADD) {
+          if (tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.CLOSE_AFTER_ADD) {
             update.isTagListOpenLocal = false
 
             optimisticDelFromTagList = 0
@@ -484,7 +484,7 @@ ${semanticTagsStyle}
     const tagListOpenMode = input.tagListOpenMode
     const isTagListOpenLocal = input.isTagListOpenLocal || false
     const isTagListOpenGlobal = input.isTagListOpenGlobal || false
-    const isTagListOpen = tagListOpenMode == TAG_LIST_OPEN_MODE.GLOBAL
+    const isTagListOpen = tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL
       ? isTagListOpenGlobal
       : isTagListOpenLocal
     const tagLength = input.tagLength || 8
@@ -1110,7 +1110,7 @@ ${semanticTagsStyle}
     const fullState = showInHtmlSingleTaskQueue.getState()
     const tagListOpenMode = fullState.tagListOpenMode
     if (document.hidden) {
-      if (tagListOpenMode && tagListOpenMode != TAG_LIST_OPEN_MODE.GLOBAL
+      if (tagListOpenMode && tagListOpenMode != TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL
         && fullState.isTagListOpenLocal) {
 
         showInHtmlSingleTaskQueue.addUpdate({ isTagListOpenLocal: false })
