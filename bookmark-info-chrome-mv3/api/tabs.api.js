@@ -73,11 +73,12 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     // visits history
     ...visitsData,
     // recent list
-    tagList: tagList.list,
     tagListOpenMode: settings[USER_OPTION.TAG_LIST_OPEN_MODE],
     isTagListOpenGlobal: settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN],
+    tagList: tagList.list,
+
+    fontSize: settings[USER_OPTION.FONT_SIZE],
     tagLength: settings[USER_OPTION.TAG_LIST_TAG_LENGTH],
-    // page settings
     isHideSemanticHtmlTagsOnPrinting: settings[USER_OPTION.HIDE_TAG_HEADER_ON_PRINTING],
     isHideHeaderForYoutube: settings[USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE],
   }

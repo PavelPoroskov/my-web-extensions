@@ -83,6 +83,18 @@ function restoreOptions(settings) {
   element.checked = settings[optionId];
   element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 
+  optionId = USER_OPTION.FONT_SIZE;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.value = settings[optionId];
+  element.addEventListener('input', makeSaveInputHandler(optionId) );
+
+  const valueFS = document.querySelector(`#${optionId}-VALUE`);
+  valueFS.textContent = element.value;
+  element.addEventListener("input", (event) => {
+    valueFS.textContent = event.target.value;
+  });
+
   optionId = USER_OPTION.USE_TAG_LIST;
   domId = `#${optionId}`
   element = document.querySelector(domId)

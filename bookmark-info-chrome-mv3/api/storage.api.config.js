@@ -17,6 +17,9 @@ const USER_OPTION_META = {
   CLEAR_URL_ON_PAGE_OPEN: {
     default: true
   },
+  FONT_SIZE: {
+    default: 14,
+  },
   HIDE_PAGE_HEADER_FOR_YOUTUBE: {
     default: false
   },

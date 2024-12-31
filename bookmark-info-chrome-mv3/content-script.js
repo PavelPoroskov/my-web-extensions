@@ -1,6 +1,6 @@
-let SHOW_LOG = false
-// SHOW_LOG = true
-const log = SHOW_LOG ? console.log : () => {};
+let log = () => {};
+// log = console.log
+
 (async function() {
   log('IN content-script 00');
 
@@ -62,22 +62,42 @@ const log = SHOW_LOG ? console.log : () => {};
   const bkmInfoStyle1Id = 'bkm-info--style1';
   const bkmInfoStyle2Id = 'bkm-info--style2';
 
-  function getStyleText({ tagLength, isHideSemanticHtmlTagsOnPrinting }) {
+  function getChangeableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting }) {
     let semanticTagsStyle = ''
 
     if (isHideSemanticHtmlTagsOnPrinting) {
-      semanticTagsStyle = `
-      @media print {
-        header, footer, aside, nav {
-            display: none;
-        }
-        .blockSpoiler, .blockSpoiler-content {
-          display: none;
-        }
-      }
-      `
+      semanticTagsStyle = (
+`@media print {
+  header, footer, aside, nav {
+      display: none;
+  }
+  .blockSpoiler, .blockSpoiler-content {
+    display: none;
+  }
+}`
+      )
     }
 
+    const fontSizeLetter = Math.floor(10/14*(+fontSize))
+
+    return (
+`#${bkmInfoRootId} {
+  font-size: ${fontSize}px;
+  width: ${tagLength}ch;
+}
+.bkm-info--tag {
+  min-width: ${tagLength}ch;
+  max-width: ${tagLength}ch;
+}
+.bkm-info--btn-letter {
+  font-size: ${fontSizeLetter}px;
+}
+${semanticTagsStyle}
+`
+    )
+  }
+
+  function getConstantStyleText() {
     return (
 `
 #${bkmInfoRootId} {
@@ -86,7 +106,6 @@ const log = SHOW_LOG ? console.log : () => {};
   top: 0;
   z-index: 2147483646;
   background-color: transparent;
-  font-size: 14px;
   font-family: sans-serif !important;
   font-weight: normal;
   user-select: none;
@@ -95,7 +114,6 @@ const log = SHOW_LOG ? console.log : () => {};
   text-align: left;
   line-height: 1.2;
   letter-spacing: normal;
-  width: ${tagLength}ch;
   margin: 0;
 }
 @media print {
@@ -103,7 +121,6 @@ const log = SHOW_LOG ? console.log : () => {};
       display: none;
   }
 }
-${semanticTagsStyle}
 .bkm-info--row {
   display: flex;
   position: relative;
@@ -150,7 +167,6 @@ ${semanticTagsStyle}
 }
 .bkm-info--btn-letter {
   color: white;
-  font-size: 10px;
   line-height: 1;
   font-family: inherit !important;
   margin: inherit;
@@ -287,9 +303,6 @@ ${semanticTagsStyle}
 `
     )
   };
-
-  let storedTagLength = 8;
-  let storedIsHideSemanticHtmlTagsOnPrinting = false;
 
   async function hideBookmarks() {
     const rootDiv = document.getElementById(bkmInfoRootId);
@@ -469,13 +482,16 @@ ${semanticTagsStyle}
   }
 
 
+  let storedFontSize
+  let storedTagLength;
+  let storedIsHideSemanticHtmlTagsOnPrinting;
+
   function showBookmarkInfo(input) {
     const bookmarkList = (input.bookmarkList || [])
       .filter(({ optimisticDel }) => !optimisticDel)
       .filter(({ source }) => source !== 'substring')
 
     const partialBookmarkList = (input.bookmarkList || [])
-      // .filter(({ optimisticDel }) => !optimisticDel)
       .filter(({ source }) => source == 'substring')
 
     const visitString = input.visitString || []
@@ -487,7 +503,8 @@ ${semanticTagsStyle}
     const isTagListOpen = tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL
       ? isTagListOpenGlobal
       : isTagListOpenLocal
-    const tagLength = input.tagLength || 8
+    const fontSize = input.fontSize || 14
+    const tagLength = input.tagLength || 15
     const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting || false
 
     log('showBookmarkInfo 00');
@@ -556,50 +573,48 @@ ${semanticTagsStyle}
       }
     }
 
+    let rootStyle1 = document.getElementById(bkmInfoStyle1Id);
     let rootDiv = document.getElementById(bkmInfoRootId);
+    if (!rootStyle1) {
+      storedFontSize = fontSize
+      storedTagLength = tagLength
+      storedIsHideSemanticHtmlTagsOnPrinting = isHideSemanticHtmlTagsOnPrinting
 
-    if (!rootDiv) {
-      log('showBookmarkInfo 22 2');
-      const rootStyle = document.createElement('style');
-      rootStyle.setAttribute('id', bkmInfoStyle1Id);
-      const textNodeStyle = document.createTextNode(getStyleText({ tagLength, isHideSemanticHtmlTagsOnPrinting }));
-      rootStyle.appendChild(textNodeStyle);
-
-      rootDiv = document.createElement('div');
-      rootDiv.setAttribute('id', bkmInfoRootId);
-
-      document.body.insertAdjacentElement('afterbegin', rootStyle);
+      rootStyle1 = document.createElement('style');
+      rootStyle1.setAttribute('id', bkmInfoStyle1Id);
+      const textNodeStyle1 = document.createTextNode(
+        getChangeableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting })
+      );
+      rootStyle1.appendChild(textNodeStyle1);
 
       const rootStyle2 = document.createElement('style');
       rootStyle2.setAttribute('id', bkmInfoStyle2Id);
       const textNodeStyle2 = document.createTextNode(
-        `.bkm-info--tag {
-          min-width: ${tagLength}ch;
-          max-width: ${tagLength}ch;
-        }`
+        getConstantStyleText()
       );
       rootStyle2.appendChild(textNodeStyle2);
 
-      rootStyle.insertAdjacentElement('afterend', rootStyle2);
+      document.body.insertAdjacentElement('afterbegin', rootStyle1);
+      rootStyle1.insertAdjacentElement('afterend', rootStyle2);
+
+      rootDiv = document.createElement('div');
+      rootDiv.setAttribute('id', bkmInfoRootId);
       rootStyle2.insertAdjacentElement('afterend', rootDiv);
-    } else {
-      if (tagLength !== storedTagLength || isHideSemanticHtmlTagsOnPrinting !== storedIsHideSemanticHtmlTagsOnPrinting) {
-        storedTagLength = tagLength
-        storedIsHideSemanticHtmlTagsOnPrinting = isHideSemanticHtmlTagsOnPrinting
+    }
 
-        const rootStyle1 = document.getElementById(bkmInfoStyle1Id);
-        const textNodeStyle1 = document.createTextNode(getStyleText({ tagLength, isHideSemanticHtmlTagsOnPrinting }));
-        rootStyle1.replaceChild(textNodeStyle1, rootStyle1.firstChild);
+    if (!(fontSize == storedFontSize && tagLength == storedTagLength
+      && isHideSemanticHtmlTagsOnPrinting == storedIsHideSemanticHtmlTagsOnPrinting)) {
+      storedFontSize = fontSize
+      storedTagLength = tagLength
+      storedIsHideSemanticHtmlTagsOnPrinting = isHideSemanticHtmlTagsOnPrinting
 
-        const rootStyle2 = document.getElementById(bkmInfoStyle2Id);
-        const textNodeStyle2 = document.createTextNode(
-          `.bkm-info--tag {
-            min-width: ${tagLength}ch;
-            max-width: ${tagLength}ch;
-          }`
-        );
-        rootStyle2.replaceChild(textNodeStyle2, rootStyle2.firstChild);
-      }
+      // const textNodeStyle1 = document.createTextNode(
+      //   getChangeableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting })
+      // );
+      // rootStyle1.replaceChild(textNodeStyle1, rootStyle1.firstChild);
+      rootStyle1.firstChild.replaceWith(
+        getChangeableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting })
+      )
     }
 
     const rawNodeList = rootDiv.childNodes;
