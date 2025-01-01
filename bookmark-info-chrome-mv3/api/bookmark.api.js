@@ -73,3 +73,24 @@ export async function moveBookmarkIgnoreInController({ id, parentId, index }) {
 
   return await chrome.bookmarks.move(id, options)
 }
+
+export async function updateBookmarkIgnoreInController({ id, title, url }) {
+  const options = {}
+  if (title != undefined) {
+    options.title = title
+  }
+  if (url != undefined) {
+    options.url = url
+  }
+  if (Object.keys(options).length == 0) {
+    return
+  }
+
+  ignoreBkmControllerApiActionSet.addIgnoreUpdate(id)
+  await chrome.bookmarks.update(id, options)
+}
+
+export async function removeBookmarkIgnoreInController(bkmId) {
+  ignoreBkmControllerApiActionSet.addIgnoreRemove(bkmId)
+  await chrome.bookmarks.remove(bkmId)
+}

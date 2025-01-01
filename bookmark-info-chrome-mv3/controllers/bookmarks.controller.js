@@ -55,6 +55,10 @@ export const bookmarksController = {
     });
   },
   async onChanged(bookmarkId, changeInfo) {
+    if (ignoreBkmControllerApiActionSet.hasIgnoreUpdate(bookmarkId)) {
+      logBC('bookmark.onChanged ignore', bookmarkId);
+      return
+    }
     logBC('bookmark.onChanged 00 <-', changeInfo);
 
     if (changeInfo.title) {
@@ -141,6 +145,11 @@ export const bookmarksController = {
     }
   },
   async onRemoved(bookmarkId, { node }) {
+    if (ignoreBkmControllerApiActionSet.hasIgnoreRemove(bookmarkId)) {
+      logBC('bookmark.onRemoved ignore', bookmarkId);
+      return
+    }
+
     logBC('bookmark.onRemoved <-', bookmarkId);
 
     if (!node.url) {

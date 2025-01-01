@@ -22,21 +22,34 @@ class IgnoreBkmControllerApiActionSet {
 
     return isHas
   }
-  addIgnoreMove(bkmId) {
-    const innerKey = `move#${bkmId}`
 
-    this._innerSet.add(innerKey)
-  }
-  hasIgnoreMove(bkmId) {
-    const innerKey = `move#${bkmId}`
-
-    const isHas = this._innerSet.has(innerKey)
-    if (isHas) {
-      this._innerSet.delete(innerKey)
+  makeAddIgnoreAction(action) {
+    return function (bkmId) {
+      const innerKey = `${action}#${bkmId}`
+      this._innerSet.add(innerKey)
     }
-
-    return isHas
   }
+  makeHasIgnoreAction(action) {
+    return function (bkmId) {
+      const innerKey = `${action}#${bkmId}`
+
+      const isHas = this._innerSet.has(innerKey)
+      if (isHas) {
+        this._innerSet.delete(innerKey)
+      }
+
+      return isHas
+    }
+  }
+
+  addIgnoreMove = this.makeAddIgnoreAction('move')
+  hasIgnoreMove = this.makeHasIgnoreAction('move')
+
+  addIgnoreRemove = this.makeAddIgnoreAction('remove')
+  hasIgnoreRemove = this.makeHasIgnoreAction('remove')
+
+  addIgnoreUpdate = this.makeAddIgnoreAction('update')
+  hasIgnoreUpdate = this.makeHasIgnoreAction('update')
 }
 
 export const ignoreBkmControllerApiActionSet = new IgnoreBkmControllerApiActionSet()

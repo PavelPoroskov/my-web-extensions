@@ -4,6 +4,8 @@ import {
 } from '../api/special-folder.api.js';
 import {
   moveBookmarkIgnoreInController,
+  removeBookmarkIgnoreInController,
+  updateBookmarkIgnoreInController,
 } from '../api/bookmark.api.js';
 
 async function getMaxUsedSuffix() {
@@ -106,7 +108,7 @@ async function flatChildren({ parentId, freeSuffix }) {
   })
   await updateTaskList.reduce(
     (promiseChain, { id, title }) => promiseChain.then(
-      () => chrome.bookmarks.update(id, { title })
+      () => updateBookmarkIgnoreInController({ id, title })
     ),
     Promise.resolve(),
   );
@@ -133,7 +135,8 @@ async function flatChildren({ parentId, freeSuffix }) {
             const newTitle = `${folderNode.title} ${freeSuffix}`
             freeSuffix += 1
 
-            await chrome.bookmarks.update(folderNode.id, {
+            await updateBookmarkIgnoreInController({
+              id: folderNode.id,
               title: newTitle,
             })
             flatFolderNameSet.add(newTitle)
@@ -142,7 +145,7 @@ async function flatChildren({ parentId, freeSuffix }) {
           }
         }
       } else {
-        await chrome.bookmarks.remove(folderNode.id)
+        await removeBookmarkIgnoreInController(folderNode.id)
       }
     }
 

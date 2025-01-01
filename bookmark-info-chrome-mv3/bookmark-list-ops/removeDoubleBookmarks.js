@@ -1,4 +1,9 @@
-import { ExtraMap } from '../api/structure/index.js'
+import {
+  ExtraMap,
+} from '../api/structure/index.js'
+import {
+  removeBookmarkIgnoreInController,
+} from '../api/bookmark.api.js'
 
 async function getDoubles() {
   const doubleList = []
@@ -50,7 +55,7 @@ export async function removeDoubleBookmarks() {
 
   await doubleList.reduce(
     (promiseChain, bkmId) => promiseChain.then(
-      () => chrome.bookmarks.remove(bkmId)
+      () => removeBookmarkIgnoreInController(bkmId)
     ),
     Promise.resolve(),
   );
