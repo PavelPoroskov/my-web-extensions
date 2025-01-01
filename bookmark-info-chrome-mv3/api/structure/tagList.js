@@ -22,16 +22,21 @@ import {
 } from './extensionSettings.js'
 
 class TagList {
-  isTagListAvailable = true
   _recentTagObj = {}
   _fixedTagObj = {}
   _tagList = []
+
+  USE_TAG_LIST
   LIST_LIMIT
   USE_FLAT_FOLDER_STRUCTURE
   HIGHLIGHT_LAST
 
   changeCount = 0
   changeProcessedCount = -1
+
+  addRecentTagFromFolder = () => {}
+  addRecentTagFromBkm = () => {}
+  removeTag = () => {}
 
   get list() {
     if (this.changeProcessedCount !== this.changeCount) {
@@ -45,13 +50,28 @@ class TagList {
     this.changeCount += 1
   }
 
+
+  _enableTagList(isEnabled) {
+    if (isEnabled) {
+      this.addRecentTagFromFolder = this._addRecentTagFromFolder
+      this.addRecentTagFromBkm = this._addRecentTagFromBkm
+      this.removeTag = this._removeTag
+    } else {
+      this.addRecentTagFromFolder = () => {}
+      this.addRecentTagFromBkm = () => {}
+      this.removeTag = () => {}
+    }
+  }
+  blockTagList(isBlocking) {
+    if (this.USE_TAG_LIST) {
+      this._enableTagList(!isBlocking)
+    }
+  }
   async readFromStorage() {
     const settings = await extensionSettings.get()
-    this.isTagListAvailable = settings[USER_OPTION.USE_TAG_LIST]
 
-    if (!this.isTagListAvailable) {
-      return
-    }
+    this.USE_TAG_LIST = settings[USER_OPTION.USE_TAG_LIST]
+    this._enableTagList(this.USE_TAG_LIST)
 
     this.LIST_LIMIT = settings[USER_OPTION.TAG_LIST_LIST_LENGTH]
     this.USE_FLAT_FOLDER_STRUCTURE = settings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]
@@ -148,15 +168,7 @@ class TagList {
 
     return resultList
   }
-  async blockTagList(boolValue) {
-    this.isTagListAvailable = !boolValue
-  }
-
-  async addRecentTagFromFolder(folderNode) {
-    if (!this.isTagListAvailable) {
-      return
-    }
-
+  async _addRecentTagFromFolder(folderNode) {
     // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
     if (this.USE_FLAT_FOLDER_STRUCTURE) {
       // if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
@@ -204,11 +216,7 @@ class TagList {
       ...fixedTagUpdate,
     })
   }
-  async addRecentTagFromBkm(bkmNode) {
-    if (!this.isTagListAvailable) {
-      return
-    }
-
+  async _addRecentTagFromBkm(bkmNode) {
     const parentId = bkmNode?.parentId
 
     if (parentId) {
@@ -216,11 +224,7 @@ class TagList {
       await this.addRecentTagFromFolder(folderNode)
     }
   }
-  async removeTag(id) {
-    if (!this.isTagListAvailable) {
-      return
-    }
-
+  async _removeTag(id) {
     const isInFixedList = id in this._fixedTagObj
     let fixedTagUpdate
 
