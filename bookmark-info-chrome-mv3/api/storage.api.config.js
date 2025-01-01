@@ -35,6 +35,9 @@ const USER_OPTION_META = {
   TAG_LIST_HIGHLIGHT_LAST: {
     default: 7
   },
+  TAG_LIST_HIGHLIGHT_ALPHABET: {
+    default: false,
+  },
   TAG_LIST_LIST_LENGTH: {
     default: 35
   },

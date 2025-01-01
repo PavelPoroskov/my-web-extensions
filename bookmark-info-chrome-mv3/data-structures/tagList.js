@@ -20,6 +20,115 @@ import {
 import {
   extensionSettings,
 } from './extensionSettings.js'
+import {
+  ExtraMap,
+} from './extraMap.js'
+import {
+  makeLogFunction,
+} from '../api/log.api.js'
+
+const logTL = makeLogFunction({ module: 'tagList.js' })
+
+function getIsConditionFromDown(letterList, iTest, allowDistance) {
+  let iPrev = iTest
+  let i = iPrev + 1
+  let distanceFromDown = 0
+
+  while (i < letterList.length) {
+    distanceFromDown += letterList[iPrev].n
+
+    if (allowDistance <= distanceFromDown) {
+      return true
+    }
+
+    if (letterList[i].isHighlight) {
+      return false
+    }
+
+    iPrev = i
+    // epic error
+    // i =+ 1
+    i += 1
+  }
+
+  return letterList.length <= i
+}
+
+function goBetween(letterList, allowDistance) {
+  logTL('goBetween () 00')
+  let distanceFromUp = 0
+
+  let i = 0
+
+  if (!letterList[i].isHighlight) {
+    const isConditionFromDown = getIsConditionFromDown(letterList, i, allowDistance)
+    if (isConditionFromDown) {
+      letterList[i].isHighlight = true
+      logTL('goBetween () 11 0', letterList[i].letter)
+    }
+  }
+
+  let iPrev = i
+  i += 1
+
+  while (i < letterList.length) {
+    distanceFromUp += letterList[iPrev].n
+
+    if (letterList[i].isHighlight) {
+      distanceFromUp = 0
+    }
+
+    if (allowDistance <= distanceFromUp) {
+      const isConditionFromDown = getIsConditionFromDown(letterList, i, allowDistance)
+      logTL('goBetween () 11 allowDistance <= distanceFromUp', letterList[i].letter, isConditionFromDown)
+
+      if (isConditionFromDown) {
+        letterList[i].isHighlight = true
+        distanceFromUp = 0
+        logTL('goBetween () 11 add', letterList[i].letter)
+      }
+    }
+
+    iPrev = i
+    i += 1
+  }
+}
+
+function getHighlightSet(letterList = [], allowDistance = 3) {
+  logTL('getHighlightSet () 00', letterList)
+  if (letterList.length == 0) {
+    return new Set()
+  }
+
+  letterList.forEach(({ n, letter }, index, arr) => {
+    if (allowDistance <= n) {
+      logTL('getHighlightSet () 11 allowDistance <= n', letter, n)
+      arr[index].isHighlight = true
+    }
+  })
+
+  goBetween(letterList, allowDistance)
+
+  return new Set(
+    letterList
+      .filter(({ isHighlight }) => isHighlight)
+      .map(({ letter }) => letter)
+  )
+}
+
+function getLetterList(resultList) {
+  const letterToNMap = new ExtraMap()
+
+  resultList.forEach(({ letter }) => {
+    letterToNMap.sum(letter, 1)
+  })
+
+  const letterList = Array.from(letterToNMap.entries())
+    .map(([letter, n]) => ({ letter, n }))
+    .toSorted((a, b) => a.letter.localeCompare(b.letter))
+
+  return letterList
+}
 
 class TagList {
   _recentTagObj = {}
@@ -30,13 +139,14 @@ class TagList {
   LIST_LIMIT
   USE_FLAT_FOLDER_STRUCTURE
   HIGHLIGHT_LAST
+  HIGHLIGHT_ALPHABET
 
   changeCount = 0
   changeProcessedCount = -1
 
-  addRecentTagFromFolder = () => {}
-  addRecentTagFromBkm = () => {}
-  removeTag = () => {}
+  addRecentTagFromFolder = () => { }
+  addRecentTagFromBkm = () => { }
+  removeTag = () => { }
 
   get list() {
     if (this.changeProcessedCount !== this.changeCount) {
@@ -57,9 +167,9 @@ class TagList {
       this.addRecentTagFromBkm = this._addRecentTagFromBkm
       this.removeTag = this._removeTag
     } else {
-      this.addRecentTagFromFolder = () => {}
-      this.addRecentTagFromBkm = () => {}
-      this.removeTag = () => {}
+      this.addRecentTagFromFolder = () => { }
+      this.addRecentTagFromBkm = () => { }
+      this.removeTag = () => { }
     }
   }
   blockTagList(isBlocking) {
@@ -76,6 +186,7 @@ class TagList {
     this.LIST_LIMIT = settings[USER_OPTION.TAG_LIST_LIST_LENGTH]
     this.USE_FLAT_FOLDER_STRUCTURE = settings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]
     this.HIGHLIGHT_LAST = settings[USER_OPTION.TAG_LIST_HIGHLIGHT_LAST]
+    this.HIGHLIGHT_ALPHABET = settings[USER_OPTION.TAG_LIST_HIGHLIGHT_ALPHABET]
     this.TAG_LIST_PINNED_TAGS_POSITION = settings[USER_OPTION.TAG_LIST_PINNED_TAGS_POSITION]
 
     const savedObj = await getOptions([
@@ -118,8 +229,8 @@ class TagList {
 
     const isFlatStructure = true
     // console.log('filterTagListForFlatFolderStructure ', this._fixedTagObj)
-    this._recentTagObj =  await filterRecentTagObj(this._recentTagObj, isFlatStructure)
-    this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
+    this._recentTagObj = await filterRecentTagObj(this._recentTagObj, isFlatStructure)
+    this._fixedTagObj = await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
     // console.log('filterTagListForFlatFolderStructure, after filter', this._fixedTagObj)
     this.markUpdates()
 
@@ -137,12 +248,12 @@ class TagList {
     const recentTagList = Object.entries(this._recentTagObj)
       .filter(([parentId]) => !(parentId in this._fixedTagObj))
       .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-      .sort((a,b) => -(a.dateAdded - b.dateAdded))
+      .sort((a, b) => -(a.dateAdded - b.dateAdded))
       .slice(0, recentTagLimit)
 
     const lastTagList = Object.entries(this._recentTagObj)
       .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-      .sort((a,b) => -(a.dateAdded - b.dateAdded))
+      .sort((a, b) => -(a.dateAdded - b.dateAdded))
       .slice(0, this.HIGHLIGHT_LAST)
     const lastTagSet = new Set(
       lastTagList.map(({ parentId }) => parentId)
@@ -159,12 +270,41 @@ class TagList {
           isFixed: true,
         }))
     )
-      .map((item) => ({ ...item, isLast: lastTagSet.has(item.parentId) }))
       .filter(({ title }) => !!title)
+      .map((item) => ({
+        ...item,
+        isLast: lastTagSet.has(item.parentId),
+        letter: item.title.at(0).toUpperCase(),
+      }))
 
-    const resultList = this.TAG_LIST_PINNED_TAGS_POSITION == TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.TOP
-      ? fullList.sort((a, b) => -(+a.isFixed -b.isFixed) || a.title.localeCompare(b.title))
-      : fullList.sort((a, b) => a.title.localeCompare(b.title))
+    let resultList
+    if (this.TAG_LIST_PINNED_TAGS_POSITION == TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.TOP) {
+      resultList = fullList.sort((a, b) => -(+a.isFixed - b.isFixed) || a.title.localeCompare(b.title))
+    } else {
+
+      if (this.HIGHLIGHT_ALPHABET) {
+        const resultList0 = fullList.sort((a, b) => a.title.localeCompare(b.title))
+        const highlightSet = getHighlightSet(getLetterList(resultList0))
+
+        resultList = []
+        resultList0.forEach((tag) => {
+          const { letter, ...rest } = tag
+
+          let isHighlight = 0
+          if (highlightSet.has(letter)) {
+            isHighlight = 1
+            highlightSet.delete(letter)
+          }
+
+          resultList.push({
+            ...rest,
+            isHighlight,
+          })
+        })
+      } else {
+        resultList = fullList.sort((a, b) => a.title.localeCompare(b.title))
+      }
+    }
 
     return resultList
   }
@@ -201,13 +341,13 @@ class TagList {
     if (TAG_LIST_MAX_LIST_LENGTH + 10 < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
         .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-        .sort((a,b) => -(a.dateAdded - b.dateAdded))
+        .sort((a, b) => -(a.dateAdded - b.dateAdded))
         .slice(TAG_LIST_MAX_LIST_LENGTH)
         .map(({ parentId }) => parentId)
 
-        redundantIdList.forEach((id) => {
-          delete this._recentTagObj[id]
-        })
+      redundantIdList.forEach((id) => {
+        delete this._recentTagObj[id]
+      })
     }
 
     this.markUpdates()

@@ -21,6 +21,7 @@ const logModuleList = [
   // 'storage.controller',
   // 'tabs.api',
   // 'tabs.controller',
+  // 'tagList.js',
   // 'url-search.api',
   // 'url.api.config',
   // 'windows.controller',

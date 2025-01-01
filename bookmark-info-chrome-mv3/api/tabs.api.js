@@ -48,6 +48,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
 
   await initExtension({ debugCaller: 'updateTab ()' })
   const settings = await extensionSettings.get()
+  const isShowTitle = settings[USER_OPTION.SHOW_BOOKMARK_TITLE]
 
   let visitsData
   const isShowVisits = settings[USER_OPTION.SHOW_PREVIOUS_VISIT]
@@ -56,7 +57,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     bookmarkInfo,
     visitInfo,
   ] = await Promise.all([
-    getBookmarkInfoUni({ url, useCache }),
+    getBookmarkInfoUni({ url, useCache, isShowTitle }),
     isShowVisits && getHistoryInfo({ url }),
   ])
   logTA(`UPDATE-TAB () 22 bookmarkInfo.bookmarkList`, bookmarkInfo.bookmarkList);

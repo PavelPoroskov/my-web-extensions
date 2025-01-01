@@ -77,7 +77,7 @@ async function addBookmarkParentInfo(bookmarkList, bookmarkByIdMap) {
   return await addBookmarkParentInfo(knownFolderList, bookmarkByIdMap)
 }
 
-async function getBookmarkInfo(url) {
+async function getBookmarkInfo({ url, isShowTitle }) {
   logGB('getBookmarkInfo () 00', url)
   const bkmListForUrl = await chrome.bookmarks.search({ url });
   logGB('getBookmarkInfo () 11 search({ url })', bkmListForUrl.length, bkmListForUrl)
@@ -120,16 +120,17 @@ async function getBookmarkInfo(url) {
 
       return {
         id: bookmarkItem.id,
-        fullPathList,
-        title: bookmarkItem.title,
+        folder: fullPathList.at(-1),
+        path: fullPathList.slice(0, -1).concat('').join('/ '),
         parentId: bookmarkItem.parentId,
         source: bookmarkItem.source,
         url: bookmarkItem.url,
+        ...(isShowTitle ? { title: bookmarkItem.title } : {})
       }
     });
 }
 
-export async function getBookmarkInfoUni({ url, useCache=false }) {
+export async function getBookmarkInfoUni({ url, useCache=false, isShowTitle }) {
   if (!url || !isSupportedProtocol(url)) {
     return;
   }
@@ -147,7 +148,7 @@ export async function getBookmarkInfoUni({ url, useCache=false }) {
   }
 
   if (!bookmarkList) {
-    bookmarkList = await getBookmarkInfo(url);
+    bookmarkList = await getBookmarkInfo({ url, isShowTitle });
     source = SOURCE.ACTUAL;
     memo.cacheUrlToInfo.add(url, bookmarkList);
   }

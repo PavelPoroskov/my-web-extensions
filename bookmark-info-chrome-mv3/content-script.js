@@ -1,5 +1,6 @@
-let log = () => {};
-// log = console.log
+let SHOW_LOG = false
+SHOW_LOG = true
+const log = SHOW_LOG ? console.log : () => {};
 
 (async function() {
   log('IN content-script 00');
@@ -300,6 +301,11 @@ ${semanticTagsStyle}
 .bkm-info--last-tag:not(.bkm-info--used-tag) {
   font-weight: 600;
 }
+.bkm-info--tag span {
+  background-color: gold;
+  display: inline-block;
+  padding-left: 0.5ch;
+}
 `
     )
   };
@@ -404,7 +410,8 @@ ${semanticTagsStyle}
           const newBookmarkList = bookmarkList.concat({
             id: '',
             title: document.title,
-            fullPathList: [tag.title],
+            folder: tag.title,
+            path: '',
             parentId,
             optimisticAdd: true,
           })
@@ -510,12 +517,9 @@ ${semanticTagsStyle}
     log('showBookmarkInfo 00');
 
     const usedParentIdSet = new Set(bookmarkList.map(({ parentId }) => parentId))
-    const tagList = inTagList.map(({ parentId, title, isFixed, isLast}) => ({
-      parentId,
-      title,
-      isFixed,
-      isLast,
-      isUsed: usedParentIdSet.has(parentId)
+    const tagList = inTagList.map((tag) => ({
+      ...tag,
+      isUsed: usedParentIdSet.has(tag.parentId)
     }))
 
     const drawList = []
@@ -564,10 +568,10 @@ ${semanticTagsStyle}
       drawList.push({ type: 'separator' })
 
       if (isTagListOpen) {
-        tagList.forEach(({ isFixed, isLast, parentId, title, isUsed }) => {
+        tagList.forEach((tag) => {
           drawList.push({
-            type: isFixed ? 'fixedTag' : 'recentTag',
-            value: { parentId, title, isUsed, isLast },
+            type: tag.isFixed ? 'fixedTag' : 'recentTag',
+            value: tag,
           })
         })
       }
@@ -625,16 +629,13 @@ ${semanticTagsStyle}
 
       switch (type) {
         case 'bookmark': {
-          const { id, fullPathList } = value
-          const [folderName] = fullPathList.slice(-1)
-          const restPathList = fullPathList.slice(0, -1)
-          const restPath = restPathList.concat('').join('/ ')
+          const { id, path, folder } = value
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
-          const textNode = document.createTextNode(folderName);
+          const textNode = document.createTextNode(folder);
           divLabel.appendChild(textNode);
-          divLabel.setAttribute('data-restpath', restPath);
+          divLabel.setAttribute('data-restpath', path);
 
           divLabel.addEventListener('click', onBookmarkLabelClick);
           // TODO sanitize: remove ",<,>
@@ -672,13 +673,12 @@ ${semanticTagsStyle}
         }
         case 'partial-bookmark': {
           // TODO? go to original bookmark
-          const { id, fullPathList, url } = value
-          const [folderName] = fullPathList.slice(-1)
+          const { id, folder, url } = value
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
 
-          const textNode = document.createTextNode(`url*: ${folderName}`);
+          const textNode = document.createTextNode(`url*: ${folder}`);
           divLabel.appendChild(textNode);
           divLabel.setAttribute('data-restpath', `url*: ${url}`);
 
@@ -748,8 +748,8 @@ ${semanticTagsStyle}
           break
         }
         case 'recentTag': {
-          const { parentId, title, isUsed, isLast } = value
-
+          const { parentId, title, isHighlight, isUsed, isLast } = value
+          log('recentTag 11', title, isHighlight)
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag', 'bkm-info--recent');
           divLabel.setAttribute('data-parentid', parentId);
@@ -759,8 +759,19 @@ ${semanticTagsStyle}
           divLabel.setAttribute('data-isused', isUsed ? '1' : '');
           divLabel.classList.toggle('bkm-info--last-tag', isLast);
 
-          const textNodeLabel = document.createTextNode(`${title}`);
-          divLabel.appendChild(textNodeLabel);
+          if (isHighlight) {
+            const elSpan = document.createElement('span');
+            const textNode1 = document.createTextNode(title.at(0).toUpperCase());
+            elSpan.appendChild(textNode1);
+            divLabel.appendChild(elSpan);
+            divLabel.style = 'padding-left: 0.2ch'
+
+            const textNodeLabel = document.createTextNode(title.slice(1));
+            divLabel.appendChild(textNodeLabel);
+          } else {
+            const textNodeLabel = document.createTextNode(`${title}`);
+            divLabel.appendChild(textNodeLabel);
+          }
 
           const divFixBtn = document.createElement('div');
           divFixBtn.setAttribute('data-parentid', parentId);
@@ -785,8 +796,8 @@ ${semanticTagsStyle}
           break
         }
         case 'fixedTag': {
-          const { parentId, title, isUsed, isLast } = value
-
+          const { parentId, title, isHighlight, isUsed, isLast } = value
+          log('fixedTag 11', title)
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag', 'bkm-info--fixed');
           divLabel.setAttribute('data-parentid', parentId);
@@ -796,8 +807,19 @@ ${semanticTagsStyle}
           divLabel.setAttribute('data-isused', isUsed ? '1' : '');
           divLabel.classList.toggle('bkm-info--last-tag', isLast);
 
-          const textNodeLabel = document.createTextNode(`${title}`);
-          divLabel.appendChild(textNodeLabel);
+          if (isHighlight) {
+            const elSpan = document.createElement('span');
+            const textNode1 = document.createTextNode(title.at(0).toUpperCase());
+            elSpan.appendChild(textNode1);
+            divLabel.appendChild(elSpan);
+            divLabel.style = 'padding-left: 0.2ch'
+
+            const textNodeLabel = document.createTextNode(title.slice(1));
+            divLabel.appendChild(textNodeLabel);
+          } else {
+            const textNodeLabel = document.createTextNode(`${title}`);
+            divLabel.appendChild(textNodeLabel);
+          }
 
           const divFixBtn = document.createElement('div');
           divFixBtn.setAttribute('data-parentid', parentId);
@@ -990,7 +1012,8 @@ ${semanticTagsStyle}
     const newBookmarkList = bookmarkList.concat({
       id: '',
       title: document.title,
-      fullPathList: [trimmedFolderName],
+      folder: trimmedFolderName,
+      path: '',
       parentId: '',
       optimisticAdd: true,
     })
