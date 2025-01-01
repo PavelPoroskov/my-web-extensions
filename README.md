@@ -7,7 +7,8 @@ The extension improves the browser's capabilities for working with bookmarks.
     &nbsp;&nbsp;&nbsp;Selection is used as folder name for new bookmark.  
     &nbsp;&nbsp;&nbsp;The extension is looking for folder (case and plural insensitive) or create new. 
   * from user input.  
-    &nbsp;&nbsp;&nbsp;Shortcut Ctrl+Shift+Comma and context command.
+    &nbsp;&nbsp;&nbsp;Shortcut Ctrl+Shift+Comma and context command.  
+    &nbsp;&nbsp;&nbsp;You can enter a list using comma.
   * from last used list.  
     &nbsp;&nbsp;&nbsp;Last used list contains up to 50 last used folders.  
     &nbsp;&nbsp;&nbsp;Standard browser last used list contains only 5 items.  

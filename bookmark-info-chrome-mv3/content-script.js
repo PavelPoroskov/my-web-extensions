@@ -976,7 +976,7 @@ ${semanticTagsStyle}
     }
   }
 
-  function addBookmarkByFolderName({ folderName }) {
+  async function addBookmarkByFolderName(folderName) {
     if (!folderName) {
       return
     }
@@ -996,12 +996,45 @@ ${semanticTagsStyle}
     })
     showInHtmlSingleTaskQueue.addUpdate({ bookmarkList: newBookmarkList })
 
-    chrome.runtime.sendMessage({
+    await chrome.runtime.sendMessage({
       command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
       url: document.location.href,
       title: document.title,
       folderName: trimmedFolderName,
     });
+  }
+
+  async function addBookmarkListByNameWithComma(strList) {
+    if (!strList) {
+      return
+    }
+
+    const list = strList
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+
+    if (list.length == 0) {
+      return
+    }
+
+    const uniqueList = []
+    const nameSet = new Set()
+    list.forEach((name) => {
+      const normalizedName = name.toLowerCase().replace(/\s+/, ' ')
+
+      if (!nameSet.has(normalizedName)) {
+        nameSet.add(normalizedName)
+        uniqueList.push(name)
+      }
+    })
+
+    await uniqueList.reduce(
+      (promiseChain, name) => promiseChain.then(
+        () => addBookmarkByFolderName(name)
+      ),
+      Promise.resolve(),
+    );
   }
 
   chrome.runtime.onMessage.addListener((message) => {
@@ -1072,14 +1105,14 @@ ${semanticTagsStyle}
         toggleYoutubePageHeader({ nTry: 1 })
         break
       }
-      case CONTENT_SCRIPT_MSG_ID.GET_SELECTION: {
-        const selection = document.getSelection().toString()
-        addBookmarkByFolderName({ folderName: selection })
-        break
-      }
       case CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT: {
         const userInput = window.prompt("Enter folder for your bookmark")
-        addBookmarkByFolderName({ folderName: userInput })
+        addBookmarkListByNameWithComma(userInput)
+        break
+      }
+      case CONTENT_SCRIPT_MSG_ID.GET_SELECTION: {
+        const selection = document.getSelection().toString()
+        addBookmarkByFolderName(selection)
         break
       }
     }
