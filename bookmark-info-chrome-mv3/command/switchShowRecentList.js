@@ -1,9 +1,9 @@
 import {
   extensionSettings,
-} from '../structure/index.js'
+} from '../api/structure/index.js'
 import {
   INTERNAL_VALUES,
-} from '../storage.api.config.js'
+} from '../api/storage.api.config.js'
 
 export async function switchShowRecentList(isShow) {
   await extensionSettings.update({

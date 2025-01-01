@@ -1,7 +1,7 @@
 import {
   startAddBookmarkFromInput,
   startAddBookmarkFromSelection,
-} from '../api/command/index.js'
+} from '../command/index.js'
 import {
   makeLogFunction,
 } from '../api/log.api.js'

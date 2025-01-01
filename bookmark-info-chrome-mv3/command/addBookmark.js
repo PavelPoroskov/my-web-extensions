@@ -1,9 +1,9 @@
-import { findOrCreateFolder } from '../find-folder.api.js'
-import { createBookmarkWithApi } from '../bookmark.api.js'
+import { findOrCreateFolder } from '../api/find-folder.api.js'
+import { createBookmarkWithApi } from '../api/bookmark.api.js'
 import {
   getUserInputInPage,
   getSelectionInPage,
-} from '../content-script.api.js'
+} from '../api/content-script.api.js'
 
 export async function addBookmark({ url, title, parentId }) {
   const bookmarkList = await chrome.bookmarks.search({ url });

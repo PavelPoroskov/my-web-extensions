@@ -1,9 +1,9 @@
 import {
   replaceUrlInTab,
-} from '../content-script.api.js'
+} from '../api/content-script.api.js'
 import {
   makeLogFunction,
-} from '../log.api.js'
+} from '../api/log.api.js'
 
 const logUU = makeLogFunction({ module: 'getUrlFromUrl' })
 
@@ -35,8 +35,8 @@ export async function getUrlFromUrl() {
         }
       }
       // eslint-disable-next-line no-unused-vars
-    } catch (e) 
-    // eslint-disable-next-line no-empty 
+    } catch (e)
+    // eslint-disable-next-line no-empty
     {
 
     }

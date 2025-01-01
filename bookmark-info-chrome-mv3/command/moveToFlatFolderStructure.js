@@ -1,11 +1,11 @@
-import { flatBookmarks } from '../../bookmark-list-ops/index.js'
+import { flatBookmarks } from '../bookmark-list-ops/index.js'
 import {
   USER_OPTION,
-} from '../storage.api.config.js'
+} from '../api/storage.api.config.js'
 import {
   extensionSettings,
   tagList,
-} from '../structure/index.js'
+} from '../api/structure/index.js'
 
 export async function moveToFlatFolderStructure() {
   await extensionSettings.update({

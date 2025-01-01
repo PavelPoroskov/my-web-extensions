@@ -7,7 +7,7 @@ import {
   moveToFlatFolderStructure,
   switchShowRecentList,
   unfixTag,
-} from '../api/command/index.js'
+} from '../command/index.js'
 import {
   extensionSettings,
   memo,

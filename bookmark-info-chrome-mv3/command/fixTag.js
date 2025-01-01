@@ -1,6 +1,6 @@
 import {
   tagList,
-} from '../structure/index.js'
+} from '../api/structure/index.js'
 
 export async function fixTag({ parentId, title }) {
   await tagList.addFixedTag({

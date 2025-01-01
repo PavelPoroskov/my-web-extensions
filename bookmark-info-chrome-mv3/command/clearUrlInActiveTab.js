@@ -1,10 +1,10 @@
 
 import {
   changeUrlInTab,
-} from '../content-script.api.js'
+} from '../api/content-script.api.js'
 import {
   makeLogFunction,
-} from '../log.api.js'
+} from '../api/log.api.js'
 
 const logCU = makeLogFunction({ module: 'clearUrlInActiveTab' })
 
@@ -14,8 +14,8 @@ function removeHashAndSearchParams(url) {
     const oUrl = new URL(url);
     oUrl.search = ''
     oUrl.hash = ''
-  
-    return oUrl.toString();  
+
+    return oUrl.toString();
   // eslint-disable-next-line no-unused-vars
   } catch (e) {
     return url
