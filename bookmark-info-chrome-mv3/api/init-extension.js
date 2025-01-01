@@ -63,16 +63,14 @@ export async function createContextMenu(settings) {
 export async function setFirstActiveTab({ debugCaller='' }) {
   logIX(`setFirstActiveTab() 00 <- ${debugCaller}`, memo['activeTabId'])
 
-  if (!memo.activeTabId) {
-    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    const [Tab] = tabs;
+  const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  const [Tab] = tabs;
 
-    if (Tab?.id) {
-      memo.activeTabId = Tab.id;
-      memo.activeTabUrl = Tab.url
+  if (Tab?.id) {
+    memo.activeTabId = Tab.id;
+    memo.activeTabUrl = Tab.url
 
-      logIX(`setFirstActiveTab() 11 <- ${debugCaller}`, memo['activeTabId'])
-    }
+    logIX(`setFirstActiveTab() 11 <- ${debugCaller}`, memo['activeTabId'])
   }
 }
 
