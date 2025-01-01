@@ -47,8 +47,9 @@ class TagList {
 
   async readFromStorage() {
     const settings = await extensionSettings.get()
+    this.isTagListAvailable = settings[USER_OPTION.USE_TAG_LIST]
 
-    if (!settings[USER_OPTION.USE_TAG_LIST]) {
+    if (!this.isTagListAvailable) {
       return
     }
 
@@ -216,6 +217,10 @@ class TagList {
     }
   }
   async removeTag(id) {
+    if (!this.isTagListAvailable) {
+      return
+    }
+
     const isInFixedList = id in this._fixedTagObj
     let fixedTagUpdate
 
@@ -244,35 +249,6 @@ class TagList {
       })
     }
   }
-  // async updateTag(id, title) {
-  //   const isInFixedList = id in this._fixedTagObj
-  //   let fixedTagUpdate
-
-  //   if (isInFixedList) {
-  //     this._fixedTagObj[id] = title
-  //     fixedTagUpdate = {
-  //       [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
-  //     }
-  //   }
-
-  //   const isInRecentList = id in this._recentTagObj
-  //   let recentTagUpdate
-
-  //   if (isInRecentList) {
-  //     this._recentTagObj[id].title = title
-  //     recentTagUpdate = {
-  //       [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj
-  //     }
-  //   }
-
-  //   if (isInFixedList || isInRecentList) {
-  //     this.markUpdates()
-  //     await setOptions({
-  //       ...fixedTagUpdate,
-  //       ...recentTagUpdate,
-  //     })
-  //   }
-  // }
   async addFixedTag({ parentId, title }) {
     if (!title || !parentId) {
       return

@@ -11,7 +11,6 @@ export async function moveToFlatFolderStructure() {
   await extensionSettings.update({
     [USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]: true,
   })
-  // await tagList.filterTagListForFlatFolderStructure()
 
   await flatBookmarks()
   await tagList.filterTagListForFlatFolderStructure()
