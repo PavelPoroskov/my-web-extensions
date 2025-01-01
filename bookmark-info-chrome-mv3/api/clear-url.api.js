@@ -3,12 +3,12 @@ import {
 } from './storage.api.config.js'
 import {
   extensionSettings,
-} from './structure/index.js'
+} from '../data-structures/index.js'
 import {
   isNotEmptyArray,
 } from './common.api.js'
 import {
-  getHostSettings 
+  getHostSettings
 } from './url.api.config.js'
 import {
   makeLogFunction,
@@ -25,11 +25,11 @@ const isPathnameMatchForPattern = ({ pathname, patternList }) => {
 
   const pathToList = (pathname) => {
     let list = pathname.split(/(\/)/).filter(Boolean)
-  
+
     if (1 < list.length && list.at(-1) === '/') {
       list = list.slice(0, -1)
-    }  
-  
+    }
+
     return list
   }
   const isPartsEqual = (patternPart, pathPart) => {
@@ -39,12 +39,12 @@ const isPathnameMatchForPattern = ({ pathname, patternList }) => {
       result = pathPart && pathPart != '/'
     } else {
       result = pathPart === patternPart
-    } 
+    }
     logCUA('isPartsEqual () 11', patternPart, pathPart, result)
-  
+
     return result
   }
-  
+
   let isMath = false
   const pathAsList = pathToList(pathname)
   logCUA('isPathnameMatch () 11 pathAsList', pathAsList)
@@ -55,7 +55,7 @@ const isPathnameMatchForPattern = ({ pathname, patternList }) => {
     const patternAsList = pathToList(pattern)
     logCUA('isPathnameMatch () 11 patternAsList', patternAsList)
 
-    isMath = patternAsList.length > 0 && pathAsList.length === patternAsList.length 
+    isMath = patternAsList.length > 0 && pathAsList.length === patternAsList.length
       && patternAsList.every((patternPart, patternIndex) => isPartsEqual(patternPart, pathAsList[patternIndex])
     )
     i += 1
@@ -75,7 +75,7 @@ const removeQueryParamsIfTarget = (url) => {
     if (targetHostSettings) {
       const { removeAllSearchParamForPath, removeSearchParamList } = targetHostSettings
       logCUA('removeQueryParamsIfTarget () 22 removeSearchParamList', removeSearchParamList)
- 
+
       const oUrl = new URL(url);
       const { pathname, searchParams: oSearchParams } = oUrl;
 
@@ -91,7 +91,7 @@ const removeQueryParamsIfTarget = (url) => {
           oUrl.search = oSearchParams.size > 0
             ? `?${oSearchParams.toString()}`
             : ''
-        }         
+        }
       }
 
       if (isNotEmptyArray(removeAllSearchParamForPath)) {
@@ -101,14 +101,14 @@ const removeQueryParamsIfTarget = (url) => {
         }
       }
 
-      cleanUrl = oUrl.toString();  
+      cleanUrl = oUrl.toString();
     }
-  
+
   // eslint-disable-next-line no-unused-vars
-  } catch (_e) 
+  } catch (_e)
   // eslint-disable-next-line no-empty
   {
-    
+
   }
 
   logCUA('removeQueryParamsIfTarget () 99 cleanUrl', cleanUrl)
@@ -122,11 +122,11 @@ export async function clearUrlOnPageOpen({ tabId, url }) {
 
   if (settings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN]) {
     cleanUrl = removeQueryParamsIfTarget(url);
-    
+
     if (url !== cleanUrl) {
       await changeUrlInTab({ tabId, url: cleanUrl })
     }
-  }  
+  }
 
   return cleanUrl || url
 }

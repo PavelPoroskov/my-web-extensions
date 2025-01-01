@@ -11,7 +11,7 @@ import {
 import {
   extensionSettings,
   memo,
-} from '../api/structure/index.js'
+} from '../data-structures/index.js'
 import {
   updateActiveTab,
 } from '../api/tabs.api.js'

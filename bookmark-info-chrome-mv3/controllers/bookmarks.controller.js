@@ -5,7 +5,7 @@ import {
   memo,
   tagList,
   ignoreBkmControllerApiActionSet,
-} from '../api/structure/index.js'
+} from '../data-structures/index.js'
 import {
   debouncedUpdateActiveTab,
 } from '../api/tabs.api.js'

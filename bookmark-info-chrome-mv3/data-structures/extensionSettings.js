@@ -1,12 +1,12 @@
 import {
   makeLogFunction,
-} from '../log.api.js'
+} from '../api/log.api.js'
 import {
   getOptions, setOptions
-} from '../storage.api.js'
+} from '../api/storage.api.js'
 import {
   USER_OPTION_KEY_LIST,
-} from '../storage.api.config.js';
+} from '../api/storage.api.config.js';
 
 const logES = makeLogFunction({ module: 'extensionSettings' })
 
@@ -43,16 +43,16 @@ class ExtensionSettings {
         this.fnResolve()
       })
       .catch(this.fnReject);
-  
+
     logES('readSavedSettings')
-    logES(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
+    logES(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)
   }
 
   async update(updateObj) {
     Object.entries(updateObj).forEach(([ket, value]) => {
       this._settings[ket] = value
     })
-    
+
     await setOptions(updateObj)
   }
 }

@@ -1,7 +1,7 @@
 
 import {
   makeLogFunction,
-} from '../log.api.js'
+} from '../api/log.api.js'
 
 const logC = makeLogFunction({ module: 'cache' })
 
@@ -15,7 +15,7 @@ export class CacheWithLimit {
     if (this.LIMIT < this.cache.size) {
       let deleteCount = this.cache.size - this.LIMIT;
       const keyToDelete = [];
-      
+
       // Map.key() returns keys in insertion order
       for (const key of this.cache.keys()) {
         keyToDelete.push(key);
@@ -24,7 +24,7 @@ export class CacheWithLimit {
           break;
         }
       }
-  
+
       for (const key of keyToDelete) {
         this.cache.delete(key);
       }
@@ -34,14 +34,14 @@ export class CacheWithLimit {
   add (key,value) {
     this.cache.set(key, value);
     logC(`   ${this.name}.add: ${key}`, value);
-    
+
     this.removeStale();
   }
-  
+
   get(key) {
     const value = this.cache.get(key);
     logC(`   ${this.name}.get: ${key}`, value);
-  
+
     return value;
   }
 
@@ -49,7 +49,7 @@ export class CacheWithLimit {
     this.cache.delete(key);
     logC(`   ${this.name}.delete: ${key}`);
   }
-  
+
   clear() {
     this.cache.clear();
     logC(`   ${this.name}.clear()`);

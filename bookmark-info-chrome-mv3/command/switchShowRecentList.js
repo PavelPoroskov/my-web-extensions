@@ -1,6 +1,6 @@
 import {
   extensionSettings,
-} from '../api/structure/index.js'
+} from '../data-structures/index.js'
 import {
   INTERNAL_VALUES,
 } from '../api/storage.api.config.js'

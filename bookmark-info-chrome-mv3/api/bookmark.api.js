@@ -1,6 +1,6 @@
 import {
   ignoreBkmControllerApiActionSet,
-} from './structure/ignoreBkmControllerApiActionSet.js';
+} from '../data-structures/ignoreBkmControllerApiActionSet.js';
 
 let lastCreatedBkmParentId
 let lastCreatedBkmUrl

@@ -1,12 +1,12 @@
 import {
   makeLogFunction,
-} from '../log.api.js'
+} from '../api/log.api.js'
 import {
   getOptions, setOptions
-} from '../storage.api.js'
+} from '../api/storage.api.js'
 import {
   INTERNAL_VALUES,
-} from '../storage.api.config.js'
+} from '../api/storage.api.config.js'
 
 const logBST = makeLogFunction({ module: 'browserStartTime' })
 

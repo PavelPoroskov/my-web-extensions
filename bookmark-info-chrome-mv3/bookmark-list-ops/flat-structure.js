@@ -5,7 +5,7 @@ import {
 } from '../api/special-folder.api.js';
 import {
   tagList,
-} from '../api/structure/index.js';
+} from '../data-structures/index.js';
 import {
   flatFolders,
 } from './flatFolders.js';

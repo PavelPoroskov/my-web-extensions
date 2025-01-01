@@ -2,21 +2,21 @@ import {
   filterFixedTagObj,
   filterRecentTagObj,
   getRecentTagObj,
-} from '../recent.api.js'
+} from '../api/recent.api.js'
 import {
   getUnclassifiedFolderId,
   isDescriptiveFolderTitle,
-} from '../special-folder.api.js'
+} from '../api/special-folder.api.js'
 import {
   getOptions,
   setOptions
-} from '../storage.api.js'
+} from '../api/storage.api.js'
 import {
   USER_OPTION,
   INTERNAL_VALUES,
   TAG_LIST_MAX_LIST_LENGTH,
   TAG_LIST_PINNED_TAGS_POSITION_OPTIONS,
-} from '../storage.api.config.js'
+} from '../api/storage.api.config.js'
 import {
   extensionSettings,
 } from './extensionSettings.js'

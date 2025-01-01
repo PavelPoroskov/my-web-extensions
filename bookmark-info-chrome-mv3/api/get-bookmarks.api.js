@@ -1,6 +1,6 @@
 import {
   memo,
-} from './structure/index.js'
+} from '../data-structures/index.js'
 import {
   isSupportedProtocol,
 } from './common.api.js'

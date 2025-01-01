@@ -1,6 +1,6 @@
 import {
   tagList,
-} from '../api/structure/index.js'
+} from '../data-structures/index.js'
 
 export async function addRecentTagFromView(bookmarkId) {
   if (!bookmarkId) {

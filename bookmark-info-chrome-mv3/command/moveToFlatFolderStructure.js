@@ -5,7 +5,7 @@ import {
 import {
   extensionSettings,
   tagList,
-} from '../api/structure/index.js'
+} from '../data-structures/index.js'
 
 export async function moveToFlatFolderStructure() {
   await extensionSettings.update({

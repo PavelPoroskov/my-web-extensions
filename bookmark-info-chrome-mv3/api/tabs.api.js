@@ -16,7 +16,7 @@ import {
   extensionSettings,
   memo,
   tagList,
-} from './structure/index.js'
+} from '../data-structures/index.js'
 import {
   updateBookmarkInfoInPage,
 } from './content-script.api.js'

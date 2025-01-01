@@ -7,7 +7,7 @@ import {
   extensionSettings,
   tagList,
   memo,
-} from './structure/index.js'
+} from '../data-structures/index.js'
 import {
   makeLogFunction,
 } from './log.api.js'
@@ -24,7 +24,7 @@ export async function createContextMenu(settings) {
     id: CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_SELECTION_MENU,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'add bookmark, selection as a tag',
-  });  
+  });
   chrome.contextMenus.create({
     id: CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_INPUT_MENU,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
@@ -44,7 +44,7 @@ export async function createContextMenu(settings) {
     id: CONTEXT_MENU_CMD_ID.CLOSE_DUPLICATE,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'close duplicate tabs',
-  });  
+  });
   chrome.contextMenus.create({
     id: CONTEXT_MENU_CMD_ID.CLOSE_BOOKMARKED,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
@@ -56,7 +56,7 @@ export async function createContextMenu(settings) {
       id: CONTEXT_MENU_CMD_ID.TOGGLE_YOUTUBE_HEADER,
       contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
       title: 'toggle youtube page header',
-    });  
+    });
   }
 }
 

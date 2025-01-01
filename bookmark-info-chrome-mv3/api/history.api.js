@@ -3,8 +3,8 @@ import {
 } from '../constant/index.js';
 import {
   browserStartTime,
-} from './structure/index.js';
-import { 
+} from '../data-structures/index.js';
+import {
   startPartialUrlSearch,
 } from './url-search.api.js'
 import {
@@ -68,7 +68,7 @@ function filterTimeList(timeList) {
 async function getVisitListForUrl(url) {
   const visitList = (await chrome.history.getVisits({ url }))
     .filter((i) => i.visitTime)
-   
+
   let newToOldList
   let previousList
 
@@ -81,7 +81,7 @@ async function getVisitListForUrl(url) {
   //    visit.visitTime > browserProfileStartTime
   if (IS_BROWSER_FIREFOX) {
     newToOldList = visitList
-    
+
     const mostNewVisitMS = newToOldList[0]?.visitTime
     const startTime = await browserStartTime.get()
 
@@ -94,7 +94,7 @@ async function getVisitListForUrl(url) {
     newToOldList = visitList.toReversed()
     previousList = newToOldList.slice(1)
   }
-  
+
   const filteredList = previousList.filter(({ transition }) => transition !== 'reload')
   const filteredTimeList = filteredList
     .map((i) => i.visitTime)
@@ -154,7 +154,7 @@ export async function getHistoryInfo({ url }) {
     .map((i) => formatPrevVisit(i))
     .flatMap((value, index, array) => index === 0 || value !== array[index - 1] ? [value]: [])
     .join(", ")
-  
+
   logHA('getHistoryInfo () 44 visitString', visitString)
 
   return {

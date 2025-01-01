@@ -3,7 +3,7 @@ import {
 } from '../api/log.api.js'
 import {
   memo,
-} from '../api/structure/index.js'
+} from '../data-structures/index.js'
 import {
   updateActiveTab,
 } from '../api/tabs.api.js'
@@ -25,7 +25,7 @@ export const tabsController = {
     //   if (tabId === memo.activeTabId) {
     //     if (memo.activeTabUrl != changeInfo.url) {
     //       memo.activeTabUrl = changeInfo.url
-    //     }        
+    //     }
     //   }
     // }
 
@@ -33,7 +33,7 @@ export const tabsController = {
       case ('complete'): {
         logTC('tabs.onUpdated complete 00', 'tabId', tabId, 'memo.activeTabId', memo.activeTabId);
         logTC('tabs.onUpdated complete 00 -------Tab',Tab);
-        
+
         if (tabId === memo.activeTabId) {
           logTC('tabs.onUpdated complete 11 tabId === memo.activeTabId');
           // we here after message page-is-ready. that message triggers update. not necessary to update here
@@ -48,10 +48,10 @@ export const tabsController = {
               tabId,
               url: cleanUrl,
               debugCaller: 'tabs.onUpdated complete',
-            })       
+            })
           }
         }
-    
+
         break;
       }
     }

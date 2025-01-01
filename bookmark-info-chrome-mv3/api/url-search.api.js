@@ -12,7 +12,7 @@ import {
 } from './common.api.js'
 import {
   extensionSettings,
-} from './structure/index.js'
+} from '../data-structures/index.js'
 
 const logUS = makeLogFunction({ module: 'url-search.api' })
 
