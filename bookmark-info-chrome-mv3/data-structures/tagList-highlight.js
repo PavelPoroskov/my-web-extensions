@@ -9,6 +9,27 @@ const logTH = makeLogFunction({ module: 'tagList-highlight.js' })
 
 const ALLOWED_DISTANCE = 4
 
+function getIsConditionFromUp(letterList, iTest) {
+  let distanceFromUp = 0
+  let i = iTest - 1
+
+  while (-1 < i) {
+    distanceFromUp += letterList[i].n
+
+    if (ALLOWED_DISTANCE <= distanceFromUp) {
+      return true
+    }
+
+    if (letterList[i].isHighlight) {
+      return false
+    }
+
+    i = i - 1
+  }
+
+  return i == -1
+}
+
 function getIsConditionFromDown(letterList, iTest) {
   let distanceFromDown = 0
   let i = iTest + 1
@@ -71,6 +92,23 @@ function getHighlightSet(letterList = []) {
     if (ALLOWED_DISTANCE <= n) {
       logTH('getHighlightSet () 11 ALLOW_DISTANCE <= n', letter, n)
       arr[index].isHighlight = true
+    }
+  })
+
+  const priorityCheckList = letterList
+    .map(({ letter, n }, index) => ({ letter, n, index }))
+    .filter(({ n }) => 1 < n && n < ALLOWED_DISTANCE)
+    .toSorted((a, b) => -(a.n - b.n) || a.index - b.index)
+
+  priorityCheckList.forEach(({ index }) => {
+    const isConditionFromUp = getIsConditionFromUp(letterList, index)
+
+    if (isConditionFromUp) {
+      const isConditionFromDown = getIsConditionFromDown(letterList, index)
+
+      if (isConditionFromDown) {
+        letterList[index].isHighlight = true
+      }
     }
   })
 

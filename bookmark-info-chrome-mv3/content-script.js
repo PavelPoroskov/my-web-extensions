@@ -302,7 +302,7 @@ ${semanticTagsStyle}
   font-weight: 600;
 }
 .bkm-info--tag span {
-  background-color: gold;
+  background-color: white;
   display: inline-block;
   padding-left: 0.5ch;
 }
