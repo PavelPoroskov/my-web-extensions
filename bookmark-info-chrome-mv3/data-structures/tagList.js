@@ -21,121 +21,20 @@ import {
   extensionSettings,
 } from './extensionSettings.js'
 import {
-  ExtraMap,
-} from './extraMap.js'
+  highlightAlphabet,
+} from './tagList-highlight.js'
 import {
   makeLogFunction,
 } from '../api/log.api.js'
 
 const logTL = makeLogFunction({ module: 'tagList.js' })
 
-function getIsConditionFromDown(letterList, iTest, allowDistance) {
-  let iPrev = iTest
-  let i = iPrev + 1
-  let distanceFromDown = 0
-
-  while (i < letterList.length) {
-    distanceFromDown += letterList[iPrev].n
-
-    if (allowDistance <= distanceFromDown) {
-      return true
-    }
-
-    if (letterList[i].isHighlight) {
-      return false
-    }
-
-    iPrev = i
-    // epic error
-    // i =+ 1
-    i += 1
-  }
-
-  return letterList.length <= i
-}
-
-function goBetween(letterList, allowDistance) {
-  logTL('goBetween () 00')
-  let distanceFromUp = 0
-
-  let i = 0
-
-  if (!letterList[i].isHighlight) {
-    const isConditionFromDown = getIsConditionFromDown(letterList, i, allowDistance)
-    if (isConditionFromDown) {
-      letterList[i].isHighlight = true
-      logTL('goBetween () 11 0', letterList[i].letter)
-    }
-  }
-
-  let iPrev = i
-  i += 1
-
-  while (i < letterList.length) {
-    distanceFromUp += letterList[iPrev].n
-
-    if (letterList[i].isHighlight) {
-      distanceFromUp = 0
-    }
-
-    if (allowDistance <= distanceFromUp) {
-      const isConditionFromDown = getIsConditionFromDown(letterList, i, allowDistance)
-      logTL('goBetween () 11 allowDistance <= distanceFromUp', letterList[i].letter, isConditionFromDown)
-
-      if (isConditionFromDown) {
-        letterList[i].isHighlight = true
-        distanceFromUp = 0
-        logTL('goBetween () 11 add', letterList[i].letter)
-      }
-    }
-
-    iPrev = i
-    i += 1
-  }
-}
-
-function getHighlightSet(letterList = [], allowDistance = 3) {
-  logTL('getHighlightSet () 00', letterList)
-  if (letterList.length == 0) {
-    return new Set()
-  }
-
-  letterList.forEach(({ n, letter }, index, arr) => {
-    if (allowDistance <= n) {
-      logTL('getHighlightSet () 11 allowDistance <= n', letter, n)
-      arr[index].isHighlight = true
-    }
-  })
-
-  goBetween(letterList, allowDistance)
-
-  return new Set(
-    letterList
-      .filter(({ isHighlight }) => isHighlight)
-      .map(({ letter }) => letter)
-  )
-}
-
-function getLetterList(resultList) {
-  const letterToNMap = new ExtraMap()
-
-  resultList.forEach(({ letter }) => {
-    letterToNMap.sum(letter, 1)
-  })
-
-  const letterList = Array.from(letterToNMap.entries())
-    .map(([letter, n]) => ({ letter, n }))
-    .toSorted((a, b) => a.letter.localeCompare(b.letter))
-
-  return letterList
-}
-
 class TagList {
   _recentTagObj = {}
   _fixedTagObj = {}
   _tagList = []
 
-  USE_TAG_LIST
+  USE_TAG_LIST = false
   LIST_LIMIT
   USE_FLAT_FOLDER_STRUCTURE
   HIGHLIGHT_LAST
@@ -160,8 +59,8 @@ class TagList {
     this.changeCount += 1
   }
 
-
   _enableTagList(isEnabled) {
+    logTL('_enableTagList 00', isEnabled)
     if (isEnabled) {
       this.addRecentTagFromFolder = this._addRecentTagFromFolder
       this.addRecentTagFromBkm = this._addRecentTagFromBkm
@@ -187,7 +86,7 @@ class TagList {
     this.USE_FLAT_FOLDER_STRUCTURE = settings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]
     this.HIGHLIGHT_LAST = settings[USER_OPTION.TAG_LIST_HIGHLIGHT_LAST]
     this.HIGHLIGHT_ALPHABET = settings[USER_OPTION.TAG_LIST_HIGHLIGHT_ALPHABET]
-    this.TAG_LIST_PINNED_TAGS_POSITION = settings[USER_OPTION.TAG_LIST_PINNED_TAGS_POSITION]
+    this.PINNED_TAGS_POSITION = settings[USER_OPTION.TAG_LIST_PINNED_TAGS_POSITION]
 
     const savedObj = await getOptions([
       INTERNAL_VALUES.TAG_LIST_SESSION_STARTED,
@@ -274,41 +173,33 @@ class TagList {
       .map((item) => ({
         ...item,
         isLast: lastTagSet.has(item.parentId),
-        letter: item.title.at(0).toUpperCase(),
       }))
 
     let resultList
-    if (this.TAG_LIST_PINNED_TAGS_POSITION == TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.TOP) {
+    if (this.PINNED_TAGS_POSITION == TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.TOP) {
       resultList = fullList.sort((a, b) => -(+a.isFixed - b.isFixed) || a.title.localeCompare(b.title))
-    } else {
 
       if (this.HIGHLIGHT_ALPHABET) {
-        const resultList0 = fullList.sort((a, b) => a.title.localeCompare(b.title))
-        const highlightSet = getHighlightSet(getLetterList(resultList0))
-
-        resultList = []
-        resultList0.forEach((tag) => {
-          const { letter, ...rest } = tag
-
-          let isHighlight = 0
-          if (highlightSet.has(letter)) {
-            isHighlight = 1
-            highlightSet.delete(letter)
-          }
-
-          resultList.push({
-            ...rest,
-            isHighlight,
-          })
+        resultList = highlightAlphabet({
+          list: resultList,
+          fnGetFirstLetter: ({ isFixed, title }) => `${isFixed ? 'F': 'R'}#${title.at(0).toUpperCase()}`
         })
-      } else {
-        resultList = fullList.sort((a, b) => a.title.localeCompare(b.title))
+      }
+    } else {
+      resultList = fullList.sort((a, b) => a.title.localeCompare(b.title))
+
+      if (this.HIGHLIGHT_ALPHABET) {
+        resultList = highlightAlphabet({
+          list: resultList,
+          fnGetFirstLetter: ({ title }) => title.at(0).toUpperCase(),
+        })
       }
     }
 
     return resultList
   }
   async _addRecentTagFromFolder(folderNode) {
+    logTL('_addRecentTagFromFolder 00', folderNode)
     // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
     if (this.USE_FLAT_FOLDER_STRUCTURE) {
       // if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {

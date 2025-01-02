@@ -26,6 +26,7 @@ createFileForFirefox(
     'api/bookmark.api.js',
     'api/special-folder.api.js',
     'api/recent.api.js',
+    'data-structures/tagList-highlight.js',
     'data-structures/tagList.js',
     'data-structures/index.js',
     'api/content-script.api.js',
