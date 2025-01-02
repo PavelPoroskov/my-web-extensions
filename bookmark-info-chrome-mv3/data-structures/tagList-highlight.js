@@ -7,7 +7,7 @@ import {
 
 const logTH = makeLogFunction({ module: 'tagList-highlight.js' })
 
-const ALLOWED_DISTANCE = 4
+const ALLOWED_DISTANCE = 3
 
 function getIsConditionFromUp(letterList, iTest) {
   let distanceFromUp = 0
