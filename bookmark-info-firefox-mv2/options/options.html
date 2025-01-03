@@ -11,7 +11,7 @@
         padding-right: 2px;
         box-sizing: border-box;
       }
-      #list-tag-length {
+      #list-tag-length, #FONT_SIZE_LIST {
         display: flex;
         justify-content: space-between;
         width: 100%;
@@ -40,7 +40,7 @@
       <div>For specified sites and paths only.</div>
       <textarea id="CLEAR_URL_LIST" style="resize: none; width: 500px;" rows="5" readonly></textarea>
     </article>
-    
+
     <article>
       <label>
         <input type="checkbox" id="SHOW_BOOKMARK_TITLE" style="vertical-align: middle;"/>
@@ -49,24 +49,41 @@
     </article>
 
     <article>
-
       <label>
         <input type="checkbox" id="SHOW_PREVIOUS_VISIT" style="vertical-align: middle;"/>
         Show previous visits
       </label>
     </article>
 
+    <article>
+      <label for="FONT_SIZE_NAME">
+        Font size.
+      </label>
+      <div style="display: flex">
+        <div style="flex: 1">
+          <input type="range" id="FONT_SIZE" name="FONT_SIZE_NAME" list="FONT_SIZE_LIST" min="14" max="24" step="1" style="width: 100%;" />
+          <datalist id="FONT_SIZE_LIST">
+            <option value="14" label="14">14</option>
+            <option value="24" label="24">24</option>
+          </datalist>
+        </div>
+        <div style="flex: 1; padding-left: 2ch; padding-top: 0.7ch;">
+          Value: <output id="FONT_SIZE-VALUE"></output>
+        </div>
+      </div>
+    </article>
+
     <fieldset>
       <article>
       <label>
-        <input type="checkbox" id="TAG_LIST_USE" style="vertical-align: middle;"/>
+        <input type="checkbox" id="USE_TAG_LIST" style="vertical-align: middle;"/>
         User can add bookmark from recent bookmarks.
       </label>
       </article>
 
       <article>
       <label for="list-limit">
-        Size of recent tag list. 
+        Size of recent tag list.
       </label>
       <div style="display: flex">
         <div style="flex: 1">
@@ -81,17 +98,17 @@
             <option value="40" label="40">40</option>
             <option value="45" label="45">45</option>
             <option value="50" label="50">50</option>
-          </datalist>  
+          </datalist>
         </div>
         <div style="flex: 1">
 
-        </div>  
+        </div>
       </div>
       </article>
 
       <article>
         <label for="tag-length">
-          Visible length of recent tag in characters. 
+          Visible length of recent tag in characters.
         </label>
         <div style="display: flex">
           <div style="flex: 1">
@@ -99,38 +116,61 @@
             <datalist id="list-tag-length">
               <option value="8" label="8">8</option>
               <option value="25" label="25">25</option>
-            </datalist>    
+            </datalist>
           </div>
           <div style="flex: 1; padding-left: 2ch; padding-top: 0.7ch;">
             Value: <output id="TAG_LIST_TAG_LENGTH-VALUE"></output>
-          </div>  
-        </div>
-        </article>
-
-        <article>
-          <label for="highlight-last-n">
-            Highlight last N recent tag. 
-          </label>
-          <div style="display: flex">
-            <div>
-              <input type="range" id="TAG_LIST_HIGHLIGHT_LAST" name="highlight-last" list="highlight-last-values" min="0" max="7" step="1"/>
-              <datalist id="highlight-last-values">
-                <option value="0" label="0">0</option>
-                <option value="1" label="1">1</option>
-                <option value="2" label="2">2</option>
-                <option value="3" label="3">3</option>
-                <option value="4" label="4">4</option>
-                <option value="5" label="5">5</option>
-                <option value="6" label="6">6</option>
-                <option value="7" label="7">7</option>
-              </datalist>  
-            </div>
-            <div style="flex: 1">
-    
-            </div>  
           </div>
-        </article>
+        </div>
+      </article>
 
+      <article>
+        <label for="highlight-last-n">
+          Highlight last N recent tag.
+        </label>
+        <div style="display: flex">
+          <div>
+            <input type="range" id="TAG_LIST_HIGHLIGHT_LAST" name="highlight-last" list="highlight-last-values" min="0" max="7" step="1"/>
+            <datalist id="highlight-last-values">
+              <option value="0" label="0">0</option>
+              <option value="1" label="1">1</option>
+              <option value="2" label="2">2</option>
+              <option value="3" label="3">3</option>
+              <option value="4" label="4">4</option>
+              <option value="5" label="5">5</option>
+              <option value="6" label="6">6</option>
+              <option value="7" label="7">7</option>
+            </datalist>
+          </div>
+          <div style="flex: 1">
+
+          </div>
+        </div>
+      </article>
+
+      <article>
+        <label for="TAG_LIST_OPEN_MODE_NAME">Tag list open/close mode</label>
+        <select name="TAG_LIST_OPEN_MODE_NAME" id="TAG_LIST_OPEN_MODE">
+          <option value="GLOBAL">Global for all pages</option>
+          <option value="PER_PAGE">Per page, close on tab/url change</option>
+          <option value="CLOSE_AFTER_ADD">Per page, and close after bookmark add</option>
+        </select>
+      </article>
+
+      <article>
+        <label for="TAG_LIST_PINNED_TAGS_POSITION_NAME">Pinned tags position</label>
+        <select name="TAG_LIST_PINNED_TAGS_POSITION_NAME" id="TAG_LIST_PINNED_TAGS_POSITION">
+          <option value="TOP">Top</option>
+          <option value="WITH_RECENT">With recent tags</option>
+        </select>
+      </article>
+
+      <article>
+        <label>
+          <input type="checkbox" id="TAG_LIST_HIGHLIGHT_ALPHABET" style="vertical-align: middle;"/>
+          Highlight alphabet in tag list.
+        </label>
+      </article>
     </fieldset>
 
     <fieldset>
@@ -145,7 +185,7 @@
         </p>
         <div style="display: flex">
           <div>
-            <button name="FLAT_BOOKMARKS_NAME" id="FLAT_BOOKMARKS">Flat folder structure</button> 
+            <button name="FLAT_BOOKMARKS_NAME" id="FLAT_BOOKMARKS">Flat folder structure</button>
           </div>
           <div style="flex: 1; padding-left: 2ch;">
             <output id="FLAT_BOOKMARKS_RESULT"></output>
@@ -157,6 +197,15 @@
             Enforce flat folder structure.
           </label>
         </div>
+        <p>
+          In this mode on every browser start:<br/>
+* folders with name starting with 'todo' are moved to root folder 'Bookmarks Toolbar'<br/>
+* other folders are moved to root folder 'Other Bookmarks'<br/>
+* nested folders are moved to root folder. Empty nested folders are deleted.<br/>
+* folders are sorted<br/>
+* folders with equal names (case and plural insensitive) are merged<br/>
+* folders with not descriptive names (name starts with 'New folder', '[Folder Name]') are merged to 'Other bookmarks\zz-bookmark-info--unclassified'<br/>
+        </p>
       </article>
     </fieldset>
 

@@ -78,7 +78,7 @@ const KEYBOARD_CMD_ID = {
   // 'contextMenu.controller',
   // 'debounceQueue',
   // 'extensionSettings',
-  // 'folder.api',
+  // 'find-folder.api.js',
   // 'get-bookmarks.api.js',
   // 'getUrlFromUrl',
   // 'history.api',
@@ -91,6 +91,8 @@ const KEYBOARD_CMD_ID = {
   // 'storage.controller',
   // 'tabs.api',
   // 'tabs.controller',
+  // 'tagList-highlight.js',
+  // 'tagList.js',
   // 'url-search.api',
   // 'url.api.config',
   // 'windows.controller',
@@ -182,7 +184,7 @@ class CacheWithLimit {
     if (this.LIMIT < this.cache.size) {
       let deleteCount = this.cache.size - this.LIMIT;
       const keyToDelete = [];
-      
+
       // Map.key() returns keys in insertion order
       for (const key of this.cache.keys()) {
         keyToDelete.push(key);
@@ -191,7 +193,7 @@ class CacheWithLimit {
           break;
         }
       }
-  
+
       for (const key of keyToDelete) {
         this.cache.delete(key);
       }
@@ -201,14 +203,14 @@ class CacheWithLimit {
   add (key,value) {
     this.cache.set(key, value);
     logC(`   ${this.name}.add: ${key}`, value);
-    
+
     this.removeStale();
   }
-  
+
   get(key) {
     const value = this.cache.get(key);
     logC(`   ${this.name}.get: ${key}`, value);
-  
+
     return value;
   }
 
@@ -216,7 +218,7 @@ class CacheWithLimit {
     this.cache.delete(key);
     logC(`   ${this.name}.delete: ${key}`);
   }
-  
+
   clear() {
     this.cache.clear();
     logC(`   ${this.name}.clear()`);
@@ -235,39 +237,61 @@ class CacheWithLimit {
   SESSION: 'SESSION',
 }
 
+const TAG_LIST_OPEN_MODE_OPTIONS = {
+  GLOBAL: 'GLOBAL',
+  PER_PAGE: 'PER_PAGE',
+  CLOSE_AFTER_ADD: 'CLOSE_AFTER_ADD',
+}
+const TAG_LIST_PINNED_TAGS_POSITION_OPTIONS = {
+  TOP: 'TOP',
+  WITH_RECENT: 'WITH_RECENT',
+}
+
 const USER_OPTION_META = {
   CLEAR_URL_ON_PAGE_OPEN: {
-    default: true,
+    default: true
   },
-  SHOW_PREVIOUS_VISIT: {
-    default: false,
-  },
-  SHOW_BOOKMARK_TITLE: {
-    default: false,
-  },
-  TAG_LIST_USE: {
-    default: true,
-  },
-  TAG_LIST_LIST_LENGTH: {
-    default: 35,
-  },
-  TAG_LIST_TAG_LENGTH: {
-    default: 15,
-  },
-  TAG_LIST_HIGHLIGHT_LAST: {
-    default: 7,
-  },
-  USE_FLAT_FOLDER_STRUCTURE: {
-    default: false,
+  FONT_SIZE: {
+    default: 14,
   },
   HIDE_PAGE_HEADER_FOR_YOUTUBE: {
-    default: false,
+    default: false
   },
   HIDE_TAG_HEADER_ON_PRINTING: {
+    default: false
+  },
+  SHOW_BOOKMARK_TITLE: {
+    default: false
+  },
+  SHOW_PREVIOUS_VISIT: {
+    default: false
+  },
+  TAG_LIST_HIGHLIGHT_LAST: {
+    default: 7
+  },
+  TAG_LIST_HIGHLIGHT_ALPHABET: {
     default: false,
   },
+  TAG_LIST_LIST_LENGTH: {
+    default: 35
+  },
+  TAG_LIST_OPEN_MODE: {
+    default: TAG_LIST_OPEN_MODE_OPTIONS.PER_PAGE,
+  },
+  TAG_LIST_PINNED_TAGS_POSITION: {
+    default: TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.TOP,
+  },
+  TAG_LIST_TAG_LENGTH: {
+    default: 15
+  },
+  USE_FLAT_FOLDER_STRUCTURE: {
+    default: false
+  },
   USE_PARTIAL_URL_SEARCH: {
-    default: false,
+    default: false
+  },
+  USE_TAG_LIST: {
+    default: true
   },
 }
 
@@ -466,16 +490,16 @@ class ExtensionSettings {
         this.fnResolve()
       })
       .catch(this.fnReject);
-  
+
     logES('readSavedSettings')
-    logES(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)  
+    logES(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)
   }
 
   async update(updateObj) {
     Object.entries(updateObj).forEach(([ket, value]) => {
       this._settings[ket] = value
     })
-    
+
     await setOptions(updateObj)
   }
 }
@@ -564,21 +588,34 @@ class IgnoreBkmControllerApiActionSet {
 
     return isHas
   }
-  addIgnoreMove(bkmId) {
-    const innerKey = `move#${bkmId}`
 
-    this._innerSet.add(innerKey)
-  }
-  hasIgnoreMove(bkmId) {
-    const innerKey = `move#${bkmId}`
-
-    const isHas = this._innerSet.has(innerKey)
-    if (isHas) {
-      this._innerSet.delete(innerKey)
+  makeAddIgnoreAction(action) {
+    return function (bkmId) {
+      const innerKey = `${action}#${bkmId}`
+      this._innerSet.add(innerKey)
     }
-
-    return isHas
   }
+  makeHasIgnoreAction(action) {
+    return function (bkmId) {
+      const innerKey = `${action}#${bkmId}`
+
+      const isHas = this._innerSet.has(innerKey)
+      if (isHas) {
+        this._innerSet.delete(innerKey)
+      }
+
+      return isHas
+    }
+  }
+
+  addIgnoreMove = this.makeAddIgnoreAction('move')
+  hasIgnoreMove = this.makeHasIgnoreAction('move')
+
+  addIgnoreRemove = this.makeAddIgnoreAction('remove')
+  hasIgnoreRemove = this.makeHasIgnoreAction('remove')
+
+  addIgnoreUpdate = this.makeAddIgnoreAction('update')
+  hasIgnoreUpdate = this.makeHasIgnoreAction('update')
 }
 
 const ignoreBkmControllerApiActionSet = new IgnoreBkmControllerApiActionSet()
@@ -680,6 +717,27 @@ async function moveBookmarkIgnoreInController({ id, parentId, index }) {
   ignoreBkmControllerApiActionSet.addIgnoreMove(id)
 
   return await browser.bookmarks.move(id, options)
+}
+
+async function updateBookmarkIgnoreInController({ id, title, url }) {
+  const options = {}
+  if (title != undefined) {
+    options.title = title
+  }
+  if (url != undefined) {
+    options.url = url
+  }
+  if (Object.keys(options).length == 0) {
+    return
+  }
+
+  ignoreBkmControllerApiActionSet.addIgnoreUpdate(id)
+  await browser.bookmarks.update(id, options)
+}
+
+async function removeBookmarkIgnoreInController(bkmId) {
+  ignoreBkmControllerApiActionSet.addIgnoreRemove(bkmId)
+  await browser.bookmarks.remove(bkmId)
 }
 const BOOKMARKS_BAR_FOLDER_ID = IS_BROWSER_FIREFOX ? 'toolbar_____' : '1'
 const BOOKMARKS_MENU_FOLDER_ID = IS_BROWSER_FIREFOX ? 'menu________' : undefined
@@ -846,17 +904,183 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
     filteredFolderList.map(({ id, title }) => [id, title])
   )
 }
-class TagList {
-  isTagListAvailable = true
+const logTH = makeLogFunction({ module: 'tagList-highlight.js' })
+
+const ALLOWED_DISTANCE = 3
+
+function getIsConditionFromUp(letterList, iTest) {
+  let distanceFromUp = 0
+  let i = iTest - 1
+
+  while (-1 < i) {
+    distanceFromUp += letterList[i].n
+
+    if (ALLOWED_DISTANCE <= distanceFromUp) {
+      return true
+    }
+
+    if (letterList[i].isHighlight) {
+      return false
+    }
+
+    i = i - 1
+  }
+
+  return i == -1
+}
+
+function getIsConditionFromDown(letterList, iTest) {
+  let distanceFromDown = 0
+  let i = iTest + 1
+
+  while (i < letterList.length) {
+    distanceFromDown += letterList[i - 1].n
+
+    if (ALLOWED_DISTANCE <= distanceFromDown) {
+      return true
+    }
+
+    if (letterList[i].isHighlight) {
+      return false
+    }
+
+    // epic error
+    // i =+ 1
+    i = i + 1
+  }
+
+  return i == letterList.length
+}
+
+function markItemInList(letterList) {
+  logTH('markItemInList () 00')
+  let distanceFromUp = 0
+  let i = 0
+
+  while (i < letterList.length) {
+    distanceFromUp = distanceFromUp + (i == 0
+      ? ALLOWED_DISTANCE
+      : letterList[i - 1].n
+    )
+
+    if (letterList[i].isHighlight) {
+      distanceFromUp = 0
+    } else if (ALLOWED_DISTANCE <= distanceFromUp) {
+      logTH('markItemInList () 11 ALLOWED_DISTANCE <= distanceFromUp', letterList[i].letter)
+      const isConditionFromDown = getIsConditionFromDown(letterList, i)
+      logTH('markItemInList () 11 isConditionFromDown', letterList[i].letter, isConditionFromDown)
+
+      if (isConditionFromDown) {
+        letterList[i].isHighlight = true
+        distanceFromUp = 0
+        logTH('markItemInList () 11 add', letterList[i].letter)
+      }
+    }
+
+    i = i + 1
+  }
+}
+
+function getHighlightSet(letterList = []) {
+  logTH('getHighlightSet () 00', letterList)
+  if (letterList.length == 0) {
+    return new Set()
+  }
+
+  letterList.forEach(({ letter, n }, index, arr) => {
+    if (ALLOWED_DISTANCE <= n) {
+      logTH('getHighlightSet () 11 ALLOW_DISTANCE <= n', letter, n)
+      arr[index].isHighlight = true
+    }
+  })
+
+  const priorityCheckList = letterList
+    .map(({ letter, n }, index) => ({ letter, n, index }))
+    .filter(({ n }) => 1 < n && n < ALLOWED_DISTANCE)
+    .toSorted((a, b) => -(a.n - b.n) || a.index - b.index)
+
+  priorityCheckList.forEach(({ index }) => {
+    const isConditionFromUp = getIsConditionFromUp(letterList, index)
+
+    if (isConditionFromUp) {
+      const isConditionFromDown = getIsConditionFromDown(letterList, index)
+
+      if (isConditionFromDown) {
+        letterList[index].isHighlight = true
+      }
+    }
+  })
+
+  markItemInList(letterList)
+
+  return new Set(
+    letterList
+      .filter(({ isHighlight }) => isHighlight)
+      .map(({ letter }) => letter)
+  )
+}
+
+function getGroupedLetterList(resultList) {
+  const letterToNMap = new ExtraMap()
+
+  resultList.forEach(({ letter }) => {
+    letterToNMap.sum(letter, 1)
+  })
+
+  const letterList = Array.from(letterToNMap.entries())
+    .map(([letter, n]) => ({ letter, n }))
+    .toSorted((a, b) => a.letter.localeCompare(b.letter))
+
+  return letterList
+}
+
+function highlightAlphabet({
+  list = [],
+  fnGetFirstLetter = (i) => i.title.at(0).toUpperCase(),
+}) {
+  const midList = list.map((item) => ({
+    ...item,
+    letter: fnGetFirstLetter(item),
+  }))
+
+  const highlightSet = getHighlightSet(
+    getGroupedLetterList(midList)
+  )
+  const resultList = []
+
+  midList.forEach(({ letter, ...rest }) => {
+    if (highlightSet.has(letter)) {
+      resultList.push({
+        ...rest,
+        isHighlight: 1,
+      })
+      highlightSet.delete(letter)
+    } else {
+      resultList.push(rest)
+    }
+  })
+
+  return resultList
+}
+const logTL = makeLogFunction({ module: 'tagList.js' })
+
+class TagList {
   _recentTagObj = {}
   _fixedTagObj = {}
   _tagList = []
+
+  USE_TAG_LIST = false
   LIST_LIMIT
   USE_FLAT_FOLDER_STRUCTURE
   HIGHLIGHT_LAST
+  HIGHLIGHT_ALPHABET
 
   changeCount = 0
   changeProcessedCount = -1
+
+  addRecentTagFromFolder = () => { }
+  addRecentTagFromBkm = () => { }
+  removeTag = () => { }
 
   get list() {
     if (this.changeProcessedCount !== this.changeCount) {
@@ -870,16 +1094,34 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
     this.changeCount += 1
   }
 
+  _enableTagList(isEnabled) {
+    logTL('_enableTagList 00', isEnabled)
+    if (isEnabled) {
+      this.addRecentTagFromFolder = this._addRecentTagFromFolder
+      this.addRecentTagFromBkm = this._addRecentTagFromBkm
+      this.removeTag = this._removeTag
+    } else {
+      this.addRecentTagFromFolder = () => { }
+      this.addRecentTagFromBkm = () => { }
+      this.removeTag = () => { }
+    }
+  }
+  blockTagList(isBlocking) {
+    if (this.USE_TAG_LIST) {
+      this._enableTagList(!isBlocking)
+    }
+  }
   async readFromStorage() {
     const settings = await extensionSettings.get()
 
-    if (!settings[USER_OPTION.TAG_LIST_USE]) {
-      return
-    }
+    this.USE_TAG_LIST = settings[USER_OPTION.USE_TAG_LIST]
+    this._enableTagList(this.USE_TAG_LIST)
 
     this.LIST_LIMIT = settings[USER_OPTION.TAG_LIST_LIST_LENGTH]
     this.USE_FLAT_FOLDER_STRUCTURE = settings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]
     this.HIGHLIGHT_LAST = settings[USER_OPTION.TAG_LIST_HIGHLIGHT_LAST]
+    this.HIGHLIGHT_ALPHABET = settings[USER_OPTION.TAG_LIST_HIGHLIGHT_ALPHABET]
+    this.PINNED_TAGS_POSITION = settings[USER_OPTION.TAG_LIST_PINNED_TAGS_POSITION]
 
     const savedObj = await getOptions([
       INTERNAL_VALUES.TAG_LIST_SESSION_STARTED,
@@ -921,8 +1163,8 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
 
     const isFlatStructure = true
     // console.log('filterTagListForFlatFolderStructure ', this._fixedTagObj)
-    this._recentTagObj =  await filterRecentTagObj(this._recentTagObj, isFlatStructure)
-    this._fixedTagObj =  await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
+    this._recentTagObj = await filterRecentTagObj(this._recentTagObj, isFlatStructure)
+    this._fixedTagObj = await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
     // console.log('filterTagListForFlatFolderStructure, after filter', this._fixedTagObj)
     this.markUpdates()
 
@@ -932,7 +1174,7 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
     })
   }
   refillList() {
-    const recentTaLimit = Math.max(
+    const recentTagLimit = Math.max(
       this.LIST_LIMIT - Object.keys(this._fixedTagObj).length,
       0
     )
@@ -940,17 +1182,17 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
     const recentTagList = Object.entries(this._recentTagObj)
       .filter(([parentId]) => !(parentId in this._fixedTagObj))
       .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-      .sort((a,b) => -(a.dateAdded - b.dateAdded))
-      .slice(0, recentTaLimit)
+      .sort((a, b) => -(a.dateAdded - b.dateAdded))
+      .slice(0, recentTagLimit)
 
     const lastTagList = Object.entries(this._recentTagObj)
       .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-      .sort((a,b) => -(a.dateAdded - b.dateAdded))
+      .sort((a, b) => -(a.dateAdded - b.dateAdded))
       .slice(0, this.HIGHLIGHT_LAST)
     const lastTagSet = new Set(
       lastTagList.map(({ parentId }) => parentId)
     )
-    
+
     const fullList = [].concat(
       recentTagList
         .map(({ parentId, title }) => ({ parentId, title, isFixed: false })),
@@ -962,21 +1204,37 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
           isFixed: true,
         }))
     )
-      .map((item) => ({ ...item, isLast: lastTagSet.has(item.parentId) }))
-
-    return fullList
       .filter(({ title }) => !!title)
-      .sort(({ title: a }, { title: b }) => a.localeCompare(b))
-  }
-  async blockTagList(boolValue) {
-    this.isTagListAvailable = !boolValue
-  }
+      .map((item) => ({
+        ...item,
+        isLast: lastTagSet.has(item.parentId),
+      }))
 
-  async addRecentTagFromFolder(folderNode) {
-    if (!this.isTagListAvailable) {
-      return
+    let resultList
+    if (this.PINNED_TAGS_POSITION == TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.TOP) {
+      resultList = fullList.sort((a, b) => -(+a.isFixed - b.isFixed) || a.title.localeCompare(b.title))
+
+      if (this.HIGHLIGHT_ALPHABET) {
+        resultList = highlightAlphabet({
+          list: resultList,
+          fnGetFirstLetter: ({ isFixed, title }) => `${isFixed ? 'F': 'R'}#${title.at(0).toUpperCase()}`
+        })
+      }
+    } else {
+      resultList = fullList.sort((a, b) => a.title.localeCompare(b.title))
+
+      if (this.HIGHLIGHT_ALPHABET) {
+        resultList = highlightAlphabet({
+          list: resultList,
+          fnGetFirstLetter: ({ title }) => title.at(0).toUpperCase(),
+        })
+      }
     }
 
+    return resultList
+  }
+  async _addRecentTagFromFolder(folderNode) {
+    logTL('_addRecentTagFromFolder 00', folderNode)
     // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
     if (this.USE_FLAT_FOLDER_STRUCTURE) {
       // if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
@@ -988,7 +1246,7 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
         return
       }
     }
-  
+
     if (!isDescriptiveFolderTitle(folderNode.title)) {
       return
     }
@@ -1009,13 +1267,13 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
     if (TAG_LIST_MAX_LIST_LENGTH + 10 < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
         .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-        .sort((a,b) => -(a.dateAdded - b.dateAdded))
+        .sort((a, b) => -(a.dateAdded - b.dateAdded))
         .slice(TAG_LIST_MAX_LIST_LENGTH)
         .map(({ parentId }) => parentId)
 
-        redundantIdList.forEach((id) => {
-          delete this._recentTagObj[id]
-        })
+      redundantIdList.forEach((id) => {
+        delete this._recentTagObj[id]
+      })
     }
 
     this.markUpdates()
@@ -1024,11 +1282,7 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
       ...fixedTagUpdate,
     })
   }
-  async addRecentTagFromBkm(bkmNode) {
-    if (!this.isTagListAvailable) {
-      return
-    }
-
+  async _addRecentTagFromBkm(bkmNode) {
     const parentId = bkmNode?.parentId
 
     if (parentId) {
@@ -1036,12 +1290,12 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
       await this.addRecentTagFromFolder(folderNode)
     }
   }
-  async removeTag(id) {
+  async _removeTag(id) {
     const isInFixedList = id in this._fixedTagObj
     let fixedTagUpdate
 
     if (isInFixedList) {
-      delete this._fixedTagObj[id] 
+      delete this._fixedTagObj[id]
       fixedTagUpdate = {
         [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
       }
@@ -1065,35 +1319,6 @@ async function filterFixedTagObj(obj = {}, isFlatStructure) {
       })
     }
   }
-  // async updateTag(id, title) {
-  //   const isInFixedList = id in this._fixedTagObj
-  //   let fixedTagUpdate
-
-  //   if (isInFixedList) {
-  //     this._fixedTagObj[id] = title
-  //     fixedTagUpdate = {
-  //       [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
-  //     }
-  //   }
-
-  //   const isInRecentList = id in this._recentTagObj
-  //   let recentTagUpdate
-
-  //   if (isInRecentList) {
-  //     this._recentTagObj[id].title = title
-  //     recentTagUpdate = {
-  //       [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj
-  //     }
-  //   }
-
-  //   if (isInFixedList || isInRecentList) {
-  //     this.markUpdates()
-  //     await setOptions({
-  //       ...fixedTagUpdate,
-  //       ...recentTagUpdate,
-  //     })
-  //   }
-  // }
   async addFixedTag({ parentId, title }) {
     if (!title || !parentId) {
       return
@@ -1199,43 +1424,21 @@ async function updateBookmarkInfoInPage({ tabId, data }) {
 }
 const logUAC = makeLogFunction({ module: 'url.api.config' })
 
-const HOST_URL_SETTINGS = [
-  // TODO-NEXT if we clean url on open then we loose check-in, check-out dates
-  //    need search bookmark for clean url
-  //    strategy01: clean url on open
-  //    strategy02: clean url on save
-  //    strategy00: don't clear url, default
-  // {
-  //   hostname: 'airbnb.com',
-  //   paths: [
-  //     '/rooms/',
-  //   ]
-  // },
-  // {
-  //   hostname: 'djinni.co',
-  //   removeAllSearchParamForPath: [
-  //     '/my/profile/',
-  //     '/jobs/',
-  //   ]
-  // },
-  {
-    hostname: '9gag.com',
+const HOST_URL_SETTINGS = {
+  '9gag.com': {
     isHashRequired: true,
   },
-  {
-    hostname: 'forcoder.net',
+  'forcoder.net': {
     searchParamList: [
       's', // https://forcoder.net/?s=CQRS
     ],
   },
-  {
-    hostname: 'frontendmasters.com',
+  'frontendmasters.com': {
     removeAllSearchParamForPath: [
       '/courses/:id/',
     ]
   },
-  {
-    hostname: 'hh.ru',
+  'hh.ru': {
     removeAllSearchParamForPath: [
       '/vacancy/:id',
     ],
@@ -1246,90 +1449,66 @@ const HOST_URL_SETTINGS = [
       'professional_role',
     ],
   },
-  {
-    hostname: 'imdb.com',
-    // removeAllSearchParamForPath: [
-    //   '/title/',
-    //   '/list/',
-    //   '/imdbpicks/',
-    //   '/interest/',
-    //   '/',
-    // ],
-    //
+  'imdb.com': {
     searchParamList: [
       ['ref_'],
       'season', // https://www.imdb.com/title/tt8111088/episodes/?season=3&ref_=tt_eps_sn_3
     ],
   },
-  // TODO the same
-  // https://www.linkedin.com/jobs/collections/recommended/?currentJobId=4096094176
-  // https://www.linkedin.com/jobs/view/4096094176/?alternateChannel=search&refId=WYo23okoaVDvmJkLoaclcg%3D%3D&trackingId=bTIytUCJN%2BDpKjaalPv4gg%3D%3D
-  // https://www.linkedin.com/jobs/search/?currentJobId=4096094176&geoId=106686604&origin=JOBS_HOME_LOCATION_AUTOCOMPLETE&refresh=true
-  {
-    hostname: 'linkedin.com',
+  'linkedin.com': {
     removeAllSearchParamForPath: [
       '/jobs/view/:id/',
-      '/posts/:id/'
-    ]
+      '/posts/:id/',
+    ],
   },
-  {
-    hostname: 'opennet.ru',
+  'mail.google.com': {
+    isHashRequired: true,
+  },
+  'marketplace.visualstudio.com': {
+    searchParamList: [
+      'itemName',
+    ],
+  },
+  'opennet.ru': {
     searchParamList: [
       'num',
     ],
   },
-  {
-    hostname: 'thepiratebay.org',
+  'thepiratebay.org': {
     searchParamList: [
       'q',
       'id',
     ],
   },
-  {
-    hostname: 'torrentgalaxy.to',
+  'torrentgalaxy.to': {
     searchParamList: [
       'cat',
     ],
   },
-  {
-    hostname: 'udemy.com',
+  'udemy.com': {
     removeAllSearchParamForPath: [
       '/course/:id/',
-    ]
-  },
-  {
-    hostname: 'www.google.com',
-    searchParamList: [
-      'q', // https://www.google.com/search?q=react-native
     ],
   },
-  {
-    hostname: 'mail.google.com',
-    isHashRequired: true,
-  },
-  {
-    hostname: 'youtube.com',
-    hostnameAliasList: ['youtu.be'],
+  'www.google.com': {
     searchParamList: [
-      'v', // https://www.youtube.com/watch?v=qqqqq
+      'q',
     ],
   },
-]
+  'youtu.be': 'youtube.com',
+  'youtube.com': {
+    searchParamList: [
+      'v',
+    ],
+  },
+}
 
-// all articles of author
-// https://dev.to/codewithsadee
-//  https://dev.to/:author
-//
-// article
-// https://dev.to/codewithsadee/build-deploy-a-stunning-saas-landing-page-with-react-tailwind-51p0
-//  https://dev.to/:author/:slug
-//
-// https://www.youtube.com/watch?v=qqqqq
-//  // https://www.youtube.com/watch?v=:slug
+function extendsSettings(oSettings) {
+  let mSettings = typeof oSettings == 'string'
+    ? HOST_URL_SETTINGS[oSettings]
+    : oSettings
 
-// logUAC('HOST_URL_SETTINGS', HOST_URL_SETTINGS.length, HOST_URL_SETTINGS)
-const HOST_URL_SETTINGS_LIST = HOST_URL_SETTINGS.map((item) => {
-  const searchParamList = item.searchParamList || []
+  const searchParamList = mSettings.searchParamList || []
   const importantSearchParamList = searchParamList
     .filter((searchParmName) => typeof searchParmName == 'string')
     .filter(Boolean)
@@ -1340,16 +1519,21 @@ const HOST_URL_SETTINGS_LIST = HOST_URL_SETTINGS.map((item) => {
     .filter(Boolean)
 
   return {
-    ...item,
+    ...mSettings,
     removeSearchParamList,
     importantSearchParamList,
+    isAlias: typeof oSettings == 'string',
   }
-})
+}
 
-// logUAC('HOST_URL_SETTINGS_LIST', HOST_URL_SETTINGS_LIST.length, HOST_URL_SETTINGS_LIST)
-const HOST_URL_SETTINGS_MAP = new Map(
-  HOST_URL_SETTINGS_LIST.map((item) => [item.hostname, item]),
-)
+const HOST_URL_SETTINGS_LIST = Object.entries(HOST_URL_SETTINGS)
+  .map(([hostname, oSettings]) => [
+    hostname,
+    extendsSettings(oSettings)
+  ])
+
+// logUAC('HOST_URL_SETTINGS', HOST_URL_SETTINGS)
+const HOST_URL_SETTINGS_MAP = new Map(HOST_URL_SETTINGS_LIST)
 
 const getHostSettings = (url) => {
   logUAC('getHostSettings 00', url)
@@ -1385,11 +1569,11 @@ const getHostSettings = (url) => {
 }
 
 const HOST_LIST_FOR_PAGE_OPTIONS = HOST_URL_SETTINGS_LIST
-  .toSorted()
-  .filter(({ removeSearchParamList, removeAllSearchParamForPath }) => isNotEmptyArray(removeSearchParamList) || isNotEmptyArray(removeAllSearchParamForPath))
-  .map(
-    ({ hostname, removeAllSearchParamForPath }) => `${hostname}{${(removeAllSearchParamForPath || []).toSorted().join(',')}}`
-  )
+  .toSorted((a, b) => a[0].localeCompare(b[0]))
+  .filter(([, obj]) => (isNotEmptyArray(obj.removeSearchParamList) || isNotEmptyArray(obj.removeAllSearchParamForPath)) && !obj.isAlias)
+    .map(
+      ([hostname, obj]) => `${hostname}{${(obj.removeAllSearchParamForPath || []).toSorted().join(',')}}`
+    )
 const logUS = makeLogFunction({ module: 'url-search.api' })
 
 function removeIndexFromPathname(pathname) {
@@ -1502,11 +1686,11 @@ const isPathnameMatchForPattern = ({ pathname, patternList }) => {
 
   const pathToList = (pathname) => {
     let list = pathname.split(/(\/)/).filter(Boolean)
-  
+
     if (1 < list.length && list.at(-1) === '/') {
       list = list.slice(0, -1)
-    }  
-  
+    }
+
     return list
   }
   const isPartsEqual = (patternPart, pathPart) => {
@@ -1516,12 +1700,12 @@ const isPathnameMatchForPattern = ({ pathname, patternList }) => {
       result = pathPart && pathPart != '/'
     } else {
       result = pathPart === patternPart
-    } 
+    }
     logCUA('isPartsEqual () 11', patternPart, pathPart, result)
-  
+
     return result
   }
-  
+
   let isMath = false
   const pathAsList = pathToList(pathname)
   logCUA('isPathnameMatch () 11 pathAsList', pathAsList)
@@ -1532,7 +1716,7 @@ const isPathnameMatchForPattern = ({ pathname, patternList }) => {
     const patternAsList = pathToList(pattern)
     logCUA('isPathnameMatch () 11 patternAsList', patternAsList)
 
-    isMath = patternAsList.length > 0 && pathAsList.length === patternAsList.length 
+    isMath = patternAsList.length > 0 && pathAsList.length === patternAsList.length
       && patternAsList.every((patternPart, patternIndex) => isPartsEqual(patternPart, pathAsList[patternIndex])
     )
     i += 1
@@ -1552,7 +1736,7 @@ const removeQueryParamsIfTarget = (url) => {
     if (targetHostSettings) {
       const { removeAllSearchParamForPath, removeSearchParamList } = targetHostSettings
       logCUA('removeQueryParamsIfTarget () 22 removeSearchParamList', removeSearchParamList)
- 
+
       const oUrl = new URL(url);
       const { pathname, searchParams: oSearchParams } = oUrl;
 
@@ -1568,7 +1752,7 @@ const removeQueryParamsIfTarget = (url) => {
           oUrl.search = oSearchParams.size > 0
             ? `?${oSearchParams.toString()}`
             : ''
-        }         
+        }
       }
 
       if (isNotEmptyArray(removeAllSearchParamForPath)) {
@@ -1578,14 +1762,14 @@ const removeQueryParamsIfTarget = (url) => {
         }
       }
 
-      cleanUrl = oUrl.toString();  
+      cleanUrl = oUrl.toString();
     }
-  
+
   // eslint-disable-next-line no-unused-vars
-  } catch (_e) 
+  } catch (_e)
   // eslint-disable-next-line no-empty
   {
-    
+
   }
 
   logCUA('removeQueryParamsIfTarget () 99 cleanUrl', cleanUrl)
@@ -1599,11 +1783,11 @@ async function clearUrlOnPageOpen({ tabId, url }) {
 
   if (settings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN]) {
     cleanUrl = removeQueryParamsIfTarget(url);
-    
+
     if (url !== cleanUrl) {
       await changeUrlInTab({ tabId, url: cleanUrl })
     }
-  }  
+  }
 
   return cleanUrl || url
 }
@@ -1670,7 +1854,7 @@ async function addBookmarkParentInfo(bookmarkList, bookmarkByIdMap) {
   return await addBookmarkParentInfo(knownFolderList, bookmarkByIdMap)
 }
 
-async function getBookmarkInfo(url) {
+async function getBookmarkInfo({ url, isShowTitle }) {
   logGB('getBookmarkInfo () 00', url)
   const bkmListForUrl = await browser.bookmarks.search({ url });
   logGB('getBookmarkInfo () 11 search({ url })', bkmListForUrl.length, bkmListForUrl)
@@ -1713,16 +1897,17 @@ async function getBookmarkInfo(url) {
 
       return {
         id: bookmarkItem.id,
-        fullPathList,
-        title: bookmarkItem.title,
+        folder: fullPathList.at(-1),
+        path: fullPathList.slice(0, -1).concat('').join('/ '),
         parentId: bookmarkItem.parentId,
         source: bookmarkItem.source,
         url: bookmarkItem.url,
+        ...(isShowTitle ? { title: bookmarkItem.title } : {})
       }
     });
 }
 
-async function getBookmarkInfoUni({ url, useCache=false }) {
+async function getBookmarkInfoUni({ url, useCache=false, isShowTitle }) {
   if (!url || !isSupportedProtocol(url)) {
     return;
   }
@@ -1740,7 +1925,7 @@ async function getBookmarkInfoUni({ url, useCache=false }) {
   }
 
   if (!bookmarkList) {
-    bookmarkList = await getBookmarkInfo(url);
+    bookmarkList = await getBookmarkInfo({ url, isShowTitle });
     source = SOURCE.ACTUAL;
     memo.cacheUrlToInfo.add(url, bookmarkList);
   }
@@ -1807,7 +1992,7 @@ function filterTimeList(timeList) {
 async function getVisitListForUrl(url) {
   const visitList = (await browser.history.getVisits({ url }))
     .filter((i) => i.visitTime)
-   
+
   let newToOldList
   let previousList
 
@@ -1820,7 +2005,7 @@ async function getVisitListForUrl(url) {
   //    visit.visitTime > browserProfileStartTime
   if (IS_BROWSER_FIREFOX) {
     newToOldList = visitList
-    
+
     const mostNewVisitMS = newToOldList[0]?.visitTime
     const startTime = await browserStartTime.get()
 
@@ -1833,7 +2018,7 @@ async function getVisitListForUrl(url) {
     newToOldList = visitList.toReversed()
     previousList = newToOldList.slice(1)
   }
-  
+
   const filteredList = previousList.filter(({ transition }) => transition !== 'reload')
   const filteredTimeList = filteredList
     .map((i) => i.visitTime)
@@ -1893,7 +2078,7 @@ async function getHistoryInfo({ url }) {
     .map((i) => formatPrevVisit(i))
     .flatMap((value, index, array) => index === 0 || value !== array[index - 1] ? [value]: [])
     .join(", ")
-  
+
   logHA('getHistoryInfo () 44 visitString', visitString)
 
   return {
@@ -1909,7 +2094,7 @@ async function createContextMenu(settings) {
     id: CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_SELECTION_MENU,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'add bookmark, selection as a tag',
-  });  
+  });
   browser.menus.create({
     id: CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_INPUT_MENU,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
@@ -1929,7 +2114,7 @@ async function createContextMenu(settings) {
     id: CONTEXT_MENU_CMD_ID.CLOSE_DUPLICATE,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'close duplicate tabs',
-  });  
+  });
   browser.menus.create({
     id: CONTEXT_MENU_CMD_ID.CLOSE_BOOKMARKED,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
@@ -1941,23 +2126,21 @@ async function createContextMenu(settings) {
       id: CONTEXT_MENU_CMD_ID.TOGGLE_YOUTUBE_HEADER,
       contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
       title: 'toggle youtube page header',
-    });  
+    });
   }
 }
 
 async function setFirstActiveTab({ debugCaller='' }) {
   logIX(`setFirstActiveTab() 00 <- ${debugCaller}`, memo['activeTabId'])
 
-  if (!memo.activeTabId) {
-    const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
-    const [Tab] = tabs;
+  const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+  const [Tab] = tabs;
 
-    if (Tab?.id) {
-      memo.activeTabId = Tab.id;
-      memo.activeTabUrl = Tab.url
+  if (Tab?.id) {
+    memo.activeTabId = Tab.id;
+    memo.activeTabUrl = Tab.url
 
-      logIX(`setFirstActiveTab() 11 <- ${debugCaller}`, memo['activeTabId'])
-    }
+    logIX(`setFirstActiveTab() 11 <- ${debugCaller}`, memo['activeTabId'])
   }
 }
 
@@ -2010,6 +2193,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
 
   await initExtension({ debugCaller: 'updateTab ()' })
   const settings = await extensionSettings.get()
+  const isShowTitle = settings[USER_OPTION.SHOW_BOOKMARK_TITLE]
 
   let visitsData
   const isShowVisits = settings[USER_OPTION.SHOW_PREVIOUS_VISIT]
@@ -2018,7 +2202,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     bookmarkInfo,
     visitInfo,
   ] = await Promise.all([
-    getBookmarkInfoUni({ url, useCache }),
+    getBookmarkInfoUni({ url, useCache, isShowTitle }),
     isShowVisits && getHistoryInfo({ url }),
   ])
   logTA(`UPDATE-TAB () 22 bookmarkInfo.bookmarkList`, bookmarkInfo.bookmarkList);
@@ -2035,10 +2219,12 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     // visits history
     ...visitsData,
     // recent list
+    tagListOpenMode: settings[USER_OPTION.TAG_LIST_OPEN_MODE],
+    isTagListOpenGlobal: settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN],
     tagList: tagList.list,
-    isShowTagList: settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN],
+
+    fontSize: settings[USER_OPTION.FONT_SIZE],
     tagLength: settings[USER_OPTION.TAG_LIST_TAG_LENGTH],
-    // page settings
     isHideSemanticHtmlTagsOnPrinting: settings[USER_OPTION.HIDE_TAG_HEADER_ON_PRINTING],
     isHideHeaderForYoutube: settings[USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE],
   }
@@ -2494,7 +2680,7 @@ const normalizeTitle = (title) => trimLowSingular(title.replaceAll('-', ''))
 function isStartWithTODO(str) {
   return !!str && str.slice(0, 4).toLowerCase() === 'todo'
 }
-const logFA = makeLogFunction({ module: 'folder.api' })
+const logFF = makeLogFunction({ module: 'find-folder.api.js' })
 
 function findFolderFrom({ normalizedTitle, startFolder }) {
   function traverseSubFolder(folderNode) {
@@ -2517,11 +2703,11 @@ function findFolderFrom({ normalizedTitle, startFolder }) {
 }
 
 async function findFolderInSubtree({ normalizedTitle, parentId }) {
-  logFA('findFolderInSubtree 00 normalizedTitle', normalizedTitle, parentId)
+  logFF('findFolderInSubtree 00 normalizedTitle', normalizedTitle, parentId)
   // search in direct children
   const firstLevelNodeList = await browser.bookmarks.getChildren(parentId)
   let foundItem = firstLevelNodeList.find((node) => !node.url && normalizeTitle(node.title) === normalizedTitle)
-  logFA('findFolderInSubtree 11 firstLevelNodeList', foundItem)
+  logFF('findFolderInSubtree 11 firstLevelNodeList', foundItem)
 
   if (!foundItem) {
     // search in subfolders of direct children
@@ -2542,7 +2728,7 @@ async function findFolderInSubtree({ normalizedTitle, parentId }) {
       foundItem = findFolderFrom({ normalizedTitle, startFolder: allSecondLevelFolderList[i] })
       i += 1
     }
-    logFA('findFolderInSubtree 22 secondLevelFolderList', foundItem)
+    logFF('findFolderInSubtree 22 secondLevelFolderList', foundItem)
   }
 
   return foundItem
@@ -2562,11 +2748,11 @@ async function findFolderInSubtree({ normalizedTitle, parentId }) {
 //    filter folders
 //  onStart, merge will be
 async function findFolder(title) {
-  logFA('findFolder 00 title', title)
+  logFF('findFolder 00 title', title)
   let foundItem
 
   const bookmarkList = await browser.bookmarks.search({ title });
-  logFA('findFolder 11 search({ title })', bookmarkList.length, bookmarkList)
+  logFF('findFolder 11 search({ title })', bookmarkList.length, bookmarkList)
   let i = 0
   while (!foundItem && i < bookmarkList.length) {
     const checkItem = bookmarkList[i]
@@ -2583,8 +2769,8 @@ async function findFolder(title) {
     const noDotTitle = `${lowTitle.slice(0, -3)}js`
 
     const bookmarkList = await browser.bookmarks.search(noDotTitle);
-    logFA('findFolder 22 search(title) noDotTitle', noDotTitle)
-    logFA('findFolder 22 search(title)', bookmarkList.length, bookmarkList)
+    logFF('findFolder 22 search(title) noDotTitle', noDotTitle)
+    logFF('findFolder 22 search(title)', bookmarkList.length, bookmarkList)
 
     let i = 0
     while (!foundItem && i < bookmarkList.length) {
@@ -2599,10 +2785,10 @@ async function findFolder(title) {
 
   if (!foundItem) {
     const noDashTitle = trimLowSingular(title.replaceAll('-', ''))
-    logFA('findFolder 333 noDashTitle', noDashTitle)
+    logFF('findFolder 333 noDashTitle', noDashTitle)
 
     const bookmarkList = await browser.bookmarks.search(noDashTitle);
-    logFA('findFolder 333 search(noDashTitle)', bookmarkList.length, bookmarkList)
+    logFF('findFolder 333 search(noDashTitle)', bookmarkList.length, bookmarkList)
 
     let i = 0
     while (!foundItem && i < bookmarkList.length) {
@@ -2616,10 +2802,10 @@ async function findFolder(title) {
 
   if (!foundItem) {
     const dashToSpaceTitle = trimLowSingular(title.replaceAll('-', ' '))
-    logFA('findFolder 333 dashToSpaceTitle', dashToSpaceTitle)
+    logFF('findFolder 333 dashToSpaceTitle', dashToSpaceTitle)
 
     const bookmarkList = await browser.bookmarks.search(dashToSpaceTitle);
-    logFA('findFolder 333 search(dashToSpaceTitle)', bookmarkList.length, bookmarkList)
+    logFF('findFolder 333 search(dashToSpaceTitle)', bookmarkList.length, bookmarkList)
 
     let i = 0
     while (!foundItem && i < bookmarkList.length) {
@@ -2633,13 +2819,13 @@ async function findFolder(title) {
 
 
   const normalizedTitle = normalizeTitle(title)
-  logFA('findFolder 00 normalizedTitle', normalizedTitle)
+  logFF('findFolder 00 normalizedTitle', normalizedTitle)
 
   if (!foundItem) {
-    logFA('findFolder 33 normalizedTitle', normalizedTitle)
+    logFF('findFolder 33 normalizedTitle', normalizedTitle)
 
     const bookmarkList = await browser.bookmarks.search(title);
-    logFA('findFolder 33 search(title)', bookmarkList.length, bookmarkList)
+    logFF('findFolder 33 search(title)', bookmarkList.length, bookmarkList)
 
     let i = 0
     while (!foundItem && i < bookmarkList.length) {
@@ -2659,8 +2845,8 @@ async function findFolder(title) {
     const modifiedTitle = lowTitle2.slice(0, -3)
 
     const bookmarkList = await browser.bookmarks.search(modifiedTitle);
-    logFA('findFolder 44 search(title) modifiedTitle', modifiedTitle)
-    logFA('findFolder 44 search(title)', bookmarkList.length, bookmarkList)
+    logFF('findFolder 44 search(title) modifiedTitle', modifiedTitle)
+    logFF('findFolder 44 search(title)', bookmarkList.length, bookmarkList)
 
     let i = 0
     while (!foundItem && i < bookmarkList.length) {
@@ -2674,12 +2860,12 @@ async function findFolder(title) {
 
   if (!foundItem) {
     foundItem = await findFolderInSubtree({ normalizedTitle, parentId: OTHER_BOOKMARKS_FOLDER_ID })
-    logFA('findFolder 55 OTHER_BOOKMARKS_FOLDER_ID', foundItem)
+    logFF('findFolder 55 OTHER_BOOKMARKS_FOLDER_ID', foundItem)
   }
 
   if (!foundItem) {
     foundItem = await findFolderInSubtree({ normalizedTitle, parentId: BOOKMARKS_BAR_FOLDER_ID })
-    logFA('findFolder 66 BOOKMARKS_BAR_FOLDER_ID', foundItem)
+    logFF('findFolder 66 BOOKMARKS_BAR_FOLDER_ID', foundItem)
   }
 
   return foundItem
@@ -2695,7 +2881,7 @@ async function findOrCreateFolder(title) {
 
     const firstLevelNodeList = await browser.bookmarks.getChildren(parentId)
     const findIndex = firstLevelNodeList.find((node) => title.localeCompare(node.title) < 0)
-    logFA('findOrCreateFolder 11 findIndex', findIndex?.index, findIndex?.title)
+    logFF('findOrCreateFolder 11 findIndex', findIndex?.index, findIndex?.title)
 
     const folderParams = {
       parentId,
@@ -2707,6 +2893,14 @@ async function findOrCreateFolder(title) {
     }
 
     folder = await createFolderIgnoreInController(folderParams)
+  } else {
+    const oldBigLetterN = folder.title.replace(/[^A-Z]+/g, "").length
+    const newBigLetterN = title.replace(/[^A-Z]+/g, "").length
+    // const isAbbreviation = title.length == newBigLetterN
+
+    if (oldBigLetterN < newBigLetterN) {
+      await updateBookmarkIgnoreInController({ id: folder.id, title })
+    }
   }
 
   return folder
@@ -2811,7 +3005,7 @@ async function flatChildren({ parentId, freeSuffix }) {
   })
   await updateTaskList.reduce(
     (promiseChain, { id, title }) => promiseChain.then(
-      () => browser.bookmarks.update(id, { title })
+      () => updateBookmarkIgnoreInController({ id, title })
     ),
     Promise.resolve(),
   );
@@ -2838,7 +3032,8 @@ async function flatChildren({ parentId, freeSuffix }) {
             const newTitle = `${folderNode.title} ${freeSuffix}`
             freeSuffix += 1
 
-            await browser.bookmarks.update(folderNode.id, {
+            await updateBookmarkIgnoreInController({
+              id: folderNode.id,
               title: newTitle,
             })
             flatFolderNameSet.add(newTitle)
@@ -2847,7 +3042,7 @@ async function flatChildren({ parentId, freeSuffix }) {
           }
         }
       } else {
-        await browser.bookmarks.remove(folderNode.id)
+        await removeBookmarkIgnoreInController(folderNode.id)
       }
     }
 
@@ -2923,7 +3118,7 @@ async function mergeSubFolder(parentId) {
 
   await moveTaskList.reduce(
     (promiseChain, { fromNode }) => promiseChain.then(
-      () => browser.bookmarks.remove(fromNode.id)
+      () => removeBookmarkIgnoreInController(fromNode.id)
     ),
     Promise.resolve(),
   );
@@ -2947,7 +3142,7 @@ async function trimTitleInSubFolder(parentId) {
 
   await renameTaskList.reduce(
     (promiseChain, { id, title }) => promiseChain.then(
-      () => browser.bookmarks.update(id, { title })
+      () => updateBookmarkIgnoreInController({ id,  title })
     ),
     Promise.resolve(),
   );
@@ -2987,7 +3182,7 @@ async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
 
   await folderList.reduce(
     (promiseChain, folderNode) => promiseChain.then(
-      () => browser.bookmarks.remove(folderNode.id)
+      () => removeBookmarkIgnoreInController(folderNode.id)
     ),
     Promise.resolve(),
   );
@@ -3104,7 +3299,7 @@ async function removeDoubleBookmarks() {
 
   await doubleList.reduce(
     (promiseChain, bkmId) => promiseChain.then(
-      () => browser.bookmarks.remove(bkmId)
+      () => removeBookmarkIgnoreInController(bkmId)
     ),
     Promise.resolve(),
   );
@@ -3183,7 +3378,7 @@ async function sortFolders() {
   const bookmarkList = await browser.bookmarks.search({ url });
   const isExist = bookmarkList.some((bkm) => bkm.parentId == parentId)
   if (isExist) {
-    return
+    return false
   }
 
   await createBookmarkWithApi({
@@ -3192,6 +3387,8 @@ async function sortFolders() {
     title,
     url
   })
+
+  return true
 }
 
 async function startAddBookmarkFromSelection() {
@@ -3214,17 +3411,17 @@ async function startAddBookmarkFromInput() {
 
 async function addBookmarkFolderByName({ url, title, folderName }) {
   if (folderName.length > 40) {
-    return
+    return false
   }
 
   const folder = await findOrCreateFolder(folderName)
-  await addBookmark({ url, title, parentId: folder.id })
+  return await addBookmark({ url, title, parentId: folder.id })
 }
 async function addRecentTagFromView(bookmarkId) {
   if (!bookmarkId) {
     return
   }
-  
+
   const [bkmNode] = await browser.bookmarks.get(bookmarkId)
   await tagList.addRecentTagFromBkm(bkmNode)
 }
@@ -3236,8 +3433,8 @@ function removeHashAndSearchParams(url) {
     const oUrl = new URL(url);
     oUrl.search = ''
     oUrl.hash = ''
-  
-    return oUrl.toString();  
+
+    return oUrl.toString();
   // eslint-disable-next-line no-unused-vars
   } catch (e) {
     return url
@@ -3451,8 +3648,8 @@ async function getUrlFromUrl() {
         }
       }
       // eslint-disable-next-line no-unused-vars
-    } catch (e) 
-    // eslint-disable-next-line no-empty 
+    } catch (e)
+    // eslint-disable-next-line no-empty
     {
 
     }
@@ -3467,7 +3664,6 @@ async function getUrlFromUrl() {
   await extensionSettings.update({
     [USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]: true,
   })
-  // await tagList.filterTagListForFlatFolderStructure()
 
   await flatBookmarks()
   await tagList.filterTagListForFlatFolderStructure()
@@ -3504,22 +3700,16 @@ const bookmarksController = {
 
     lastCreatedBkmId = bookmarkId
     lastCreatedBkmTabId = memo.activeTabId
-
     logBC('bookmark.onCreated <-', node);
-    const settings = await extensionSettings.get()
 
     if (node.url) {
       if (node.index !== 0) {
         await moveBookmarkIgnoreInController({ id: bookmarkId, index: 0 })
       }
 
-      if (settings[USER_OPTION.TAG_LIST_USE]) {
-        await tagList.addRecentTagFromBkm(node)
-      }
+      await tagList.addRecentTagFromBkm(node)
     } else {
-      if (settings[USER_OPTION.TAG_LIST_USE]) {
-        await tagList.addRecentTagFromFolder(node)
-      }
+      await tagList.addRecentTagFromFolder(node)
     }
 
     // changes in active tab
@@ -3528,19 +3718,17 @@ const bookmarksController = {
     });
   },
   async onChanged(bookmarkId, changeInfo) {
+    if (ignoreBkmControllerApiActionSet.hasIgnoreUpdate(bookmarkId)) {
+      logBC('bookmark.onChanged ignore', bookmarkId);
+      return
+    }
     logBC('bookmark.onChanged 00 <-', changeInfo);
-    const settings = await extensionSettings.get()
 
-    const [node] = await browser.bookmarks.get(bookmarkId)
+    if (changeInfo.title) {
+      const [node] = await browser.bookmarks.get(bookmarkId)
 
-    // eslint-disable-next-line no-empty
-    if (node.url) {
-
-    } else {
-      memo.bkmFolderById.delete(bookmarkId);
-
-      if (settings[USER_OPTION.TAG_LIST_USE] && changeInfo.title) {
-        // await tagList.updateTag(bookmarkId, changeInfo.title)
+      if (!node.url) {
+        memo.bkmFolderById.delete(bookmarkId);
         await tagList.addRecentTagFromFolder(node)
       }
     }
@@ -3557,74 +3745,55 @@ const bookmarksController = {
     }
 
     logBC('bookmark.onMoved <-', { oldIndex, index, oldParentId, parentId });
-    const settings = await extensionSettings.get()
-    // switch (true) {
-    //   // in bookmark manager. no changes for this extension
-    //   case parentId === oldParentId: {
-    //     break
-    //   }
-    //   // in bookmark manager.
-    //   case index < lastIndex: {
-    //     getBookmarkInfoUni({ url: node.url });
-    //     break
-    //   }
-    //   // parentId !== oldParentId && index == lastIndex
-    //   // in bookmark manager OR in active tab
-    //   default: {
-
-    //   }
-    // }
     const [node] = await browser.bookmarks.get(bookmarkId)
 
     if (node.url) {
       if (parentId !== oldParentId) {
-        if (settings[USER_OPTION.TAG_LIST_USE]) {
-          await tagList.addRecentTagFromBkm(node);
+        await tagList.addRecentTagFromBkm(node);
 
-          const isBookmarkWasCreatedManually = (
-            bookmarkId == lastCreatedBkmId
-            && memo.activeTabId == lastCreatedBkmTabId
-            && !isBookmarkCreatedWithApi({ parentId: oldParentId, url: node.url })
-          )
+        const isBookmarkWasCreatedManually = (
+          bookmarkId == lastCreatedBkmId
+          && memo.activeTabId == lastCreatedBkmTabId
+          && !isBookmarkCreatedWithApi({ parentId: oldParentId, url: node.url })
+        )
 
-          if (isBookmarkWasCreatedManually) {
-            const bookmarkList = await browser.bookmarks.search({ url: node.url });
-            const isFirstBookmark = bookmarkList.length == 1
-            const isMoveOnly = isBookmarkWasCreatedManually && isFirstBookmark && lastMovedBkmId != bookmarkId
+        if (isBookmarkWasCreatedManually) {
+          const bookmarkList = await browser.bookmarks.search({ url: node.url });
+          const isFirstBookmark = bookmarkList.length == 1
+          const isMoveOnly = isBookmarkWasCreatedManually && isFirstBookmark && lastMovedBkmId != bookmarkId
 
-            if (isMoveOnly) {
-              if (index !== 0) {
-                await moveBookmarkIgnoreInController({ id: bookmarkId, index: 0 })
+          if (isMoveOnly) {
+            if (index !== 0) {
+              await moveBookmarkIgnoreInController({ id: bookmarkId, index: 0 })
+            }
+          } else {
+            let isReplaceMoveToCreate = false
+
+            if (IS_BROWSER_CHROME) {
+              const isChromeBookmarkManagerTabActive = !!memo.activeTabUrl && memo.activeTabUrl.startsWith('chrome://bookmarks');
+              isReplaceMoveToCreate = !isChromeBookmarkManagerTabActive
+            } else if (IS_BROWSER_FIREFOX) {
+              const childrenList = await browser.bookmarks.getChildren(parentId)
+              const lastIndex = childrenList.length - 1
+                // isReplaceMoveToCreate = index == lastIndex && settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN]
+              isReplaceMoveToCreate = index == lastIndex
+            }
+
+            const unclassifiedFolderId = await getUnclassifiedFolderId()
+            isReplaceMoveToCreate = isReplaceMoveToCreate && parentId !== unclassifiedFolderId
+
+            if (isReplaceMoveToCreate) {
+              logBC('bookmark.onMoved 22');
+              await moveBookmarkIgnoreInController({ id: bookmarkId, parentId: oldParentId, index: oldIndex })
+
+              const { url, title } = node
+              const newBkm = {
+                parentId,
+                title,
+                url,
+                index: 0,
               }
-            } else {
-              let isReplaceMoveToCreate = false
-
-              if (IS_BROWSER_CHROME) {
-                const isChromeBookmarkManagerTabActive = !!memo.activeTabUrl && memo.activeTabUrl.startsWith('chrome://bookmarks');
-                isReplaceMoveToCreate = !isChromeBookmarkManagerTabActive
-              } else if (IS_BROWSER_FIREFOX) {
-                const childrenList = await browser.bookmarks.getChildren(parentId)
-                const lastIndex = childrenList.length - 1
-                  // isReplaceMoveToCreate = index == lastIndex && settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN]
-                isReplaceMoveToCreate = index == lastIndex
-              }
-
-              const unclassifiedFolderId = await getUnclassifiedFolderId()
-              isReplaceMoveToCreate = isReplaceMoveToCreate && parentId !== unclassifiedFolderId
-
-              if (isReplaceMoveToCreate) {
-                logBC('bookmark.onMoved 22');
-                await moveBookmarkIgnoreInController({ id: bookmarkId, parentId: oldParentId, index: oldIndex })
-
-                const { url, title } = node
-                const newBkm = {
-                  parentId,
-                  title,
-                  url,
-                  index: 0,
-                }
-                await createBookmarkIgnoreInController(newBkm)
-              }
+              await createBookmarkIgnoreInController(newBkm)
             }
           }
         }
@@ -3639,15 +3808,16 @@ const bookmarksController = {
     }
   },
   async onRemoved(bookmarkId, { node }) {
+    if (ignoreBkmControllerApiActionSet.hasIgnoreRemove(bookmarkId)) {
+      logBC('bookmark.onRemoved ignore', bookmarkId);
+      return
+    }
+
     logBC('bookmark.onRemoved <-', bookmarkId);
-    const settings = await extensionSettings.get()
 
     if (!node.url) {
       memo.bkmFolderById.delete(bookmarkId);
-
-      if (settings[USER_OPTION.TAG_LIST_USE]) {
-        await tagList.removeTag(bookmarkId)
-      }
+      await tagList.removeTag(bookmarkId)
     }
 
     // changes in active tab
@@ -3856,11 +4026,22 @@ async function onIncomingMessage (message, sender) {
         break
       }
 
-      await addBookmarkFolderByName({
+      const isAddedNewBookmark = await addBookmarkFolderByName({
         url: message.url,
         title: message.title,
         folderName: folderName,
       })
+      if (!isAddedNewBookmark) {
+        // to remove optimistic add
+        const tabId = sender?.tab?.id;
+        if (tabId == memo.activeTabId) {
+          updateActiveTab({
+            tabId,
+            debugCaller: 'runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME',
+            useCache: true,
+          })
+        }
+      }
       break
     }
   }
@@ -3901,9 +4082,9 @@ const runtimeController = {
 const logSC = makeLogFunction({ module: 'storage.controller' })
 
 const storageController = {
-  
+
   onChanged(changes, namespace) {
-    
+
     if (namespace === 'local') {
       const changesSet = new Set(Object.keys(changes))
       const userOptionSet = new Set(USER_OPTION_STORAGE_KEY_LIST)
@@ -3931,7 +4112,7 @@ const tabsController = {
     //   if (tabId === memo.activeTabId) {
     //     if (memo.activeTabUrl != changeInfo.url) {
     //       memo.activeTabUrl = changeInfo.url
-    //     }        
+    //     }
     //   }
     // }
 
@@ -3939,7 +4120,7 @@ const tabsController = {
       case ('complete'): {
         logTC('tabs.onUpdated complete 00', 'tabId', tabId, 'memo.activeTabId', memo.activeTabId);
         logTC('tabs.onUpdated complete 00 -------Tab',Tab);
-        
+
         if (tabId === memo.activeTabId) {
           logTC('tabs.onUpdated complete 11 tabId === memo.activeTabId');
           // we here after message page-is-ready. that message triggers update. not necessary to update here
@@ -3954,10 +4135,10 @@ const tabsController = {
               tabId,
               url: cleanUrl,
               debugCaller: 'tabs.onUpdated complete',
-            })       
+            })
           }
         }
-    
+
         break;
       }
     }

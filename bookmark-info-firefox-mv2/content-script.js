@@ -1,6 +1,7 @@
 let SHOW_LOG = false
-// SHOW_LOG = true
+SHOW_LOG = true
 const log = SHOW_LOG ? console.log : () => {};
+
 (async function() {
   log('IN content-script 00');
 
@@ -52,27 +53,52 @@ const log = SHOW_LOG ? console.log : () => {};
     Object.entries(BROWSER_SPECIFIC_OPTIONS)
       .map(([option, obj]) => [option, obj[BROWSER]])
   );
+  const TAG_LIST_OPEN_MODE_OPTIONS = {
+    GLOBAL: 'GLOBAL',
+    PER_PAGE: 'PER_PAGE',
+    CLOSE_AFTER_ADD: 'CLOSE_AFTER_ADD',
+  }
 
   const bkmInfoRootId = 'bkm-info--root';
   const bkmInfoStyle1Id = 'bkm-info--style1';
   const bkmInfoStyle2Id = 'bkm-info--style2';
 
-  function getStyleText({ tagLength, isHideSemanticHtmlTagsOnPrinting }) {
+  function getChangeableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting }) {
     let semanticTagsStyle = ''
 
     if (isHideSemanticHtmlTagsOnPrinting) {
-      semanticTagsStyle = `
-      @media print {
-        header, footer, aside, nav {
-            display: none;
-        }
-        .blockSpoiler, .blockSpoiler-content {
-          display: none;
-        }
-      }
-      `
+      semanticTagsStyle = (
+`@media print {
+  header, footer, aside, nav {
+      display: none;
+  }
+  .blockSpoiler, .blockSpoiler-content {
+    display: none;
+  }
+}`
+      )
     }
 
+    const fontSizeLetter = Math.floor(10/14*(+fontSize))
+
+    return (
+`#${bkmInfoRootId} {
+  font-size: ${fontSize}px;
+  width: ${tagLength}ch;
+}
+.bkm-info--tag {
+  min-width: ${tagLength}ch;
+  max-width: ${tagLength}ch;
+}
+.bkm-info--btn-letter {
+  font-size: ${fontSizeLetter}px;
+}
+${semanticTagsStyle}
+`
+    )
+  }
+
+  function getConstantStyleText() {
     return (
 `
 #${bkmInfoRootId} {
@@ -81,7 +107,6 @@ const log = SHOW_LOG ? console.log : () => {};
   top: 0;
   z-index: 2147483646;
   background-color: transparent;
-  font-size: 14px;
   font-family: sans-serif !important;
   font-weight: normal;
   user-select: none;
@@ -90,7 +115,6 @@ const log = SHOW_LOG ? console.log : () => {};
   text-align: left;
   line-height: 1.2;
   letter-spacing: normal;
-  width: ${tagLength}ch;
   margin: 0;
 }
 @media print {
@@ -98,7 +122,6 @@ const log = SHOW_LOG ? console.log : () => {};
       display: none;
   }
 }
-${semanticTagsStyle}
 .bkm-info--row {
   display: flex;
   position: relative;
@@ -145,7 +168,6 @@ ${semanticTagsStyle}
 }
 .bkm-info--btn-letter {
   color: white;
-  font-size: 10px;
   line-height: 1;
   font-family: inherit !important;
   margin: inherit;
@@ -279,12 +301,14 @@ ${semanticTagsStyle}
 .bkm-info--last-tag:not(.bkm-info--used-tag) {
   font-weight: 600;
 }
+.bkm-info--tag span {
+  background-color: white;
+  display: inline-block;
+  padding-left: 0.5ch;
+}
 `
     )
   };
-
-  let storedTagLength = 8;
-  let storedIsHideSemanticHtmlTagsOnPrinting = false;
 
   async function hideBookmarks() {
     const rootDiv = document.getElementById(bkmInfoRootId);
@@ -334,13 +358,19 @@ ${semanticTagsStyle}
 
   async function toggleTagList() {
     const fullMessage = showInHtmlSingleTaskQueue.getState()
-    const before = !!fullMessage.isShowTagList
+    const tagListOpenMode = fullMessage.tagListOpenMode
 
-    showInHtmlSingleTaskQueue.addUpdate({ isShowTagList: !before })
-    await browser.runtime.sendMessage({
-      command: EXTENSION_MSG_ID.SHOW_TAG_LIST,
-      value: !before,
-    });
+    if (tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL) {
+      const before = !!fullMessage.isTagListOpenGlobal
+      showInHtmlSingleTaskQueue.addUpdate({ isTagListOpenGlobal: !before })
+      await browser.runtime.sendMessage({
+        command: EXTENSION_MSG_ID.SHOW_TAG_LIST,
+        value: !before,
+      });
+    } else {
+      const before = !!fullMessage.isTagListOpenLocal
+      showInHtmlSingleTaskQueue.addUpdate({ isTagListOpenLocal: !before })
+    }
   }
 
   async function toggleTag(event) {
@@ -351,6 +381,7 @@ ${semanticTagsStyle}
     if (parentId) {
       const fullState = showInHtmlSingleTaskQueue.getState()
       const bookmarkList = fullState.bookmarkList || []
+      const tagListOpenMode = fullState.tagListOpenMode
 
       if (isUsed) {
         const bkm = bookmarkList.find((item) => item.parentId === parentId)
@@ -379,14 +410,25 @@ ${semanticTagsStyle}
           const newBookmarkList = bookmarkList.concat({
             id: '',
             title: document.title,
-            fullPathList: [tag.title],
+            folder: tag.title,
+            path: '',
             parentId,
             optimisticAdd: true,
           })
           if (optimisticAddFromTagList < optimisticDelFromTagList) {
             optimisticAddFromTagList += 1
           }
-          showInHtmlSingleTaskQueue.addUpdate({ bookmarkList: newBookmarkList })
+
+          const update = { bookmarkList: newBookmarkList }
+          if (tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.CLOSE_AFTER_ADD) {
+            update.isTagListOpenLocal = false
+
+            optimisticDelFromTagList = 0
+            optimisticAddFromTagList = 0
+            optimisticToStorageDel = 0
+            optimisticToStorageAdd = 0
+          }
+          showInHtmlSingleTaskQueue.addUpdate(update)
         }
         await browser.runtime.sendMessage({
           command: EXTENSION_MSG_ID.ADD_BOOKMARK,
@@ -394,6 +436,7 @@ ${semanticTagsStyle}
           url: document.location.href,
           title: document.title,
         });
+
       }
     }
   }
@@ -446,31 +489,37 @@ ${semanticTagsStyle}
   }
 
 
+  let storedFontSize
+  let storedTagLength;
+  let storedIsHideSemanticHtmlTagsOnPrinting;
+
   function showBookmarkInfo(input) {
     const bookmarkList = (input.bookmarkList || [])
       .filter(({ optimisticDel }) => !optimisticDel)
       .filter(({ source }) => source !== 'substring')
 
     const partialBookmarkList = (input.bookmarkList || [])
-      // .filter(({ optimisticDel }) => !optimisticDel)
       .filter(({ source }) => source == 'substring')
 
     const visitString = input.visitString || []
     const isShowTitle = input.isShowTitle || false
     const inTagList = input.tagList || []
-    const isShowTagList = input.isShowTagList || false
-    const tagLength = input.tagLength || 8
+    const tagListOpenMode = input.tagListOpenMode
+    const isTagListOpenLocal = input.isTagListOpenLocal || false
+    const isTagListOpenGlobal = input.isTagListOpenGlobal || false
+    const isTagListOpen = tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL
+      ? isTagListOpenGlobal
+      : isTagListOpenLocal
+    const fontSize = input.fontSize || 14
+    const tagLength = input.tagLength || 15
     const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting || false
 
     log('showBookmarkInfo 00');
 
     const usedParentIdSet = new Set(bookmarkList.map(({ parentId }) => parentId))
-    const tagList = inTagList.map(({ parentId, title, isFixed, isLast}) => ({
-      parentId,
-      title,
-      isFixed,
-      isLast,
-      isUsed: usedParentIdSet.has(parentId)
+    const tagList = inTagList.map((tag) => ({
+      ...tag,
+      isUsed: usedParentIdSet.has(tag.parentId)
     }))
 
     const drawList = []
@@ -499,12 +548,16 @@ ${semanticTagsStyle}
 
       drawList.push({ type: 'partial-bookmark', value, bkmIndex: index + bookmarkList.length })
     })
-    const emptySlotsForDel = Math.max(0, optimisticDelFromTagList - optimisticAddFromTagList)
-    const emptySlotsForAdd = Math.max(0, 2 - bookmarkList.length - emptySlotsForDel)
-    const emptySlots = emptySlotsForAdd + emptySlotsForDel
 
-    for (let iEmpty = 0; iEmpty < emptySlots; iEmpty += 1) {
-      drawList.push({ type: 'emptySlot' })
+    if (tagList.length > 0) {
+    //if (tagList.length > 0 && isTagListOpen) {
+      const emptySlotsForDel = Math.max(0, optimisticDelFromTagList - optimisticAddFromTagList)
+      const emptySlotsForAdd = Math.max(0, 2 - bookmarkList.length - partialBookmarkList.length - emptySlotsForDel)
+      const emptySlots = emptySlotsForAdd + emptySlotsForDel
+
+      for (let iEmpty = 0; iEmpty < emptySlots; iEmpty += 1) {
+        drawList.push({ type: 'emptySlot' })
+      }
     }
 
     if (visitString) {
@@ -514,60 +567,58 @@ ${semanticTagsStyle}
     if (tagList.length > 0) {
       drawList.push({ type: 'separator' })
 
-      if (isShowTagList) {
-        tagList.forEach(({ isFixed, isLast, parentId, title, isUsed }) => {
+      if (isTagListOpen) {
+        tagList.forEach((tag) => {
           drawList.push({
-            type: isFixed ? 'fixedTag' : 'recentTag',
-            value: { parentId, title, isUsed, isLast },
+            type: tag.isFixed ? 'fixedTag' : 'recentTag',
+            value: tag,
           })
         })
       }
     }
 
+    let rootStyle1 = document.getElementById(bkmInfoStyle1Id);
     let rootDiv = document.getElementById(bkmInfoRootId);
+    if (!rootStyle1) {
+      storedFontSize = fontSize
+      storedTagLength = tagLength
+      storedIsHideSemanticHtmlTagsOnPrinting = isHideSemanticHtmlTagsOnPrinting
 
-    if (!rootDiv) {
-      log('showBookmarkInfo 22 2');
-      const rootStyle = document.createElement('style');
-      rootStyle.setAttribute('id', bkmInfoStyle1Id);
-      const textNodeStyle = document.createTextNode(getStyleText({ tagLength, isHideSemanticHtmlTagsOnPrinting }));
-      rootStyle.appendChild(textNodeStyle);
-
-      rootDiv = document.createElement('div');
-      rootDiv.setAttribute('id', bkmInfoRootId);
-
-      document.body.insertAdjacentElement('afterbegin', rootStyle);
+      rootStyle1 = document.createElement('style');
+      rootStyle1.setAttribute('id', bkmInfoStyle1Id);
+      const textNodeStyle1 = document.createTextNode(
+        getChangeableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting })
+      );
+      rootStyle1.appendChild(textNodeStyle1);
 
       const rootStyle2 = document.createElement('style');
       rootStyle2.setAttribute('id', bkmInfoStyle2Id);
       const textNodeStyle2 = document.createTextNode(
-        `.bkm-info--tag {
-          min-width: ${tagLength}ch;
-          max-width: ${tagLength}ch;
-        }`
+        getConstantStyleText()
       );
       rootStyle2.appendChild(textNodeStyle2);
 
-      rootStyle.insertAdjacentElement('afterend', rootStyle2);
+      document.body.insertAdjacentElement('afterbegin', rootStyle1);
+      rootStyle1.insertAdjacentElement('afterend', rootStyle2);
+
+      rootDiv = document.createElement('div');
+      rootDiv.setAttribute('id', bkmInfoRootId);
       rootStyle2.insertAdjacentElement('afterend', rootDiv);
-    } else {
-      if (tagLength !== storedTagLength || isHideSemanticHtmlTagsOnPrinting !== storedIsHideSemanticHtmlTagsOnPrinting) {
-        storedTagLength = tagLength
-        storedIsHideSemanticHtmlTagsOnPrinting = isHideSemanticHtmlTagsOnPrinting
+    }
 
-        const rootStyle1 = document.getElementById(bkmInfoStyle1Id);
-        const textNodeStyle1 = document.createTextNode(getStyleText({ tagLength, isHideSemanticHtmlTagsOnPrinting }));
-        rootStyle1.replaceChild(textNodeStyle1, rootStyle1.firstChild);
+    if (!(fontSize == storedFontSize && tagLength == storedTagLength
+      && isHideSemanticHtmlTagsOnPrinting == storedIsHideSemanticHtmlTagsOnPrinting)) {
+      storedFontSize = fontSize
+      storedTagLength = tagLength
+      storedIsHideSemanticHtmlTagsOnPrinting = isHideSemanticHtmlTagsOnPrinting
 
-        const rootStyle2 = document.getElementById(bkmInfoStyle2Id);
-        const textNodeStyle2 = document.createTextNode(
-          `.bkm-info--tag {
-            min-width: ${tagLength}ch;
-            max-width: ${tagLength}ch;
-          }`
-        );
-        rootStyle2.replaceChild(textNodeStyle2, rootStyle2.firstChild);
-      }
+      // const textNodeStyle1 = document.createTextNode(
+      //   getChangeableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting })
+      // );
+      // rootStyle1.replaceChild(textNodeStyle1, rootStyle1.firstChild);
+      rootStyle1.firstChild.replaceWith(
+        getChangeableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting })
+      )
     }
 
     const rawNodeList = rootDiv.childNodes;
@@ -578,16 +629,13 @@ ${semanticTagsStyle}
 
       switch (type) {
         case 'bookmark': {
-          const { id, fullPathList } = value
-          const [folderName] = fullPathList.slice(-1)
-          const restPathList = fullPathList.slice(0, -1)
-          const restPath = restPathList.concat('').join('/ ')
+          const { id, path, folder } = value
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
-          const textNode = document.createTextNode(folderName);
+          const textNode = document.createTextNode(folder);
           divLabel.appendChild(textNode);
-          divLabel.setAttribute('data-restpath', restPath);
+          divLabel.setAttribute('data-restpath', path);
 
           divLabel.addEventListener('click', onBookmarkLabelClick);
           // TODO sanitize: remove ",<,>
@@ -625,13 +673,12 @@ ${semanticTagsStyle}
         }
         case 'partial-bookmark': {
           // TODO? go to original bookmark
-          const { id, fullPathList, url } = value
-          const [folderName] = fullPathList.slice(-1)
+          const { id, folder, url } = value
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
 
-          const textNode = document.createTextNode(`url*: ${folderName}`);
+          const textNode = document.createTextNode(`url*: ${folder}`);
           divLabel.appendChild(textNode);
           divLabel.setAttribute('data-restpath', `url*: ${url}`);
 
@@ -678,6 +725,7 @@ ${semanticTagsStyle}
 
           divRow = document.createElement('div');
           divRow.classList.add('bkm-info--row');
+          divRow.addEventListener('click', hideBookmarks);
           divRow.appendChild(divLabelContainer);
 
           break
@@ -686,7 +734,7 @@ ${semanticTagsStyle}
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--separator');
           divLabel.addEventListener('click', toggleTagList);
-          const textNode = document.createTextNode( isShowTagList ? '▴ hide' : '▾ add' );
+          const textNode = document.createTextNode( isTagListOpen ? '▴ hide' : '▾ add' );
           divLabel.appendChild(textNode);
 
           const divLabelContainer = document.createElement('div');
@@ -700,8 +748,8 @@ ${semanticTagsStyle}
           break
         }
         case 'recentTag': {
-          const { parentId, title, isUsed, isLast } = value
-
+          const { parentId, title, isHighlight, isUsed, isLast } = value
+          log('recentTag 11', title, isHighlight)
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag', 'bkm-info--recent');
           divLabel.setAttribute('data-parentid', parentId);
@@ -711,8 +759,19 @@ ${semanticTagsStyle}
           divLabel.setAttribute('data-isused', isUsed ? '1' : '');
           divLabel.classList.toggle('bkm-info--last-tag', isLast);
 
-          const textNodeLabel = document.createTextNode(`${title}`);
-          divLabel.appendChild(textNodeLabel);
+          if (isHighlight) {
+            const elSpan = document.createElement('span');
+            const textNode1 = document.createTextNode(title.at(0).toUpperCase());
+            elSpan.appendChild(textNode1);
+            divLabel.appendChild(elSpan);
+            divLabel.style = 'padding-left: 0.2ch'
+
+            const textNodeLabel = document.createTextNode(title.slice(1));
+            divLabel.appendChild(textNodeLabel);
+          } else {
+            const textNodeLabel = document.createTextNode(`${title}`);
+            divLabel.appendChild(textNodeLabel);
+          }
 
           const divFixBtn = document.createElement('div');
           divFixBtn.setAttribute('data-parentid', parentId);
@@ -737,8 +796,8 @@ ${semanticTagsStyle}
           break
         }
         case 'fixedTag': {
-          const { parentId, title, isUsed, isLast } = value
-
+          const { parentId, title, isHighlight, isUsed, isLast } = value
+          log('fixedTag 11', title)
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag', 'bkm-info--fixed');
           divLabel.setAttribute('data-parentid', parentId);
@@ -748,8 +807,19 @@ ${semanticTagsStyle}
           divLabel.setAttribute('data-isused', isUsed ? '1' : '');
           divLabel.classList.toggle('bkm-info--last-tag', isLast);
 
-          const textNodeLabel = document.createTextNode(`${title}`);
-          divLabel.appendChild(textNodeLabel);
+          if (isHighlight) {
+            const elSpan = document.createElement('span');
+            const textNode1 = document.createTextNode(title.at(0).toUpperCase());
+            elSpan.appendChild(textNode1);
+            divLabel.appendChild(elSpan);
+            divLabel.style = 'padding-left: 0.2ch'
+
+            const textNodeLabel = document.createTextNode(title.slice(1));
+            divLabel.appendChild(textNodeLabel);
+          } else {
+            const textNodeLabel = document.createTextNode(`${title}`);
+            divLabel.appendChild(textNodeLabel);
+          }
 
           const divFixBtn = document.createElement('div');
           divFixBtn.setAttribute('data-parentid', parentId);
@@ -928,6 +998,35 @@ ${semanticTagsStyle}
     }
   }
 
+  async function addBookmarkByFolderName(folderName) {
+    if (!folderName) {
+      return
+    }
+    const trimmedFolderName = folderName.trim()
+    if (!trimmedFolderName) {
+      return
+    }
+
+    const fullState = showInHtmlSingleTaskQueue.getState()
+    const bookmarkList = fullState.bookmarkList || []
+    const newBookmarkList = bookmarkList.concat({
+      id: '',
+      title: document.title,
+      folder: trimmedFolderName,
+      path: '',
+      parentId: '',
+      optimisticAdd: true,
+    })
+    showInHtmlSingleTaskQueue.addUpdate({ bookmarkList: newBookmarkList })
+
+    await browser.runtime.sendMessage({
+      command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
+      url: document.location.href,
+      title: document.title,
+      folderName: trimmedFolderName,
+    });
+  }
+
   browser.runtime.onMessage.addListener((message) => {
     log('browser.runtime.onMessage: ', message);
     switch (message.command) {
@@ -996,40 +1095,15 @@ ${semanticTagsStyle}
         toggleYoutubePageHeader({ nTry: 1 })
         break
       }
-      case CONTENT_SCRIPT_MSG_ID.GET_SELECTION: {
-        const selection = document.getSelection().toString()
-        if (!selection) {
-          break
-        }
-        const folderName = selection.trim()
-        if (!folderName) {
-          break
-        }
-
-        browser.runtime.sendMessage({
-          command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
-          url: document.location.href,
-          title: document.title,
-          folderName,
-        });
-        break
-      }
       case CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT: {
         const userInput = window.prompt("Enter folder for your bookmark")
-        if (!userInput) {
-          break
-        }
-        const folderName = userInput.trim()
-        if (!folderName) {
-          break
-        }
-
-        browser.runtime.sendMessage({
-          command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
-          url: document.location.href,
-          title: document.title,
-          folderName,
-        });
+        // addBookmarkListByNameWithComma(userInput)
+        addBookmarkByFolderName(userInput)
+        break
+      }
+      case CONTENT_SCRIPT_MSG_ID.GET_SELECTION: {
+        const selection = document.getSelection().toString()
+        addBookmarkByFolderName(selection)
         break
       }
     }
@@ -1072,6 +1146,16 @@ ${semanticTagsStyle}
     }
   });
   document.addEventListener("visibilitychange", () => {
+    const fullState = showInHtmlSingleTaskQueue.getState()
+    const tagListOpenMode = fullState.tagListOpenMode
+    if (document.hidden) {
+      if (tagListOpenMode && tagListOpenMode != TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL
+        && fullState.isTagListOpenLocal) {
+
+        showInHtmlSingleTaskQueue.addUpdate({ isTagListOpenLocal: false })
+      }
+    }
+
     if (!document.hidden) {
       optimisticDelFromTagList = 0
       optimisticAddFromTagList = 0
