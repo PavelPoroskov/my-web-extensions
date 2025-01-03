@@ -1027,39 +1027,6 @@ ${semanticTagsStyle}
     });
   }
 
-  async function addBookmarkListByNameWithComma(strList) {
-    if (!strList) {
-      return
-    }
-
-    const list = strList
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean)
-
-    if (list.length == 0) {
-      return
-    }
-
-    const uniqueList = []
-    const nameSet = new Set()
-    list.forEach((name) => {
-      const normalizedName = name.toLowerCase().replace(/\s+/, ' ')
-
-      if (!nameSet.has(normalizedName)) {
-        nameSet.add(normalizedName)
-        uniqueList.push(name)
-      }
-    })
-
-    await uniqueList.reduce(
-      (promiseChain, name) => promiseChain.then(
-        () => addBookmarkByFolderName(name)
-      ),
-      Promise.resolve(),
-    );
-  }
-
   chrome.runtime.onMessage.addListener((message) => {
     log('chrome.runtime.onMessage: ', message);
     switch (message.command) {
@@ -1130,7 +1097,8 @@ ${semanticTagsStyle}
       }
       case CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT: {
         const userInput = window.prompt("Enter folder for your bookmark")
-        addBookmarkListByNameWithComma(userInput)
+        // addBookmarkListByNameWithComma(userInput)
+        addBookmarkByFolderName(userInput)
         break
       }
       case CONTENT_SCRIPT_MSG_ID.GET_SELECTION: {
