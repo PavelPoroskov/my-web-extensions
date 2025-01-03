@@ -14,6 +14,7 @@ export async function getUrlFromUrl() {
   const [activeTab] = tabs;
 
   if (activeTab?.id && activeTab?.url) {
+    let testUrl
     let resultUrl
     const oUrl = new URL(activeTab.url)
     logUU('getUrlFromUrl () 11 oUrl', oUrl)
@@ -23,17 +24,30 @@ export async function getUrlFromUrl() {
     try {
       switch (baseDomain) {
         case '9gag.com': {
-          let param = oUrl.hash
-          const testUrl = param.split('#').at(1)
-          const o = new URL(testUrl)
+          testUrl = oUrl.hash.split('#').at(1)
 
-          if (o) {
-            resultUrl = testUrl
+          break
+        }
+        case 'dev.to': {
+          const decoded = decodeURIComponent(oUrl.pathname)
+          const i = decoded.indexOf('https://')
+
+          if (-1 < i) {
+            testUrl = decoded.slice(i)
           }
 
           break
         }
       }
+
+      if (testUrl) {
+        const o = new URL(testUrl)
+
+        if (o) {
+          resultUrl = testUrl
+        }
+      }
+
       // eslint-disable-next-line no-unused-vars
     } catch (e)
     // eslint-disable-next-line no-empty
