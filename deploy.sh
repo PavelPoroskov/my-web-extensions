@@ -17,7 +17,7 @@ if [ $? -ne 0 ]; then
     WASERROR=1
 fi
 cd - > /dev/null
-if [ $WASERROR -ne 0 ]; then
+if [ -n "$WASERROR" ]; then
     exit 1
 fi
 
@@ -30,7 +30,7 @@ if [ $? -ne 0 ]; then
     WASERROR=1
 fi
 cd - > /dev/null
-if [ $WASERROR ]; then
+if [ -n "$WASERROR" ]; then
     exit 1
 fi
 

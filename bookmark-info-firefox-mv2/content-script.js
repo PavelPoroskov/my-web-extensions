@@ -1,5 +1,5 @@
 let SHOW_LOG = false
-SHOW_LOG = true
+// SHOW_LOG = true
 const log = SHOW_LOG ? console.log : () => {};
 
 (async function() {
