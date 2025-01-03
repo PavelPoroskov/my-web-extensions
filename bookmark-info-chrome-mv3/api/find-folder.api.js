@@ -12,7 +12,8 @@ import {
   makeLogFunction,
 } from './log.api.js'
 import {
-  createFolderIgnoreInController
+  createFolderIgnoreInController,
+  updateBookmarkIgnoreInController,
 } from './bookmark.api.js'
 
 const logFF = makeLogFunction({ module: 'find-folder.api.js' })
@@ -228,6 +229,14 @@ export async function findOrCreateFolder(title) {
     }
 
     folder = await createFolderIgnoreInController(folderParams)
+  } else {
+    const oldBigLetterN = folder.title.replace(/[^A-Z]+/g, "").length
+    const newBigLetterN = title.replace(/[^A-Z]+/g, "").length
+    // const isAbbreviation = title.length == newBigLetterN
+
+    if (oldBigLetterN < newBigLetterN) {
+      await updateBookmarkIgnoreInController({ id: folder.id, title })
+    }
   }
 
   return folder
