@@ -339,13 +339,13 @@ ${semanticTagsStyle}
 
     if (bkmId) {
       // optimistic ui
-      const fullState = showInHtmlSingleTaskQueue.getState()
+      const fullState = stateContainer.getState()
       const bookmarkList = fullState.bookmarkList || []
 
       const findIndex = bookmarkList.findIndex((item) => item.id == bkmId)
       if (-1 < findIndex) {
         const newBookmarkList = bookmarkList.with(findIndex, { optimisticDel: true })
-        showInHtmlSingleTaskQueue.addUpdate({ bookmarkList: newBookmarkList })
+        stateContainer.update({ bookmarkList: newBookmarkList })
       }
 
       await chrome.runtime.sendMessage({
@@ -356,19 +356,19 @@ ${semanticTagsStyle}
   }
 
   async function toggleTagList() {
-    const fullMessage = showInHtmlSingleTaskQueue.getState()
+    const fullMessage = stateContainer.getState()
     const tagListOpenMode = fullMessage.tagListOpenMode
 
     if (tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL) {
       const before = !!fullMessage.isTagListOpenGlobal
-      showInHtmlSingleTaskQueue.addUpdate({ isTagListOpenGlobal: !before })
+      stateContainer.update({ isTagListOpenGlobal: !before })
       await chrome.runtime.sendMessage({
         command: EXTENSION_MSG_ID.SHOW_TAG_LIST,
         value: !before,
       });
     } else {
       const before = !!fullMessage.isTagListOpenLocal
-      showInHtmlSingleTaskQueue.addUpdate({ isTagListOpenLocal: !before })
+      stateContainer.update({ isTagListOpenLocal: !before })
     }
   }
 
@@ -378,7 +378,7 @@ ${semanticTagsStyle}
     // log('toggleTag () 00', 'isUsed', isUsed, 'parentId', parentId)
 
     if (parentId) {
-      const fullState = showInHtmlSingleTaskQueue.getState()
+      const fullState = stateContainer.getState()
       const bookmarkList = fullState.bookmarkList || []
       const tagListOpenMode = fullState.tagListOpenMode
 
@@ -393,7 +393,7 @@ ${semanticTagsStyle}
             const newBookmarkList = bookmarkList.with(findIndex, { optimisticDel: true })
             optimisticDelFromTagList += 1
             // log('bookmarkFromTag 11 +optimisticDelFromTagList', optimisticDelFromTagList);
-            showInHtmlSingleTaskQueue.addUpdate({ bookmarkList: newBookmarkList })
+            stateContainer.update({ bookmarkList: newBookmarkList })
           }
 
           await chrome.runtime.sendMessage({
@@ -427,7 +427,7 @@ ${semanticTagsStyle}
             optimisticToStorageDel = 0
             optimisticToStorageAdd = 0
           }
-          showInHtmlSingleTaskQueue.addUpdate(update)
+          stateContainer.update(update)
         }
         await chrome.runtime.sendMessage({
           command: EXTENSION_MSG_ID.ADD_BOOKMARK,
@@ -435,7 +435,6 @@ ${semanticTagsStyle}
           url: document.location.href,
           title: document.title,
         });
-
       }
     }
   }
@@ -445,7 +444,7 @@ ${semanticTagsStyle}
     const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
 
     if (parentId) {
-      const fullState = showInHtmlSingleTaskQueue.getState()
+      const fullState = stateContainer.getState()
       const tagList = fullState.tagList || []
 
       let tag
@@ -453,7 +452,7 @@ ${semanticTagsStyle}
       if (-1 < findIndex) {
         tag = tagList[findIndex]
         const newTagList = tagList.with(findIndex, { ...tag, isFixed: true })
-        showInHtmlSingleTaskQueue.addUpdate({ tagList: newTagList })
+        stateContainer.update({ tagList: newTagList })
       }
 
       await chrome.runtime.sendMessage({
@@ -469,7 +468,7 @@ ${semanticTagsStyle}
     const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
 
     if (parentId) {
-      const fullState = showInHtmlSingleTaskQueue.getState()
+      const fullState = stateContainer.getState()
       const tagList = fullState.tagList || []
 
       let tag
@@ -477,7 +476,7 @@ ${semanticTagsStyle}
       if (-1 < findIndex) {
         tag = tagList[findIndex]
         const newTagList = tagList.with(findIndex, { ...tag, isFixed: false })
-        showInHtmlSingleTaskQueue.addUpdate({ tagList: newTagList })
+        stateContainer.update({ tagList: newTagList })
       }
 
       await chrome.runtime.sendMessage({
@@ -492,7 +491,9 @@ ${semanticTagsStyle}
   let storedTagLength;
   let storedIsHideSemanticHtmlTagsOnPrinting;
 
-  function showBookmarkInfo(input) {
+  function renderBookmarkInfo(input) {
+    log('renderBookmarkInfo 00');
+
     const bookmarkList = (input.bookmarkList || [])
       .filter(({ optimisticDel }) => !optimisticDel)
       .filter(({ source }) => source !== 'substring')
@@ -512,8 +513,6 @@ ${semanticTagsStyle}
     const fontSize = input.fontSize || 14
     const tagLength = input.tagLength || 15
     const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting || false
-
-    log('showBookmarkInfo 00');
 
     const usedParentIdSet = new Set(bookmarkList.map(({ parentId }) => parentId))
     const tagList = inTagList.map((tag) => ({
@@ -864,56 +863,90 @@ ${semanticTagsStyle}
   }
 
   class TaskQueue {
-    fullState = {}
-    updateList = []
-    fnTask
+    queue = []
+    nRunningTask = 0
+    concurrencyLimit = 1
 
-    promise = Promise.resolve(0)
-    fnResolve
-    fnReject
+    constructor() {}
 
-    constructor(fnTask) {
-      this.fnTask = fnTask
-    }
-    async continueQueue() {
-      // console.log('continueQueue 00')
-      await this.promise.catch()
-
-      // console.log('continueQueue 11')
-      this.promise = new Promise((fnResolve, fnReject) => {
-        this.fnResolve = fnResolve;
-        this.fnReject = fnReject;
-      });
-
-      let sumUpdate = {}
-      let step = this.updateList.shift()
-      while (step) {
-        sumUpdate = { ...sumUpdate, ...step }
-        step = this.updateList.shift()
-      }
-      // console.log('continueQueue 66 sumUpdate', sumUpdate)
-      if (Object.keys(sumUpdate).length > 0) {
-        this.fullState = { ...this.fullState, ...sumUpdate }
-        // console.log('continueQueue 77 ')
-        this.fnTask(this.fullState)
+    _run() {
+      if (this.nRunningTask >= this.concurrencyLimit || this.queue.length === 0) {
+        return;
       }
 
-      // console.log('continueQueue 88')
-      this.fnResolve()
-      // console.log('continueQueue 99')
-    }
-    addUpdate(update) {
-      this.updateList.push(update)
+      this.nRunningTask++;
+      const task = this.queue.shift();
+      if (task) {
+        task();
+      }
+      this.nRunningTask--;
 
-      this.continueQueue()
+      this._run();
     }
-    getState() {
-      return { ...this.fullState }
+
+    enqueue(task) {
+      this.queue.push(task);
+      this._run();
     }
   }
 
-  const showInHtmlSingleTaskQueue = new TaskQueue(showBookmarkInfo)
+  class StateContainer {
+    state = {}
+    // updates = []
+    nUpdates = 0
+    nReadUpdates = 0
 
+    afterUpdateAction
+
+    constructor() {
+      this.state = {}
+      // this.updates = []
+    }
+    setAfterUpdateAction(action) {
+      this.afterUpdateAction = action
+    }
+    update(updateObj) {
+      this.nUpdates = this.nUpdates + 1
+      // updates.push(updateObj)
+      Object.assign(this.state, updateObj)
+
+      if (this.afterUpdateAction) {
+        this.afterUpdateAction()
+      }
+    }
+    getState() {
+      return { ...this.state }
+    }
+    readUpdates() {
+      const isUpdates = this.nReadUpdates < this.nUpdates
+      this.nReadUpdates = this.nUpdates
+
+      return {
+        isUpdates,
+        state: isUpdates ? this.getState() : undefined
+      }
+    }
+  }
+  const stateContainer = new StateContainer()
+  const renderQueue = new TaskQueue()
+  stateContainer.setAfterUpdateAction(() => {
+    const callback = () => {
+      renderQueue.enqueue(() => {
+        const { isUpdates, state } = stateContainer.readUpdates()
+        if (isUpdates) {
+          renderBookmarkInfo(state)
+        }
+      })
+    }
+
+    requestAnimationFrame(callback)
+    // Promise.resolve()
+    //   .then(callback)
+    //   .catch((err) => {
+    //     log('error on render', err)
+    //   })
+    //setTimeout(callback, 0)
+  })
 
   const options = {}
   let cToggleYoutubePageHeader = 0
@@ -993,7 +1026,7 @@ ${semanticTagsStyle}
       return
     }
 
-    const fullState = showInHtmlSingleTaskQueue.getState()
+    const fullState = stateContainer.getState()
     const bookmarkList = fullState.bookmarkList || []
     const newBookmarkList = bookmarkList.concat({
       id: '',
@@ -1003,7 +1036,7 @@ ${semanticTagsStyle}
       parentId: '',
       optimisticAdd: true,
     })
-    showInHtmlSingleTaskQueue.addUpdate({ bookmarkList: newBookmarkList })
+    stateContainer.update({ bookmarkList: newBookmarkList })
 
     await chrome.runtime.sendMessage({
       command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
@@ -1019,10 +1052,10 @@ ${semanticTagsStyle}
       // case CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO:
       // case CONTENT_SCRIPT_MSG_ID.TAGS_INFO:
       case CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO: {
-        const fullState = showInHtmlSingleTaskQueue.getState()
+        const fullState = stateContainer.getState()
         const bookmarkListBefore = (fullState.bookmarkList || []).filter(({ optimisticAdd }) => !optimisticAdd)
 
-        showInHtmlSingleTaskQueue.addUpdate(message)
+        stateContainer.update(message)
         const bookmarkList = message.bookmarkList || []
         const diff = bookmarkList.length - bookmarkListBefore.length
 
@@ -1132,13 +1165,13 @@ ${semanticTagsStyle}
     }
   });
   document.addEventListener("visibilitychange", () => {
-    const fullState = showInHtmlSingleTaskQueue.getState()
+    const fullState = stateContainer.getState()
     const tagListOpenMode = fullState.tagListOpenMode
     if (document.hidden) {
       if (tagListOpenMode && tagListOpenMode != TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL
         && fullState.isTagListOpenLocal) {
 
-        showInHtmlSingleTaskQueue.addUpdate({ isTagListOpenLocal: false })
+          stateContainer.update({ isTagListOpenLocal: false })
       }
     }
 
