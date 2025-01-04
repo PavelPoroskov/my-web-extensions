@@ -897,23 +897,23 @@ ${semanticTagsStyle}
 
   class StateContainer {
     state = {}
-    // updates = []
-    nUpdates = 0
-    nReadUpdates = 0
+    updates = []
+    // nUpdates = 0
+    // nReadUpdates = 0
 
     afterUpdateAction
 
     constructor() {
       this.state = {}
-      // this.updates = []
+      this.updates = []
     }
     setAfterUpdateAction(action) {
       this.afterUpdateAction = action
     }
     update(updateObj) {
-      this.nUpdates = this.nUpdates + 1
-      // updates.push(updateObj)
-      Object.assign(this.state, updateObj)
+      // this.nUpdates = this.nUpdates + 1
+      //Object.assign(this.state, updateObj)
+      this.updates.push(updateObj)
 
       if (this.afterUpdateAction) {
         this.afterUpdateAction()
@@ -923,12 +923,26 @@ ${semanticTagsStyle}
       return { ...this.state }
     }
     readUpdates() {
-      const isUpdates = this.nReadUpdates < this.nUpdates
-      this.nReadUpdates = this.nUpdates
+      // const isUpdates = this.nReadUpdates < this.nUpdates
+      // this.nReadUpdates = this.nUpdates
+
+      const isUpdates = this.updates.length > 0
+
+      if (isUpdates) {
+        let sumUpdate = {}
+        let step = this.updates.shift()
+        while (step) {
+          sumUpdate = { ...sumUpdate, ...step }
+          step = this.updates.shift()
+        }
+
+        // const isUpdates = Object.keys(sumUpdate).length > 0
+        Object.assign(this.state, sumUpdate)
+      }
 
       return {
         isUpdates,
-        state: isUpdates ? this.getState() : undefined
+        state: isUpdates ? this.state : undefined
       }
     }
   }
@@ -944,12 +958,12 @@ ${semanticTagsStyle}
       })
     }
 
-    requestAnimationFrame(callback)
-    // Promise.resolve()
-    //   .then(callback)
-    //   .catch((err) => {
-    //     log('error on render', err)
-    //   })
+    // requestAnimationFrame(callback)
+    Promise.resolve()
+      .then(callback)
+      .catch((err) => {
+        log('error on render', err)
+      })
     //setTimeout(callback, 0)
   })
 
