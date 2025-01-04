@@ -1,14 +1,13 @@
-let SHOW_LOG = false
-// SHOW_LOG = true
-const log = SHOW_LOG ? console.log : () => {};
-
 (async function() {
+  let SHOW_LOG = false
+  // SHOW_LOG = true
+  const log = SHOW_LOG ? console.log : () => {};
   log('IN content-script 00');
 
-  if (window.hasRun) {
+  if (window.gHasRunBkmInfScript) {
     return;
   }
-  window.hasRun = true;
+  window.gHasRunBkmInfScript = true;
 
   // TODO-DOUBLE remove duplication in EXTENSION_MSG_ID: message-id.js and content-scripts.js
   const EXTENSION_MSG_ID = {
@@ -60,10 +59,10 @@ const log = SHOW_LOG ? console.log : () => {};
   }
 
   const bkmInfoRootId = 'bkm-info--root';
-  const bkmInfoStyle1Id = 'bkm-info--style1';
-  const bkmInfoStyle2Id = 'bkm-info--style2';
+  const bkmInfoMutableStyleId = 'bkm-info--mutable-style';
+  const bkmInfoFixedStyleId = 'bkm-info--fixed-style';
 
-  function getChangeableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting }) {
+  function getMutableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting }) {
     let semanticTagsStyle = ''
 
     if (isHideSemanticHtmlTagsOnPrinting) {
@@ -98,7 +97,7 @@ ${semanticTagsStyle}
     )
   }
 
-  function getConstantStyleText() {
+  function getFixedStyleText() {
     return (
 `
 #${bkmInfoRootId} {
@@ -537,15 +536,6 @@ ${semanticTagsStyle}
       drawList.push({ type: 'bookmark', value, bkmIndex: index })
     })
     partialBookmarkList.forEach((value, index) => {
-      // const { title } = value
-
-      // if (isShowTitle && title) {
-      //   if (title !== prevTitle) {
-      //     drawList.push({ type: 'title', value: title })
-      //     prevTitle = title
-      //   }
-      // }
-
       drawList.push({ type: 'partial-bookmark', value, bkmIndex: index + bookmarkList.length })
     })
 
@@ -577,29 +567,29 @@ ${semanticTagsStyle}
       }
     }
 
-    let rootStyle1 = document.getElementById(bkmInfoStyle1Id);
+    let rootStyleMutable = document.getElementById(bkmInfoMutableStyleId);
     let rootDiv = document.getElementById(bkmInfoRootId);
-    if (!rootStyle1) {
+    if (!rootStyleMutable) {
       storedFontSize = fontSize
       storedTagLength = tagLength
       storedIsHideSemanticHtmlTagsOnPrinting = isHideSemanticHtmlTagsOnPrinting
 
-      rootStyle1 = document.createElement('style');
-      rootStyle1.setAttribute('id', bkmInfoStyle1Id);
+      rootStyleMutable = document.createElement('style');
+      rootStyleMutable.setAttribute('id', bkmInfoMutableStyleId);
       const textNodeStyle1 = document.createTextNode(
-        getChangeableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting })
+        getMutableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting })
       );
-      rootStyle1.appendChild(textNodeStyle1);
+      rootStyleMutable.appendChild(textNodeStyle1);
 
       const rootStyle2 = document.createElement('style');
-      rootStyle2.setAttribute('id', bkmInfoStyle2Id);
+      rootStyle2.setAttribute('id', bkmInfoFixedStyleId);
       const textNodeStyle2 = document.createTextNode(
-        getConstantStyleText()
+        getFixedStyleText()
       );
       rootStyle2.appendChild(textNodeStyle2);
 
-      document.body.insertAdjacentElement('afterbegin', rootStyle1);
-      rootStyle1.insertAdjacentElement('afterend', rootStyle2);
+      document.body.insertAdjacentElement('afterbegin', rootStyleMutable);
+      rootStyleMutable.insertAdjacentElement('afterend', rootStyle2);
 
       rootDiv = document.createElement('div');
       rootDiv.setAttribute('id', bkmInfoRootId);
@@ -612,12 +602,8 @@ ${semanticTagsStyle}
       storedTagLength = tagLength
       storedIsHideSemanticHtmlTagsOnPrinting = isHideSemanticHtmlTagsOnPrinting
 
-      // const textNodeStyle1 = document.createTextNode(
-      //   getChangeableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting })
-      // );
-      // rootStyle1.replaceChild(textNodeStyle1, rootStyle1.firstChild);
-      rootStyle1.firstChild.replaceWith(
-        getChangeableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting })
+      rootStyleMutable.firstChild.replaceWith(
+        getMutableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting })
       )
     }
 
