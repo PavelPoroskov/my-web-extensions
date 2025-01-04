@@ -373,8 +373,13 @@ ${semanticTagsStyle}
   }
 
   async function toggleTag(event) {
-    const parentId = event?.target?.dataset?.parentid;
-    const isUsed = event?.target?.dataset?.isused;
+    let parentId = event?.target?.dataset?.parentid
+    let isUsed = event?.target?.dataset?.isused;
+
+    if (!parentId) {
+      parentId = event?.target?.parentNode?.dataset?.parentid;
+      isUsed = event?.target?.parentNode?.dataset?.isused;
+    }
     // log('toggleTag () 00', 'isUsed', isUsed, 'parentId', parentId)
 
     if (parentId) {
