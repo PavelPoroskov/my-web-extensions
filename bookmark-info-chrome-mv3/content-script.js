@@ -510,11 +510,7 @@ ${semanticTagsStyle}
     }
   }
 
-  let storedFontSize
-  let storedTagLength;
-  let storedIsHideSemanticHtmlTagsOnPrinting;
-
-  function renderBookmarkInfo(input) {
+  function renderBookmarkInfo(input, prevState) {
     log('renderBookmarkInfo 00');
 
     const bookmarkList = (input.bookmarkList || [])
@@ -531,11 +527,11 @@ ${semanticTagsStyle}
     const isTagListOpen = tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL
       ? (input.isTagListOpenGlobal || false)
       : (input.isTagListOpenLocal || false)
-    const fontSize = input.fontSize || 14
-    const tagLength = input.tagLength || 15
-    const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting || false
-    const optimisticDelFromTagList = input.optimisticDelFromTagList || 0
-    const optimisticAddFromTagList = input.optimisticAddFromTagList || 0
+    const fontSize = input.fontSize
+    const tagLength = input.tagLength
+    const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting
+    const optimisticDelFromTagList = input.optimisticDelFromTagList
+    const optimisticAddFromTagList = input.optimisticAddFromTagList
 
 
     const usedParentIdSet = new Set(bookmarkList.map(({ parentId }) => parentId))
@@ -593,10 +589,6 @@ ${semanticTagsStyle}
     let rootStyleMutable = document.getElementById(bkmInfoMutableStyleId);
     let rootDiv = document.getElementById(bkmInfoRootId);
     if (!rootStyleMutable) {
-      storedFontSize = fontSize
-      storedTagLength = tagLength
-      storedIsHideSemanticHtmlTagsOnPrinting = isHideSemanticHtmlTagsOnPrinting
-
       rootStyleMutable = document.createElement('style');
       rootStyleMutable.setAttribute('id', bkmInfoMutableStyleId);
       const textNodeStyle1 = document.createTextNode(
@@ -620,12 +612,8 @@ ${semanticTagsStyle}
       rootStyleFixed.insertAdjacentElement('afterend', rootDiv);
     }
 
-    if (!(fontSize == storedFontSize && tagLength == storedTagLength
-      && isHideSemanticHtmlTagsOnPrinting == storedIsHideSemanticHtmlTagsOnPrinting)) {
-      storedFontSize = fontSize
-      storedTagLength = tagLength
-      storedIsHideSemanticHtmlTagsOnPrinting = isHideSemanticHtmlTagsOnPrinting
-
+    if (!(fontSize == prevState.fontSize && tagLength == prevState.tagLength
+      && isHideSemanticHtmlTagsOnPrinting == prevState.isHideSemanticHtmlTagsOnPrinting)) {
       rootStyleMutable.firstChild.replaceWith(
         getMutableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting })
       )
@@ -952,6 +940,7 @@ ${semanticTagsStyle}
       // this.nReadUpdates = this.nUpdates
 
       const isUpdates = this.updates.length > 0
+      let prevState = {}
 
       if (isUpdates) {
         let sumUpdate = {}
@@ -962,12 +951,14 @@ ${semanticTagsStyle}
         }
 
         // const isUpdates = Object.keys(sumUpdate).length > 0
+        prevState = { ...this.state }
         Object.assign(this.state, sumUpdate)
       }
 
       return {
         isUpdates,
-        state: isUpdates ? this.state : undefined
+        state: isUpdates ? this.state : undefined,
+        prevState,
       }
     }
   }
@@ -976,14 +967,17 @@ ${semanticTagsStyle}
     optimisticAddFromTagList: 0,
     optimisticToStorageDel: 0,
     optimisticToStorageAdd: 0,
+    fontSize: 14,
+    tagLength: 15,
+    isHideSemanticHtmlTagsOnPrinting: false,
   })
   const renderQueue = new TaskQueue()
   stateContainer.setAfterUpdateAction(() => {
     const callback = () => {
       renderQueue.enqueue(() => {
-        const { isUpdates, state } = stateContainer.readUpdates()
+        const { isUpdates, state, prevState } = stateContainer.readUpdates()
         if (isUpdates) {
-          renderBookmarkInfo(state)
+          renderBookmarkInfo(state, prevState)
         }
       })
     }
