@@ -69,7 +69,7 @@ export async function onIncomingMessage (message, sender) {
     case EXTENSION_MSG_ID.DELETE_BOOKMARK: {
       logIM('runtime.onMessage deleteBookmark');
 
-      deleteBookmark(message.bkmId);
+      deleteBookmark(message.bookmarkId);
       break
     }
     case EXTENSION_MSG_ID.SHOW_TAG_LIST: {

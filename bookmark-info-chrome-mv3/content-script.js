@@ -312,7 +312,7 @@ ${semanticTagsStyle}
     )
   };
 
-  async function hideBookmarks() {
+  function hideBookmarks() {
     const rootDiv = document.getElementById(bkmInfoRootId);
 
     if (rootDiv) {
@@ -322,94 +322,87 @@ ${semanticTagsStyle}
     }
   }
 
-  async function onBookmarkLabelClick(event) {
-    log('onBookmarkLabelClick 00', event?.target);
-    const bkmid = event?.target?.dataset?.bkmid
-
-    if (bkmid) {
-      await chrome.runtime.sendMessage({
-        command: EXTENSION_MSG_ID.ADD_RECENT_TAG,
-        bookmarkId: bkmid,
-      });
+  const availableActionSet = new Set(['b', 'db', 'pb', 'h', 'tgl', 't', 'ut', 'fx', 'uf'])
+  async function rootListener(event) {
+    const actionId = event?.target?.dataset?.id || event?.target?.parentNode?.dataset?.id;
+    if (!actionId) {
+      return
     }
 
-    hideBookmarks()
-  }
-
-  async function deleteBookmark(event) {
-    log('deleteBookmark 00');
-    const bkmId = event?.target?.dataset?.bkmid || event?.target?.parentNode?.dataset?.bkmid;
-
-    if (bkmId) {
-      // optimistic ui
-      const fullState = stateContainer.getState()
-      const bookmarkList = fullState.bookmarkList || []
-
-      const findIndex = bookmarkList.findIndex((item) => item.id == bkmId)
-      if (-1 < findIndex) {
-        const newBookmarkList = bookmarkList.with(findIndex, { optimisticDel: true })
-        stateContainer.update({ bookmarkList: newBookmarkList })
-      }
-
-      await chrome.runtime.sendMessage({
-        command: EXTENSION_MSG_ID.DELETE_BOOKMARK,
-        bkmId,
-      });
+    const [action, id] = actionId.split('#')
+    // if (!id) {
+    //   return
+    // }
+    if (!availableActionSet.has(action)) {
+      return
     }
-  }
+    event.stopPropagation()
 
-  async function toggleTagList() {
-    const fullMessage = stateContainer.getState()
-    const tagListOpenMode = fullMessage.tagListOpenMode
+    switch (action) {
+      // onBookmarkLabelClick
+      case 'pb':
+      case 'b': {
+        const bookmarkId = id
 
-    if (tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL) {
-      const before = !!fullMessage.isTagListOpenGlobal
-      stateContainer.update({ isTagListOpenGlobal: !before })
-      await chrome.runtime.sendMessage({
-        command: EXTENSION_MSG_ID.SHOW_TAG_LIST,
-        value: !before,
-      });
-    } else {
-      const before = !!fullMessage.isTagListOpenLocal
-      stateContainer.update({ isTagListOpenLocal: !before })
-    }
-  }
-
-  async function toggleTag(event) {
-    let parentId = event?.target?.dataset?.parentid
-    let isUsed = event?.target?.dataset?.isused;
-
-    if (!parentId) {
-      parentId = event?.target?.parentNode?.dataset?.parentid;
-      isUsed = event?.target?.parentNode?.dataset?.isused;
-    }
-    // log('toggleTag () 00', 'isUsed', isUsed, 'parentId', parentId)
-
-    if (parentId) {
-      const fullState = stateContainer.getState()
-      const bookmarkList = fullState.bookmarkList || []
-      const tagListOpenMode = fullState.tagListOpenMode
-
-      if (isUsed) {
-        const bkm = bookmarkList.find((item) => item.parentId === parentId)
-
-        if (bkm?.id) {
-          // epic error
-          // const findIndex = bookmarkList.findIndex((item) => item.id != bkm.id)
-          const findIndex = bookmarkList.findIndex((item) => item.id == bkm.id)
-          if (-1 < findIndex) {
-            const newBookmarkList = bookmarkList.with(findIndex, { optimisticDel: true })
-            optimisticDelFromTagList += 1
-            // log('bookmarkFromTag 11 +optimisticDelFromTagList', optimisticDelFromTagList);
-            stateContainer.update({ bookmarkList: newBookmarkList })
-          }
-
+        if (bookmarkId) {
           await chrome.runtime.sendMessage({
-            command: EXTENSION_MSG_ID.DELETE_BOOKMARK,
-            bkmId: bkm.id,
+            command: EXTENSION_MSG_ID.ADD_RECENT_TAG,
+            bookmarkId,
           });
         }
-      } else {
+
+        hideBookmarks()
+        break
+      }
+      case 'db': {
+        const bookmarkId = id
+        if (!bookmarkId) {
+          break
+        }
+
+        // optimistic ui
+        const fullState = stateContainer.getState()
+        const bookmarkList = fullState.bookmarkList || []
+
+        const findIndex = bookmarkList.findIndex((item) => item.id == bookmarkId)
+        if (-1 < findIndex) {
+          const newBookmarkList = bookmarkList.with(findIndex, { optimisticDel: true })
+          stateContainer.update({ bookmarkList: newBookmarkList })
+        }
+
+        await chrome.runtime.sendMessage({
+          command: EXTENSION_MSG_ID.DELETE_BOOKMARK,
+          bookmarkId,
+        });
+        break
+      }
+      case 'h': {
+        hideBookmarks()
+        break
+      }
+      case 'tgl': {
+        const fullMessage = stateContainer.getState()
+        const tagListOpenMode = fullMessage.tagListOpenMode
+
+        if (tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL) {
+          const before = !!fullMessage.isTagListOpenGlobal
+          stateContainer.update({ isTagListOpenGlobal: !before })
+          await chrome.runtime.sendMessage({
+            command: EXTENSION_MSG_ID.SHOW_TAG_LIST,
+            value: !before,
+          });
+        } else {
+          const before = !!fullMessage.isTagListOpenLocal
+          stateContainer.update({ isTagListOpenLocal: !before })
+        }
+        break
+      }
+      case 't': {
+        const parentId = id
+        const fullState = stateContainer.getState()
+        const bookmarkList = fullState.bookmarkList || []
+        const tagListOpenMode = fullState.tagListOpenMode
+
         // optimistic ui
         const tagList = fullState.tagList || []
         const tag = tagList.find((item) => item.parentId === parentId)
@@ -443,57 +436,72 @@ ${semanticTagsStyle}
           url: document.location.href,
           title: document.title,
         });
+        break
+      }
+      case 'ut': {
+        const parentId = id
+        const fullState = stateContainer.getState()
+        const bookmarkList = fullState.bookmarkList || []
+        const bkm = bookmarkList.find((item) => item.parentId === parentId)
+
+        if (bkm?.id) {
+          // epic error
+          // const findIndex = bookmarkList.findIndex((item) => item.id != bkm.id)
+          const findIndex = bookmarkList.findIndex((item) => item.id == bkm.id)
+          if (-1 < findIndex) {
+            const newBookmarkList = bookmarkList.with(findIndex, { optimisticDel: true })
+            optimisticDelFromTagList += 1
+            stateContainer.update({ bookmarkList: newBookmarkList })
+          }
+
+          await chrome.runtime.sendMessage({
+            command: EXTENSION_MSG_ID.DELETE_BOOKMARK,
+            bookmarkId: bkm.id,
+          });
+        }
+        break
+      }
+      case 'fx': {
+        const parentId = id
+        const fullState = stateContainer.getState()
+        const tagList = fullState.tagList || []
+
+        let tag
+        const findIndex = tagList.findIndex((item) => item.parentId == parentId)
+        if (-1 < findIndex) {
+          tag = tagList[findIndex]
+          const newTagList = tagList.with(findIndex, { ...tag, isFixed: true })
+          stateContainer.update({ tagList: newTagList })
+        }
+
+        await chrome.runtime.sendMessage({
+          command: EXTENSION_MSG_ID.FIX_TAG,
+          parentId,
+          title: tag?.title,
+        });
+        break
+      }
+      case 'uf': {
+        const parentId = id
+        const fullState = stateContainer.getState()
+        const tagList = fullState.tagList || []
+
+        let tag
+        const findIndex = tagList.findIndex((item) => item.parentId == parentId)
+        if (-1 < findIndex) {
+          tag = tagList[findIndex]
+          const newTagList = tagList.with(findIndex, { ...tag, isFixed: false })
+          stateContainer.update({ tagList: newTagList })
+        }
+
+        await chrome.runtime.sendMessage({
+          command: EXTENSION_MSG_ID.UNFIX_TAG,
+          parentId,
+        });
+        break
       }
     }
   }
-
-  async function fixTag(event) {
-    log('fixTag 00');
-    const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
-
-    if (parentId) {
-      const fullState = stateContainer.getState()
-      const tagList = fullState.tagList || []
-
-      let tag
-      const findIndex = tagList.findIndex((item) => item.parentId == parentId)
-      if (-1 < findIndex) {
-        tag = tagList[findIndex]
-        const newTagList = tagList.with(findIndex, { ...tag, isFixed: true })
-        stateContainer.update({ tagList: newTagList })
-      }
-
-      await chrome.runtime.sendMessage({
-        command: EXTENSION_MSG_ID.FIX_TAG,
-        parentId,
-        title: tag?.title,
-      });
-    }
-  }
-
-  async function unfixTag(event) {
-    log('unfixTag 00');
-    const parentId = event?.target?.dataset?.parentid || event?.target?.parentNode?.dataset?.parentid;
-
-    if (parentId) {
-      const fullState = stateContainer.getState()
-      const tagList = fullState.tagList || []
-
-      let tag
-      const findIndex = tagList.findIndex((item) => item.parentId == parentId)
-      if (-1 < findIndex) {
-        tag = tagList[findIndex]
-        const newTagList = tagList.with(findIndex, { ...tag, isFixed: false })
-        stateContainer.update({ tagList: newTagList })
-      }
-
-      await chrome.runtime.sendMessage({
-        command: EXTENSION_MSG_ID.UNFIX_TAG,
-        parentId,
-      });
-    }
-  }
-
 
   let storedFontSize
   let storedTagLength;
@@ -509,15 +517,13 @@ ${semanticTagsStyle}
     const partialBookmarkList = (input.bookmarkList || [])
       .filter(({ source }) => source == 'substring')
 
-    const visitString = input.visitString || []
+    const visitString = input.visitString || ''
     const isShowTitle = input.isShowTitle || false
     const inTagList = input.tagList || []
     const tagListOpenMode = input.tagListOpenMode
-    const isTagListOpenLocal = input.isTagListOpenLocal || false
-    const isTagListOpenGlobal = input.isTagListOpenGlobal || false
     const isTagListOpen = tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL
-      ? isTagListOpenGlobal
-      : isTagListOpenLocal
+      ? (input.isTagListOpenGlobal || false)
+      : (input.isTagListOpenLocal || false)
     const fontSize = input.fontSize || 14
     const tagLength = input.tagLength || 15
     const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting || false
@@ -588,19 +594,20 @@ ${semanticTagsStyle}
       );
       rootStyleMutable.appendChild(textNodeStyle1);
 
-      const rootStyle2 = document.createElement('style');
-      rootStyle2.setAttribute('id', bkmInfoFixedStyleId);
+      const rootStyleFixed = document.createElement('style');
+      rootStyleFixed.setAttribute('id', bkmInfoFixedStyleId);
       const textNodeStyle2 = document.createTextNode(
         getFixedStyleText()
       );
-      rootStyle2.appendChild(textNodeStyle2);
+      rootStyleFixed.appendChild(textNodeStyle2);
 
       document.body.insertAdjacentElement('afterbegin', rootStyleMutable);
-      rootStyleMutable.insertAdjacentElement('afterend', rootStyle2);
+      rootStyleMutable.insertAdjacentElement('afterend', rootStyleFixed);
 
       rootDiv = document.createElement('div');
       rootDiv.setAttribute('id', bkmInfoRootId);
-      rootStyle2.insertAdjacentElement('afterend', rootDiv);
+      rootDiv.addEventListener('click', rootListener);
+      rootStyleFixed.insertAdjacentElement('afterend', rootDiv);
     }
 
     if (!(fontSize == storedFontSize && tagLength == storedTagLength
@@ -630,7 +637,6 @@ ${semanticTagsStyle}
           divLabel.appendChild(textNode);
           divLabel.setAttribute('data-restpath', path);
 
-          divLabel.addEventListener('click', onBookmarkLabelClick);
           // TODO sanitize: remove ",<,>
           // const sanitizedFullPath = fullPath
           //   .replaceAll('"', '&quot;')
@@ -639,10 +645,10 @@ ${semanticTagsStyle}
           // divLabel.setAttribute('data-restpath', sanitizedFullPath);
           //
           // Symbols ( " > < ) don't break html and displayed as text.
-          divLabel.setAttribute('data-bkmid', id);
+          divLabel.setAttribute('data-id', `b#${id}`);
 
           const divDelBtn = document.createElement('div');
-          divDelBtn.setAttribute('data-bkmid', id);
+          divDelBtn.setAttribute('data-id', `db#${id}`);
           divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-del');
 
           const divDelBtnLetter = document.createElement('div');
@@ -651,7 +657,6 @@ ${semanticTagsStyle}
           divDelBtnLetter.appendChild(textNodeDel);
 
           divDelBtn.appendChild(divDelBtnLetter);
-          divDelBtn.addEventListener('click', deleteBookmark);
 
           const divLabelContainer = document.createElement('div');
           divLabelContainer.classList.add('bkm-info--label-container');
@@ -674,9 +679,7 @@ ${semanticTagsStyle}
           const textNode = document.createTextNode(`url*: ${folder}`);
           divLabel.appendChild(textNode);
           divLabel.setAttribute('data-restpath', `url*: ${url}`);
-
-          divLabel.addEventListener('click', onBookmarkLabelClick);
-          divLabel.setAttribute('data-bkmid', id);
+          divLabel.setAttribute('data-id', `pb#${id}`);
 
           const divLabelContainer = document.createElement('div');
           divLabelContainer.classList.add('bkm-info--label-container');
@@ -692,6 +695,7 @@ ${semanticTagsStyle}
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--empty');
           const textNode = document.createTextNode('|');
+          divLabel.setAttribute('data-id', 'h#1');
           divLabel.appendChild(textNode);
 
           const divLabelContainer = document.createElement('div');
@@ -700,7 +704,7 @@ ${semanticTagsStyle}
 
           divRow = document.createElement('div');
           divRow.classList.add('bkm-info--row');
-          divRow.addEventListener('click', hideBookmarks);
+          divRow.setAttribute('data-id', 'h#1');
           divRow.appendChild(divLabelContainer);
 
           break
@@ -708,7 +712,7 @@ ${semanticTagsStyle}
         case 'history': {
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--history');
-          divLabel.addEventListener('click', hideBookmarks);
+          divLabel.setAttribute('data-id', 'h#1');
           const textNode = document.createTextNode(`${value}`);
           divLabel.appendChild(textNode);
 
@@ -718,7 +722,7 @@ ${semanticTagsStyle}
 
           divRow = document.createElement('div');
           divRow.classList.add('bkm-info--row');
-          divRow.addEventListener('click', hideBookmarks);
+          divRow.setAttribute('data-id', 'h#1');
           divRow.appendChild(divLabelContainer);
 
           break
@@ -726,7 +730,7 @@ ${semanticTagsStyle}
         case 'separator': {
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--separator');
-          divLabel.addEventListener('click', toggleTagList);
+          divLabel.setAttribute('data-id', 'tgl#1');
           const textNode = document.createTextNode( isTagListOpen ? '▴ hide' : '▾ add' );
           divLabel.appendChild(textNode);
 
@@ -745,11 +749,13 @@ ${semanticTagsStyle}
           log('recentTag 11', title, isHighlight)
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag', 'bkm-info--recent');
-          divLabel.setAttribute('data-parentid', parentId);
-          divLabel.addEventListener('click', toggleTag);
 
+          if (isUsed) {
+            divLabel.setAttribute('data-id', `ut#${parentId}`);
+          } else {
+            divLabel.setAttribute('data-id', `t#${parentId}`);
+          }
           divLabel.classList.toggle('bkm-info--used-tag', isUsed);
-          divLabel.setAttribute('data-isused', isUsed ? '1' : '');
           divLabel.classList.toggle('bkm-info--last-tag', isLast);
 
           if (isHighlight) {
@@ -769,7 +775,7 @@ ${semanticTagsStyle}
           const divFixBtn = document.createElement('div');
           divFixBtn.setAttribute('data-parentid', parentId);
           divFixBtn.classList.add('bkm-info--btn', 'bkm-info--btn-fix');
-          divFixBtn.addEventListener('click', fixTag);
+          divFixBtn.setAttribute('data-id', `fx#${parentId}`);
 
           const divFixBtnLetter = document.createElement('div');
           divFixBtnLetter.classList.add('bkm-info--btn-letter');
@@ -794,10 +800,13 @@ ${semanticTagsStyle}
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag', 'bkm-info--fixed');
           divLabel.setAttribute('data-parentid', parentId);
-          divLabel.addEventListener('click', toggleTag);
+          if (isUsed) {
+            divLabel.setAttribute('data-id', `ut#${parentId}`);
+          } else {
+            divLabel.setAttribute('data-id', `t#${parentId}`);
+          }
 
           divLabel.classList.toggle('bkm-info--used-tag', isUsed);
-          divLabel.setAttribute('data-isused', isUsed ? '1' : '');
           divLabel.classList.toggle('bkm-info--last-tag', isLast);
 
           if (isHighlight) {
@@ -817,7 +826,7 @@ ${semanticTagsStyle}
           const divFixBtn = document.createElement('div');
           divFixBtn.setAttribute('data-parentid', parentId);
           divFixBtn.classList.add('bkm-info--btn', 'bkm-info--btn-unfix');
-          divFixBtn.addEventListener('click', unfixTag);
+          divFixBtn.setAttribute('data-id', `uf#${parentId}`);
 
           const divFixBtnLetter = document.createElement('div');
           divFixBtnLetter.classList.add('bkm-info--btn-letter');
@@ -840,7 +849,7 @@ ${semanticTagsStyle}
         case 'title': {
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--title');
-          divLabel.addEventListener('click', hideBookmarks);
+          divLabel.setAttribute('data-id', 'h#1');
           const textNode = document.createTextNode(`${value} :title`);
           divLabel.appendChild(textNode);
 
