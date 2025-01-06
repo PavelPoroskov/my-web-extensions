@@ -24,12 +24,14 @@ const HOST_URL_SETTINGS = {
   'hh.ru': {
     removeAllSearchParamForPath: [
       '/vacancy/:id',
+      '/resume/:id',
     ],
     searchParamList: [
       ['hhtmFrom'],
       ['hhtmFromLabel'],
       'text',
       'professional_role',
+      'resume',
     ],
   },
   'imdb.com': {

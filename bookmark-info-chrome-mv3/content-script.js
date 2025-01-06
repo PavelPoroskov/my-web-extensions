@@ -919,6 +919,9 @@ ${semanticTagsStyle}
         this.afterUpdateAction()
       }
     }
+    updateNoRender(updateObj) {
+      this.updates.push(updateObj)
+    }
     getState() {
       return { ...this.state }
     }
@@ -1190,7 +1193,7 @@ ${semanticTagsStyle}
       if (tagListOpenMode && tagListOpenMode != TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL
         && fullState.isTagListOpenLocal) {
 
-          stateContainer.update({ isTagListOpenLocal: false })
+          stateContainer.updateNoRender({ isTagListOpenLocal: false })
       }
     }
 
