@@ -116,6 +116,9 @@ ${semanticTagsStyle}
   letter-spacing: normal;
   margin: 0;
 }
+#${bkmInfoRootId} * {
+  box-sizing: border-box;
+}
 @media print {
   #${bkmInfoRootId} {
       display: none;
