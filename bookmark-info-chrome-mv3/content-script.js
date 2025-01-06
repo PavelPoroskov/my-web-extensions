@@ -415,20 +415,25 @@ ${semanticTagsStyle}
             parentId,
             optimisticAdd: true,
           })
-          if (optimisticAddFromTagList < optimisticDelFromTagList) {
-            optimisticAddFromTagList += 1
-          }
-
-          const update = { bookmarkList: newBookmarkList }
-          if (tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.CLOSE_AFTER_ADD) {
-            update.isTagListOpenLocal = false
-
-            optimisticDelFromTagList = 0
-            optimisticAddFromTagList = 0
-            optimisticToStorageDel = 0
-            optimisticToStorageAdd = 0
-          }
-          stateContainer.update(update)
+          stateContainer.update({
+            bookmarkList: newBookmarkList,
+            ...(fullState.optimisticAddFromTagList < fullState.optimisticDelFromTagList
+              ? {
+                optimisticAddFromTagList: fullState.optimisticAddFromTagList + 1,
+              }
+              : {}
+            ),
+            ...(tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.CLOSE_AFTER_ADD
+              ? {
+                isTagListOpenLocal: false,
+                optimisticDelFromTagList: 0,
+                optimisticAddFromTagList: 0,
+                optimisticToStorageDel: 0,
+                optimisticToStorageAdd: 0,
+              }
+              : {}
+            ),
+          })
         }
         await chrome.runtime.sendMessage({
           command: EXTENSION_MSG_ID.ADD_BOOKMARK,
@@ -450,8 +455,10 @@ ${semanticTagsStyle}
           const findIndex = bookmarkList.findIndex((item) => item.id == bkm.id)
           if (-1 < findIndex) {
             const newBookmarkList = bookmarkList.with(findIndex, { optimisticDel: true })
-            optimisticDelFromTagList += 1
-            stateContainer.update({ bookmarkList: newBookmarkList })
+            stateContainer.update({
+              bookmarkList: newBookmarkList,
+              optimisticDelFromTagList: fullState.optimisticDelFromTagList + 1,
+            })
           }
 
           await chrome.runtime.sendMessage({
@@ -527,6 +534,9 @@ ${semanticTagsStyle}
     const fontSize = input.fontSize || 14
     const tagLength = input.tagLength || 15
     const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting || false
+    const optimisticDelFromTagList = input.optimisticDelFromTagList || 0
+    const optimisticAddFromTagList = input.optimisticAddFromTagList || 0
+
 
     const usedParentIdSet = new Set(bookmarkList.map(({ parentId }) => parentId))
     const tagList = inTagList.map((tag) => ({
@@ -606,7 +616,7 @@ ${semanticTagsStyle}
 
       rootDiv = document.createElement('div');
       rootDiv.setAttribute('id', bkmInfoRootId);
-      rootDiv.addEventListener('click', rootListener);
+      rootDiv.addEventListener('click', rootListener, { capture: true });
       rootStyleFixed.insertAdjacentElement('afterend', rootDiv);
     }
 
@@ -915,8 +925,8 @@ ${semanticTagsStyle}
 
     afterUpdateAction
 
-    constructor() {
-      this.state = {}
+    constructor(initialState) {
+      this.state = initialState
       this.updates = []
     }
     setAfterUpdateAction(action) {
@@ -961,7 +971,12 @@ ${semanticTagsStyle}
       }
     }
   }
-  const stateContainer = new StateContainer()
+  const stateContainer = new StateContainer({
+    optimisticDelFromTagList: 0,
+    optimisticAddFromTagList: 0,
+    optimisticToStorageDel: 0,
+    optimisticToStorageAdd: 0,
+  })
   const renderQueue = new TaskQueue()
   stateContainer.setAfterUpdateAction(() => {
     const callback = () => {
@@ -1089,7 +1104,11 @@ ${semanticTagsStyle}
         const fullState = stateContainer.getState()
         const bookmarkListBefore = (fullState.bookmarkList || []).filter(({ optimisticAdd }) => !optimisticAdd)
 
-        stateContainer.update(message)
+        let optimisticDelFromTagList = fullState.optimisticDelFromTagList
+        let optimisticAddFromTagList = fullState.optimisticAddFromTagList
+        let optimisticToStorageDel = fullState.optimisticToStorageDel
+        let optimisticToStorageAdd = fullState.optimisticToStorageAdd
+
         const bookmarkList = message.bookmarkList || []
         const diff = bookmarkList.length - bookmarkListBefore.length
 
@@ -1119,6 +1138,14 @@ ${semanticTagsStyle}
             }
           }
         }
+
+        stateContainer.update({
+          ...message,
+          optimisticDelFromTagList,
+          optimisticAddFromTagList,
+          optimisticToStorageDel,
+          optimisticToStorageAdd,
+        })
 
         options.isHideHeaderForYoutube = message.isHideHeaderForYoutube || false
         toggleYoutubePageHeader({ nTry: 30 })
@@ -1182,11 +1209,6 @@ ${semanticTagsStyle}
     }
   }
 
-  let optimisticDelFromTagList = 0
-  let optimisticAddFromTagList = 0
-  let optimisticToStorageDel = 0
-  let optimisticToStorageAdd = 0
-
   document.addEventListener("fullscreenchange", () => {
     let rootDiv = document.getElementById(bkmInfoRootId);
 
@@ -1201,19 +1223,20 @@ ${semanticTagsStyle}
   document.addEventListener("visibilitychange", () => {
     const fullState = stateContainer.getState()
     const tagListOpenMode = fullState.tagListOpenMode
+
     if (document.hidden) {
       if (tagListOpenMode && tagListOpenMode != TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL
         && fullState.isTagListOpenLocal) {
 
-          stateContainer.updateNoRender({ isTagListOpenLocal: false })
+        stateContainer.updateNoRender({ isTagListOpenLocal: false })
       }
-    }
-
-    if (!document.hidden) {
-      optimisticDelFromTagList = 0
-      optimisticAddFromTagList = 0
-      optimisticToStorageDel = 0
-      optimisticToStorageAdd = 0
+    } else {
+      stateContainer.updateNoRender({
+        optimisticDelFromTagList: 0,
+        optimisticAddFromTagList: 0,
+        optimisticToStorageDel: 0,
+        optimisticToStorageAdd: 0,
+      })
       sendTabIsReady()
     }
   });
