@@ -939,8 +939,8 @@ ${semanticTagsStyle}
       // const isUpdates = this.nReadUpdates < this.nUpdates
       // this.nReadUpdates = this.nUpdates
 
-      const isUpdates = this.updates.length > 0
-      let prevState = {}
+      const isUpdates = 0 < this.updates.length
+      let prevState
 
       if (isUpdates) {
         let sumUpdate = {}
@@ -951,7 +951,11 @@ ${semanticTagsStyle}
         }
 
         // const isUpdates = Object.keys(sumUpdate).length > 0
-        prevState = { ...this.state }
+        prevState = {
+          fontSize: this.state.fontSize,
+          tagLength: this.state.tagLength,
+          isHideSemanticHtmlTagsOnPrinting: this.state.isHideSemanticHtmlTagsOnPrinting,
+        }
         Object.assign(this.state, sumUpdate)
       }
 
