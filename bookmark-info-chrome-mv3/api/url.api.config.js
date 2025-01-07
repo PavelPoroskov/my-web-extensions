@@ -11,6 +11,11 @@ const HOST_URL_SETTINGS = {
   '9gag.com': {
     isHashRequired: true,
   },
+  'avito.ru': {
+    removeAllSearchParamForPath: [
+      '/',
+    ]
+  },
   'forcoder.net': {
     searchParamList: [
       's', // https://forcoder.net/?s=CQRS
