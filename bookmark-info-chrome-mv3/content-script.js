@@ -401,7 +401,6 @@ ${semanticTagsStyle}
         const parentId = id
         const fullState = stateContainer.getState()
         const bookmarkList = fullState.bookmarkList || []
-        const tagListOpenMode = fullState.tagListOpenMode
 
         // optimistic ui
         const tagList = fullState.tagList || []
@@ -415,25 +414,21 @@ ${semanticTagsStyle}
             parentId,
             optimisticAdd: true,
           })
-          stateContainer.update({
-            bookmarkList: newBookmarkList,
-            ...(fullState.optimisticAddFromTagList < fullState.optimisticDelFromTagList
-              ? {
-                optimisticAddFromTagList: fullState.optimisticAddFromTagList + 1,
-              }
-              : {}
-            ),
-            ...(tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.CLOSE_AFTER_ADD
-              ? {
-                isTagListOpenLocal: false,
-                optimisticDelFromTagList: 0,
-                optimisticAddFromTagList: 0,
-                optimisticToStorageDel: 0,
-                optimisticToStorageAdd: 0,
-              }
-              : {}
-            ),
-          })
+          const update = { bookmarkList: newBookmarkList }
+
+          if (fullState.optimisticAddFromTagList < fullState.optimisticDelFromTagList) {
+            Object.assign(update, { optimisticAddFromTagList: fullState.optimisticAddFromTagList + 1 })
+          }
+          if (fullState.tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.CLOSE_AFTER_ADD) {
+            Object.assign(update, {
+              isTagListOpenLocal: false,
+              optimisticDelFromTagList: 0,
+              optimisticAddFromTagList: 0,
+              optimisticToStorageDel: 0,
+              optimisticToStorageAdd: 0,
+            })
+          }
+          stateContainer.update(update)
         }
         await chrome.runtime.sendMessage({
           command: EXTENSION_MSG_ID.ADD_BOOKMARK,
@@ -946,7 +941,7 @@ ${semanticTagsStyle}
         let sumUpdate = {}
         let step = this.updates.shift()
         while (step) {
-          sumUpdate = { ...sumUpdate, ...step }
+          Object.assign(sumUpdate, step)
           step = this.updates.shift()
         }
 
