@@ -11,7 +11,7 @@ import {
 import {
   USER_OPTION,
   INTERNAL_VALUES,
-} from './storage.api.js'
+} from '../constant/index.js'
 import {
   extensionSettings,
   memo,

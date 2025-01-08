@@ -4,8 +4,10 @@ import {
 import {
   getOptions,
   setOptions,
+} from '../api-low/storage.api.js'
+import {
   USER_OPTION_KEY_LIST,
-} from '../api/storage.api.js'
+} from '../constant/index.js'
 
 const logES = makeLogFunction({ module: 'extensionSettings' })
 

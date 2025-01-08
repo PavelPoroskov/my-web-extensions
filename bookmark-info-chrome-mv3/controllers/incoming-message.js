@@ -20,10 +20,8 @@ import {
 } from '../api/clear-url.api.js'
 import {
   EXTENSION_MSG_ID,
-} from '../constant/index.js'
-import {
   USER_OPTION,
-} from '../api/storage.api.js'
+} from '../constant/index.js'
 import {
   HOST_LIST_FOR_PAGE_OPTIONS,
 } from '../api/url.api.js'

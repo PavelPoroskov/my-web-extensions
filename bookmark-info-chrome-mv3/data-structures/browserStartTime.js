@@ -4,8 +4,10 @@ import {
 import {
   getOptions,
   setOptions,
+} from '../api-low/storage.api.js'
+import {
   INTERNAL_VALUES,
-} from '../api/storage.api.js'
+} from '../constant/index.js'
 
 const logBST = makeLogFunction({ module: 'browserStartTime' })
 

@@ -1,6 +1,7 @@
 import {
   BROWSER_SPECIFIC,
   CONTEXT_MENU_CMD_ID,
+  USER_OPTION,
 } from '../constant/index.js'
 import {
   browserStartTime,
@@ -11,9 +12,6 @@ import {
 import {
   makeLogFunction,
 } from '../api-low/log.api.js'
-import {
-  USER_OPTION,
-} from './storage.api.js'
 
 const logIX = makeLogFunction({ module: 'init-extension' })
 

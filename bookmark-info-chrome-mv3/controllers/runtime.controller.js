@@ -6,10 +6,10 @@ import {
 } from '../bookmark-list-ops/index.js'
 import {
   getOptions,
-} from '../api/storage.api.js'
+} from '../api-low/storage.api.js'
 import {
   USER_OPTION,
-} from '../api/storage.api.js'
+} from '../constant/index.js'
 import {
   onIncomingMessage,
 } from './incoming-message.js'

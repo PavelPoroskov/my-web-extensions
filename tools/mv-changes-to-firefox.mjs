@@ -9,6 +9,7 @@ createFileForFirefox(
     'constant/message-id.js',
     'constant/id.js',
     'constant/optimization-cache.js',
+    'constant/storage.api.config.js',
     'constant/index.js',
 
     'constant/log.api.config.js',
@@ -17,12 +18,11 @@ createFileForFirefox(
     'api-low/common.js',
     'api-low/pluralize-rules.js',
     'api-low/pluralize.js',
+    'api-low/storage.api.js',
     'api-low/text.js',
 
     'data-structures/extraMap.js',
     'data-structures/cache.js',
-    'constant/storage.api.config.js',
-    'api/storage.api.js',
     'data-structures/memo.js',
     'data-structures/extensionSettings.js',
     'data-structures/browserStartTime.js',

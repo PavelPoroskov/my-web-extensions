@@ -1,6 +1,6 @@
 import {
   USER_OPTION
-} from './storage.api.js'
+} from '../constant/index.js'
 import {
   getHostSettings
 } from './url.api.js'

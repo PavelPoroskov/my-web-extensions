@@ -10,11 +10,13 @@ import {
 import {
   getOptions,
   setOptions,
+} from '../api-low/storage.api.js'
+import {
   USER_OPTION,
   INTERNAL_VALUES,
   TAG_LIST_MAX_LIST_LENGTH,
   TAG_LIST_PINNED_TAGS_POSITION_OPTIONS,
-} from '../api/storage.api.js'
+} from '../constant/index.js'
 import {
   extensionSettings,
 } from './extensionSettings.js'
