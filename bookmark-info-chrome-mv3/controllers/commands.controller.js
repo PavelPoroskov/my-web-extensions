@@ -4,7 +4,7 @@ import {
 } from '../command/index.js'
 import {
   makeLogFunction,
-} from '../api/log.api.js'
+} from '../api-low/log.api.js'
 import {
   KEYBOARD_CMD_ID,
 } from '../constant/index.js';

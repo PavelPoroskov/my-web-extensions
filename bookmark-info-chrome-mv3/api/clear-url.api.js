@@ -12,7 +12,7 @@ import {
 } from './url.api.js'
 import {
   makeLogFunction,
-} from './log.api.js'
+} from '../api-low/log.api.js'
 import {
   changeUrlInTab,
 } from './content-script.api.js'

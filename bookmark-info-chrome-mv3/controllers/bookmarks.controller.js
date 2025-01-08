@@ -20,7 +20,7 @@ import {
 } from '../constant/index.js'
 import {
   makeLogFunction,
-} from '../api/log.api.js'
+} from '../api-low/log.api.js'
 
 const logBC = makeLogFunction({ module: 'bookmarks.controller' })
 

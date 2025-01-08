@@ -1,6 +1,6 @@
 import {
   makeLogFunction,
-} from './log.api.js'
+} from '../api-low/log.api.js'
 import {
   STORAGE_TYPE,
   STORAGE_KEY_META,

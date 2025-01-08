@@ -23,7 +23,7 @@ import {
 import { initExtension } from './init-extension.js'
 import {
   makeLogFunction,
-} from './log.api.js'
+} from '../api-low/log.api.js'
 
 const logTA = makeLogFunction({ module: 'tabs.api' })
 

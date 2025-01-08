@@ -1,7 +1,7 @@
 import { CacheWithLimit } from './cache.js'
 import {
   makeLogFunction,
-} from '../api/log.api.js'
+} from '../api-low/log.api.js'
 
 const logM = makeLogFunction({ module: 'memo' })
 

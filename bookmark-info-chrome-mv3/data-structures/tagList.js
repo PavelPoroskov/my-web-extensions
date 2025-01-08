@@ -23,7 +23,7 @@ import {
 } from './tagList-highlight.js'
 import {
   makeLogFunction,
-} from '../api/log.api.js'
+} from '../api-low/log.api.js'
 
 const logTL = makeLogFunction({ module: 'tagList.js' })
 

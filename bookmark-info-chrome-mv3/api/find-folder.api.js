@@ -10,7 +10,7 @@ import {
 } from '../api-low/text.js';
 import {
   makeLogFunction,
-} from './log.api.js'
+} from '../api-low/log.api.js'
 import {
   createFolderIgnoreInController,
   updateBookmarkIgnoreInController,

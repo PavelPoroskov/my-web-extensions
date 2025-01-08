@@ -1,6 +1,6 @@
 import {
   makeLogFunction,
-} from '../api/log.api.js'
+} from '../api-low/log.api.js'
 import {
   ExtraMap,
 } from './extraMap.js'

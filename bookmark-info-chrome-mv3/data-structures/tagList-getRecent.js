@@ -6,7 +6,7 @@ import {
 } from '../api/special-folder.api.js'
 import {
   makeLogFunction,
-} from '../api/log.api.js'
+} from '../api-low/log.api.js'
 
 const logRA = makeLogFunction({ module: 'tagList-getRecent.js' })
 

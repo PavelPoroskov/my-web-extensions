@@ -10,7 +10,7 @@ import {
 } from '../data-structures/index.js'
 import {
   makeLogFunction,
-} from './log.api.js'
+} from '../api-low/log.api.js'
 import {
   USER_OPTION,
 } from './storage.api.js'

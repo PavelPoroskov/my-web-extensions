@@ -6,7 +6,7 @@ import {
 } from '../data-structures/index.js'
 import {
   makeLogFunction,
-} from '../api/log.api.js'
+} from '../api-low/log.api.js'
 
 const logSC = makeLogFunction({ module: 'storage.controller' })
 
