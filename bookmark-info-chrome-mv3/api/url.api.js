@@ -33,15 +33,38 @@ function extendsSettings(oSettings) {
   }
 }
 
+function mergeSettings(oSettings, oDefaultSettings) {
+  const getUniq = (ar1, ar2) => Array.from(new Set(ar1.concat(ar2)))
+
+  const {
+    removeSearchParamList,
+    importantSearchParamList,
+    ...rest
+  } = oSettings
+  const {
+    removeSearchParamList: defaultRemoveSearchParamList,
+    importantSearchParamList: defaultImportantSearchParamList,
+    ...defaultRest
+  } = oDefaultSettings
+
+  return {
+    ...defaultRest,
+    ...rest,
+    removeSearchParamList: getUniq(removeSearchParamList, defaultRemoveSearchParamList),
+    importantSearchParamList: getUniq(importantSearchParamList, defaultImportantSearchParamList),
+  }
+}
+
+const DEFAULT_HOST_SETTINGS_EXT = extendsSettings(DEFAULT_HOST_SETTINGS)
+
 const HOST_URL_SETTINGS_LIST = Object.entries(HOST_URL_SETTINGS)
   .map(([hostname, oSettings]) => [
     hostname,
-    extendsSettings(oSettings)
+    mergeSettings(extendsSettings(oSettings), DEFAULT_HOST_SETTINGS_EXT)
   ])
 
 const HOST_URL_SETTINGS_MAP = new Map(HOST_URL_SETTINGS_LIST)
 
-const DEFAULT_HOST_SETTINGS_EXT = extendsSettings(DEFAULT_HOST_SETTINGS)
 export const getHostSettings = (url) => {
   logUAC('getHostSettings 00', url)
   const oUrl = new URL(url);

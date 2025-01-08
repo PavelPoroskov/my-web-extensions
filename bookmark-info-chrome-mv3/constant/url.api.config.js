@@ -2,6 +2,7 @@ export const DEFAULT_HOST_SETTINGS = {
   isHashRequired: false,
   searchParamList: [
     '*id',
+    ['utm_*'],
   ],
 }
 
