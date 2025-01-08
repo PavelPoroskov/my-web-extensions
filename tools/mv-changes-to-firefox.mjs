@@ -11,6 +11,11 @@ createFileForFirefox(
     'constant/optimization-cache.js',
     'constant/index.js',
 
+    'api-low/common.js',
+    'api-low/pluralize-rules.js',
+    'api-low/pluralize.js',
+    'api-low/text.js',
+
     'constant/log.api.config.js',
     'api/log.api.js',
     'data-structures/extraMap.js',
@@ -22,7 +27,6 @@ createFileForFirefox(
     'data-structures/browserStartTime.js',
     'data-structures/ignoreBkmControllerApiActionSet.js',
 
-    'api/common.api.js',
     'api/bookmark.api.js',
     'api/special-folder.api.js',
     'data-structures/tagList-getRecent.js',
@@ -38,9 +42,6 @@ createFileForFirefox(
     'api/history.api.js',
     'api/init-extension.js',
     'api/tabs.api.js',
-    'api/pluralize-rules.js',
-    'api/pluralize.js',
-    'api/text.api.js',
     'api/find-folder.api.js',
     'bookmark-list-ops/flatFolders.js',
     'bookmark-list-ops/mergeFolders.js',

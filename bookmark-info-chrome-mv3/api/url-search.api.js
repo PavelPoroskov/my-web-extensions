@@ -9,7 +9,7 @@ import {
 } from './log.api.js'
 import {
   isNotEmptyArray,
-} from './common.api.js'
+} from '../api-low/common.js'
 import {
   extensionSettings,
 } from '../data-structures/index.js'

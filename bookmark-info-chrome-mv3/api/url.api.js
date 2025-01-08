@@ -3,7 +3,7 @@ import {
 } from './log.api.js'
 import {
   isNotEmptyArray,
-} from './common.api.js'
+} from '../api-low/common.js'
 import {
   HOST_URL_SETTINGS,
 } from '../constant/url.api.config.js'

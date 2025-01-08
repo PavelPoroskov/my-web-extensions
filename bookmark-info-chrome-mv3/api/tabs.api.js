@@ -1,7 +1,7 @@
 import {
   debounce,
   isSupportedProtocol,
-} from './common.api.js'
+} from '../api-low/common.js'
 import {
   getBookmarkInfoUni,
 } from './get-bookmarks.api.js'

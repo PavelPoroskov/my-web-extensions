@@ -7,7 +7,7 @@ import {
   trimLow,
   trimLowSingular,
   normalizeTitle,
-} from './text.api.js';
+} from '../api-low/text.js';
 import {
   makeLogFunction,
 } from './log.api.js'

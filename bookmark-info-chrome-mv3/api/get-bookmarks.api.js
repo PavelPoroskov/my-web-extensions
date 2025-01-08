@@ -3,7 +3,7 @@ import {
 } from '../data-structures/index.js'
 import {
   isSupportedProtocol,
-} from './common.api.js'
+} from '../api-low/common.js'
 import {
   SOURCE,
 } from '../constant/index.js'
