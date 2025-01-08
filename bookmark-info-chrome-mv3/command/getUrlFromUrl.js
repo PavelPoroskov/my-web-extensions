@@ -1,6 +1,4 @@
-import {
-  replaceUrlInTab,
-} from '../api/content-script.api.js'
+import { page } from '../api/page.api.js'
 import {
   makeLogFunction,
 } from '../api-low/index.js'
@@ -57,7 +55,7 @@ export async function getUrlFromUrl() {
 
     if (resultUrl) {
       logUU('getUrlFromUrl () 99 call replaceUrlInTab ()')
-      await replaceUrlInTab({ tabId: activeTab.id, url: resultUrl })
+      await page.replaceUrlInTab({ tabId: activeTab.id, url: resultUrl })
     }
   }
 }

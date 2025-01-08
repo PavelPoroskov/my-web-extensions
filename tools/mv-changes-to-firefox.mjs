@@ -11,6 +11,7 @@ createFileForFirefox(
     'constant/optimization-cache.js',
     'constant/storage.api.config.js',
     'constant/log.api.config.js',
+    'constant/url.api.config.js',
     'constant/index.js',
 
     'api-low/common.js',
@@ -34,8 +35,7 @@ createFileForFirefox(
     'data-structures/tagList-highlight.js',
     'data-structures/tagList.js',
     'data-structures/index.js',
-    'api/content-script.api.js',
-    'constant/url.api.config.js',
+    'api/page.api.js',
     'api/url.api.js',
     'api/url-search.api.js',
     'api/clear-url.api.js',

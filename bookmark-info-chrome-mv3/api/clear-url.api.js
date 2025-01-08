@@ -11,9 +11,7 @@ import {
 import {
   getHostSettings
 } from './url.api.js'
-import {
-  changeUrlInTab,
-} from './content-script.api.js'
+import { page } from './page.api.js'
 
 const logCUA = makeLogFunction({ module: 'clear-url.api' })
 
@@ -122,7 +120,7 @@ export async function clearUrlOnPageOpen({ tabId, url }) {
     cleanUrl = removeQueryParamsIfTarget(url);
 
     if (url !== cleanUrl) {
-      await changeUrlInTab({ tabId, url: cleanUrl })
+      await page.changeUrlInTab({ tabId, url: cleanUrl })
     }
   }
 

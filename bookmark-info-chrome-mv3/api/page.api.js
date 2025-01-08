@@ -5,9 +5,9 @@ import {
   makeLogFunction,
 } from '../api-low/index.js'
 
-const logCSA = makeLogFunction({ module: 'page.api.js' })
+const logCSA = makeLogFunction({ module: 'content-script.api' })
 
-async function changeUrlInTab({ tabId, url }) {
+export async function changeUrlInTab({ tabId, url }) {
   logCSA('changeUrlInTab () 00', tabId, url)
   const msg = {
     command: CONTENT_SCRIPT_MSG_ID.CHANGE_URL,
@@ -20,7 +20,7 @@ async function changeUrlInTab({ tabId, url }) {
     })
 }
 
-async function replaceUrlInTab({ tabId, url }) {
+export async function replaceUrlInTab({ tabId, url }) {
   logCSA('replaceUrlInTab () 00', tabId, url)
 
   const msg = {
@@ -34,7 +34,7 @@ async function replaceUrlInTab({ tabId, url }) {
     })
 }
 
-async function getSelectionInPage(tabId) {
+export async function getSelectionInPage(tabId) {
   logCSA('getSelectionInPage () 00', tabId)
   const msg = {
     command: CONTENT_SCRIPT_MSG_ID.GET_SELECTION,
@@ -46,7 +46,7 @@ async function getSelectionInPage(tabId) {
     })
 }
 
-async function getUserInputInPage(tabId) {
+export async function getUserInputInPage(tabId) {
   logCSA('getUserInputInPage () 00', tabId)
   const msg = {
     command: CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT,
@@ -58,7 +58,7 @@ async function getUserInputInPage(tabId) {
     })
 }
 
-async function toggleYoutubeHeaderInPage(tabId) {
+export async function toggleYoutubeHeaderInPage(tabId) {
   logCSA('toggleYoutubeHeaderInPage () 00', tabId)
   const msg = {
     command: CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER,
@@ -70,7 +70,7 @@ async function toggleYoutubeHeaderInPage(tabId) {
     })
 }
 
-async function updateBookmarkInfoInPage({ tabId, data }) {
+export async function updateBookmarkInfoInPage({ tabId, data }) {
   logCSA('updateBookmarkInfo () 00', tabId)
   const msg = {
     command: CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO,
@@ -81,13 +81,4 @@ async function updateBookmarkInfoInPage({ tabId, data }) {
     .catch((err) => {
       logCSA('updateBookmarkInfo () IGNORE', err)
     })
-}
-
-export const page = {
-  changeUrlInTab,
-  replaceUrlInTab,
-  getSelectionInPage,
-  getUserInputInPage,
-  toggleYoutubeHeaderInPage,
-  updateBookmarkInfoInPage,
 }

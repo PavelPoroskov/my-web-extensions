@@ -1,9 +1,6 @@
 import { findOrCreateFolder } from '../api/find-folder.api.js'
 import { createBookmarkWithApi } from '../api/bookmark.api.js'
-import {
-  getUserInputInPage,
-  getSelectionInPage,
-} from '../api/content-script.api.js'
+import { page } from '../api/page.api.js'
 
 export async function addBookmark({ url, title, parentId }) {
   const bookmarkList = await chrome.bookmarks.search({ url });
@@ -27,7 +24,7 @@ export async function startAddBookmarkFromSelection() {
   const [activeTab] = tabs;
 
   if (activeTab?.id) {
-    await getSelectionInPage(activeTab.id)
+    await page.getSelectionInPage(activeTab.id)
   }
 }
 
@@ -36,7 +33,7 @@ export async function startAddBookmarkFromInput() {
   const [activeTab] = tabs;
 
   if (activeTab?.id) {
-    await getUserInputInPage(activeTab.id)
+    await page.getUserInputInPage(activeTab.id)
   }
 }
 

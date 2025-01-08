@@ -1,7 +1,5 @@
 
-import {
-  changeUrlInTab,
-} from '../api/content-script.api.js'
+import { page } from '../api/page.api.js'
 import {
   makeLogFunction,
 } from '../api-low/index.js'
@@ -32,7 +30,7 @@ export async function removeFromUrlHashAndSearchParamsInActiveTab() {
     logCU('removeFromUrlHashAndSearchParamsInActiveTab () 22 cleanUrl', cleanUrl)
 
     if (activeTab.url !== cleanUrl) {
-      await changeUrlInTab({ tabId: activeTab.id, url: cleanUrl })
+      await page.changeUrlInTab({ tabId: activeTab.id, url: cleanUrl })
     }
   }
 }

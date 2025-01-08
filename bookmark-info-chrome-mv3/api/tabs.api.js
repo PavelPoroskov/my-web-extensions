@@ -18,9 +18,7 @@ import {
   memo,
   tagList,
 } from '../data-structures/index.js'
-import {
-  updateBookmarkInfoInPage,
-} from './content-script.api.js'
+import { page } from './page.api.js'
 import { initExtension } from './init-extension.js'
 
 const logTA = makeLogFunction({ module: 'tabs.api' })
@@ -82,7 +80,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     isHideHeaderForYoutube: settings[USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE],
   }
   logTA('UPDATE-TAB () 99 sendMessage', tabId, data);
-  await updateBookmarkInfoInPage({ tabId, data })
+  await page.updateBookmarkInfoInPage({ tabId, data })
 }
 
 function updateTabTask(options) {
