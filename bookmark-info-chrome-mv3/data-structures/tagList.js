@@ -2,7 +2,7 @@ import {
   filterFixedTagObj,
   filterRecentTagObj,
   getRecentTagObj,
-} from '../api/recent.api.js'
+} from './tagList-getRecent.js'
 import {
   getUnclassifiedFolderId,
   isDescriptiveFolderTitle,

@@ -3,12 +3,12 @@ import {
   BOOKMARKS_BAR_FOLDER_ID,
   getUnclassifiedFolderId,
   isDescriptiveFolderTitle,
-} from './special-folder.api.js'
+} from '../api/special-folder.api.js'
 import {
   makeLogFunction,
-} from './log.api.js'
+} from '../api/log.api.js'
 
-const logRA = makeLogFunction({ module: 'recent.api' })
+const logRA = makeLogFunction({ module: 'tagList-getRecent.js' })
 
 async function getRecentList(nItems) {
   logRA('getRecentList() 00', nItems)
@@ -99,9 +99,9 @@ export async function filterRecentTagObj(obj = {}, isFlatStructure) {
 
   return Object.fromEntries(
     filteredFolderList.map(({ id, title }) => [
-      id, 
+      id,
       {
-        title, 
+        title,
         dateAdded: obj[id].dateAdded,
       }
     ])
