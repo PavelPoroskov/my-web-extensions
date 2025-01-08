@@ -11,7 +11,7 @@ createFileForFirefox(
     'constant/optimization-cache.js',
     'constant/index.js',
 
-    'api/log.api.config.js',
+    'constant/log.api.config.js',
     'api/log.api.js',
     'data-structures/extraMap.js',
     'data-structures/cache.js',
