@@ -3,7 +3,7 @@ import {
 } from './storage.api.js'
 import {
   getHostSettings
-} from './url.api.config.js'
+} from './url.api.js'
 import {
   makeLogFunction,
 } from './log.api.js'

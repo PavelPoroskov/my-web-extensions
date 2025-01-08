@@ -26,7 +26,7 @@ import {
 } from '../api/storage.api.js'
 import {
   HOST_LIST_FOR_PAGE_OPTIONS,
-} from '../api/url.api.config.js'
+} from '../api/url.api.js'
 import {
   makeLogFunction,
 } from '../api/log.api.js'

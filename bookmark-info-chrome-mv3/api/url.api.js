@@ -4,94 +4,11 @@ import {
 import {
   isNotEmptyArray,
 } from './common.api.js'
+import {
+  HOST_URL_SETTINGS,
+} from '../constant/url.api.config.js'
 
-const logUAC = makeLogFunction({ module: 'url.api.config' })
-
-const HOST_URL_SETTINGS = {
-  '9gag.com': {
-    isHashRequired: true,
-  },
-  'avito.ru': {
-    removeAllSearchParamForPath: [
-      '/',
-    ]
-  },
-  'forcoder.net': {
-    searchParamList: [
-      's', // https://forcoder.net/?s=CQRS
-    ],
-  },
-  'frontendmasters.com': {
-    removeAllSearchParamForPath: [
-      '/courses/:id/',
-    ]
-  },
-  'hh.ru': {
-    removeAllSearchParamForPath: [
-      '/vacancy/:id',
-      '/resume/:id',
-    ],
-    searchParamList: [
-      ['hhtmFrom'],
-      ['hhtmFromLabel'],
-      'text',
-      'professional_role',
-      'resume',
-    ],
-  },
-  'imdb.com': {
-    searchParamList: [
-      ['ref_'],
-      'season', // https://www.imdb.com/title/tt8111088/episodes/?season=3&ref_=tt_eps_sn_3
-    ],
-  },
-  'linkedin.com': {
-    removeAllSearchParamForPath: [
-      '/jobs/view/:id/',
-      '/posts/:id/',
-    ],
-  },
-  'mail.google.com': {
-    isHashRequired: true,
-  },
-  'marketplace.visualstudio.com': {
-    searchParamList: [
-      'itemName',
-    ],
-  },
-  'opennet.ru': {
-    searchParamList: [
-      'num',
-    ],
-  },
-  'thepiratebay.org': {
-    searchParamList: [
-      'q',
-      'id',
-    ],
-  },
-  'torrentgalaxy.to': {
-    searchParamList: [
-      'cat',
-    ],
-  },
-  'udemy.com': {
-    removeAllSearchParamForPath: [
-      '/course/:id/',
-    ],
-  },
-  'www.google.com': {
-    searchParamList: [
-      'q',
-    ],
-  },
-  'youtu.be': 'youtube.com',
-  'youtube.com': {
-    searchParamList: [
-      'v',
-    ],
-  },
-}
+const logUAC = makeLogFunction({ module: 'url.api.js' })
 
 function extendsSettings(oSettings) {
   let mSettings = typeof oSettings == 'string'
@@ -121,6 +38,13 @@ const HOST_URL_SETTINGS_LIST = Object.entries(HOST_URL_SETTINGS)
     hostname,
     extendsSettings(oSettings)
   ])
+
+export const HOST_LIST_FOR_PAGE_OPTIONS = HOST_URL_SETTINGS_LIST
+  .toSorted((a, b) => a[0].localeCompare(b[0]))
+  .filter(([, obj]) => (isNotEmptyArray(obj.removeSearchParamList) || isNotEmptyArray(obj.removeAllSearchParamForPath)) && !obj.isAlias)
+    .map(
+      ([hostname, obj]) => `${hostname}{${(obj.removeAllSearchParamForPath || []).toSorted().join(',')}}`
+    )
 
 // logUAC('HOST_URL_SETTINGS', HOST_URL_SETTINGS)
 const HOST_URL_SETTINGS_MAP = new Map(HOST_URL_SETTINGS_LIST)
@@ -157,10 +81,3 @@ export const getHostSettings = (url) => {
 
   return targetHostSettings
 }
-
-export const HOST_LIST_FOR_PAGE_OPTIONS = HOST_URL_SETTINGS_LIST
-  .toSorted((a, b) => a[0].localeCompare(b[0]))
-  .filter(([, obj]) => (isNotEmptyArray(obj.removeSearchParamList) || isNotEmptyArray(obj.removeAllSearchParamForPath)) && !obj.isAlias)
-    .map(
-      ([hostname, obj]) => `${hostname}{${(obj.removeAllSearchParamForPath || []).toSorted().join(',')}}`
-    )

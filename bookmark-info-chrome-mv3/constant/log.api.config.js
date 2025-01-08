@@ -24,7 +24,7 @@ const logModuleList = [
   // 'tagList-highlight.js',
   // 'tagList.js',
   // 'url-search.api',
-  // 'url.api.config',
+  // 'url.api.js',
   // 'windows.controller',
 ]
 export const logModuleMap = Object.fromEntries(
