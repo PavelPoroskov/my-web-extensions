@@ -9,7 +9,7 @@ import {
 } from '../api/storage.api.js'
 import {
   USER_OPTION,
-} from '../api/storage.api.config.js'
+} from '../api/storage.api.js'
 import {
   onIncomingMessage,
 } from './incoming-message.js'

@@ -15,7 +15,7 @@ createFileForFirefox(
     'api/log.api.js',
     'data-structures/extraMap.js',
     'data-structures/cache.js',
-    'api/storage.api.config.js',
+    'constant/storage.api.config.js',
     'api/storage.api.js',
     'data-structures/memo.js',
     'data-structures/extensionSettings.js',

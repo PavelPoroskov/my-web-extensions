@@ -1,7 +1,7 @@
 import { flatBookmarks } from '../bookmark-list-ops/index.js'
 import {
   USER_OPTION,
-} from '../api/storage.api.config.js'
+} from '../api/storage.api.js'
 import {
   extensionSettings,
   tagList,

@@ -9,14 +9,12 @@ import {
 } from '../api/special-folder.api.js'
 import {
   getOptions,
-  setOptions
-} from '../api/storage.api.js'
-import {
+  setOptions,
   USER_OPTION,
   INTERNAL_VALUES,
   TAG_LIST_MAX_LIST_LENGTH,
   TAG_LIST_PINNED_TAGS_POSITION_OPTIONS,
-} from '../api/storage.api.config.js'
+} from '../api/storage.api.js'
 import {
   extensionSettings,
 } from './extensionSettings.js'

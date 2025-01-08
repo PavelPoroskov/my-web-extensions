@@ -13,7 +13,7 @@ import {
 } from './log.api.js'
 import {
   USER_OPTION,
-} from './storage.api.config.js'
+} from './storage.api.js'
 
 const logIX = makeLogFunction({ module: 'init-extension' })
 

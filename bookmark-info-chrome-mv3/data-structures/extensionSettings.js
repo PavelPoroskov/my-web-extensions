@@ -2,11 +2,10 @@ import {
   makeLogFunction,
 } from '../api/log.api.js'
 import {
-  getOptions, setOptions
-} from '../api/storage.api.js'
-import {
+  getOptions,
+  setOptions,
   USER_OPTION_KEY_LIST,
-} from '../api/storage.api.config.js';
+} from '../api/storage.api.js'
 
 const logES = makeLogFunction({ module: 'extensionSettings' })
 

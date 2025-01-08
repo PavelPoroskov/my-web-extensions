@@ -3,7 +3,7 @@ import {
 } from '../data-structures/index.js'
 import {
   INTERNAL_VALUES,
-} from '../api/storage.api.config.js'
+} from '../api/storage.api.js'
 
 export async function switchShowRecentList(isShow) {
   await extensionSettings.update({

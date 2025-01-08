@@ -4,14 +4,15 @@ import {
 import {
   STORAGE_TYPE,
   STORAGE_KEY_META,
-} from './storage.api.config.js';
+} from '../constant/storage.api.config.js'
+export * from '../constant/storage.api.config.js'
 
-const logSA = makeLogFunction({ module: 'storage.api' })
+const logSA = makeLogFunction({ module: 'storage.api.js' })
 
 export async function setOptions(obj) {
   const entryList = Object.entries(obj)
     .map(([key, value]) => ({
-      key, 
+      key,
       storage: STORAGE_KEY_META[key].storage,
       value,
     }))
@@ -41,7 +42,7 @@ export async function getOptions(keyList) {
 
   const entryList = inKeyList
     .map((key) => ({
-      key, 
+      key,
       storage: STORAGE_KEY_META[key].storage,
     }))
 
@@ -57,15 +58,15 @@ export async function getOptions(keyList) {
     localStoredObj,
     sessionStoredObj,
   ] = await Promise.all([
-    localList.length > 0 
+    localList.length > 0
       ? chrome.storage.local.get(
         localList.map((key) => STORAGE_KEY_META[key].storageKey)
       )
       : {},
-    sessionList.length > 0 
+    sessionList.length > 0
       ? chrome.storage.session.get(
         sessionList.map((key) => STORAGE_KEY_META[key].storageKey)
-      ) 
+      )
       : {},
   ])
 
@@ -75,8 +76,8 @@ export async function getOptions(keyList) {
 
       return [
         key,
-        localStoredObj[storageKey] !== undefined 
-          ? localStoredObj[storageKey] 
+        localStoredObj[storageKey] !== undefined
+          ? localStoredObj[storageKey]
           : STORAGE_KEY_META[key].default
       ]
     })
@@ -87,8 +88,8 @@ export async function getOptions(keyList) {
 
       return [
         key,
-        sessionStoredObj[storageKey] !== undefined 
-          ? sessionStoredObj[storageKey] 
+        sessionStoredObj[storageKey] !== undefined
+          ? sessionStoredObj[storageKey]
           : STORAGE_KEY_META[key].default
       ]
     })

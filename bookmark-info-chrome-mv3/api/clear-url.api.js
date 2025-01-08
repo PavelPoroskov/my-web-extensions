@@ -1,6 +1,6 @@
 import {
   USER_OPTION,
-} from './storage.api.config.js'
+} from './storage.api.js'
 import {
   extensionSettings,
 } from '../data-structures/index.js'
