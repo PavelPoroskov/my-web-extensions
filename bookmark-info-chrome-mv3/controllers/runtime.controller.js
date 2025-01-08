@@ -5,9 +5,6 @@ import {
   flatBookmarks,
 } from '../bookmark-list-ops/index.js'
 import {
-  getOptions,
-} from '../api-low/storage.api.js'
-import {
   USER_OPTION,
 } from '../constant/index.js'
 import {
@@ -15,8 +12,9 @@ import {
 } from './incoming-message.js'
 import { initExtension } from '../api/init-extension.js'
 import {
+  getOptions,
   makeLogFunction,
-} from '../api-low/log.api.js'
+} from '../api-low/index.js'
 
 const logRC = makeLogFunction({ module: 'runtime.controller' })
 

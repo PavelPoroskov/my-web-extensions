@@ -3,7 +3,7 @@ import {
 } from '../constant/index.js'
 import {
   makeLogFunction,
-} from '../api-low/log.api.js'
+} from '../api-low/index.js'
 
 const logCSA = makeLogFunction({ module: 'content-script.api' })
 

@@ -10,16 +10,16 @@ createFileForFirefox(
     'constant/id.js',
     'constant/optimization-cache.js',
     'constant/storage.api.config.js',
-    'constant/index.js',
-
     'constant/log.api.config.js',
-    'api-low/log.api.js',
+    'constant/index.js',
 
     'api-low/common.js',
     'api-low/pluralize-rules.js',
     'api-low/pluralize.js',
-    'api-low/storage.api.js',
     'api-low/text.js',
+    'api-low/log.api.js',
+    'api-low/storage.api.js',
+    'api-low/index.js',
 
     'data-structures/extraMap.js',
     'data-structures/cache.js',
@@ -44,6 +44,7 @@ createFileForFirefox(
     'api/init-extension.js',
     'api/tabs.api.js',
     'api/find-folder.api.js',
+
     'bookmark-list-ops/flatFolders.js',
     'bookmark-list-ops/mergeFolders.js',
     'bookmark-list-ops/moveNotDescriptiveFolders.js',

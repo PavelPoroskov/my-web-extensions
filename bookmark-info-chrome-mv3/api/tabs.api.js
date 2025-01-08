@@ -1,7 +1,8 @@
 import {
   debounce,
   isSupportedProtocol,
-} from '../api-low/common.js'
+  makeLogFunction,
+} from '../api-low/index.js'
 import {
   getBookmarkInfoUni,
 } from './get-bookmarks.api.js'
@@ -21,9 +22,6 @@ import {
   updateBookmarkInfoInPage,
 } from './content-script.api.js'
 import { initExtension } from './init-extension.js'
-import {
-  makeLogFunction,
-} from '../api-low/log.api.js'
 
 const logTA = makeLogFunction({ module: 'tabs.api' })
 

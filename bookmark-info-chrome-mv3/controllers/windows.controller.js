@@ -1,6 +1,6 @@
 import {
   makeLogFunction,
-} from '../api-low/log.api.js'
+} from '../api-low/index.js'
 import {
   debouncedUpdateActiveTab,
 } from '../api/tabs.api.js'

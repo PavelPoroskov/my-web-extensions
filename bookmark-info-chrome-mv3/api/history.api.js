@@ -9,7 +9,7 @@ import {
 } from './url-search.api.js'
 import {
   makeLogFunction,
-} from '../api-low/log.api.js'
+} from '../api-low/index.js'
 
 const logHA = makeLogFunction({ module: 'history.api' })
 

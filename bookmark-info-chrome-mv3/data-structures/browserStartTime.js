@@ -1,10 +1,8 @@
 import {
-  makeLogFunction,
-} from '../api-low/log.api.js'
-import {
   getOptions,
   setOptions,
-} from '../api-low/storage.api.js'
+  makeLogFunction,
+} from '../api-low/index.js'
 import {
   INTERNAL_VALUES,
 } from '../constant/index.js'

@@ -3,13 +3,11 @@ import {
 } from '../data-structures/index.js'
 import {
   isSupportedProtocol,
-} from '../api-low/common.js'
+  makeLogFunction,
+} from '../api-low/index.js'
 import {
   SOURCE,
 } from '../constant/index.js'
-import {
-  makeLogFunction,
-} from '../api-low/log.api.js'
 import {
   startPartialUrlSearch,
 } from './url-search.api.js'

@@ -4,7 +4,7 @@ import {
 } from '../api/special-folder.api.js';
 import {
   isStartWithTODO,
-} from '../api-low/text.js';
+} from '../api-low/index.js';
 import {
   moveBookmarkIgnoreInController,
 } from '../api/bookmark.api.js';

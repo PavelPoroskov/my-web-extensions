@@ -5,7 +5,7 @@ import {
 import {
   normalizeTitle,
   trimTitle,
-} from '../api-low/text.js';
+} from '../api-low/index.js';
 import {
   moveBookmarkIgnoreInController,
   removeBookmarkIgnoreInController,

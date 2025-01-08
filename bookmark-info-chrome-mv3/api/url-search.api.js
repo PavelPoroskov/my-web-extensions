@@ -5,11 +5,9 @@ import {
   getHostSettings
 } from './url.api.js'
 import {
-  makeLogFunction,
-} from '../api-low/log.api.js'
-import {
   isNotEmptyArray,
-} from '../api-low/common.js'
+  makeLogFunction,
+} from '../api-low/index.js'
 import {
   extensionSettings,
 } from '../data-structures/index.js'

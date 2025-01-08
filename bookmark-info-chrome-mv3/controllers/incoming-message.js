@@ -27,7 +27,7 @@ import {
 } from '../api/url.api.js'
 import {
   makeLogFunction,
-} from '../api-low/log.api.js'
+} from '../api-low/index.js'
 
 const logIM = makeLogFunction({ module: 'incoming-message' })
 

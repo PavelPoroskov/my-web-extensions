@@ -12,7 +12,7 @@ import {
 } from '../command/index.js'
 import {
   makeLogFunction,
-} from '../api-low/log.api.js'
+} from '../api-low/index.js'
 
 const logCMC = makeLogFunction({ module: 'contextMenu.controller' })
 

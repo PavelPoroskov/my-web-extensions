@@ -6,11 +6,9 @@ import {
   isStartWithTODO,
   trimLow,
   trimLowSingular,
-  normalizeTitle,
-} from '../api-low/text.js';
-import {
   makeLogFunction,
-} from '../api-low/log.api.js'
+  normalizeTitle,
+} from '../api-low/index.js';
 import {
   createFolderIgnoreInController,
   updateBookmarkIgnoreInController,

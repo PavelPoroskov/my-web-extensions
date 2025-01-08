@@ -8,10 +8,6 @@ import {
   isDescriptiveFolderTitle,
 } from '../api/special-folder.api.js'
 import {
-  getOptions,
-  setOptions,
-} from '../api-low/storage.api.js'
-import {
   USER_OPTION,
   INTERNAL_VALUES,
   TAG_LIST_MAX_LIST_LENGTH,
@@ -24,8 +20,10 @@ import {
   highlightAlphabet,
 } from './tagList-highlight.js'
 import {
+  getOptions,
+  setOptions,
   makeLogFunction,
-} from '../api-low/log.api.js'
+} from '../api-low/index.js'
 
 const logTL = makeLogFunction({ module: 'tagList.js' })
 
