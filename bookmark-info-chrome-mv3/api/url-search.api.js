@@ -2,7 +2,8 @@ import {
   USER_OPTION
 } from '../constant/index.js'
 import {
-  getHostSettings
+  getHostSettings,
+  makeIsSearchParamMatch,
 } from './url.api.js'
 import {
   isNotEmptyArray,
@@ -93,9 +94,18 @@ export async function startPartialUrlSearch(url) {
       const { importantSearchParamList } = targetHostSettings
 
       if (isNotEmptyArray(importantSearchParamList)) {
+        const isSearchParamMatch = makeIsSearchParamMatch(importantSearchParamList)
         const oSearchParams = oUrl.searchParams;
+
+        const matchedParamList = []
+        for (const [searchParam] of oSearchParams) {
+          if (isSearchParamMatch(searchParam)) {
+            matchedParamList.push(searchParam)
+          }
+        }
+
         requiredSearchParams = {}
-        importantSearchParamList.forEach((searchParam) => {
+        matchedParamList.forEach((searchParam) => {
           requiredSearchParams[searchParam] = oSearchParams.get(searchParam)
         })
       }

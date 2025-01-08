@@ -1,21 +1,87 @@
-export const HOST_URL_SETTINGS = {
-  '9gag.com': {
+export const DEFAULT_HOST_SETTINGS = {
+  isHashRequired: false,
+  searchParamList: [
+    '*id',
+  ],
+}
+
+const urlSettingsGo = {
+  'mail.google.com': {
     isHashRequired: true,
   },
-  'avito.ru': {
-    removeAllSearchParamForPath: [
-      '/',
-    ]
-  },
-  'forcoder.net': {
+  'www.google.com': {
     searchParamList: [
-      's', // https://forcoder.net/?s=CQRS
+      'q',
     ],
   },
+  'youtu.be': 'youtube.com',
+  'youtube.com': {
+    searchParamList: [
+      'v',
+    ],
+  },
+}
+
+const urlSettingsUse = {
   'frontendmasters.com': {
     removeAllSearchParamForPath: [
       '/courses/:id/',
     ]
+  },
+  'imdb.com': {
+    searchParamList: [
+      ['ref_'],
+      'season',
+    ],
+  },
+  'linkedin.com': {
+    removeAllSearchParamForPath: [
+      '/jobs/view/:id/',
+      '/posts/:id/',
+    ],
+  },
+  'marketplace.visualstudio.com': {
+    searchParamList: [
+      'itemName',
+    ],
+  },
+  'udemy.com': {
+    removeAllSearchParamForPath: [
+      '/course/:id/',
+    ],
+  },
+}
+
+const urlSettingsEnt = {
+  '9gag.com': {
+    isHashRequired: true,
+  },
+}
+
+const urlSettingsDark = {
+  'forcoder.net': {
+    searchParamList: [
+      's',
+    ],
+  },
+  'thepiratebay.org': {
+    searchParamList: [
+      'q',
+      'id',
+    ],
+  },
+  'torrentgalaxy.to': {
+    searchParamList: [
+      'cat',
+    ],
+  },
+}
+
+const urlSettingsRu = {
+  'avito.ru': {
+    searchParamList: [
+      ['utm_*'],
+    ],
   },
   'hh.ru': {
     removeAllSearchParamForPath: [
@@ -30,56 +96,25 @@ export const HOST_URL_SETTINGS = {
       'resume',
     ],
   },
-  'imdb.com': {
-    searchParamList: [
-      ['ref_'],
-      'season', // https://www.imdb.com/title/tt8111088/episodes/?season=3&ref_=tt_eps_sn_3
-    ],
-  },
-  'linkedin.com': {
-    removeAllSearchParamForPath: [
-      '/jobs/view/:id/',
-      '/posts/:id/',
-    ],
-  },
-  'mail.google.com': {
-    isHashRequired: true,
-  },
-  'marketplace.visualstudio.com': {
-    searchParamList: [
-      'itemName',
-    ],
-  },
   'opennet.ru': {
     searchParamList: [
       'num',
     ],
   },
-  'thepiratebay.org': {
-    searchParamList: [
-      'q',
-      'id',
-    ],
-  },
-  'torrentgalaxy.to': {
-    searchParamList: [
-      'cat',
-    ],
-  },
-  'udemy.com': {
-    removeAllSearchParamForPath: [
-      '/course/:id/',
-    ],
-  },
-  'www.google.com': {
-    searchParamList: [
-      'q',
-    ],
-  },
-  'youtu.be': 'youtube.com',
-  'youtube.com': {
-    searchParamList: [
-      'v',
-    ],
-  },
+
 }
+
+export const HOST_URL_SETTINGS = Object.assign(
+  {},
+  urlSettingsGo,
+  urlSettingsUse,
+  urlSettingsEnt,
+  urlSettingsDark,
+  urlSettingsRu,
+)
+export const HOST_URL_SETTINGS_SHORT = Object.assign(
+  {},
+  urlSettingsGo,
+  urlSettingsUse,
+  urlSettingsEnt,
+)

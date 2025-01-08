@@ -9,7 +9,8 @@ import {
   makeLogFunction,
 } from '../api-low/index.js'
 import {
-  getHostSettings
+  getHostSettings,
+  makeIsSearchParamMatch,
 } from './url.api.js'
 import { page } from './page.api.js'
 
@@ -39,6 +40,10 @@ const isPathnameMatchForPattern = ({ pathname, patternList }) => {
     logCUA('isPartsEqual () 11', patternPart, pathPart, result)
 
     return result
+  }
+
+  if (patternList.includes('*')) {
+    return true
   }
 
   let isMath = false
@@ -77,11 +82,20 @@ const removeQueryParamsIfTarget = (url) => {
 
       if (isNotEmptyArray(removeSearchParamList)) {
         logCUA('removeQueryParamsIfTarget () 33 isNotEmptyArray(removeSearchParamList)')
+
+        const isSearchParamMatch = makeIsSearchParamMatch(removeSearchParamList)
+
+        const matchedParamList = []
+        for (const [searchParam] of oSearchParams) {
+          if (isSearchParamMatch(searchParam)) {
+            matchedParamList.push(searchParam)
+          }
+        }
         // remove query params by list
-        const isHasThisSearchParams = removeSearchParamList.some((searchParam) => oSearchParams.get(searchParam) !== null)
+        const isHasThisSearchParams = 0 < matchedParamList.length
 
         if (isHasThisSearchParams) {
-          removeSearchParamList.forEach((searchParam) => {
+          matchedParamList.forEach((searchParam) => {
             oSearchParams.delete(searchParam)
           })
           oUrl.search = oSearchParams.size > 0
