@@ -1428,6 +1428,11 @@ const HOST_URL_SETTINGS = {
   '9gag.com': {
     isHashRequired: true,
   },
+  'avito.ru': {
+    removeAllSearchParamForPath: [
+      '/',
+    ]
+  },
   'forcoder.net': {
     searchParamList: [
       's', // https://forcoder.net/?s=CQRS
@@ -1441,12 +1446,14 @@ const HOST_URL_SETTINGS = {
   'hh.ru': {
     removeAllSearchParamForPath: [
       '/vacancy/:id',
+      '/resume/:id',
     ],
     searchParamList: [
       ['hhtmFrom'],
       ['hhtmFromLabel'],
       'text',
       'professional_role',
+      'resume',
     ],
   },
   'imdb.com': {
@@ -2702,7 +2709,8 @@ function findFolderFrom({ normalizedTitle, startFolder }) {
   return traverseSubFolder(startFolder)
 }
 
-async function findFolderInSubtree({ normalizedTitle, parentId }) {
+async function findFolderInSubtree({ title, parentId }) {
+  const normalizedTitle = normalizeTitle(title)
   logFF('findFolderInSubtree 00 normalizedTitle', normalizedTitle, parentId)
   // search in direct children
   const firstLevelNodeList = await browser.bookmarks.getChildren(parentId)
@@ -2734,25 +2742,11 @@ async function findFolderInSubtree({ normalizedTitle, parentId }) {
   return foundItem
 }
 
-// option 1
-//  getChildren, filter folders, compare (case insensitive, plural insensitive)
-//  find here (case insensitive, plural insensitive) folder
-// option 2
-//  git.search({ title }) // case sensitive,
-//    question: will this return folders?
-//    filter folders
-//  onStart, merge will be
-// option 3
-//  git.search(query) // case insensitive,
-//    question: will this return folders?
-//    filter folders
-//  onStart, merge will be
-async function findFolder(title) {
-  logFF('findFolder 00 title', title)
+async function findExactTitle(title) {
   let foundItem
 
   const bookmarkList = await browser.bookmarks.search({ title });
-  logFF('findFolder 11 search({ title })', bookmarkList.length, bookmarkList)
+
   let i = 0
   while (!foundItem && i < bookmarkList.length) {
     const checkItem = bookmarkList[i]
@@ -2762,15 +2756,17 @@ async function findFolder(title) {
     i += 1
   }
 
+  return foundItem
+}
 
+// example1: node.js -> NodeJS
+async function findTitleEndsWithJS(title) {
+  let foundItem
   const lowTitle = trimLow(title)
 
-  if (!foundItem && lowTitle.endsWith('.js')) {
+  if (lowTitle.endsWith('.js')) {
     const noDotTitle = `${lowTitle.slice(0, -3)}js`
-
     const bookmarkList = await browser.bookmarks.search(noDotTitle);
-    logFF('findFolder 22 search(title) noDotTitle', noDotTitle)
-    logFF('findFolder 22 search(title)', bookmarkList.length, bookmarkList)
 
     let i = 0
     while (!foundItem && i < bookmarkList.length) {
@@ -2782,90 +2778,166 @@ async function findFolder(title) {
     }
   }
 
+  return foundItem
+}
 
-  if (!foundItem) {
-    const noDashTitle = trimLowSingular(title.replaceAll('-', ''))
-    logFF('findFolder 333 noDashTitle', noDashTitle)
-
-    const bookmarkList = await browser.bookmarks.search(noDashTitle);
-    logFF('findFolder 333 search(noDashTitle)', bookmarkList.length, bookmarkList)
-
-    let i = 0
-    while (!foundItem && i < bookmarkList.length) {
-      const checkItem = bookmarkList[i]
-      if (!checkItem.url && trimLowSingular(checkItem.title) === noDashTitle) {
-        foundItem = checkItem
-      }
-      i += 1
-    }
+// example1: e-commerce -> ecommerce
+// example2: micro-frontend -> microfrontend
+async function findTitleRemoveDash(title) {
+  if (title.indexOf('-') == -1) {
+    return
   }
 
-  if (!foundItem) {
-    const dashToSpaceTitle = trimLowSingular(title.replaceAll('-', ' '))
-    logFF('findFolder 333 dashToSpaceTitle', dashToSpaceTitle)
+  let foundItem
+  const noDashTitle = trimLowSingular(title.replaceAll('-', ''))
+  const bookmarkList = await browser.bookmarks.search(noDashTitle);
 
-    const bookmarkList = await browser.bookmarks.search(dashToSpaceTitle);
-    logFF('findFolder 333 search(dashToSpaceTitle)', bookmarkList.length, bookmarkList)
-
-    let i = 0
-    while (!foundItem && i < bookmarkList.length) {
-      const checkItem = bookmarkList[i]
-      if (!checkItem.url && trimLowSingular(checkItem.title) === dashToSpaceTitle) {
-        foundItem = checkItem
-      }
-      i += 1
+  let i = 0
+  while (!foundItem && i < bookmarkList.length) {
+    const checkItem = bookmarkList[i]
+    if (!checkItem.url && trimLowSingular(checkItem.title) === noDashTitle) {
+      foundItem = checkItem
     }
+    i += 1
   }
 
+  return foundItem
+}
 
+// example1: micro-frontend -> micro frontend
+async function findTitleReplaceDashToSpace(title) {
+  if (title.indexOf('-') == -1) {
+    return
+  }
+
+  let foundItem
+  const dashToSpaceTitle = trimLowSingular(title.replaceAll('-', ' '))
+  const bookmarkList = await browser.bookmarks.search(dashToSpaceTitle);
+
+  let i = 0
+  while (!foundItem && i < bookmarkList.length) {
+    const checkItem = bookmarkList[i]
+    if (!checkItem.url && trimLowSingular(checkItem.title) === dashToSpaceTitle) {
+      foundItem = checkItem
+    }
+    i += 1
+  }
+
+  return foundItem
+}
+
+// example1: AI Video -> ai-video
+async function findTitleReplaceSpaceToDash(title) {
+  const trimLowSingularTitle = trimLowSingular(title)
+  if (trimLowSingularTitle.indexOf(' ') == -1) {
+    return
+  }
+
+  let foundItem
+  const spaceToDashTitle = trimLowSingularTitle.replaceAll(' ', '-')
+  const bookmarkList = await browser.bookmarks.search(spaceToDashTitle);
+
+  let i = 0
+  while (!foundItem && i < bookmarkList.length) {
+    const checkItem = bookmarkList[i]
+    if (!checkItem.url && trimLowSingular(checkItem.title) === spaceToDashTitle) {
+      foundItem = checkItem
+    }
+    i += 1
+  }
+
+  return foundItem
+}
+
+async function findTitleNormalized(title) {
+  let foundItem
   const normalizedTitle = normalizeTitle(title)
-  logFF('findFolder 00 normalizedTitle', normalizedTitle)
+  const bookmarkList = await browser.bookmarks.search(title);
 
-  if (!foundItem) {
-    logFF('findFolder 33 normalizedTitle', normalizedTitle)
-
-    const bookmarkList = await browser.bookmarks.search(title);
-    logFF('findFolder 33 search(title)', bookmarkList.length, bookmarkList)
-
-    let i = 0
-    while (!foundItem && i < bookmarkList.length) {
-      const checkItem = bookmarkList[i]
-      if (!checkItem.url && normalizeTitle(checkItem.title) === normalizedTitle) {
-        foundItem = checkItem
-      }
-      i += 1
+  let i = 0
+  while (!foundItem && i < bookmarkList.length) {
+    const checkItem = bookmarkList[i]
+    if (!checkItem.url && normalizeTitle(checkItem.title) === normalizedTitle) {
+      foundItem = checkItem
     }
+    i += 1
   }
 
+  return foundItem
+}
 
-  const lowTitle2 = trimLow(title)
-  const lastWord = lowTitle2.split(' ').at(-1)
+async function findTitleDropEnding(title) {
+  const lowTitle = trimLow(title)
+  const lastWord = lowTitle.split(' ').at(-1)
 
-  if (!foundItem && lastWord.length > 5) {
-    const modifiedTitle = lowTitle2.slice(0, -3)
+  if (!(5 < lastWord.length)) {
+    return
+  }
 
-    const bookmarkList = await browser.bookmarks.search(modifiedTitle);
-    logFF('findFolder 44 search(title) modifiedTitle', modifiedTitle)
-    logFF('findFolder 44 search(title)', bookmarkList.length, bookmarkList)
+  let foundItem
+  const dropEndTitle = lowTitle.slice(0, -3)
+  const normalizedTitle = normalizeTitle(title)
+  const bookmarkList = await browser.bookmarks.search(dropEndTitle);
 
-    let i = 0
-    while (!foundItem && i < bookmarkList.length) {
-      const checkItem = bookmarkList[i]
-      if (!checkItem.url && normalizeTitle(checkItem.title) === normalizedTitle) {
-        foundItem = checkItem
-      }
-      i += 1
+  let i = 0
+  while (!foundItem && i < bookmarkList.length) {
+    const checkItem = bookmarkList[i]
+    if (!checkItem.url && normalizeTitle(checkItem.title) === normalizedTitle) {
+      foundItem = checkItem
     }
+    i += 1
+  }
+
+  return foundItem
+}
+
+async function findFolder(title) {
+  logFF('findFolder 00 title', title)
+  let foundItem
+
+  if (!foundItem) {
+    foundItem = await findExactTitle(title)
+    logFF('findExactTitle -> ', foundItem)
   }
 
   if (!foundItem) {
-    foundItem = await findFolderInSubtree({ normalizedTitle, parentId: OTHER_BOOKMARKS_FOLDER_ID })
-    logFF('findFolder 55 OTHER_BOOKMARKS_FOLDER_ID', foundItem)
+    foundItem = await findTitleEndsWithJS(title)
+    logFF('findTitleEndsWithJS -> ', foundItem)
   }
 
   if (!foundItem) {
-    foundItem = await findFolderInSubtree({ normalizedTitle, parentId: BOOKMARKS_BAR_FOLDER_ID })
-    logFF('findFolder 66 BOOKMARKS_BAR_FOLDER_ID', foundItem)
+    foundItem = await findTitleRemoveDash(title)
+    logFF('findTitleRemoveDash -> ', foundItem)
+  }
+
+  if (!foundItem) {
+    foundItem = await findTitleReplaceDashToSpace(title)
+    logFF('findTitleReplaceDashToSpace -> ', foundItem)
+  }
+
+  if (!foundItem) {
+    foundItem = await findTitleReplaceSpaceToDash(title)
+    logFF('findTitleReplaceSpaceToDash -> ', foundItem)
+  }
+
+  if (!foundItem) {
+    foundItem = await findTitleNormalized(title)
+    logFF('findTitleNormalized -> ', foundItem)
+  }
+
+  if (!foundItem) {
+    foundItem = await findTitleDropEnding(title)
+    logFF('findTitleDropEnding -> ', foundItem)
+  }
+
+  if (!foundItem) {
+    foundItem = await findFolderInSubtree({ title, parentId: OTHER_BOOKMARKS_FOLDER_ID })
+    logFF('findFolderInSubtree OTHER_BOOKMARKS_FOLDER_ID', foundItem)
+  }
+
+  if (!foundItem) {
+    foundItem = await findFolderInSubtree({ title, parentId: BOOKMARKS_BAR_FOLDER_ID })
+    logFF('findFolderInSubtree BOOKMARKS_BAR_FOLDER_ID', foundItem)
   }
 
   return foundItem
@@ -3935,7 +4007,7 @@ async function onIncomingMessage (message, sender) {
     case EXTENSION_MSG_ID.DELETE_BOOKMARK: {
       logIM('runtime.onMessage deleteBookmark');
 
-      deleteBookmark(message.bkmId);
+      deleteBookmark(message.bookmarkId);
       break
     }
     case EXTENSION_MSG_ID.SHOW_TAG_LIST: {
