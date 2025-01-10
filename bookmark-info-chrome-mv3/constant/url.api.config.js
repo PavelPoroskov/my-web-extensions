@@ -40,6 +40,15 @@ const urlSettingsUse = {
       '/jobs/view/:id/',
       '/posts/:id/',
     ],
+    searchParamList: [
+      'currentJobId',
+    ],
+    theSame: [
+      '/jobs/view/:currentJobId/',
+      '/jobs/*?currentJobId=:currentJobId',
+      // '/jobs/collections/recommended/?currentJobId=:currentJobId',
+      // '/jobs/search/?currentJobId=:currentJobId',
+    ],
   },
   'marketplace.visualstudio.com': {
     searchParamList: [
