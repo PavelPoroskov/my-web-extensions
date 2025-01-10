@@ -12,7 +12,7 @@ export class CacheWithLimit {
     this.name = name;
   }
   removeStale () {
-    if (this.LIMIT < this.cache.size) {
+    if (this.LIMIT + 100 < this.cache.size) {
       let deleteCount = this.cache.size - this.LIMIT;
       const keyToDelete = [];
 

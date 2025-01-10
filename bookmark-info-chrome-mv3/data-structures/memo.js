@@ -10,9 +10,9 @@ export const memo = {
   activeTabId: '',
   activeTabUrl: '',
 
-  cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
+  cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 500 }),
   // cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
-  bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
+  bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 1000 }),
 }
 
 logM('IMPORT END', 'memo.js', new Date().toISOString())

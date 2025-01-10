@@ -227,7 +227,7 @@ class TagList {
       }
     }
 
-    if (TAG_LIST_MAX_LIST_LENGTH + 10 < Object.keys(this._recentTagObj).length) {
+    if (TAG_LIST_MAX_LIST_LENGTH + 30 < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
         .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
         .sort((a, b) => -(a.dateAdded - b.dateAdded))
