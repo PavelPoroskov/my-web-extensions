@@ -9,6 +9,8 @@ import {
   createFolderIgnoreInController,
 } from './folder.api.js'
 import {
+  isDatedFolderTitle,
+  isDatedTemplateFolder,
   makeLogFunction,
 } from '../api-low/index.js';
 import {
@@ -21,10 +23,6 @@ const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 
 const weekdayFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'short' })
 const futureDate = new Date('01/01/2125')
 const oneDayMs = 24*60*60*1000
-
-export function isDatedFolderTemplate(folderTitle) {
-  return folderTitle.endsWith(' @D') && 3 < folderTitle.length
-}
 
 function getDatedTitle(folderTitle) {
   const fixedPart = folderTitle.slice(0, -3).trim()
@@ -41,7 +39,7 @@ function getDatedTitle(folderTitle) {
 
 // folderTitle = 'DONE @D' 'selected @D' 'BEST @D'
 export async function getDatedFolder(folderNode) {
-  if (!isDatedFolderTemplate(folderNode.title)) {
+  if (!isDatedTemplateFolder(folderNode.title)) {
     return
   }
   logFD('getDatedFolder () 00', folderNode.title)
@@ -53,7 +51,7 @@ export async function getDatedFolder(folderNode) {
 
   if (!foundFolder) {
     const firstLevelNodeList = await chrome.bookmarks.getChildren(rootId)
-    const findIndex = firstLevelNodeList.find((node) => datedTitle.localeCompare(node.title) < 0)
+    const findIndex = firstLevelNodeList.find((node) => !node.url && datedTitle.localeCompare(node.title) < 0)
 
     const folderParams = {
       parentId: rootId,
@@ -68,71 +66,54 @@ export async function getDatedFolder(folderNode) {
   }
   await tagList.addRecentTagFromFolder(folderNode)
 
-
   return foundFolder
 }
 
-const inRange = ({ n, from, to }) => {
-  if (!Number.isInteger(n)) {
+export function isDatedTitleForTemplate({ title, template }) {
+  logFD('isDatedTitleForTemplate () 00', title, template)
+
+
+  if (!isDatedTemplateFolder(template)) {
+    return
+  }
+  if (!isDatedFolderTitle(title)) {
     return false
   }
 
-  if (from != undefined && !(from <= n)) {
-    return false
-  }
+  const fixedPartFromTitle = title.split(' ').slice(0, -3).join(' ')
+  const fixedPartFromTemplate = template.slice(0, -3).trim()
 
-  if (to != undefined && !(n <= to)) {
-    return false
-  }
-
-  return true
+  return fixedPartFromTitle == fixedPartFromTemplate
 }
 
-const isDate = (str) => {
-  const partList = str.split('-')
+export async function removePreviousDatedBookmarks({ url, template }) {
+  const bookmarkList = await chrome.bookmarks.search({ url });
+  logFD('removePreviousDatedBookmarks () 00', bookmarkList)
 
-  if (!(partList.length == 3)) {
-    return false
+  const parentFolderArList = await Promise.all(
+    bookmarkList.map(
+      ({ parentId }) => chrome.bookmarks.get(parentId)
+    )
+  )
+  const parentMap = Object.fromEntries(
+    parentFolderArList.flat()
+      .map(({ id, title}) => [id, title])
+  )
+
+  const removeFolderList = bookmarkList
+    .map(({ id, parentId }) => ({ id, parentTitle: parentMap[parentId] }))
+    .filter(({ parentTitle }) => isDatedTitleForTemplate({ title: parentTitle, template }))
+    .toSorted((a,b) => a.parentTitle.localeCompare(b.parentTitle))
+    .slice(1)
+  logFD('removePreviousDatedBookmarks () 00', 'removeFolderList', removeFolderList)
+
+  if (removeFolderList.length == 0) {
+    return
   }
 
-  const D = parseInt(partList.at(-3), 10)
-  const M = parseInt(partList.at(-2), 10)
-  const Y = parseInt(partList.at(-1), 10)
-
-  return inRange({ n: D, from: 1, to: 31 }) && inRange({ n: M, from: 1, to: 12 }) && inRange({ n: Y, from: 2025 })
+  await Promise.all(
+    removeFolderList.map(
+      ({ id }) => chrome.bookmarks.remove(id)
+    )
+  )
 }
-
-const weekdaySet = new Set(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
-
-export function isDatedFolderTitle(str) {
-  logFD('isDatedFolderTitle () 00', str)
-
-  const partList = str.split(' ')
-
-  if (!(4 <= partList.length)) {
-    return false
-  }
-
-  const result = !!partList.at(-4) && partList.at(-3).length == 3 && isDate(partList.at(-2)) && weekdaySet.has(partList.at(-1))
-  // logFD('isDatedFolderTitle () 11', result)
-  // logFD('isDatedFolderTitle () 11', partList, partList)
-  // logFD('isDatedFolderTitle () 11', '!!partList.at(-4)', !!partList.at(-4))
-  // logFD('isDatedFolderTitle () 11', 'partList.at(-3).length == 3', partList.at(-3).length == 3)
-  // logFD('isDatedFolderTitle () 11', 'isDate(partList.at(-2))', isDate(partList.at(-2)))
-  // logFD('isDatedFolderTitle () 11', 'weekdaySet.has(partList.at(-1)', weekdaySet.has(partList.at(-1)))
-
-  return result
-}
-
-// export function isActualDatedFolderTitle(str) {
-//   const partList = str.split(' ')
-
-//   if (!(4 <= partList.length)) {
-//     return false
-//   }
-
-//   const sD = partList.at(-2)
-
-//   new Date(year, monthIndex, day)
-
-// }

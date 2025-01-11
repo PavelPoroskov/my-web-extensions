@@ -31,13 +31,13 @@ createFileForFirefox(
 
     'api/folder.api.js',
     'api/special-folder.api.js',
-    'api/find-folder.api.js',
-    'api/folder-dated.js',
-
     'data-structures/tagList-getRecent.js',
     'data-structures/tagList-highlight.js',
     'data-structures/tagList.js',
     'data-structures/index.js',
+    'api/find-folder.api.js',
+    'api/folder-dated.js',
+
     'api/bookmark.api.js',
     'api/page.api.js',
     'api/url.api.js',

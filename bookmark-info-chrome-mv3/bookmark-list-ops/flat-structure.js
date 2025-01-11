@@ -1,9 +1,7 @@
 import {
+  isDatedFolderTitle,
   isStartWithTODO,
 } from '../api-low/index.js';
-import {
-  isDatedFolderTitle,
-} from '../api/folder-dated.js';
 import {
   getDatedRootFolderId,
   getOrCreateDatedRootFolderId,
@@ -53,6 +51,7 @@ export async function flatBookmarks() {
       await moveFoldersByName({
         fromId: BOOKMARKS_MENU_FOLDER_ID,
         toId: OTHER_BOOKMARKS_FOLDER_ID,
+        isCondition: (title) => !isDatedFolderTitle(title)
       })
     }
 

@@ -3,9 +3,10 @@ import {
 } from '../data-structures/index.js';
 import {
   getDatedFolder,
-  isDatedFolderTemplate,
+  removePreviousDatedBookmarks,
 } from './folder-dated.js';
 import {
+  isDatedTemplateFolder,
   makeLogFunction,
 } from '../api-low/index.js';
 
@@ -25,7 +26,8 @@ export async function createBookmarkWithApi({
 
   const [folderNode] = await chrome.bookmarks.get(parentId)
   logBA('createBookmarkWithApi () 22', 'folderNode', folderNode)
-  if (isDatedFolderTemplate(folderNode.title)) {
+  const isDatedTemplate = isDatedTemplateFolder(folderNode.title)
+  if (isDatedTemplate) {
     const datedFolder = await getDatedFolder(folderNode)
     logBA('createBookmarkWithApi () 33', 'datedFolder', datedFolder)
     actualParentId = datedFolder.id
@@ -46,6 +48,9 @@ export async function createBookmarkWithApi({
     title,
     url
   })
+  if (isDatedTemplate) {
+    removePreviousDatedBookmarks({ url, template: folderNode.title })
+  }
 
   return true
 }

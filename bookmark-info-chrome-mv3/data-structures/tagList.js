@@ -1,9 +1,4 @@
 import {
-  filterFixedTagObj,
-  filterRecentTagObj,
-  getRecentTagObj,
-} from './tagList-getRecent.js'
-import {
   getUnclassifiedFolderId,
   isDescriptiveFolderTitle,
 } from '../api/special-folder.api.js'
@@ -17,16 +12,19 @@ import {
   extensionSettings,
 } from './extensionSettings.js'
 import {
+  filterFixedTagObj,
+  filterRecentTagObj,
+  getRecentTagObj,
+} from './tagList-getRecent.js'
+import {
   highlightAlphabet,
 } from './tagList-highlight.js'
 import {
   getOptions,
   setOptions,
+  isDatedFolderTitle,
   makeLogFunction,
 } from '../api-low/index.js'
-import {
-  isDatedFolderTitle,
-} from '../api/folder-dated.js'
 
 const logTL = makeLogFunction({ module: 'tagList.js' })
 

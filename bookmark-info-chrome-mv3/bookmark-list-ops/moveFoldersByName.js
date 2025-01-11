@@ -3,10 +3,15 @@ import {
 } from '../api/folder.api.js';
 import {
   isDatedFolderTitle,
-} from '../api/folder-dated.js';
+} from '../api-low/index.js';
+import {
+  makeLogFunction,
+} from '../api-low/index.js';
 
+const logMF = makeLogFunction({ module: 'moveFoldersByName.js' })
 
 export async function moveFoldersByName({ fromId, toId, isCondition }) {
+  logMF('moveFoldersByName () 00')
   const childrenList = await chrome.bookmarks.getChildren(fromId)
   let moveList = childrenList
     .filter(({ url }) => !url)
@@ -14,6 +19,7 @@ export async function moveFoldersByName({ fromId, toId, isCondition }) {
   if (isCondition) {
     moveList = moveList.filter(({ title }) => isCondition(title))
   }
+  logMF('moveFoldersByName () 11', moveList)
 
   await moveList.reduce(
     (promiseChain, node) => promiseChain.then(
