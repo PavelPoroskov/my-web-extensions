@@ -1,9 +1,9 @@
 import {
   ignoreBkmControllerApiActionSet,
-  tagList,
 } from '../data-structures/index.js';
 import {
   getDatedFolder,
+  isDatedFolderTemplate,
 } from './folder-dated.js';
 import {
   makeLogFunction,
@@ -25,11 +25,10 @@ export async function createBookmarkWithApi({
 
   const [folderNode] = await chrome.bookmarks.get(parentId)
   logBA('createBookmarkWithApi () 22', 'folderNode', folderNode)
-  if (folderNode.title.endsWith(' @D')) {
-    const datedFolder = await getDatedFolder(folderNode.title)
+  if (isDatedFolderTemplate(folderNode.title)) {
+    const datedFolder = await getDatedFolder(folderNode)
     logBA('createBookmarkWithApi () 33', 'datedFolder', datedFolder)
     actualParentId = datedFolder.id
-    await tagList.addRecentTagFromFolder(folderNode)
   }
 
   const bookmarkList = await chrome.bookmarks.search({ url });

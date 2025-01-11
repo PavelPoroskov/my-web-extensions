@@ -1,5 +1,6 @@
 import {
   BOOKMARKS_BAR_FOLDER_ID,
+  BOOKMARKS_MENU_FOLDER_ID,
 } from './special-folder.api.js';
 import {
   findFolderWithExactTitle,
@@ -10,6 +11,9 @@ import {
 import {
   makeLogFunction,
 } from '../api-low/index.js';
+import {
+  tagList,
+} from '../data-structures/index.js';
 
 const logFD = makeLogFunction({ module: 'folder-dated.js' })
 
@@ -17,6 +21,10 @@ const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 
 const weekdayFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'short' })
 const futureDate = new Date('01/01/2125')
 const oneDayMs = 24*60*60*1000
+
+export function isDatedFolderTemplate(folderTitle) {
+  return folderTitle.endsWith(' @D') && 3 < folderTitle.length
+}
 
 function getDatedTitle(folderTitle) {
   const fixedPart = folderTitle.slice(0, -3).trim()
@@ -32,19 +40,18 @@ function getDatedTitle(folderTitle) {
 }
 
 // folderTitle = 'DONE @D' 'selected @D' 'BEST @D'
-export async function getDatedFolder(folderTitle) {
-  if (!folderTitle.endsWith(' @D')) {
+export async function getDatedFolder(folderNode) {
+  if (!isDatedFolderTemplate(folderNode.title)) {
     return
   }
-  logFD('getDatedFolder () 00', folderTitle)
+  logFD('getDatedFolder () 00', folderNode.title)
 
-  const datedTitle = getDatedTitle(folderTitle)
+  const datedTitle = getDatedTitle(folderNode.title)
   logFD('getDatedFolder () 11', 'datedTitle', datedTitle)
-  let foundFolder = await findFolderWithExactTitle(datedTitle)
+  const rootId = BOOKMARKS_MENU_FOLDER_ID || BOOKMARKS_BAR_FOLDER_ID
+  let foundFolder = await findFolderWithExactTitle({ title: datedTitle, rootId })
 
   if (!foundFolder) {
-    const rootId = BOOKMARKS_BAR_FOLDER_ID
-
     const firstLevelNodeList = await chrome.bookmarks.getChildren(rootId)
     const findIndex = firstLevelNodeList.find((node) => datedTitle.localeCompare(node.title) < 0)
 
@@ -59,6 +66,8 @@ export async function getDatedFolder(folderTitle) {
 
     foundFolder = await createFolderIgnoreInController(folderParams)
   }
+  await tagList.addRecentTagFromFolder(folderNode)
+
 
   return foundFolder
 }

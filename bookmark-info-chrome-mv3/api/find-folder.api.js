@@ -69,18 +69,15 @@ async function findFolderInSubtree({ title, parentId }) {
   return foundItem
 }
 
-export async function findFolderWithExactTitle(title) {
+export async function findFolderWithExactTitle({ title, rootId }) {
   let foundItem
 
-  const bookmarkList = await chrome.bookmarks.search({ title });
+  const nodeList = await chrome.bookmarks.search({ title });
 
-  let i = 0
-  while (!foundItem && i < bookmarkList.length) {
-    const checkItem = bookmarkList[i]
-    if (!checkItem.url) {
-      foundItem = checkItem
-    }
-    i += 1
+  if (rootId) {
+    foundItem = nodeList.find((node) => !node.url && node.parentId == rootId)
+  } else {
+    foundItem = nodeList.find((node) => !node.url)
   }
 
   return foundItem
@@ -223,8 +220,8 @@ async function findFolder(title) {
   let foundItem
 
   if (!foundItem) {
-    foundItem = await findFolderWithExactTitle(title)
-    logFF('findExactTitle -> ', foundItem)
+    foundItem = await findFolderWithExactTitle({ title })
+    logFF('findFolderWithExactTitle -> ', foundItem)
   }
 
   if (!foundItem) {

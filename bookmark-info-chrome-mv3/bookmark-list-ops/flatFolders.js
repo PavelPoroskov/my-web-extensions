@@ -1,4 +1,5 @@
 import {
+  getDatedRootFolderId,
   BOOKMARKS_BAR_FOLDER_ID,
   OTHER_BOOKMARKS_FOLDER_ID,
 } from '../api/special-folder.api.js';
@@ -73,7 +74,7 @@ async function getMaxUsedSuffix() {
   return maxUsedSuffix
 }
 
-async function flatChildren({ parentId, freeSuffix }) {
+async function flatChildren({ parentId, freeSuffix, datedRootId }) {
   const notFlatFolderList = []
   const flatFolderList = []
 
@@ -81,6 +82,10 @@ async function flatChildren({ parentId, freeSuffix }) {
 
   for (const node of otherBookmarks.children) {
     if (!node.url) {
+      if (node.id == datedRootId) {
+        continue
+      }
+
       const childrenFolderList = node.children.filter(({ url }) => !url)
 
       if (childrenFolderList.length > 0) {
@@ -164,7 +169,8 @@ async function flatChildren({ parentId, freeSuffix }) {
 export async function flatFolders() {
   const usedSuffix = await getMaxUsedSuffix()
   let freeSuffix = usedSuffix ? usedSuffix + 1 : 1;
+  const datedRootFolderId = await getDatedRootFolderId()
 
   await flatChildren({ parentId: BOOKMARKS_BAR_FOLDER_ID, freeSuffix })
-  await flatChildren({ parentId: OTHER_BOOKMARKS_FOLDER_ID, freeSuffix })
+  await flatChildren({ parentId: OTHER_BOOKMARKS_FOLDER_ID, freeSuffix, datedRootId: datedRootFolderId })
 }

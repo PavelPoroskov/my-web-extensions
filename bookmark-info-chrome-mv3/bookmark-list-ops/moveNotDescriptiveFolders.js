@@ -5,9 +5,7 @@ import {
   OTHER_BOOKMARKS_FOLDER_ID,
 } from '../api/special-folder.api.js';
 import {
-  moveBookmarkIgnoreInController,
-} from '../api/bookmark.api.js';
-import {
+  moveNodeIgnoreInController,
   removeFolderIgnoreInController,
 } from '../api/folder.api.js';
 
@@ -17,7 +15,7 @@ async function moveContentToStart(fromFolderId, toFolderId) {
 
   await reversedNodeList.reduce(
     (promiseChain, node) => promiseChain.then(
-      () => moveBookmarkIgnoreInController({ id: node.id, parentId: toFolderId, index: 0 })
+      () => moveNodeIgnoreInController({ id: node.id, parentId: toFolderId, index: 0 })
     ),
     Promise.resolve(),
   );

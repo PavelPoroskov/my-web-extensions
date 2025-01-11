@@ -7,11 +7,9 @@ import {
   trimTitle,
 } from '../api-low/index.js';
 import {
-  moveBookmarkIgnoreInController,
-} from '../api/bookmark.api.js';
-import {
   removeFolderIgnoreInController,
   updateFolderIgnoreInController,
+  moveNodeIgnoreInController,
 } from '../api/folder.api.js';
 
 
@@ -20,7 +18,7 @@ async function moveContent(fromFolderId, toFolderId) {
 
   await nodeList.reduce(
     (promiseChain, node) => promiseChain.then(
-      () => moveBookmarkIgnoreInController({ id: node.id, parentId: toFolderId })
+      () => moveNodeIgnoreInController({ id: node.id, parentId: toFolderId })
     ),
     Promise.resolve(),
   );

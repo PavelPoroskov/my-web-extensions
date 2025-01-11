@@ -22,7 +22,7 @@ export async function updateFolderIgnoreInController({ id, title }) {
   await chrome.bookmarks.update(id, { title })
 }
 
-export async function moveFolderIgnoreInController({ id, parentId, index }) {
+export async function moveNodeIgnoreInController({ id, parentId, index }) {
   const options = {}
   if (parentId != undefined) {
     options.parentId = parentId
@@ -37,6 +37,10 @@ export async function moveFolderIgnoreInController({ id, parentId, index }) {
   ignoreBkmControllerApiActionSet.addIgnoreMove(id)
 
   return await chrome.bookmarks.move(id, options)
+}
+
+export async function moveFolderIgnoreInController({ id, parentId, index }) {
+  return await moveNodeIgnoreInController({ id, parentId, index })
 }
 
 export async function removeFolderIgnoreInController(bkmId) {

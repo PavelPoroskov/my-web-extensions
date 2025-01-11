@@ -71,7 +71,7 @@ export async function flatBookmarks() {
       isCondition: (title) => isStartWithTODO(title)
     })
     await moveOldDatedFolders({
-      fromId: BOOKMARKS_BAR_FOLDER_ID,
+      fromId: BOOKMARKS_MENU_FOLDER_ID || BOOKMARKS_BAR_FOLDER_ID,
       toId: datedRootFolderId,
     })
 
@@ -80,6 +80,9 @@ export async function flatBookmarks() {
     await sortFolders(BOOKMARKS_BAR_FOLDER_ID)
     await sortFolders(OTHER_BOOKMARKS_FOLDER_ID)
     await sortFolders(datedRootFolderId)
+    if (IS_BROWSER_FIREFOX) {
+      await sortFolders(BOOKMARKS_MENU_FOLDER_ID)
+    }
 
     await removeDoubleBookmarks()
 
