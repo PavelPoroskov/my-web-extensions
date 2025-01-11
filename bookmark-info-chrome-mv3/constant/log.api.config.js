@@ -8,7 +8,7 @@ const logModuleList = [
   // 'contextMenu.controller',
   // 'debounceQueue',
   // 'extensionSettings',
-  // 'find-folder.api.js',
+  // 'find-folder.js',
   // 'folder-dated.js',
   // 'get-bookmarks.api.js',
   // 'getUrlFromUrl',

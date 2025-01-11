@@ -3,7 +3,7 @@ import {
 } from '../constant/index.js';
 import {
   createFolderIgnoreInController
-} from './folder.api.js'
+} from './folder-crud.js'
 
 export const BOOKMARKS_BAR_FOLDER_ID = IS_BROWSER_FIREFOX ? 'toolbar_____' : '1'
 export const BOOKMARKS_MENU_FOLDER_ID = IS_BROWSER_FIREFOX ? 'menu________' : undefined

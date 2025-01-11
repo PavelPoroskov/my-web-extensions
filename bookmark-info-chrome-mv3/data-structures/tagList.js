@@ -1,7 +1,7 @@
 import {
   getUnclassifiedFolderId,
   isDescriptiveFolderTitle,
-} from '../api/special-folder.api.js'
+} from '../folder-api/index.js'
 import {
   USER_OPTION,
   INTERNAL_VALUES,
@@ -20,9 +20,11 @@ import {
   highlightAlphabet,
 } from './tagList-highlight.js'
 import {
+  isDatedFolderTitle,
+} from '../folder-api/index.js'
+import {
   getOptions,
   setOptions,
-  isDatedFolderTitle,
   makeLogFunction,
 } from '../api-low/index.js'
 

@@ -1,21 +1,20 @@
 import {
   BOOKMARKS_BAR_FOLDER_ID,
   BOOKMARKS_MENU_FOLDER_ID,
-} from './special-folder.api.js';
+} from './special-folder.js';
 import {
   findFolderWithExactTitle,
-} from './find-folder.api.js'
+} from './find-folder.js'
 import {
   createFolderIgnoreInController,
-} from './folder.api.js'
+} from './folder-crud.js'
 import {
   isDatedFolderTitle,
   isDatedTemplateFolder,
+} from './folder-title.js';
+import {
   makeLogFunction,
 } from '../api-low/index.js';
-import {
-  tagList,
-} from '../data-structures/index.js';
 
 const logFD = makeLogFunction({ module: 'folder-dated.js' })
 
@@ -64,7 +63,6 @@ export async function getDatedFolder(folderNode) {
 
     foundFolder = await createFolderIgnoreInController(folderParams)
   }
-  await tagList.addRecentTagFromFolder(folderNode)
 
   return foundFolder
 }

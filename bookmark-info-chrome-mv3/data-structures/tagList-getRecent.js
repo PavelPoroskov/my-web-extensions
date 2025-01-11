@@ -4,7 +4,7 @@ import {
   getDatedRootFolderId,
   getUnclassifiedFolderId,
   isDescriptiveFolderTitle,
-} from '../api/special-folder.api.js'
+} from '../folder-api/index.js'
 import {
   makeLogFunction,
 } from '../api-low/index.js'

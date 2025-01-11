@@ -1,10 +1,9 @@
 import {
   getUnclassifiedFolderId,
-} from '../api/special-folder.api.js'
+} from '../folder-api/index.js'
 import {
   memo,
   tagList,
-  ignoreBkmControllerApiActionSet,
 } from '../data-structures/index.js'
 import {
   debouncedUpdateActiveTab,
@@ -19,6 +18,7 @@ import {
   IS_BROWSER_FIREFOX,
 } from '../constant/index.js'
 import {
+  ignoreBkmControllerApiActionSet,
   makeLogFunction,
 } from '../api-low/index.js'
 

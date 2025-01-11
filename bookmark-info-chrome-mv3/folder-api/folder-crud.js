@@ -1,6 +1,6 @@
 import {
   ignoreBkmControllerApiActionSet,
-} from '../data-structures/ignoreBkmControllerApiActionSet.js';
+} from '../api-low/index.js';
 
 export async function createFolderIgnoreInController({
   title,

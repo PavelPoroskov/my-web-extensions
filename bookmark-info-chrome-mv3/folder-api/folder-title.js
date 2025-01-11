@@ -1,7 +1,6 @@
 import {
   singular,
-} from './pluralize.js';
-// TODO? mv to folder/folder-title.js
+} from '../api-low/index.js';
 
 export const trimTitle = (title) => title
   .trim()

@@ -1,7 +1,7 @@
 import {
   getUnclassifiedFolderId,
   OTHER_BOOKMARKS_FOLDER_ID,
-} from '../api/special-folder.api.js';
+} from '../folder-api/index.js';
 import {
   moveBookmarkIgnoreInController,
 } from '../api/bookmark.api.js';

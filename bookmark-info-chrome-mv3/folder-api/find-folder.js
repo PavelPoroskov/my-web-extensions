@@ -1,20 +1,22 @@
 import {
   BOOKMARKS_BAR_FOLDER_ID,
   OTHER_BOOKMARKS_FOLDER_ID,
-} from './special-folder.api.js';
+} from './special-folder.js';
 import {
   isStartWithTODO,
   trimLow,
   trimLowSingular,
-  makeLogFunction,
   normalizeTitle,
-} from '../api-low/index.js';
+} from './folder-title.js';
 import {
   createFolderIgnoreInController,
   updateFolderIgnoreInController,
-} from './folder.api.js'
+} from './folder-crud.js'
+import {
+  makeLogFunction,
+} from '../api-low/index.js';
 
-const logFF = makeLogFunction({ module: 'find-folder.api.js' })
+const logFF = makeLogFunction({ module: 'find-folder.js' })
 
 function findFolderFrom({ normalizedTitle, startFolder }) {
   function traverseSubFolder(folderNode) {

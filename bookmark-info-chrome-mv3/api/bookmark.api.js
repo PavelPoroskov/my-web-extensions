@@ -1,12 +1,13 @@
 import {
-  ignoreBkmControllerApiActionSet,
+  tagList,
 } from '../data-structures/index.js';
 import {
   getDatedFolder,
-  removePreviousDatedBookmarks,
-} from './folder-dated.js';
-import {
   isDatedTemplateFolder,
+  removePreviousDatedBookmarks,
+} from '../folder-api/index.js';
+import {
+  ignoreBkmControllerApiActionSet,
   makeLogFunction,
 } from '../api-low/index.js';
 
@@ -49,6 +50,7 @@ export async function createBookmarkWithApi({
     url
   })
   if (isDatedTemplate) {
+    await tagList.addRecentTagFromFolder(folderNode)
     removePreviousDatedBookmarks({ url, template: folderNode.title })
   }
 

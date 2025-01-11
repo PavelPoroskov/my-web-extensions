@@ -1,15 +1,13 @@
 import {
   isDatedFolderTitle,
   isStartWithTODO,
-} from '../api-low/index.js';
-import {
   getDatedRootFolderId,
   getOrCreateDatedRootFolderId,
   getOrCreateUnclassifiedFolderId,
   BOOKMARKS_BAR_FOLDER_ID,
   BOOKMARKS_MENU_FOLDER_ID,
   OTHER_BOOKMARKS_FOLDER_ID,
-} from '../api/special-folder.api.js';
+} from '../folder-api/index.js';
 import {
   tagList,
 } from '../data-structures/index.js';

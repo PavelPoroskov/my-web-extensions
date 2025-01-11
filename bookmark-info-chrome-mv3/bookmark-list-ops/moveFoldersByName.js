@@ -1,9 +1,7 @@
 import {
-  moveFolderIgnoreInController,
-} from '../api/folder.api.js';
-import {
   isDatedFolderTitle,
-} from '../api-low/index.js';
+  moveFolderIgnoreInController,
+} from '../folder-api/index.js';
 import {
   makeLogFunction,
 } from '../api-low/index.js';
