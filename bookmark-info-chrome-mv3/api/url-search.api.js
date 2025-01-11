@@ -3,7 +3,6 @@ import {
 } from '../constant/index.js'
 import {
   getHostSettings,
-  makeIsSearchParamMatch,
 } from './url.api.js'
 import {
   isNotEmptyArray,
@@ -61,6 +60,52 @@ function isSearchParamsMatchForSearch({ url, requiredSearchParams }) {
     .every((key) => oSearchParams.get(key) === requiredSearchParams[key])
 }
 
+export function makeIsSearchParamMatch(patternList) {
+  logUS('makeIsSearchParamMatch () 00', patternList)
+  const isFnList = []
+
+  patternList.forEach((pattern) => {
+    logUS('makeIsSearchParamMatch () 11', 'pattern', pattern)
+    const asteriskIndex = pattern.indexOf('*')
+    const partsLength = pattern.split('*').length
+    switch (true) {
+      case asteriskIndex < 0: {
+        const fullPattern = pattern
+        isFnList.push((s) => s == fullPattern)
+        logUS('makeIsSearchParamMatch () 11', '(s) => s == fullPattern', fullPattern)
+        break
+      }
+      case asteriskIndex == 0 && partsLength == 2: {
+        if (pattern.length == 1) {
+          isFnList.push(() => true)
+          logUS('makeIsSearchParamMatch () 11', '() => true', pattern)
+        } else {
+          const end = pattern.slice(asteriskIndex + 1)
+          // isFnList.push((s) => s.endsWith(end) && end.length < s.length)
+          isFnList.push((s) => s.endsWith(end))
+          logUS('makeIsSearchParamMatch () 11', '(s) => s.endsWith(end)', end)
+        }
+        break
+      }
+      case 0 < asteriskIndex && partsLength == 2: {
+        const start = pattern.slice(0, asteriskIndex)
+        if (asteriskIndex == pattern.length - 1) {
+          isFnList.push((s) => s.startsWith(start))
+          logUS('makeIsSearchParamMatch () 11', '(s) => s.startsWith(start)', start)
+        } else {
+          const end = pattern.slice(asteriskIndex + 1)
+          const minLength = start.length + end.length
+          isFnList.push((s) => s.startsWith(start) && s.endsWith(end) && minLength <= s.length)
+          logUS('makeIsSearchParamMatch () 11', '(s) => s.startsWith(start) && s.endsWith(end) && minLength <= s.length', start, end)
+        }
+      }
+    }
+  })
+
+  logUS('makeIsSearchParamMatch () 99', 'isFnList.length', isFnList.length)
+  return (name) => isFnList.some((isFn) => isFn(name))
+}
+
 export async function startPartialUrlSearch(url) {
   const settings = await extensionSettings.get()
   if (!settings[USER_OPTION.USE_PARTIAL_URL_SEARCH]) {
@@ -73,7 +118,7 @@ export async function startPartialUrlSearch(url) {
 
   try {
     const targetHostSettings = getHostSettings(url)
-    logUS('startPartialUrlSearch targetHostSettings', !!targetHostSettings, targetHostSettings)
+    logUS('startPartialUrlSearch 11 targetHostSettings', !!targetHostSettings, targetHostSettings)
 
     // if (!targetHostSettings) {
     //   return {
@@ -82,12 +127,6 @@ export async function startPartialUrlSearch(url) {
     // }
 
     const oUrl = new URL(url);
-    oUrl.search = ''
-    if (!targetHostSettings?.isHashRequired) {
-      oUrl.hash = ''
-    }
-    oUrl.pathname = getPathnameForSearch(oUrl.pathname)
-    const urlForSearch = oUrl.toString();
 
     let requiredSearchParams
     if (targetHostSettings) {
@@ -96,9 +135,11 @@ export async function startPartialUrlSearch(url) {
       if (isNotEmptyArray(importantSearchParamList)) {
         const isSearchParamMatch = makeIsSearchParamMatch(importantSearchParamList)
         const oSearchParams = oUrl.searchParams;
+        logUS('startPartialUrlSearch 22', 'oSearchParams', oSearchParams)
 
         const matchedParamList = []
         for (const [searchParam] of oSearchParams) {
+          logUS('startPartialUrlSearch 22', 'for (const [searchParam] of oSearchParams', searchParam)
           if (isSearchParamMatch(searchParam)) {
             matchedParamList.push(searchParam)
           }
@@ -111,7 +152,16 @@ export async function startPartialUrlSearch(url) {
       }
     }
 
+    if (!targetHostSettings?.isHashRequired) {
+      oUrl.hash = ''
+    }
+    oUrl.pathname = getPathnameForSearch(oUrl.pathname)
+    oUrl.search = ''
+    const urlForSearch = oUrl.toString();
+
     const { pathname: pathnameForSearch } = new URL(urlForSearch);
+
+    logUS('startPartialUrlSearch 99', 'requiredSearchParams', requiredSearchParams)
 
     return {
       isSearchAvailable: true,
