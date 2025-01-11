@@ -8,9 +8,12 @@ import {
 } from '../api-low/index.js';
 import {
   moveBookmarkIgnoreInController,
-  removeBookmarkIgnoreInController,
-  updateBookmarkIgnoreInController,
 } from '../api/bookmark.api.js';
+import {
+  removeFolderIgnoreInController,
+  updateFolderIgnoreInController,
+} from '../api/folder.api.js';
+
 
 async function moveContent(fromFolderId, toFolderId) {
   const nodeList = await chrome.bookmarks.getChildren(fromFolderId)
@@ -65,7 +68,7 @@ async function mergeSubFolder(parentId) {
 
   await moveTaskList.reduce(
     (promiseChain, { fromNode }) => promiseChain.then(
-      () => removeBookmarkIgnoreInController(fromNode.id)
+      () => removeFolderIgnoreInController(fromNode.id)
     ),
     Promise.resolve(),
   );
@@ -89,7 +92,7 @@ async function trimTitleInSubFolder(parentId) {
 
   await renameTaskList.reduce(
     (promiseChain, { id, title }) => promiseChain.then(
-      () => updateBookmarkIgnoreInController({ id,  title })
+      () => updateFolderIgnoreInController({ id,  title })
     ),
     Promise.resolve(),
   );

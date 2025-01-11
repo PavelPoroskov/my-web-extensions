@@ -1,4 +1,5 @@
 const logModuleList = [
+  // 'bookmarks.api.js',
   // 'bookmarks.controller',
   // 'browserStartTime',
   // 'cache',
@@ -8,6 +9,7 @@ const logModuleList = [
   // 'debounceQueue',
   // 'extensionSettings',
   // 'find-folder.api.js',
+  // 'folder-dated.js',
   // 'get-bookmarks.api.js',
   // 'getUrlFromUrl',
   // 'history.api',

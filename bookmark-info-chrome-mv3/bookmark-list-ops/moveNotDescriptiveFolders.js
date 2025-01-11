@@ -6,8 +6,10 @@ import {
 } from '../api/special-folder.api.js';
 import {
   moveBookmarkIgnoreInController,
-  removeBookmarkIgnoreInController,
 } from '../api/bookmark.api.js';
+import {
+  removeFolderIgnoreInController,
+} from '../api/folder.api.js';
 
 async function moveContentToStart(fromFolderId, toFolderId) {
   const nodeList = await chrome.bookmarks.getChildren(fromFolderId)
@@ -36,7 +38,7 @@ async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
 
   await folderList.reduce(
     (promiseChain, folderNode) => promiseChain.then(
-      () => removeBookmarkIgnoreInController(folderNode.id)
+      () => removeFolderIgnoreInController(folderNode.id)
     ),
     Promise.resolve(),
   );

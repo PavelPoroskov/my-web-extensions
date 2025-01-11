@@ -56,11 +56,22 @@ export async function onIncomingMessage (message, sender) {
     }
     case EXTENSION_MSG_ID.ADD_BOOKMARK: {
       logIM('runtime.onMessage addBookmark');
-      await addBookmark({
+      const isAddedNewBookmark = await addBookmark({
         url: message.url,
         title: message.title,
         parentId: message.parentId,
       })
+      if (!isAddedNewBookmark) {
+        // to remove optimistic add
+        const tabId = sender?.tab?.id;
+        if (tabId == memo.activeTabId) {
+          updateActiveTab({
+            tabId,
+            debugCaller: 'runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME',
+            useCache: true,
+          })
+        }
+      }
 
       break
     }

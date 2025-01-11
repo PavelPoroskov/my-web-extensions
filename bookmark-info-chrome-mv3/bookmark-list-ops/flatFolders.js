@@ -3,10 +3,10 @@ import {
   OTHER_BOOKMARKS_FOLDER_ID,
 } from '../api/special-folder.api.js';
 import {
-  moveBookmarkIgnoreInController,
-  removeBookmarkIgnoreInController,
-  updateBookmarkIgnoreInController,
-} from '../api/bookmark.api.js';
+  moveFolderIgnoreInController,
+  removeFolderIgnoreInController,
+  updateFolderIgnoreInController,
+} from '../api/folder.api.js';
 
 async function getMaxUsedSuffix() {
   function getFoldersFromTree(tree) {
@@ -108,7 +108,7 @@ async function flatChildren({ parentId, freeSuffix }) {
   })
   await updateTaskList.reduce(
     (promiseChain, { id, title }) => promiseChain.then(
-      () => updateBookmarkIgnoreInController({ id, title })
+      () => updateFolderIgnoreInController({ id, title })
     ),
     Promise.resolve(),
   );
@@ -129,13 +129,13 @@ async function flatChildren({ parentId, freeSuffix }) {
 
       if (bookmarkList.length > 0) {
         if (folderLevel > 0) {
-          await moveBookmarkIgnoreInController({ id: folderNode.id, parentId })
+          await moveFolderIgnoreInController({ id: folderNode.id, parentId })
 
           if (flatFolderNameSet.has(folderNode.title)) {
             const newTitle = `${folderNode.title} ${freeSuffix}`
             freeSuffix += 1
 
-            await updateBookmarkIgnoreInController({
+            await updateFolderIgnoreInController({
               id: folderNode.id,
               title: newTitle,
             })
@@ -145,7 +145,7 @@ async function flatChildren({ parentId, freeSuffix }) {
           }
         }
       } else {
-        await removeBookmarkIgnoreInController(folderNode.id)
+        await removeFolderIgnoreInController(folderNode.id)
       }
     }
 

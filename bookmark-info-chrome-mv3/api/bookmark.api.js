@@ -1,6 +1,15 @@
 import {
   ignoreBkmControllerApiActionSet,
-} from '../data-structures/ignoreBkmControllerApiActionSet.js';
+  tagList,
+} from '../data-structures/index.js';
+import {
+  getDatedFolder,
+} from './folder-dated.js';
+import {
+  makeLogFunction,
+} from '../api-low/index.js';
+
+const logBA = makeLogFunction({ module: 'bookmark.api.js' })
 
 let lastCreatedBkmParentId
 let lastCreatedBkmUrl
@@ -11,15 +20,35 @@ export async function createBookmarkWithApi({
   title,
   url
 }) {
-  lastCreatedBkmParentId = parentId
+  logBA('createBookmarkWithApi () 00', 'parentId', parentId)
+  let actualParentId = parentId
+
+  const [folderNode] = await chrome.bookmarks.get(parentId)
+  logBA('createBookmarkWithApi () 22', 'folderNode', folderNode)
+  if (folderNode.title.endsWith(' @D')) {
+    const datedFolder = await getDatedFolder(folderNode.title)
+    logBA('createBookmarkWithApi () 33', 'datedFolder', datedFolder)
+    actualParentId = datedFolder.id
+    await tagList.addRecentTagFromFolder(folderNode)
+  }
+
+  const bookmarkList = await chrome.bookmarks.search({ url });
+  const isExist = bookmarkList.some((bkm) => bkm.parentId == actualParentId)
+  if (isExist) {
+    return false
+  }
+
+  lastCreatedBkmParentId = actualParentId
   lastCreatedBkmUrl = url
 
-  return await chrome.bookmarks.create({
+  await chrome.bookmarks.create({
     index,
-    parentId,
+    parentId: actualParentId,
     title,
     url
   })
+
+  return true
 }
 
 export function isBookmarkCreatedWithApi({ parentId, url }) {
@@ -33,21 +62,6 @@ export async function createBookmarkIgnoreInController({
   index,
 }) {
   const options = { url, parentId, title }
-  if (index != undefined) {
-    options.index = index
-  }
-
-  ignoreBkmControllerApiActionSet.addIgnoreCreate(options)
-
-  return await chrome.bookmarks.create(options)
-}
-
-export async function createFolderIgnoreInController({
-  title,
-  parentId,
-  index,
-}) {
-  const options = { parentId, title }
   if (index != undefined) {
     options.index = index
   }
@@ -72,22 +86,6 @@ export async function moveBookmarkIgnoreInController({ id, parentId, index }) {
   ignoreBkmControllerApiActionSet.addIgnoreMove(id)
 
   return await chrome.bookmarks.move(id, options)
-}
-
-export async function updateBookmarkIgnoreInController({ id, title, url }) {
-  const options = {}
-  if (title != undefined) {
-    options.title = title
-  }
-  if (url != undefined) {
-    options.url = url
-  }
-  if (Object.keys(options).length == 0) {
-    return
-  }
-
-  ignoreBkmControllerApiActionSet.addIgnoreUpdate(id)
-  await chrome.bookmarks.update(id, options)
 }
 
 export async function removeBookmarkIgnoreInController(bkmId) {

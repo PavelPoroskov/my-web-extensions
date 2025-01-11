@@ -11,8 +11,8 @@ import {
 } from '../api-low/index.js';
 import {
   createFolderIgnoreInController,
-  updateBookmarkIgnoreInController,
-} from './bookmark.api.js'
+  updateFolderIgnoreInController,
+} from './folder.api.js'
 
 const logFF = makeLogFunction({ module: 'find-folder.api.js' })
 
@@ -69,7 +69,7 @@ async function findFolderInSubtree({ title, parentId }) {
   return foundItem
 }
 
-async function findExactTitle(title) {
+export async function findFolderWithExactTitle(title) {
   let foundItem
 
   const bookmarkList = await chrome.bookmarks.search({ title });
@@ -223,7 +223,7 @@ async function findFolder(title) {
   let foundItem
 
   if (!foundItem) {
-    foundItem = await findExactTitle(title)
+    foundItem = await findFolderWithExactTitle(title)
     logFF('findExactTitle -> ', foundItem)
   }
 
@@ -298,7 +298,7 @@ export async function findOrCreateFolder(title) {
     // const isAbbreviation = title.length == newBigLetterN
 
     if (oldBigLetterN < newBigLetterN) {
-      await updateBookmarkIgnoreInController({ id: folder.id, title })
+      await updateFolderIgnoreInController({ id: folder.id, title })
     }
   }
 

@@ -3,20 +3,12 @@ import { createBookmarkWithApi } from '../api/bookmark.api.js'
 import { page } from '../api/page.api.js'
 
 export async function addBookmark({ url, title, parentId }) {
-  const bookmarkList = await chrome.bookmarks.search({ url });
-  const isExist = bookmarkList.some((bkm) => bkm.parentId == parentId)
-  if (isExist) {
-    return false
-  }
-
-  await createBookmarkWithApi({
+  return await createBookmarkWithApi({
     index: 0,
     parentId,
     title,
     url
   })
-
-  return true
 }
 
 export async function startAddBookmarkFromSelection() {

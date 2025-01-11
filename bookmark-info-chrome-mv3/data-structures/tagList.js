@@ -24,6 +24,9 @@ import {
   setOptions,
   makeLogFunction,
 } from '../api-low/index.js'
+import {
+  isDatedFolderTitle,
+} from '../api/folder-dated.js'
 
 const logTL = makeLogFunction({ module: 'tagList.js' })
 
@@ -211,6 +214,10 @@ class TagList {
     }
 
     if (!isDescriptiveFolderTitle(folderNode.title)) {
+      return
+    }
+
+    if (isDatedFolderTitle(folderNode.title)) {
       return
     }
 

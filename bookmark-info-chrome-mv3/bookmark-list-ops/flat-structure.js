@@ -1,5 +1,14 @@
 import {
+  isStartWithTODO,
+} from '../api-low/index.js';
+import {
+  isDatedFolderTitle,
+} from '../api/folder-dated.js';
+import {
+  getDatedRootFolderId,
+  getOrCreateDatedRootFolderId,
   getOrCreateUnclassifiedFolderId,
+  BOOKMARKS_BAR_FOLDER_ID,
   BOOKMARKS_MENU_FOLDER_ID,
   OTHER_BOOKMARKS_FOLDER_ID,
 } from '../api/special-folder.api.js';
@@ -19,9 +28,9 @@ import {
   moveRootBookmarksToUnclassified,
 } from './moveRootBookmarks.js';
 import {
-  moveFolderByName,
-  moveTodoToBkmBar,
-} from './moveTodoToBkmBar.js';
+  moveFoldersByName,
+  moveOldDatedFolders,
+} from './moveFoldersByName.js';
 import {
   removeDoubleBookmarks,
 } from './removeDoubleBookmarks.js';
@@ -37,9 +46,11 @@ export async function flatBookmarks() {
 
   try {
     await getOrCreateUnclassifiedFolderId()
+    await getOrCreateDatedRootFolderId()
+    const datedRootFolderId = await getDatedRootFolderId()
 
     if (IS_BROWSER_FIREFOX) {
-      await moveFolderByName({
+      await moveFoldersByName({
         fromId: BOOKMARKS_MENU_FOLDER_ID,
         toId: OTHER_BOOKMARKS_FOLDER_ID,
       })
@@ -48,9 +59,28 @@ export async function flatBookmarks() {
     await flatFolders()
     await moveRootBookmarksToUnclassified()
     await moveNotDescriptiveFoldersToUnclassified()
-    await moveTodoToBkmBar()
+
+    await moveFoldersByName({
+      fromId: BOOKMARKS_BAR_FOLDER_ID,
+      toId: OTHER_BOOKMARKS_FOLDER_ID,
+      isCondition: (title) => !(isStartWithTODO(title) || isDatedFolderTitle(title))
+    })
+    await moveFoldersByName({
+      fromId: OTHER_BOOKMARKS_FOLDER_ID,
+      toId: BOOKMARKS_BAR_FOLDER_ID,
+      isCondition: (title) => isStartWithTODO(title)
+    })
+    await moveOldDatedFolders({
+      fromId: BOOKMARKS_BAR_FOLDER_ID,
+      toId: datedRootFolderId,
+    })
+
     await mergeFolders()
-    await sortFolders()
+
+    await sortFolders(BOOKMARKS_BAR_FOLDER_ID)
+    await sortFolders(OTHER_BOOKMARKS_FOLDER_ID)
+    await sortFolders(datedRootFolderId)
+
     await removeDoubleBookmarks()
 
   } finally {
