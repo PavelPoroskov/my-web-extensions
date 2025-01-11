@@ -67,171 +67,6 @@ const KEYBOARD_CMD_ID = {
   CACHE: 'CACHE',
   ACTUAL: 'ACTUAL',
 };
-
-const logModuleList = [
-  // 'bookmarks.controller',
-  // 'browserStartTime',
-  // 'cache',
-  // 'clearUrlInActiveTab',
-  // 'commands.controller',
-  // 'content-script.api',
-  // 'contextMenu.controller',
-  // 'debounceQueue',
-  // 'extensionSettings',
-  // 'find-folder.api.js',
-  // 'get-bookmarks.api.js',
-  // 'getUrlFromUrl',
-  // 'history.api',
-  // 'incoming-message',
-  // 'init-extension',
-  // 'memo',
-  // 'recent.api',
-  // 'runtime.controller',
-  // 'storage.api',
-  // 'storage.controller',
-  // 'tabs.api',
-  // 'tabs.controller',
-  // 'tagList-highlight.js',
-  // 'tagList.js',
-  // 'url-search.api',
-  // 'url.api.config',
-  // 'windows.controller',
-]
-const logModuleMap = Object.fromEntries(
-  logModuleList.map((moduleKey) => [moduleKey, true])
-)
-const makeLogWithTime = () => {
-  let startTime;
-  let prevLogTime;
-
-  return function () {
-    if (!startTime) {
-      startTime = Date.now();
-      prevLogTime = startTime;
-    }
-
-    const newLogTime = Date.now();
-    // const dif = (newLogTime - prevLogTime)/1000;
-    const dif = (newLogTime - prevLogTime);
-    prevLogTime = newLogTime;
-
-    const ar = Array.from(arguments);
-    ar.unshift(`+${dif}`);
-    console.log(...ar);
-  }
-}
-
-const logWithTime = makeLogWithTime();
-
-// eslint-disable-next-line no-unused-vars
-const makeLogWithPrefixAndTime = (prefix = '') => {
-  return function () {
-    const ar = Array.from(arguments);
-
-    if (prefix) {
-      ar.unshift(prefix);
-    }
-
-    logWithTime(...ar);
-  }
-}
-
-const makeLogFunction = ({ module }) => {
-
-  const isLogging = logModuleMap[module] || false
-
-  if (!isLogging) {
-    return () => {}
-  }
-
-  let prefix = module;
-  if (prefix.endsWith('.js')) {
-    prefix = prefix.slice(0, -3)
-  }
-
-  return function () {
-    const ar = Array.from(arguments);
-    ar.unshift(prefix);
-    console.log(...ar);
-  }
-}
-class ExtraMap extends Map {
-  sum(key, addValue) {
-    super.set(key, (super.get(key) || 0) + addValue)
-  }
-  update(key, updateObj) {
-    super.set(key, {
-      ...super.get(key),
-      ...updateObj,
-    })
-  }
-  concat(key, inItem) {
-    const item = inItem === undefined ? [] : inItem
-    // item -- single item or array
-    const ar = super.get(key) || []
-    super.set(key, ar.concat(item))
-  }
-}
-const logC = makeLogFunction({ module: 'cache' })
-
-class CacheWithLimit {
-  constructor ({ name='cache', size = 100 }) {
-    this.cache = new Map();
-    this.LIMIT = size;
-    this.name = name;
-  }
-  removeStale () {
-    if (this.LIMIT < this.cache.size) {
-      let deleteCount = this.cache.size - this.LIMIT;
-      const keyToDelete = [];
-
-      // Map.key() returns keys in insertion order
-      for (const key of this.cache.keys()) {
-        keyToDelete.push(key);
-        deleteCount -= 1;
-        if (deleteCount <= 0) {
-          break;
-        }
-      }
-
-      for (const key of keyToDelete) {
-        this.cache.delete(key);
-      }
-    }
-  }
-
-  add (key,value) {
-    this.cache.set(key, value);
-    logC(`   ${this.name}.add: ${key}`, value);
-
-    this.removeStale();
-  }
-
-  get(key) {
-    const value = this.cache.get(key);
-    logC(`   ${this.name}.get: ${key}`, value);
-
-    return value;
-  }
-
-  delete(key) {
-    this.cache.delete(key);
-    logC(`   ${this.name}.delete: ${key}`);
-  }
-
-  clear() {
-    this.cache.clear();
-    logC(`   ${this.name}.clear()`);
-  }
-
-  has(key) {
-    return this.cache.has(key);
-  }
-
-  print() {
-    logC(this.cache);
-  }
-}
 const STORAGE_TYPE = {
   LOCAL: 'LOCAL',
   SESSION: 'SESSION',
@@ -349,12 +184,647 @@ const INTERNAL_VALUES = Object.fromEntries(
 
 // rename ADD_BOOKMARK_LIST_MAX -> TAG_LIST_MAX_LIST_LENGTH
 const TAG_LIST_MAX_LIST_LENGTH = 50
-const logSA = makeLogFunction({ module: 'storage.api' })
+const logModuleList = [
+  // 'bookmarks.api.js',
+  // 'bookmarks.controller',
+  // 'browserStartTime',
+  // 'cache',
+  // 'clearUrlInActiveTab',
+  // 'commands.controller',
+  // 'contextMenu.controller',
+  // 'debounceQueue',
+  // 'extensionSettings',
+  // 'find-folder.js',
+  // 'folder-dated.js',
+  // 'get-bookmarks.api.js',
+  // 'getUrlFromUrl',
+  // 'history.api',
+  // 'incoming-message',
+  // 'init-extension',
+  // 'memo',
+  // 'moveFoldersByName.js',
+  // 'page.api.js',
+  // 'runtime.controller',
+  // 'storage.api.js',
+  // 'storage.controller',
+  // 'tabs.api',
+  // 'tabs.controller',
+  // 'tagList-getRecent.js',
+  // 'tagList-highlight.js',
+  // 'tagList.js',
+  // 'url-search.api',
+  // 'url.api.js',
+  // 'windows.controller',
+]
+const logModuleMap = Object.fromEntries(
+  logModuleList.map((moduleKey) => [moduleKey, true])
+)
+const DEFAULT_HOST_SETTINGS = {
+  isHashRequired: false,
+  searchParamList: [
+    '*id',
+    ['utm_*'],
+  ],
+}
+
+const urlSettingsGo = {
+  'mail.google.com': {
+    isHashRequired: true,
+  },
+  'www.google.com': {
+    searchParamList: [
+      'q',
+    ],
+  },
+  'youtu.be': 'youtube.com',
+  'youtube.com': {
+    searchParamList: [
+      'v',
+    ],
+  },
+}
+
+const urlSettingsUse = {
+  'frontendmasters.com': {
+    removeAllSearchParamForPath: [
+      '/courses/:id/',
+    ]
+  },
+  'imdb.com': {
+    searchParamList: [
+      ['ref_'],
+      'season',
+    ],
+  },
+  'linkedin.com': {
+    removeAllSearchParamForPath: [
+      '/jobs/view/:id/',
+      '/posts/:id/',
+    ],
+    searchParamList: [
+      'currentJobId',
+    ],
+    theSame: [
+      '/jobs/view/:currentJobId/',
+      '/jobs/*?currentJobId=:currentJobId',
+      // '/jobs/collections/recommended/?currentJobId=:currentJobId',
+      // '/jobs/search/?currentJobId=:currentJobId',
+    ],
+  },
+  'marketplace.visualstudio.com': {
+    searchParamList: [
+      'itemName',
+    ],
+  },
+  'udemy.com': {
+    removeAllSearchParamForPath: [
+      '/course/:id/',
+    ],
+  },
+}
+
+const urlSettingsEnt = {
+  '9gag.com': {
+    isHashRequired: true,
+  },
+}
+
+const urlSettingsDark = {
+  'forcoder.net': {
+    searchParamList: [
+      's',
+    ],
+  },
+  'thepiratebay.org': {
+    searchParamList: [
+      'q',
+      'id',
+    ],
+  },
+  'torrentgalaxy.to': {
+    searchParamList: [
+      'cat',
+    ],
+  },
+}
+
+const urlSettingsRu = {
+  'avito.ru': {
+    searchParamList: [
+      ['utm_*'],
+    ],
+  },
+  'hh.ru': {
+    removeAllSearchParamForPath: [
+      '/vacancy/:id',
+      '/resume/:id',
+    ],
+    searchParamList: [
+      ['hhtmFrom'],
+      ['hhtmFromLabel'],
+      'text',
+      'professional_role',
+      'resume',
+    ],
+  },
+  'opennet.ru': {
+    searchParamList: [
+      'num',
+    ],
+  },
+
+}
+
+const HOST_URL_SETTINGS = Object.assign(
+  {},
+  urlSettingsGo,
+  urlSettingsUse,
+  urlSettingsEnt,
+  urlSettingsDark,
+  urlSettingsRu,
+)
+const HOST_URL_SETTINGS_SHORT = Object.assign(
+  {},
+  urlSettingsGo,
+  urlSettingsUse,
+  urlSettingsEnt,
+)
+
+const supportedProtocols = ["https:", "http:"];
+
+function isSupportedProtocol(urlString) {
+  try {
+    const url = new URL(urlString);
+    
+    return supportedProtocols.includes(url.protocol);
+  // eslint-disable-next-line no-unused-vars
+  } catch (_er) {
+    return false;
+  }
+}
+
+function debounce(func, timeout = 300){
+  let timer;
+
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(
+      () => {
+        func.apply(this, args);
+      },
+      timeout,
+    );
+  };
+}
+
+const isNotEmptyArray = (ar) => Array.isArray(ar) && ar.length > 0
+const pluralRules = [];
+const singularRules = [];
+const uncountables = {};
+const irregularPlurals = {};
+const irregularSingles = {};
+
+function sanitizeRule (rule) {
+  if (typeof rule === 'string') {
+    return new RegExp('^' + rule + '$', 'i');
+  }
+
+  return rule;
+}
+
+function addPluralRule(rule, replacement) {
+  pluralRules.push([sanitizeRule(rule), replacement]);
+};
+
+function addSingularRule(rule, replacement) {
+  singularRules.push([sanitizeRule(rule), replacement]);
+};
+
+function addUncountableRule(word) {
+  if (typeof word === 'string') {
+    uncountables[word.toLowerCase()] = true;
+    return;
+  }
+
+  // Set singular and plural references for the word.
+  addPluralRule(word, '$0');
+  addSingularRule(word, '$0');
+};
+
+function addIrregularRule(single, plural) {
+  plural = plural.toLowerCase();
+  single = single.toLowerCase();
+
+  irregularSingles[single] = plural;
+  irregularPlurals[plural] = single;
+};
+
+/**
+ * Irregular rules.
+ */
+[
+  // Pronouns.
+  ['I', 'we'],
+  ['me', 'us'],
+  ['he', 'they'],
+  ['she', 'they'],
+  ['them', 'them'],
+  ['myself', 'ourselves'],
+  ['yourself', 'yourselves'],
+  ['itself', 'themselves'],
+  ['herself', 'themselves'],
+  ['himself', 'themselves'],
+  ['themself', 'themselves'],
+  ['is', 'are'],
+  ['was', 'were'],
+  ['has', 'have'],
+  ['this', 'these'],
+  ['that', 'those'],
+  ['my', 'our'],
+  ['its', 'their'],
+  ['his', 'their'],
+  ['her', 'their'],
+  // Words ending in with a consonant and `o`.
+  ['echo', 'echoes'],
+  ['dingo', 'dingoes'],
+  ['volcano', 'volcanoes'],
+  ['tornado', 'tornadoes'],
+  ['torpedo', 'torpedoes'],
+  // Ends with `us`.
+  ['genus', 'genera'],
+  ['viscus', 'viscera'],
+  // Ends with `ma`.
+  ['stigma', 'stigmata'],
+  ['stoma', 'stomata'],
+  ['dogma', 'dogmata'],
+  ['lemma', 'lemmata'],
+  ['schema', 'schemata'],
+  ['anathema', 'anathemata'],
+  // Other irregular rules.
+  ['ox', 'oxen'],
+  ['axe', 'axes'],
+  ['die', 'dice'],
+  ['yes', 'yeses'],
+  ['foot', 'feet'],
+  ['eave', 'eaves'],
+  ['goose', 'geese'],
+  ['tooth', 'teeth'],
+  ['quiz', 'quizzes'],
+  ['human', 'humans'],
+  ['proof', 'proofs'],
+  ['carve', 'carves'],
+  ['valve', 'valves'],
+  ['looey', 'looies'],
+  ['thief', 'thieves'],
+  ['groove', 'grooves'],
+  ['pickaxe', 'pickaxes'],
+  ['passerby', 'passersby'],
+  ['canvas', 'canvases']
+].forEach(function (rule) {
+  return addIrregularRule(rule[0], rule[1]);
+});
+
+/**
+ * Pluralization rules.
+ */
+[
+  [/s?$/i, 's'],
+  // eslint-disable-next-line no-control-regex
+  [/[^\u0000-\u007F]$/i, '$0'],
+  [/([^aeiou]ese)$/i, '$1'],
+  [/(ax|test)is$/i, '$1es'],
+  [/(alias|[^aou]us|t[lm]as|gas|ris)$/i, '$1es'],
+  [/(e[mn]u)s?$/i, '$1s'],
+  [/([^l]ias|[aeiou]las|[ejzr]as|[iu]am)$/i, '$1'],
+  [/(alumn|syllab|vir|radi|nucle|fung|cact|stimul|termin|bacill|foc|uter|loc|strat)(?:us|i)$/i, '$1i'],
+  [/(alumn|alg|vertebr)(?:a|ae)$/i, '$1ae'],
+  [/(seraph|cherub)(?:im)?$/i, '$1im'],
+  [/(her|at|gr)o$/i, '$1oes'],
+  [/(agend|addend|millenni|dat|extrem|bacteri|desiderat|strat|candelabr|errat|ov|symposi|curricul|automat|quor)(?:a|um)$/i, '$1a'],
+  [/(apheli|hyperbat|periheli|asyndet|noumen|phenomen|criteri|organ|prolegomen|hedr|automat)(?:a|on)$/i, '$1a'],
+  [/sis$/i, 'ses'],
+  [/(?:(kni|wi|li)fe|(ar|l|ea|eo|oa|hoo)f)$/i, '$1$2ves'],
+  [/([^aeiouy]|qu)y$/i, '$1ies'],
+  [/([^ch][ieo][ln])ey$/i, '$1ies'],
+  [/(x|ch|ss|sh|zz)$/i, '$1es'],
+  [/(matr|cod|mur|sil|vert|ind|append)(?:ix|ex)$/i, '$1ices'],
+  [/\b((?:tit)?m|l)(?:ice|ouse)$/i, '$1ice'],
+  [/(pe)(?:rson|ople)$/i, '$1ople'],
+  [/(child)(?:ren)?$/i, '$1ren'],
+  [/eaux$/i, '$0'],
+  [/m[ae]n$/i, 'men'],
+  ['thou', 'you']
+].forEach(function (rule) {
+  return addPluralRule(rule[0], rule[1]);
+});
+
+/**
+ * Singularization rules.
+ */
+[
+  [/s$/i, ''],
+  [/(ss)$/i, '$1'],
+  [/(wi|kni|(?:after|half|high|low|mid|non|night|[^\w]|^)li)ves$/i, '$1fe'],
+  [/(ar|(?:wo|[ae])l|[eo][ao])ves$/i, '$1f'],
+  [/ies$/i, 'y'],
+  [/(dg|ss|ois|lk|ok|wn|mb|th|ch|ec|oal|is|ck|ix|sser|ts|wb)ies$/i, '$1ie'],
+  [/\b(l|(?:neck|cross|hog|aun)?t|coll|faer|food|gen|goon|group|hipp|junk|vegg|(?:pork)?p|charl|calor|cut)ies$/i, '$1ie'],
+  [/\b(mon|smil)ies$/i, '$1ey'],
+  [/\b((?:tit)?m|l)ice$/i, '$1ouse'],
+  [/(seraph|cherub)im$/i, '$1'],
+  [/(x|ch|ss|sh|zz|tto|go|cho|alias|[^aou]us|t[lm]as|gas|(?:her|at|gr)o|[aeiou]ris)(?:es)?$/i, '$1'],
+  [/(analy|diagno|parenthe|progno|synop|the|empha|cri|ne)(?:sis|ses)$/i, '$1sis'],
+  [/(movie|twelve|abuse|e[mn]u)s$/i, '$1'],
+  [/(test)(?:is|es)$/i, '$1is'],
+  [/(alumn|syllab|vir|radi|nucle|fung|cact|stimul|termin|bacill|foc|uter|loc|strat)(?:us|i)$/i, '$1us'],
+  [/(agend|addend|millenni|dat|extrem|bacteri|desiderat|strat|candelabr|errat|ov|symposi|curricul|quor)a$/i, '$1um'],
+  [/(apheli|hyperbat|periheli|asyndet|noumen|phenomen|criteri|organ|prolegomen|hedr|automat)a$/i, '$1on'],
+  [/(alumn|alg|vertebr)ae$/i, '$1a'],
+  [/(cod|mur|sil|vert|ind)ices$/i, '$1ex'],
+  [/(matr|append)ices$/i, '$1ix'],
+  [/(pe)(rson|ople)$/i, '$1rson'],
+  [/(child)ren$/i, '$1'],
+  [/(eau)x?$/i, '$1'],
+  [/men$/i, 'man']
+].forEach(function (rule) {
+  return addSingularRule(rule[0], rule[1]);
+});
+
+/**
+ * Uncountable rules.
+ */
+[
+  // Singular words with no plurals.
+  'adulthood',
+  'advice',
+  'agenda',
+  'aid',
+  'aircraft',
+  'alcohol',
+  'ammo',
+  'analytics',
+  'anime',
+  'athletics',
+  'audio',
+  'bison',
+  'blood',
+  'bream',
+  'buffalo',
+  'butter',
+  'carp',
+  'cash',
+  'chassis',
+  'chess',
+  'clothing',
+  'cod',
+  'commerce',
+  'cooperation',
+  'corps',
+  'debris',
+  'diabetes',
+  'digestion',
+  'elk',
+  'energy',
+  'equipment',
+  'excretion',
+  'expertise',
+  'firmware',
+  'flounder',
+  'fun',
+  'gallows',
+  'garbage',
+  'graffiti',
+  'hardware',
+  'headquarters',
+  'health',
+  'herpes',
+  'highjinks',
+  'homework',
+  'housework',
+  'information',
+  'jeans',
+  'justice',
+  'kudos',
+  'labour',
+  'literature',
+  'machinery',
+  'mackerel',
+  'mail',
+  'media',
+  'mews',
+  'moose',
+  'music',
+  'mud',
+  'manga',
+  'news',
+  'only',
+  'personnel',
+  'pike',
+  'plankton',
+  'pliers',
+  'police',
+  'pollution',
+  'premises',
+  'rain',
+  'research',
+  'rice',
+  'salmon',
+  'scissors',
+  'series',
+  'sewage',
+  'shambles',
+  'shrimp',
+  'software',
+  'staff',
+  'swine',
+  'tennis',
+  'traffic',
+  'transportation',
+  'trout',
+  'tuna',
+  'wealth',
+  'welfare',
+  'whiting',
+  'wildebeest',
+  'wildlife',
+  'you',
+  /pok[eé]mon$/i,
+  // Regexes.
+  /[^aeiou]ese$/i, // "chinese", "japanese"
+  /deer$/i, // "deer", "reindeer"
+  /fish$/i, // "fish", "blowfish", "angelfish"
+  /measles$/i,
+  /o[iu]s$/i, // "carnivorous"
+  /pox$/i, // "chickpox", "smallpox"
+  /sheep$/i
+].forEach(addUncountableRule);
+const isHasOwnProperty = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop)
+
+function restoreCase (word, token) {
+  // Tokens are an exact match.
+  if (word === token) return token;
+
+  // Lower cased words. E.g. "hello".
+  if (word === word.toLowerCase()) return token.toLowerCase();
+
+  // Upper cased words. E.g. "WHISKY".
+  if (word === word.toUpperCase()) return token.toUpperCase();
+
+  // Title cased words. E.g. "Title".
+  if (word[0] === word[0].toUpperCase()) {
+    return token.charAt(0).toUpperCase() + token.substr(1).toLowerCase();
+  }
+
+  // Lower cased words. E.g. "test".
+  return token.toLowerCase();
+}
+
+function interpolate (str, args) {
+  return str.replace(/\$(\d{1,2})/g, function (match, index) {
+    return args[index] || '';
+  });
+}
+
+function replace (word, rule) {
+  return word.replace(rule[0], function (match, index) {
+    var result = interpolate(rule[1], arguments);
+
+    if (match === '') {
+      return restoreCase(word[index - 1], result);
+    }
+
+    return restoreCase(match, result);
+  });
+}
+
+function sanitizeWord (token, word, rules) {
+  // Empty string or doesn't need fixing.
+  if (!token.length || isHasOwnProperty(uncountables, token)) {
+    return word;
+  }
+
+  var len = rules.length;
+
+  // Iterate over the sanitization rules and use the first one to match.
+  while (len--) {
+    var rule = rules[len];
+
+    if (rule[0].test(word)) return replace(word, rule);
+  }
+
+  return word;
+}
+
+function replaceWord (replaceMap, keepMap, rules) {
+  return function (word) {
+    // Get the correct token and case restoration functions.
+    var token = word.toLowerCase();
+
+    // Check against the keep object map.
+    if (isHasOwnProperty(keepMap, token)) {
+      return restoreCase(word, token);
+    }
+
+    // Check against the replacement map for a direct word replacement.
+    if (isHasOwnProperty(replaceMap, token)) {
+      return restoreCase(word, replaceMap[token]);
+    }
+
+    // Run all the rules against the word.
+    return sanitizeWord(token, word, rules);
+  };
+}
+
+function checkWord (replaceMap, keepMap, rules) {
+  return function (word) {
+    var token = word.toLowerCase();
+
+    if (isHasOwnProperty(keepMap, token)) return true;
+    if (isHasOwnProperty(replaceMap, token)) return false;
+
+    return sanitizeWord(token, token, rules) === token;
+  };
+}
+
+// eslint-disable-next-line no-unused-vars
+const plural = replaceWord(
+  irregularSingles, irregularPlurals, pluralRules
+);
+
+// eslint-disable-next-line no-unused-vars
+const isPlural = checkWord(
+  irregularSingles, irregularPlurals, pluralRules
+);
+
+const singular = replaceWord(
+  irregularPlurals, irregularSingles, singularRules
+);
+
+// eslint-disable-next-line no-unused-vars
+const isSingular = checkWord(
+  irregularPlurals, irregularSingles, singularRules
+);
+const makeLogWithTime = () => {
+  let startTime;
+  let prevLogTime;
+
+  return function () {
+    if (!startTime) {
+      startTime = Date.now();
+      prevLogTime = startTime;
+    }
+
+    const newLogTime = Date.now();
+    // const dif = (newLogTime - prevLogTime)/1000;
+    const dif = (newLogTime - prevLogTime);
+    prevLogTime = newLogTime;
+
+    const ar = Array.from(arguments);
+    ar.unshift(`+${dif}`);
+    console.log(...ar);
+  }
+}
+
+const logWithTime = makeLogWithTime();
+
+// eslint-disable-next-line no-unused-vars
+const makeLogWithPrefixAndTime = (prefix = '') => {
+  return function () {
+    const ar = Array.from(arguments);
+
+    if (prefix) {
+      ar.unshift(prefix);
+    }
+
+    logWithTime(...ar);
+  }
+}
+
+const makeLogFunction = ({ module }) => {
+
+  const isLogging = logModuleMap[module] || false
+
+  if (!isLogging) {
+    return () => {}
+  }
+
+  let prefix = module;
+  if (prefix.endsWith('.js')) {
+    prefix = prefix.slice(0, -3)
+  }
+
+  return function () {
+    const ar = Array.from(arguments);
+    ar.unshift(prefix);
+    console.log(...ar);
+  }
+}
+const logSA = makeLogFunction({ module: 'storage.api.js' })
 
 async function setOptions(obj) {
   const entryList = Object.entries(obj)
     .map(([key, value]) => ({
-      key, 
+      key,
       storage: STORAGE_KEY_META[key].storage,
       value,
     }))
@@ -384,7 +854,7 @@ async function getOptions(keyList) {
 
   const entryList = inKeyList
     .map((key) => ({
-      key, 
+      key,
       storage: STORAGE_KEY_META[key].storage,
     }))
 
@@ -400,15 +870,15 @@ async function getOptions(keyList) {
     localStoredObj,
     sessionStoredObj,
   ] = await Promise.all([
-    localList.length > 0 
+    localList.length > 0
       ? browser.storage.local.get(
         localList.map((key) => STORAGE_KEY_META[key].storageKey)
       )
       : {},
-    sessionList.length > 0 
+    sessionList.length > 0
       ? browser.storage.session.get(
         sessionList.map((key) => STORAGE_KEY_META[key].storageKey)
-      ) 
+      )
       : {},
   ])
 
@@ -418,8 +888,8 @@ async function getOptions(keyList) {
 
       return [
         key,
-        localStoredObj[storageKey] !== undefined 
-          ? localStoredObj[storageKey] 
+        localStoredObj[storageKey] !== undefined
+          ? localStoredObj[storageKey]
           : STORAGE_KEY_META[key].default
       ]
     })
@@ -430,8 +900,8 @@ async function getOptions(keyList) {
 
       return [
         key,
-        sessionStoredObj[storageKey] !== undefined 
-          ? sessionStoredObj[storageKey] 
+        sessionStoredObj[storageKey] !== undefined
+          ? sessionStoredObj[storageKey]
           : STORAGE_KEY_META[key].default
       ]
     })
@@ -442,6 +912,139 @@ async function getOptions(keyList) {
     ...sessionObj,
   }
 }
+// ignore create from api to detect create from user
+class IgnoreBkmControllerApiActionSet {
+  constructor() {
+    this._innerSet = new Set();
+  }
+  addIgnoreCreate({ parentId, url, title }) {
+    const innerKey = url
+      ? `create#${parentId}#${url}`
+      : `create#${parentId}#${title}`
+
+    this._innerSet.add(innerKey)
+  }
+  hasIgnoreCreate({ parentId, url, title }) {
+    const innerKey = url
+      ? `create#${parentId}#${url}`
+      : `create#${parentId}#${title}`
+
+    const isHas = this._innerSet.has(innerKey)
+    if (isHas) {
+      this._innerSet.delete(innerKey)
+    }
+
+    return isHas
+  }
+
+  makeAddIgnoreAction(action) {
+    return function (bkmId) {
+      const innerKey = `${action}#${bkmId}`
+      this._innerSet.add(innerKey)
+    }
+  }
+  makeHasIgnoreAction(action) {
+    return function (bkmId) {
+      const innerKey = `${action}#${bkmId}`
+
+      const isHas = this._innerSet.has(innerKey)
+      if (isHas) {
+        this._innerSet.delete(innerKey)
+      }
+
+      return isHas
+    }
+  }
+
+  addIgnoreMove = this.makeAddIgnoreAction('move')
+  hasIgnoreMove = this.makeHasIgnoreAction('move')
+
+  addIgnoreRemove = this.makeAddIgnoreAction('remove')
+  hasIgnoreRemove = this.makeHasIgnoreAction('remove')
+
+  addIgnoreUpdate = this.makeAddIgnoreAction('update')
+  hasIgnoreUpdate = this.makeHasIgnoreAction('update')
+}
+
+const ignoreBkmControllerApiActionSet = new IgnoreBkmControllerApiActionSet()
+
+class ExtraMap extends Map {
+  sum(key, addValue) {
+    super.set(key, (super.get(key) || 0) + addValue)
+  }
+  update(key, updateObj) {
+    super.set(key, {
+      ...super.get(key),
+      ...updateObj,
+    })
+  }
+  concat(key, inItem) {
+    const item = inItem === undefined ? [] : inItem
+    // item -- single item or array
+    const ar = super.get(key) || []
+    super.set(key, ar.concat(item))
+  }
+}
+const logC = makeLogFunction({ module: 'cache' })
+
+class CacheWithLimit {
+  constructor ({ name='cache', size = 100 }) {
+    this.cache = new Map();
+    this.LIMIT = size;
+    this.name = name;
+  }
+  removeStale () {
+    if (this.LIMIT + 100 < this.cache.size) {
+      let deleteCount = this.cache.size - this.LIMIT;
+      const keyToDelete = [];
+
+      // Map.key() returns keys in insertion order
+      for (const key of this.cache.keys()) {
+        keyToDelete.push(key);
+        deleteCount -= 1;
+        if (deleteCount <= 0) {
+          break;
+        }
+      }
+
+      for (const key of keyToDelete) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
+  add (key,value) {
+    this.cache.set(key, value);
+    logC(`   ${this.name}.add: ${key}`, value);
+
+    this.removeStale();
+  }
+
+  get(key) {
+    const value = this.cache.get(key);
+    logC(`   ${this.name}.get: ${key}`, value);
+
+    return value;
+  }
+
+  delete(key) {
+    this.cache.delete(key);
+    logC(`   ${this.name}.delete: ${key}`);
+  }
+
+  clear() {
+    this.cache.clear();
+    logC(`   ${this.name}.clear()`);
+  }
+
+  has(key) {
+    return this.cache.has(key);
+  }
+
+  print() {
+    logC(this.cache);
+  }
+}
 const logM = makeLogFunction({ module: 'memo' })
 
 const memo = {
@@ -449,9 +1052,9 @@ const memo = {
   activeTabId: '',
   activeTabUrl: '',
 
-  cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 150 }),
+  cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 500 }),
   // cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
-  bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 200 }),
+  bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 1000 }),
 }
 
 logM('IMPORT END', 'memo.js', new Date().toISOString())
@@ -564,130 +1167,92 @@ class BrowserStartTime {
 }
 
 const browserStartTime = new BrowserStartTime()
-// ignore create from api to detect create from user
-class IgnoreBkmControllerApiActionSet {
-  constructor() {
-    this._innerSet = new Set();
-  }
-  addIgnoreCreate({ parentId, url, title }) {
-    const innerKey = url
-      ? `create#${parentId}#${url}`
-      : `create#${parentId}#${title}`
+const trimTitle = (title) => title
+  .trim()
+  .replace(/\s+/, ' ')
 
-    this._innerSet.add(innerKey)
-  }
-  hasIgnoreCreate({ parentId, url, title }) {
-    const innerKey = url
-      ? `create#${parentId}#${url}`
-      : `create#${parentId}#${title}`
+const trimLow = (title) => {
+  const trimmedTitle = title
+    .trim()
+    .replace(/\s+/, ' ')
+    .toLowerCase()
 
-    const isHas = this._innerSet.has(innerKey)
-    if (isHas) {
-      this._innerSet.delete(innerKey)
-    }
-
-    return isHas
-  }
-
-  makeAddIgnoreAction(action) {
-    return function (bkmId) {
-      const innerKey = `${action}#${bkmId}`
-      this._innerSet.add(innerKey)
-    }
-  }
-  makeHasIgnoreAction(action) {
-    return function (bkmId) {
-      const innerKey = `${action}#${bkmId}`
-
-      const isHas = this._innerSet.has(innerKey)
-      if (isHas) {
-        this._innerSet.delete(innerKey)
-      }
-
-      return isHas
-    }
-  }
-
-  addIgnoreMove = this.makeAddIgnoreAction('move')
-  hasIgnoreMove = this.makeHasIgnoreAction('move')
-
-  addIgnoreRemove = this.makeAddIgnoreAction('remove')
-  hasIgnoreRemove = this.makeHasIgnoreAction('remove')
-
-  addIgnoreUpdate = this.makeAddIgnoreAction('update')
-  hasIgnoreUpdate = this.makeHasIgnoreAction('update')
+  return trimmedTitle
 }
 
-const ignoreBkmControllerApiActionSet = new IgnoreBkmControllerApiActionSet()
-const supportedProtocols = ["https:", "http:"];
+const trimLowSingular = (title) => {
+  const trimmedTitle = trimLow(title)
 
-function isSupportedProtocol(urlString) {
-  try {
-    const url = new URL(urlString);
-    
-    return supportedProtocols.includes(url.protocol);
-  // eslint-disable-next-line no-unused-vars
-  } catch (_er) {
-    return false;
-  }
+  const wordList = trimmedTitle.split(' ')
+  const lastWord = wordList.at(-1)
+  const singularLastWord = singular(lastWord)
+  const normalizedWordList = wordList.with(-1, singularLastWord)
+  const normalizedTitle = normalizedWordList.join(' ')
+
+  return normalizedTitle
 }
 
-function debounce(func, timeout = 300){
-  let timer;
+const normalizeTitle = (title) => trimLowSingular(title.replaceAll('-', ''))
 
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(
-      () => {
-        func.apply(this, args);
-      },
-      timeout,
-    );
-  };
+function isStartWithTODO(str) {
+  return !!str && str.slice(0, 4).toLowerCase() === 'todo'
 }
 
-const isNotEmptyArray = (ar) => Array.isArray(ar) && ar.length > 0
-let lastCreatedBkmParentId
-let lastCreatedBkmUrl
-
-async function createBookmarkWithApi({
-  index,
-  parentId,
-  title,
-  url
-}) {
-  lastCreatedBkmParentId = parentId
-  lastCreatedBkmUrl = url
-
-  return await browser.bookmarks.create({
-    index,
-    parentId,
-    title,
-    url
-  })
+function isDatedTemplateFolder(folderTitle) {
+  return folderTitle.endsWith(' @D') && 3 < folderTitle.length
 }
 
-function isBookmarkCreatedWithApi({ parentId, url }) {
-  return parentId == lastCreatedBkmParentId && url == lastCreatedBkmUrl
-}
-
-async function createBookmarkIgnoreInController({
-  title,
-  url,
-  parentId,
-  index,
-}) {
-  const options = { url, parentId, title }
-  if (index != undefined) {
-    options.index = index
+const inRange = ({ n, from, to }) => {
+  if (!Number.isInteger(n)) {
+    return false
   }
 
-  ignoreBkmControllerApiActionSet.addIgnoreCreate(options)
+  if (from != undefined && !(from <= n)) {
+    return false
+  }
 
-  return await browser.bookmarks.create(options)
+  if (to != undefined && !(n <= to)) {
+    return false
+  }
+
+  return true
 }
 
-async function createFolderIgnoreInController({
+const isDate = (str) => {
+  const partList = str.split('-')
+
+  if (!(partList.length == 3)) {
+    return false
+  }
+
+  const D = parseInt(partList.at(-3), 10)
+  const M = parseInt(partList.at(-2), 10)
+  const Y = parseInt(partList.at(-1), 10)
+
+  return inRange({ n: D, from: 1, to: 31 }) && inRange({ n: M, from: 1, to: 12 }) && inRange({ n: Y, from: 2025 })
+}
+
+const weekdaySet = new Set(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
+
+function isDatedFolderTitle(str) {
+  const partList = str.split(' ')
+
+  if (!(4 <= partList.length)) {
+    return false
+  }
+
+  // const result = !!partList.at(-4) && partList.at(-3).length == 3 && isDate(partList.at(-2)) && weekdaySet.has(partList.at(-1))
+  const result = weekdaySet.has(partList.at(-1)) && partList.at(-3).length == 3 && isDate(partList.at(-2)) && !!partList.at(-4)
+  // logFD('isDatedFolderTitle () 11', result)
+  // logFD('isDatedFolderTitle () 11', partList, partList)
+  // logFD('isDatedFolderTitle () 11', '!!partList.at(-4)', !!partList.at(-4))
+  // logFD('isDatedFolderTitle () 11', 'partList.at(-3).length == 3', partList.at(-3).length == 3)
+  // logFD('isDatedFolderTitle () 11', 'isDate(partList.at(-2))', isDate(partList.at(-2)))
+  // logFD('isDatedFolderTitle () 11', 'weekdaySet.has(partList.at(-1)', weekdaySet.has(partList.at(-1)))
+
+  return result
+}
+async function createFolderIgnoreInController({
   title,
   parentId,
   index,
@@ -702,7 +1267,12 @@ async function createFolderIgnoreInController({
   return await browser.bookmarks.create(options)
 }
 
-async function moveBookmarkIgnoreInController({ id, parentId, index }) {
+async function updateFolderIgnoreInController({ id, title }) {
+  ignoreBkmControllerApiActionSet.addIgnoreUpdate(id)
+  await browser.bookmarks.update(id, { title })
+}
+
+async function moveNodeIgnoreInController({ id, parentId, index }) {
   const options = {}
   if (parentId != undefined) {
     options.parentId = parentId
@@ -719,23 +1289,11 @@ async function moveBookmarkIgnoreInController({ id, parentId, index }) {
   return await browser.bookmarks.move(id, options)
 }
 
-async function updateBookmarkIgnoreInController({ id, title, url }) {
-  const options = {}
-  if (title != undefined) {
-    options.title = title
-  }
-  if (url != undefined) {
-    options.url = url
-  }
-  if (Object.keys(options).length == 0) {
-    return
-  }
-
-  ignoreBkmControllerApiActionSet.addIgnoreUpdate(id)
-  await browser.bookmarks.update(id, options)
+async function moveFolderIgnoreInController({ id, parentId, index }) {
+  return await moveNodeIgnoreInController({ id, parentId, index })
 }
 
-async function removeBookmarkIgnoreInController(bkmId) {
+async function removeFolderIgnoreInController(bkmId) {
   ignoreBkmControllerApiActionSet.addIgnoreRemove(bkmId)
   await browser.bookmarks.remove(bkmId)
 }
@@ -745,8 +1303,8 @@ const OTHER_BOOKMARKS_FOLDER_ID = IS_BROWSER_FIREFOX ? 'unfiled_____' : '2'
 
 
 async function getOrCreateFolderByTitleInRoot(title) {
-  const nodeList = await browser.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
-  const foundItem = nodeList.find((node) => !node.url && node.title === title)
+  const nodeList = await browser.bookmarks.search({ title });
+  const foundItem = nodeList.find((node) => !node.url && node.parentId == OTHER_BOOKMARKS_FOLDER_ID)
 
   if (foundItem) {
     return foundItem.id
@@ -762,8 +1320,8 @@ async function getOrCreateFolderByTitleInRoot(title) {
 }
 
 async function getFolderByTitleInRoot(title) {
-  const nodeList = await browser.bookmarks.getChildren(OTHER_BOOKMARKS_FOLDER_ID)
-  const foundItem = nodeList.find((node) => !node.url && node.title === title)
+  const nodeList = await browser.bookmarks.search({ title });
+  const foundItem = nodeList.find((node) => !node.url && node.parentId == OTHER_BOOKMARKS_FOLDER_ID)
 
   if (foundItem) {
     return foundItem.id
@@ -786,9 +1344,13 @@ function memoize(fnGetValue) {
 }
 
 const UNCLASSIFIED_TITLE = 'zz-bookmark-info--unclassified'
+const DATED_TITLE = 'zz-bookmark-info--dated'
 
 const getOrCreateUnclassifiedFolderId = async () => getOrCreateFolderByTitleInRoot(UNCLASSIFIED_TITLE)
 const getUnclassifiedFolderId = memoize(async () => getFolderByTitleInRoot(UNCLASSIFIED_TITLE))
+
+const getOrCreateDatedRootFolderId = async () => getOrCreateFolderByTitleInRoot(DATED_TITLE)
+const getDatedRootFolderId = memoize(async () => getFolderByTitleInRoot(DATED_TITLE))
 
 const isDescriptiveFolderTitle = (title) => !!title
   && !(
@@ -797,7 +1359,394 @@ const isDescriptiveFolderTitle = (title) => !!title
     || title.startsWith('New Folder')
     || title.startsWith('(to title)')
   )
-const logRA = makeLogFunction({ module: 'recent.api' })
+const logFF = makeLogFunction({ module: 'find-folder.js' })
+
+function findFolderFrom({ normalizedTitle, startFolder }) {
+  function traverseSubFolder(folderNode) {
+    if (normalizeTitle(folderNode.title) === normalizedTitle) {
+      return folderNode
+    }
+
+    const folderList = folderNode.children
+      .filter(({ url }) => !url)
+
+    let foundItem
+    let i = 0
+    while (!foundItem && i < folderList.length) {
+      foundItem = traverseSubFolder(folderList[i])
+      i += 1
+    }
+  }
+
+  return traverseSubFolder(startFolder)
+}
+
+async function findFolderInSubtree({ title, parentId }) {
+  const normalizedTitle = normalizeTitle(title)
+  logFF('findFolderInSubtree 00 normalizedTitle', normalizedTitle, parentId)
+  // search in direct children
+  const firstLevelNodeList = await browser.bookmarks.getChildren(parentId)
+  let foundItem = firstLevelNodeList.find((node) => !node.url && normalizeTitle(node.title) === normalizedTitle)
+  logFF('findFolderInSubtree 11 firstLevelNodeList', foundItem)
+
+  if (!foundItem) {
+    // search in subfolders of direct children
+    const [otherBookmarks] = await browser.bookmarks.getSubTree(parentId)
+    const batchList = []
+
+    for (const firstLevelNode of otherBookmarks.children) {
+      if (!firstLevelNode.url) {
+        const secondLevelFolderList = firstLevelNode.children.filter(({ url }) => !url)
+        batchList.push(secondLevelFolderList)
+      }
+    }
+
+    const allSecondLevelFolderList = batchList.flat()
+
+    let i = 0
+    while (!foundItem && i < allSecondLevelFolderList.length) {
+      foundItem = findFolderFrom({ normalizedTitle, startFolder: allSecondLevelFolderList[i] })
+      i += 1
+    }
+    logFF('findFolderInSubtree 22 secondLevelFolderList', foundItem)
+  }
+
+  return foundItem
+}
+
+async function findFolderWithExactTitle({ title, rootId }) {
+  let foundItem
+
+  const nodeList = await browser.bookmarks.search({ title });
+
+  if (rootId) {
+    foundItem = nodeList.find((node) => !node.url && node.parentId == rootId)
+  } else {
+    foundItem = nodeList.find((node) => !node.url)
+  }
+
+  return foundItem
+}
+
+// example1: node.js -> NodeJS
+async function findTitleEndsWithJS(title) {
+  let foundItem
+  const lowTitle = trimLow(title)
+
+  if (lowTitle.endsWith('.js')) {
+    const noDotTitle = `${lowTitle.slice(0, -3)}js`
+    const bookmarkList = await browser.bookmarks.search(noDotTitle);
+
+    let i = 0
+    while (!foundItem && i < bookmarkList.length) {
+      const checkItem = bookmarkList[i]
+      if (!checkItem.url && trimLow(checkItem.title) === noDotTitle) {
+        foundItem = checkItem
+      }
+      i += 1
+    }
+  }
+
+  return foundItem
+}
+
+// example1: e-commerce -> ecommerce
+// example2: micro-frontend -> microfrontend
+async function findTitleRemoveDash(title) {
+  if (title.indexOf('-') == -1) {
+    return
+  }
+
+  let foundItem
+  const noDashTitle = trimLowSingular(title.replaceAll('-', ''))
+  const bookmarkList = await browser.bookmarks.search(noDashTitle);
+
+  let i = 0
+  while (!foundItem && i < bookmarkList.length) {
+    const checkItem = bookmarkList[i]
+    if (!checkItem.url && trimLowSingular(checkItem.title) === noDashTitle) {
+      foundItem = checkItem
+    }
+    i += 1
+  }
+
+  return foundItem
+}
+
+// example1: micro-frontend -> micro frontend
+async function findTitleReplaceDashToSpace(title) {
+  if (title.indexOf('-') == -1) {
+    return
+  }
+
+  let foundItem
+  const dashToSpaceTitle = trimLowSingular(title.replaceAll('-', ' '))
+  const bookmarkList = await browser.bookmarks.search(dashToSpaceTitle);
+
+  let i = 0
+  while (!foundItem && i < bookmarkList.length) {
+    const checkItem = bookmarkList[i]
+    if (!checkItem.url && trimLowSingular(checkItem.title) === dashToSpaceTitle) {
+      foundItem = checkItem
+    }
+    i += 1
+  }
+
+  return foundItem
+}
+
+// example1: AI Video -> ai-video
+async function findTitleReplaceSpaceToDash(title) {
+  const trimLowSingularTitle = trimLowSingular(title)
+  if (trimLowSingularTitle.indexOf(' ') == -1) {
+    return
+  }
+
+  let foundItem
+  const spaceToDashTitle = trimLowSingularTitle.replaceAll(' ', '-')
+  const bookmarkList = await browser.bookmarks.search(spaceToDashTitle);
+
+  let i = 0
+  while (!foundItem && i < bookmarkList.length) {
+    const checkItem = bookmarkList[i]
+    if (!checkItem.url && trimLowSingular(checkItem.title) === spaceToDashTitle) {
+      foundItem = checkItem
+    }
+    i += 1
+  }
+
+  return foundItem
+}
+
+async function findTitleNormalized(title) {
+  let foundItem
+  const normalizedTitle = normalizeTitle(title)
+  const bookmarkList = await browser.bookmarks.search(title);
+
+  let i = 0
+  while (!foundItem && i < bookmarkList.length) {
+    const checkItem = bookmarkList[i]
+    if (!checkItem.url && normalizeTitle(checkItem.title) === normalizedTitle) {
+      foundItem = checkItem
+    }
+    i += 1
+  }
+
+  return foundItem
+}
+
+async function findTitleDropEnding(title) {
+  const lowTitle = trimLow(title)
+  const lastWord = lowTitle.split(' ').at(-1)
+
+  if (!(5 < lastWord.length)) {
+    return
+  }
+
+  let foundItem
+  const dropEndTitle = lowTitle.slice(0, -3)
+  const normalizedTitle = normalizeTitle(title)
+  const bookmarkList = await browser.bookmarks.search(dropEndTitle);
+
+  let i = 0
+  while (!foundItem && i < bookmarkList.length) {
+    const checkItem = bookmarkList[i]
+    if (!checkItem.url && normalizeTitle(checkItem.title) === normalizedTitle) {
+      foundItem = checkItem
+    }
+    i += 1
+  }
+
+  return foundItem
+}
+
+async function findFolder(title) {
+  logFF('findFolder 00 title', title)
+  let foundItem
+
+  if (!foundItem) {
+    foundItem = await findFolderWithExactTitle({ title })
+    logFF('findFolderWithExactTitle -> ', foundItem)
+  }
+
+  if (!foundItem) {
+    foundItem = await findTitleEndsWithJS(title)
+    logFF('findTitleEndsWithJS -> ', foundItem)
+  }
+
+  if (!foundItem) {
+    foundItem = await findTitleRemoveDash(title)
+    logFF('findTitleRemoveDash -> ', foundItem)
+  }
+
+  if (!foundItem) {
+    foundItem = await findTitleReplaceDashToSpace(title)
+    logFF('findTitleReplaceDashToSpace -> ', foundItem)
+  }
+
+  if (!foundItem) {
+    foundItem = await findTitleReplaceSpaceToDash(title)
+    logFF('findTitleReplaceSpaceToDash -> ', foundItem)
+  }
+
+  if (!foundItem) {
+    foundItem = await findTitleNormalized(title)
+    logFF('findTitleNormalized -> ', foundItem)
+  }
+
+  if (!foundItem) {
+    foundItem = await findTitleDropEnding(title)
+    logFF('findTitleDropEnding -> ', foundItem)
+  }
+
+  if (!foundItem) {
+    foundItem = await findFolderInSubtree({ title, parentId: OTHER_BOOKMARKS_FOLDER_ID })
+    logFF('findFolderInSubtree OTHER_BOOKMARKS_FOLDER_ID', foundItem)
+  }
+
+  if (!foundItem) {
+    foundItem = await findFolderInSubtree({ title, parentId: BOOKMARKS_BAR_FOLDER_ID })
+    logFF('findFolderInSubtree BOOKMARKS_BAR_FOLDER_ID', foundItem)
+  }
+
+  return foundItem
+}
+
+async function findOrCreateFolder(title) {
+  let folder = await findFolder(title)
+
+  if (!folder) {
+    const parentId = isStartWithTODO(title)
+      ? BOOKMARKS_BAR_FOLDER_ID
+      : OTHER_BOOKMARKS_FOLDER_ID
+
+    const firstLevelNodeList = await browser.bookmarks.getChildren(parentId)
+    const findIndex = firstLevelNodeList.find((node) => title.localeCompare(node.title) < 0)
+    logFF('findOrCreateFolder 11 findIndex', findIndex?.index, findIndex?.title)
+
+    const folderParams = {
+      parentId,
+      title,
+    }
+
+    if (findIndex) {
+      folderParams.index = findIndex.index
+    }
+
+    folder = await createFolderIgnoreInController(folderParams)
+  } else {
+    const oldBigLetterN = folder.title.replace(/[^A-Z]+/g, "").length
+    const newBigLetterN = title.replace(/[^A-Z]+/g, "").length
+    // const isAbbreviation = title.length == newBigLetterN
+
+    if (oldBigLetterN < newBigLetterN) {
+      await updateFolderIgnoreInController({ id: folder.id, title })
+    }
+  }
+
+  return folder
+}
+const logFD = makeLogFunction({ module: 'folder-dated.js' })
+
+const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric'})
+const weekdayFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'short' })
+const futureDate = new Date('01/01/2125')
+const oneDayMs = 24*60*60*1000
+
+function getDatedTitle(folderTitle) {
+  const fixedPart = folderTitle.slice(0, -3).trim()
+
+  const today = new Date()
+  const sToday = dateFormatter.format(today).replaceAll('/', '-')
+  const sWeekday = weekdayFormatter.format(today)
+
+  const days = Math.floor((futureDate - today)/oneDayMs)
+  const sDays = new Number(days).toString(36).padStart(3,'0')
+
+  return `${fixedPart} ${sDays} ${sToday} ${sWeekday}`
+}
+
+// folderTitle = 'DONE @D' 'selected @D' 'BEST @D'
+async function getDatedFolder(folderNode) {
+  if (!isDatedTemplateFolder(folderNode.title)) {
+    return
+  }
+  logFD('getDatedFolder () 00', folderNode.title)
+
+  const datedTitle = getDatedTitle(folderNode.title)
+  logFD('getDatedFolder () 11', 'datedTitle', datedTitle)
+  const rootId = BOOKMARKS_MENU_FOLDER_ID || BOOKMARKS_BAR_FOLDER_ID
+  let foundFolder = await findFolderWithExactTitle({ title: datedTitle, rootId })
+
+  if (!foundFolder) {
+    const firstLevelNodeList = await browser.bookmarks.getChildren(rootId)
+    const findIndex = firstLevelNodeList.find((node) => !node.url && datedTitle.localeCompare(node.title) < 0)
+
+    const folderParams = {
+      parentId: rootId,
+      title: datedTitle,
+    }
+
+    if (findIndex) {
+      folderParams.index = findIndex.index
+    }
+
+    foundFolder = await createFolderIgnoreInController(folderParams)
+  }
+
+  return foundFolder
+}
+
+function isDatedTitleForTemplate({ title, template }) {
+  logFD('isDatedTitleForTemplate () 00', title, template)
+
+
+  if (!isDatedTemplateFolder(template)) {
+    return
+  }
+  if (!isDatedFolderTitle(title)) {
+    return false
+  }
+
+  const fixedPartFromTitle = title.split(' ').slice(0, -3).join(' ')
+  const fixedPartFromTemplate = template.slice(0, -3).trim()
+
+  return fixedPartFromTitle == fixedPartFromTemplate
+}
+
+async function removePreviousDatedBookmarks({ url, template }) {
+  const bookmarkList = await browser.bookmarks.search({ url });
+  logFD('removePreviousDatedBookmarks () 00', bookmarkList)
+
+  const parentFolderArList = await Promise.all(
+    bookmarkList.map(
+      ({ parentId }) => browser.bookmarks.get(parentId)
+    )
+  )
+  const parentMap = Object.fromEntries(
+    parentFolderArList.flat()
+      .map(({ id, title}) => [id, title])
+  )
+
+  const removeFolderList = bookmarkList
+    .map(({ id, parentId }) => ({ id, parentTitle: parentMap[parentId] }))
+    .filter(({ parentTitle }) => isDatedTitleForTemplate({ title: parentTitle, template }))
+    .toSorted((a,b) => a.parentTitle.localeCompare(b.parentTitle))
+    .slice(1)
+  logFD('removePreviousDatedBookmarks () 00', 'removeFolderList', removeFolderList)
+
+  if (removeFolderList.length == 0) {
+    return
+  }
+
+  await Promise.all(
+    removeFolderList.map(
+      ({ id }) => browser.bookmarks.remove(id)
+    )
+  )
+}
+
+const logRA = makeLogFunction({ module: 'tagList-getRecent.js' })
 
 async function getRecentList(nItems) {
   logRA('getRecentList() 00', nItems)
@@ -870,13 +1819,14 @@ async function filterFolders(idList, isFlatStructure) {
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {
     const unclassifiedFolderId = await getUnclassifiedFolderId()
+    const datedRootFolderId = await getDatedRootFolderId()
 
     filteredFolderList = filteredFolderList
       .filter(
         ({ parentId }) => parentId === OTHER_BOOKMARKS_FOLDER_ID || parentId === BOOKMARKS_BAR_FOLDER_ID
       )
       .filter(
-        ({ id }) => id !== unclassifiedFolderId
+        ({ id }) => id !== unclassifiedFolderId && id !== datedRootFolderId
       )
   }
 
@@ -888,9 +1838,9 @@ async function filterRecentTagObj(obj = {}, isFlatStructure) {
 
   return Object.fromEntries(
     filteredFolderList.map(({ id, title }) => [
-      id, 
+      id,
       {
-        title, 
+        title,
         dateAdded: obj[id].dateAdded,
       }
     ])
@@ -1251,6 +2201,10 @@ class TagList {
       return
     }
 
+    if (isDatedFolderTitle(folderNode.title)) {
+      return
+    }
+
     this._recentTagObj[folderNode.id] = {
       dateAdded: Date.now(),
       title: folderNode.title
@@ -1264,7 +2218,7 @@ class TagList {
       }
     }
 
-    if (TAG_LIST_MAX_LIST_LENGTH + 10 < Object.keys(this._recentTagObj).length) {
+    if (TAG_LIST_MAX_LIST_LENGTH + 30 < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
         .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
         .sort((a, b) => -(a.dateAdded - b.dateAdded))
@@ -1345,7 +2299,94 @@ class TagList {
 
 const tagList = new TagList()
 
-const logCSA = makeLogFunction({ module: 'content-script.api' })
+const logBA = makeLogFunction({ module: 'bookmark.api.js' })
+
+let lastCreatedBkmParentId
+let lastCreatedBkmUrl
+
+async function createBookmarkWithApi({
+  index,
+  parentId,
+  title,
+  url
+}) {
+  logBA('createBookmarkWithApi () 00', 'parentId', parentId)
+  let actualParentId = parentId
+
+  const [folderNode] = await browser.bookmarks.get(parentId)
+  logBA('createBookmarkWithApi () 22', 'folderNode', folderNode)
+  const isDatedTemplate = isDatedTemplateFolder(folderNode.title)
+  if (isDatedTemplate) {
+    const datedFolder = await getDatedFolder(folderNode)
+    logBA('createBookmarkWithApi () 33', 'datedFolder', datedFolder)
+    actualParentId = datedFolder.id
+  }
+
+  const bookmarkList = await browser.bookmarks.search({ url });
+  const isExist = bookmarkList.some((bkm) => bkm.parentId == actualParentId)
+  if (isExist) {
+    return false
+  }
+
+  lastCreatedBkmParentId = actualParentId
+  lastCreatedBkmUrl = url
+
+  await browser.bookmarks.create({
+    index,
+    parentId: actualParentId,
+    title,
+    url
+  })
+  if (isDatedTemplate) {
+    await tagList.addRecentTagFromFolder(folderNode)
+    removePreviousDatedBookmarks({ url, template: folderNode.title })
+  }
+
+  return true
+}
+
+function isBookmarkCreatedWithApi({ parentId, url }) {
+  return parentId == lastCreatedBkmParentId && url == lastCreatedBkmUrl
+}
+
+async function createBookmarkIgnoreInController({
+  title,
+  url,
+  parentId,
+  index,
+}) {
+  const options = { url, parentId, title }
+  if (index != undefined) {
+    options.index = index
+  }
+
+  ignoreBkmControllerApiActionSet.addIgnoreCreate(options)
+
+  return await browser.bookmarks.create(options)
+}
+
+async function moveBookmarkIgnoreInController({ id, parentId, index }) {
+  const options = {}
+  if (parentId != undefined) {
+    options.parentId = parentId
+  }
+  if (index != undefined) {
+    options.index = index
+  }
+  if (Object.keys(options).length == 0) {
+    return
+  }
+
+  ignoreBkmControllerApiActionSet.addIgnoreMove(id)
+
+  return await browser.bookmarks.move(id, options)
+}
+
+async function removeBookmarkIgnoreInController(bkmId) {
+  ignoreBkmControllerApiActionSet.addIgnoreRemove(bkmId)
+  await browser.bookmarks.remove(bkmId)
+}
+const logCSA = makeLogFunction({ module: 'page.api.js' })
 
 async function changeUrlInTab({ tabId, url }) {
   logCSA('changeUrlInTab () 00', tabId, url)
@@ -1422,93 +2463,16 @@ async function updateBookmarkInfoInPage({ tabId, data }) {
       logCSA('updateBookmarkInfo () IGNORE', err)
     })
 }
-const logUAC = makeLogFunction({ module: 'url.api.config' })
 
-const HOST_URL_SETTINGS = {
-  '9gag.com': {
-    isHashRequired: true,
-  },
-  'avito.ru': {
-    removeAllSearchParamForPath: [
-      '/',
-    ]
-  },
-  'forcoder.net': {
-    searchParamList: [
-      's', // https://forcoder.net/?s=CQRS
-    ],
-  },
-  'frontendmasters.com': {
-    removeAllSearchParamForPath: [
-      '/courses/:id/',
-    ]
-  },
-  'hh.ru': {
-    removeAllSearchParamForPath: [
-      '/vacancy/:id',
-      '/resume/:id',
-    ],
-    searchParamList: [
-      ['hhtmFrom'],
-      ['hhtmFromLabel'],
-      'text',
-      'professional_role',
-      'resume',
-    ],
-  },
-  'imdb.com': {
-    searchParamList: [
-      ['ref_'],
-      'season', // https://www.imdb.com/title/tt8111088/episodes/?season=3&ref_=tt_eps_sn_3
-    ],
-  },
-  'linkedin.com': {
-    removeAllSearchParamForPath: [
-      '/jobs/view/:id/',
-      '/posts/:id/',
-    ],
-  },
-  'mail.google.com': {
-    isHashRequired: true,
-  },
-  'marketplace.visualstudio.com': {
-    searchParamList: [
-      'itemName',
-    ],
-  },
-  'opennet.ru': {
-    searchParamList: [
-      'num',
-    ],
-  },
-  'thepiratebay.org': {
-    searchParamList: [
-      'q',
-      'id',
-    ],
-  },
-  'torrentgalaxy.to': {
-    searchParamList: [
-      'cat',
-    ],
-  },
-  'udemy.com': {
-    removeAllSearchParamForPath: [
-      '/course/:id/',
-    ],
-  },
-  'www.google.com': {
-    searchParamList: [
-      'q',
-    ],
-  },
-  'youtu.be': 'youtube.com',
-  'youtube.com': {
-    searchParamList: [
-      'v',
-    ],
-  },
+const page = {
+  changeUrlInTab,
+  replaceUrlInTab,
+  getSelectionInPage,
+  getUserInputInPage,
+  toggleYoutubeHeaderInPage,
+  updateBookmarkInfoInPage,
 }
+const logUAC = makeLogFunction({ module: 'url.api.js' })
 
 function extendsSettings(oSettings) {
   let mSettings = typeof oSettings == 'string'
@@ -1533,13 +2497,36 @@ function extendsSettings(oSettings) {
   }
 }
 
+function mergeSettings(oSettings, oDefaultSettings) {
+  const getUniq = (ar1, ar2) => Array.from(new Set(ar1.concat(ar2)))
+
+  const {
+    removeSearchParamList,
+    importantSearchParamList,
+    ...rest
+  } = oSettings
+  const {
+    removeSearchParamList: defaultRemoveSearchParamList,
+    importantSearchParamList: defaultImportantSearchParamList,
+    ...defaultRest
+  } = oDefaultSettings
+
+  return {
+    ...defaultRest,
+    ...rest,
+    removeSearchParamList: getUniq(removeSearchParamList, defaultRemoveSearchParamList),
+    importantSearchParamList: getUniq(importantSearchParamList, defaultImportantSearchParamList),
+  }
+}
+
+const DEFAULT_HOST_SETTINGS_EXT = extendsSettings(DEFAULT_HOST_SETTINGS)
+
 const HOST_URL_SETTINGS_LIST = Object.entries(HOST_URL_SETTINGS)
   .map(([hostname, oSettings]) => [
     hostname,
-    extendsSettings(oSettings)
+    mergeSettings(extendsSettings(oSettings), DEFAULT_HOST_SETTINGS_EXT)
   ])
 
-// logUAC('HOST_URL_SETTINGS', HOST_URL_SETTINGS)
 const HOST_URL_SETTINGS_MAP = new Map(HOST_URL_SETTINGS_LIST)
 
 const getHostSettings = (url) => {
@@ -1547,7 +2534,6 @@ const getHostSettings = (url) => {
   const oUrl = new URL(url);
   const { hostname } = oUrl;
   logUAC('getHostSettings 11', hostname)
-  // logUAC('HOST_URL_SETTINGS_MAP', HOST_URL_SETTINGS_MAP)
 
   let targetHostSettings = HOST_URL_SETTINGS_MAP.get(hostname)
   logUAC('targetHostSettings 22 hostname', targetHostSettings)
@@ -1572,15 +2558,59 @@ const getHostSettings = (url) => {
     logUAC('targetHostSettings 66 baseDomain', baseDomain, targetHostSettings)
   }
 
-  return targetHostSettings
+  return targetHostSettings || DEFAULT_HOST_SETTINGS_EXT
 }
 
-const HOST_LIST_FOR_PAGE_OPTIONS = HOST_URL_SETTINGS_LIST
+const HOST_URL_SETTINGS_LIST_SHORT = Object.entries(HOST_URL_SETTINGS_SHORT)
+  .map(([hostname, oSettings]) => [
+    hostname,
+    extendsSettings(oSettings)
+  ])
+
+const HOST_LIST_FOR_PAGE_OPTIONS = HOST_URL_SETTINGS_LIST_SHORT
   .toSorted((a, b) => a[0].localeCompare(b[0]))
   .filter(([, obj]) => (isNotEmptyArray(obj.removeSearchParamList) || isNotEmptyArray(obj.removeAllSearchParamForPath)) && !obj.isAlias)
     .map(
       ([hostname, obj]) => `${hostname}{${(obj.removeAllSearchParamForPath || []).toSorted().join(',')}}`
     )
+
+function makeIsSearchParamMatch(patternList) {
+  const isFnList = []
+
+  patternList.forEach((pattern) => {
+    const asteriskIndex = pattern.indexOf('*')
+    const partsLength = pattern.split('*').length
+    switch (true) {
+      case asteriskIndex < 0: {
+        const fullPattern = pattern
+        isFnList.push((s) => s == fullPattern)
+        break
+      }
+      case asteriskIndex == 0 && partsLength == 2: {
+        if (pattern.length == 1) {
+          isFnList.push(() => true)
+        } else {
+          const end = pattern.slice(asteriskIndex + 1)
+          // isFnList.push((s) => s.endsWith(end) && end.length < s.length)
+          isFnList.push((s) => s.endsWith(end))
+        }
+        break
+      }
+      case 0 < asteriskIndex && partsLength == 2: {
+        const start = pattern.slice(0, asteriskIndex)
+        if (asteriskIndex == pattern.length - 1) {
+          isFnList.push((s) => s.startsWith(start))
+        } else {
+          const end = pattern.slice(asteriskIndex + 1)
+          const minLength = start.length + end.length
+          isFnList.push((s) => s.startsWith(start) && s.endsWith(end) && minLength <= s.length)
+        }
+      }
+    }
+  })
+
+  return (name) => isFnList.some((isFn) => isFn(name))
+}
 const logUS = makeLogFunction({ module: 'url-search.api' })
 
 function removeIndexFromPathname(pathname) {
@@ -1662,9 +2692,18 @@ async function startPartialUrlSearch(url) {
       const { importantSearchParamList } = targetHostSettings
 
       if (isNotEmptyArray(importantSearchParamList)) {
+        const isSearchParamMatch = makeIsSearchParamMatch(importantSearchParamList)
         const oSearchParams = oUrl.searchParams;
+
+        const matchedParamList = []
+        for (const [searchParam] of oSearchParams) {
+          if (isSearchParamMatch(searchParam)) {
+            matchedParamList.push(searchParam)
+          }
+        }
+
         requiredSearchParams = {}
-        importantSearchParamList.forEach((searchParam) => {
+        matchedParamList.forEach((searchParam) => {
           requiredSearchParams[searchParam] = oSearchParams.get(searchParam)
         })
       }
@@ -1713,6 +2752,10 @@ const isPathnameMatchForPattern = ({ pathname, patternList }) => {
     return result
   }
 
+  if (patternList.includes('*')) {
+    return true
+  }
+
   let isMath = false
   const pathAsList = pathToList(pathname)
   logCUA('isPathnameMatch () 11 pathAsList', pathAsList)
@@ -1749,11 +2792,20 @@ const removeQueryParamsIfTarget = (url) => {
 
       if (isNotEmptyArray(removeSearchParamList)) {
         logCUA('removeQueryParamsIfTarget () 33 isNotEmptyArray(removeSearchParamList)')
+
+        const isSearchParamMatch = makeIsSearchParamMatch(removeSearchParamList)
+
+        const matchedParamList = []
+        for (const [searchParam] of oSearchParams) {
+          if (isSearchParamMatch(searchParam)) {
+            matchedParamList.push(searchParam)
+          }
+        }
         // remove query params by list
-        const isHasThisSearchParams = removeSearchParamList.some((searchParam) => oSearchParams.get(searchParam) !== null)
+        const isHasThisSearchParams = 0 < matchedParamList.length
 
         if (isHasThisSearchParams) {
-          removeSearchParamList.forEach((searchParam) => {
+          matchedParamList.forEach((searchParam) => {
             oSearchParams.delete(searchParam)
           })
           oUrl.search = oSearchParams.size > 0
@@ -1792,7 +2844,7 @@ async function clearUrlOnPageOpen({ tabId, url }) {
     cleanUrl = removeQueryParamsIfTarget(url);
 
     if (url !== cleanUrl) {
-      await changeUrlInTab({ tabId, url: cleanUrl })
+      await page.changeUrlInTab({ tabId, url: cleanUrl })
     }
   }
 
@@ -2236,7 +3288,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     isHideHeaderForYoutube: settings[USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE],
   }
   logTA('UPDATE-TAB () 99 sendMessage', tabId, data);
-  await updateBookmarkInfoInPage({ tabId, data })
+  await page.updateBookmarkInfoInPage({ tabId, data })
 }
 
 function updateTabTask(options) {
@@ -2270,712 +3322,6 @@ async function updateActiveTab({ tabId, url, useCache, debugCaller } = {}) {
     useCache,
     debugCaller: `updateActiveTab () <- ${debugCaller}`,
   })
-}
-const pluralRules = [];
-const singularRules = [];
-const uncountables = {};
-const irregularPlurals = {};
-const irregularSingles = {};
-
-function sanitizeRule (rule) {
-  if (typeof rule === 'string') {
-    return new RegExp('^' + rule + '$', 'i');
-  }
-
-  return rule;
-}
-
-function addPluralRule(rule, replacement) {
-  pluralRules.push([sanitizeRule(rule), replacement]);
-};
-
-function addSingularRule(rule, replacement) {
-  singularRules.push([sanitizeRule(rule), replacement]);
-};
-
-function addUncountableRule(word) {
-  if (typeof word === 'string') {
-    uncountables[word.toLowerCase()] = true;
-    return;
-  }
-
-  // Set singular and plural references for the word.
-  addPluralRule(word, '$0');
-  addSingularRule(word, '$0');
-};
-
-function addIrregularRule(single, plural) {
-  plural = plural.toLowerCase();
-  single = single.toLowerCase();
-
-  irregularSingles[single] = plural;
-  irregularPlurals[plural] = single;
-};
-
-/**
- * Irregular rules.
- */
-[
-  // Pronouns.
-  ['I', 'we'],
-  ['me', 'us'],
-  ['he', 'they'],
-  ['she', 'they'],
-  ['them', 'them'],
-  ['myself', 'ourselves'],
-  ['yourself', 'yourselves'],
-  ['itself', 'themselves'],
-  ['herself', 'themselves'],
-  ['himself', 'themselves'],
-  ['themself', 'themselves'],
-  ['is', 'are'],
-  ['was', 'were'],
-  ['has', 'have'],
-  ['this', 'these'],
-  ['that', 'those'],
-  ['my', 'our'],
-  ['its', 'their'],
-  ['his', 'their'],
-  ['her', 'their'],
-  // Words ending in with a consonant and `o`.
-  ['echo', 'echoes'],
-  ['dingo', 'dingoes'],
-  ['volcano', 'volcanoes'],
-  ['tornado', 'tornadoes'],
-  ['torpedo', 'torpedoes'],
-  // Ends with `us`.
-  ['genus', 'genera'],
-  ['viscus', 'viscera'],
-  // Ends with `ma`.
-  ['stigma', 'stigmata'],
-  ['stoma', 'stomata'],
-  ['dogma', 'dogmata'],
-  ['lemma', 'lemmata'],
-  ['schema', 'schemata'],
-  ['anathema', 'anathemata'],
-  // Other irregular rules.
-  ['ox', 'oxen'],
-  ['axe', 'axes'],
-  ['die', 'dice'],
-  ['yes', 'yeses'],
-  ['foot', 'feet'],
-  ['eave', 'eaves'],
-  ['goose', 'geese'],
-  ['tooth', 'teeth'],
-  ['quiz', 'quizzes'],
-  ['human', 'humans'],
-  ['proof', 'proofs'],
-  ['carve', 'carves'],
-  ['valve', 'valves'],
-  ['looey', 'looies'],
-  ['thief', 'thieves'],
-  ['groove', 'grooves'],
-  ['pickaxe', 'pickaxes'],
-  ['passerby', 'passersby'],
-  ['canvas', 'canvases']
-].forEach(function (rule) {
-  return addIrregularRule(rule[0], rule[1]);
-});
-
-/**
- * Pluralization rules.
- */
-[
-  [/s?$/i, 's'],
-  // eslint-disable-next-line no-control-regex
-  [/[^\u0000-\u007F]$/i, '$0'],
-  [/([^aeiou]ese)$/i, '$1'],
-  [/(ax|test)is$/i, '$1es'],
-  [/(alias|[^aou]us|t[lm]as|gas|ris)$/i, '$1es'],
-  [/(e[mn]u)s?$/i, '$1s'],
-  [/([^l]ias|[aeiou]las|[ejzr]as|[iu]am)$/i, '$1'],
-  [/(alumn|syllab|vir|radi|nucle|fung|cact|stimul|termin|bacill|foc|uter|loc|strat)(?:us|i)$/i, '$1i'],
-  [/(alumn|alg|vertebr)(?:a|ae)$/i, '$1ae'],
-  [/(seraph|cherub)(?:im)?$/i, '$1im'],
-  [/(her|at|gr)o$/i, '$1oes'],
-  [/(agend|addend|millenni|dat|extrem|bacteri|desiderat|strat|candelabr|errat|ov|symposi|curricul|automat|quor)(?:a|um)$/i, '$1a'],
-  [/(apheli|hyperbat|periheli|asyndet|noumen|phenomen|criteri|organ|prolegomen|hedr|automat)(?:a|on)$/i, '$1a'],
-  [/sis$/i, 'ses'],
-  [/(?:(kni|wi|li)fe|(ar|l|ea|eo|oa|hoo)f)$/i, '$1$2ves'],
-  [/([^aeiouy]|qu)y$/i, '$1ies'],
-  [/([^ch][ieo][ln])ey$/i, '$1ies'],
-  [/(x|ch|ss|sh|zz)$/i, '$1es'],
-  [/(matr|cod|mur|sil|vert|ind|append)(?:ix|ex)$/i, '$1ices'],
-  [/\b((?:tit)?m|l)(?:ice|ouse)$/i, '$1ice'],
-  [/(pe)(?:rson|ople)$/i, '$1ople'],
-  [/(child)(?:ren)?$/i, '$1ren'],
-  [/eaux$/i, '$0'],
-  [/m[ae]n$/i, 'men'],
-  ['thou', 'you']
-].forEach(function (rule) {
-  return addPluralRule(rule[0], rule[1]);
-});
-
-/**
- * Singularization rules.
- */
-[
-  [/s$/i, ''],
-  [/(ss)$/i, '$1'],
-  [/(wi|kni|(?:after|half|high|low|mid|non|night|[^\w]|^)li)ves$/i, '$1fe'],
-  [/(ar|(?:wo|[ae])l|[eo][ao])ves$/i, '$1f'],
-  [/ies$/i, 'y'],
-  [/(dg|ss|ois|lk|ok|wn|mb|th|ch|ec|oal|is|ck|ix|sser|ts|wb)ies$/i, '$1ie'],
-  [/\b(l|(?:neck|cross|hog|aun)?t|coll|faer|food|gen|goon|group|hipp|junk|vegg|(?:pork)?p|charl|calor|cut)ies$/i, '$1ie'],
-  [/\b(mon|smil)ies$/i, '$1ey'],
-  [/\b((?:tit)?m|l)ice$/i, '$1ouse'],
-  [/(seraph|cherub)im$/i, '$1'],
-  [/(x|ch|ss|sh|zz|tto|go|cho|alias|[^aou]us|t[lm]as|gas|(?:her|at|gr)o|[aeiou]ris)(?:es)?$/i, '$1'],
-  [/(analy|diagno|parenthe|progno|synop|the|empha|cri|ne)(?:sis|ses)$/i, '$1sis'],
-  [/(movie|twelve|abuse|e[mn]u)s$/i, '$1'],
-  [/(test)(?:is|es)$/i, '$1is'],
-  [/(alumn|syllab|vir|radi|nucle|fung|cact|stimul|termin|bacill|foc|uter|loc|strat)(?:us|i)$/i, '$1us'],
-  [/(agend|addend|millenni|dat|extrem|bacteri|desiderat|strat|candelabr|errat|ov|symposi|curricul|quor)a$/i, '$1um'],
-  [/(apheli|hyperbat|periheli|asyndet|noumen|phenomen|criteri|organ|prolegomen|hedr|automat)a$/i, '$1on'],
-  [/(alumn|alg|vertebr)ae$/i, '$1a'],
-  [/(cod|mur|sil|vert|ind)ices$/i, '$1ex'],
-  [/(matr|append)ices$/i, '$1ix'],
-  [/(pe)(rson|ople)$/i, '$1rson'],
-  [/(child)ren$/i, '$1'],
-  [/(eau)x?$/i, '$1'],
-  [/men$/i, 'man']
-].forEach(function (rule) {
-  return addSingularRule(rule[0], rule[1]);
-});
-
-/**
- * Uncountable rules.
- */
-[
-  // Singular words with no plurals.
-  'adulthood',
-  'advice',
-  'agenda',
-  'aid',
-  'aircraft',
-  'alcohol',
-  'ammo',
-  'analytics',
-  'anime',
-  'athletics',
-  'audio',
-  'bison',
-  'blood',
-  'bream',
-  'buffalo',
-  'butter',
-  'carp',
-  'cash',
-  'chassis',
-  'chess',
-  'clothing',
-  'cod',
-  'commerce',
-  'cooperation',
-  'corps',
-  'debris',
-  'diabetes',
-  'digestion',
-  'elk',
-  'energy',
-  'equipment',
-  'excretion',
-  'expertise',
-  'firmware',
-  'flounder',
-  'fun',
-  'gallows',
-  'garbage',
-  'graffiti',
-  'hardware',
-  'headquarters',
-  'health',
-  'herpes',
-  'highjinks',
-  'homework',
-  'housework',
-  'information',
-  'jeans',
-  'justice',
-  'kudos',
-  'labour',
-  'literature',
-  'machinery',
-  'mackerel',
-  'mail',
-  'media',
-  'mews',
-  'moose',
-  'music',
-  'mud',
-  'manga',
-  'news',
-  'only',
-  'personnel',
-  'pike',
-  'plankton',
-  'pliers',
-  'police',
-  'pollution',
-  'premises',
-  'rain',
-  'research',
-  'rice',
-  'salmon',
-  'scissors',
-  'series',
-  'sewage',
-  'shambles',
-  'shrimp',
-  'software',
-  'staff',
-  'swine',
-  'tennis',
-  'traffic',
-  'transportation',
-  'trout',
-  'tuna',
-  'wealth',
-  'welfare',
-  'whiting',
-  'wildebeest',
-  'wildlife',
-  'you',
-  /pok[eé]mon$/i,
-  // Regexes.
-  /[^aeiou]ese$/i, // "chinese", "japanese"
-  /deer$/i, // "deer", "reindeer"
-  /fish$/i, // "fish", "blowfish", "angelfish"
-  /measles$/i,
-  /o[iu]s$/i, // "carnivorous"
-  /pox$/i, // "chickpox", "smallpox"
-  /sheep$/i
-].forEach(addUncountableRule);
-const isHasOwnProperty = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop)
-
-function restoreCase (word, token) {
-  // Tokens are an exact match.
-  if (word === token) return token;
-
-  // Lower cased words. E.g. "hello".
-  if (word === word.toLowerCase()) return token.toLowerCase();
-
-  // Upper cased words. E.g. "WHISKY".
-  if (word === word.toUpperCase()) return token.toUpperCase();
-
-  // Title cased words. E.g. "Title".
-  if (word[0] === word[0].toUpperCase()) {
-    return token.charAt(0).toUpperCase() + token.substr(1).toLowerCase();
-  }
-
-  // Lower cased words. E.g. "test".
-  return token.toLowerCase();
-}
-
-function interpolate (str, args) {
-  return str.replace(/\$(\d{1,2})/g, function (match, index) {
-    return args[index] || '';
-  });
-}
-
-function replace (word, rule) {
-  return word.replace(rule[0], function (match, index) {
-    var result = interpolate(rule[1], arguments);
-
-    if (match === '') {
-      return restoreCase(word[index - 1], result);
-    }
-
-    return restoreCase(match, result);
-  });
-}
-
-function sanitizeWord (token, word, rules) {
-  // Empty string or doesn't need fixing.
-  if (!token.length || isHasOwnProperty(uncountables, token)) {
-    return word;
-  }
-
-  var len = rules.length;
-
-  // Iterate over the sanitization rules and use the first one to match.
-  while (len--) {
-    var rule = rules[len];
-
-    if (rule[0].test(word)) return replace(word, rule);
-  }
-
-  return word;
-}
-
-function replaceWord (replaceMap, keepMap, rules) {
-  return function (word) {
-    // Get the correct token and case restoration functions.
-    var token = word.toLowerCase();
-
-    // Check against the keep object map.
-    if (isHasOwnProperty(keepMap, token)) {
-      return restoreCase(word, token);
-    }
-
-    // Check against the replacement map for a direct word replacement.
-    if (isHasOwnProperty(replaceMap, token)) {
-      return restoreCase(word, replaceMap[token]);
-    }
-
-    // Run all the rules against the word.
-    return sanitizeWord(token, word, rules);
-  };
-}
-
-function checkWord (replaceMap, keepMap, rules) {
-  return function (word) {
-    var token = word.toLowerCase();
-
-    if (isHasOwnProperty(keepMap, token)) return true;
-    if (isHasOwnProperty(replaceMap, token)) return false;
-
-    return sanitizeWord(token, token, rules) === token;
-  };
-}
-
-// eslint-disable-next-line no-unused-vars
-const plural = replaceWord(
-  irregularSingles, irregularPlurals, pluralRules
-);
-
-// eslint-disable-next-line no-unused-vars
-const isPlural = checkWord(
-  irregularSingles, irregularPlurals, pluralRules
-);
-
-const singular = replaceWord(
-  irregularPlurals, irregularSingles, singularRules
-);
-
-// eslint-disable-next-line no-unused-vars
-const isSingular = checkWord(
-  irregularPlurals, irregularSingles, singularRules
-);
-const trimTitle = (title) => title
-  .trim()
-  .replace(/\s+/, ' ')
-
-const trimLow = (title) => {
-  const trimmedTitle = title
-    .trim()
-    .replace(/\s+/, ' ')
-    .toLowerCase()
-
-  return trimmedTitle
-}
-
-const trimLowSingular = (title) => {
-  const trimmedTitle = trimLow(title)
-
-  const wordList = trimmedTitle.split(' ')
-  const lastWord = wordList.at(-1)
-  const singularLastWord = singular(lastWord)
-  const normalizedWordList = wordList.with(-1, singularLastWord)
-  const normalizedTitle = normalizedWordList.join(' ')
-
-  return normalizedTitle
-}
-
-const normalizeTitle = (title) => trimLowSingular(title.replaceAll('-', ''))
-
-function isStartWithTODO(str) {
-  return !!str && str.slice(0, 4).toLowerCase() === 'todo'
-}
-const logFF = makeLogFunction({ module: 'find-folder.api.js' })
-
-function findFolderFrom({ normalizedTitle, startFolder }) {
-  function traverseSubFolder(folderNode) {
-    if (normalizeTitle(folderNode.title) === normalizedTitle) {
-      return folderNode
-    }
-
-    const folderList = folderNode.children
-      .filter(({ url }) => !url)
-
-    let foundItem
-    let i = 0
-    while (!foundItem && i < folderList.length) {
-      foundItem = traverseSubFolder(folderList[i])
-      i += 1
-    }
-  }
-
-  return traverseSubFolder(startFolder)
-}
-
-async function findFolderInSubtree({ title, parentId }) {
-  const normalizedTitle = normalizeTitle(title)
-  logFF('findFolderInSubtree 00 normalizedTitle', normalizedTitle, parentId)
-  // search in direct children
-  const firstLevelNodeList = await browser.bookmarks.getChildren(parentId)
-  let foundItem = firstLevelNodeList.find((node) => !node.url && normalizeTitle(node.title) === normalizedTitle)
-  logFF('findFolderInSubtree 11 firstLevelNodeList', foundItem)
-
-  if (!foundItem) {
-    // search in subfolders of direct children
-    const [otherBookmarks] = await browser.bookmarks.getSubTree(parentId)
-    const batchList = []
-
-    for (const firstLevelNode of otherBookmarks.children) {
-      if (!firstLevelNode.url) {
-        const secondLevelFolderList = firstLevelNode.children.filter(({ url }) => !url)
-        batchList.push(secondLevelFolderList)
-      }
-    }
-
-    const allSecondLevelFolderList = batchList.flat()
-
-    let i = 0
-    while (!foundItem && i < allSecondLevelFolderList.length) {
-      foundItem = findFolderFrom({ normalizedTitle, startFolder: allSecondLevelFolderList[i] })
-      i += 1
-    }
-    logFF('findFolderInSubtree 22 secondLevelFolderList', foundItem)
-  }
-
-  return foundItem
-}
-
-async function findExactTitle(title) {
-  let foundItem
-
-  const bookmarkList = await browser.bookmarks.search({ title });
-
-  let i = 0
-  while (!foundItem && i < bookmarkList.length) {
-    const checkItem = bookmarkList[i]
-    if (!checkItem.url) {
-      foundItem = checkItem
-    }
-    i += 1
-  }
-
-  return foundItem
-}
-
-// example1: node.js -> NodeJS
-async function findTitleEndsWithJS(title) {
-  let foundItem
-  const lowTitle = trimLow(title)
-
-  if (lowTitle.endsWith('.js')) {
-    const noDotTitle = `${lowTitle.slice(0, -3)}js`
-    const bookmarkList = await browser.bookmarks.search(noDotTitle);
-
-    let i = 0
-    while (!foundItem && i < bookmarkList.length) {
-      const checkItem = bookmarkList[i]
-      if (!checkItem.url && trimLow(checkItem.title) === noDotTitle) {
-        foundItem = checkItem
-      }
-      i += 1
-    }
-  }
-
-  return foundItem
-}
-
-// example1: e-commerce -> ecommerce
-// example2: micro-frontend -> microfrontend
-async function findTitleRemoveDash(title) {
-  if (title.indexOf('-') == -1) {
-    return
-  }
-
-  let foundItem
-  const noDashTitle = trimLowSingular(title.replaceAll('-', ''))
-  const bookmarkList = await browser.bookmarks.search(noDashTitle);
-
-  let i = 0
-  while (!foundItem && i < bookmarkList.length) {
-    const checkItem = bookmarkList[i]
-    if (!checkItem.url && trimLowSingular(checkItem.title) === noDashTitle) {
-      foundItem = checkItem
-    }
-    i += 1
-  }
-
-  return foundItem
-}
-
-// example1: micro-frontend -> micro frontend
-async function findTitleReplaceDashToSpace(title) {
-  if (title.indexOf('-') == -1) {
-    return
-  }
-
-  let foundItem
-  const dashToSpaceTitle = trimLowSingular(title.replaceAll('-', ' '))
-  const bookmarkList = await browser.bookmarks.search(dashToSpaceTitle);
-
-  let i = 0
-  while (!foundItem && i < bookmarkList.length) {
-    const checkItem = bookmarkList[i]
-    if (!checkItem.url && trimLowSingular(checkItem.title) === dashToSpaceTitle) {
-      foundItem = checkItem
-    }
-    i += 1
-  }
-
-  return foundItem
-}
-
-// example1: AI Video -> ai-video
-async function findTitleReplaceSpaceToDash(title) {
-  const trimLowSingularTitle = trimLowSingular(title)
-  if (trimLowSingularTitle.indexOf(' ') == -1) {
-    return
-  }
-
-  let foundItem
-  const spaceToDashTitle = trimLowSingularTitle.replaceAll(' ', '-')
-  const bookmarkList = await browser.bookmarks.search(spaceToDashTitle);
-
-  let i = 0
-  while (!foundItem && i < bookmarkList.length) {
-    const checkItem = bookmarkList[i]
-    if (!checkItem.url && trimLowSingular(checkItem.title) === spaceToDashTitle) {
-      foundItem = checkItem
-    }
-    i += 1
-  }
-
-  return foundItem
-}
-
-async function findTitleNormalized(title) {
-  let foundItem
-  const normalizedTitle = normalizeTitle(title)
-  const bookmarkList = await browser.bookmarks.search(title);
-
-  let i = 0
-  while (!foundItem && i < bookmarkList.length) {
-    const checkItem = bookmarkList[i]
-    if (!checkItem.url && normalizeTitle(checkItem.title) === normalizedTitle) {
-      foundItem = checkItem
-    }
-    i += 1
-  }
-
-  return foundItem
-}
-
-async function findTitleDropEnding(title) {
-  const lowTitle = trimLow(title)
-  const lastWord = lowTitle.split(' ').at(-1)
-
-  if (!(5 < lastWord.length)) {
-    return
-  }
-
-  let foundItem
-  const dropEndTitle = lowTitle.slice(0, -3)
-  const normalizedTitle = normalizeTitle(title)
-  const bookmarkList = await browser.bookmarks.search(dropEndTitle);
-
-  let i = 0
-  while (!foundItem && i < bookmarkList.length) {
-    const checkItem = bookmarkList[i]
-    if (!checkItem.url && normalizeTitle(checkItem.title) === normalizedTitle) {
-      foundItem = checkItem
-    }
-    i += 1
-  }
-
-  return foundItem
-}
-
-async function findFolder(title) {
-  logFF('findFolder 00 title', title)
-  let foundItem
-
-  if (!foundItem) {
-    foundItem = await findExactTitle(title)
-    logFF('findExactTitle -> ', foundItem)
-  }
-
-  if (!foundItem) {
-    foundItem = await findTitleEndsWithJS(title)
-    logFF('findTitleEndsWithJS -> ', foundItem)
-  }
-
-  if (!foundItem) {
-    foundItem = await findTitleRemoveDash(title)
-    logFF('findTitleRemoveDash -> ', foundItem)
-  }
-
-  if (!foundItem) {
-    foundItem = await findTitleReplaceDashToSpace(title)
-    logFF('findTitleReplaceDashToSpace -> ', foundItem)
-  }
-
-  if (!foundItem) {
-    foundItem = await findTitleReplaceSpaceToDash(title)
-    logFF('findTitleReplaceSpaceToDash -> ', foundItem)
-  }
-
-  if (!foundItem) {
-    foundItem = await findTitleNormalized(title)
-    logFF('findTitleNormalized -> ', foundItem)
-  }
-
-  if (!foundItem) {
-    foundItem = await findTitleDropEnding(title)
-    logFF('findTitleDropEnding -> ', foundItem)
-  }
-
-  if (!foundItem) {
-    foundItem = await findFolderInSubtree({ title, parentId: OTHER_BOOKMARKS_FOLDER_ID })
-    logFF('findFolderInSubtree OTHER_BOOKMARKS_FOLDER_ID', foundItem)
-  }
-
-  if (!foundItem) {
-    foundItem = await findFolderInSubtree({ title, parentId: BOOKMARKS_BAR_FOLDER_ID })
-    logFF('findFolderInSubtree BOOKMARKS_BAR_FOLDER_ID', foundItem)
-  }
-
-  return foundItem
-}
-
-async function findOrCreateFolder(title) {
-  let folder = await findFolder(title)
-
-  if (!folder) {
-    const parentId = isStartWithTODO(title)
-      ? BOOKMARKS_BAR_FOLDER_ID
-      : OTHER_BOOKMARKS_FOLDER_ID
-
-    const firstLevelNodeList = await browser.bookmarks.getChildren(parentId)
-    const findIndex = firstLevelNodeList.find((node) => title.localeCompare(node.title) < 0)
-    logFF('findOrCreateFolder 11 findIndex', findIndex?.index, findIndex?.title)
-
-    const folderParams = {
-      parentId,
-      title,
-    }
-
-    if (findIndex) {
-      folderParams.index = findIndex.index
-    }
-
-    folder = await createFolderIgnoreInController(folderParams)
-  } else {
-    const oldBigLetterN = folder.title.replace(/[^A-Z]+/g, "").length
-    const newBigLetterN = title.replace(/[^A-Z]+/g, "").length
-    // const isAbbreviation = title.length == newBigLetterN
-
-    if (oldBigLetterN < newBigLetterN) {
-      await updateBookmarkIgnoreInController({ id: folder.id, title })
-    }
-  }
-
-  return folder
 }
 async function getMaxUsedSuffix() {
   function getFoldersFromTree(tree) {
@@ -3042,7 +3388,7 @@ async function findOrCreateFolder(title) {
   return maxUsedSuffix
 }
 
-async function flatChildren({ parentId, freeSuffix }) {
+async function flatChildren({ parentId, freeSuffix, datedRootId }) {
   const notFlatFolderList = []
   const flatFolderList = []
 
@@ -3050,6 +3396,10 @@ async function flatChildren({ parentId, freeSuffix }) {
 
   for (const node of otherBookmarks.children) {
     if (!node.url) {
+      if (node.id == datedRootId) {
+        continue
+      }
+
       const childrenFolderList = node.children.filter(({ url }) => !url)
 
       if (childrenFolderList.length > 0) {
@@ -3077,7 +3427,7 @@ async function flatChildren({ parentId, freeSuffix }) {
   })
   await updateTaskList.reduce(
     (promiseChain, { id, title }) => promiseChain.then(
-      () => updateBookmarkIgnoreInController({ id, title })
+      () => updateFolderIgnoreInController({ id, title })
     ),
     Promise.resolve(),
   );
@@ -3098,13 +3448,13 @@ async function flatChildren({ parentId, freeSuffix }) {
 
       if (bookmarkList.length > 0) {
         if (folderLevel > 0) {
-          await moveBookmarkIgnoreInController({ id: folderNode.id, parentId })
+          await moveFolderIgnoreInController({ id: folderNode.id, parentId })
 
           if (flatFolderNameSet.has(folderNode.title)) {
             const newTitle = `${folderNode.title} ${freeSuffix}`
             freeSuffix += 1
 
-            await updateBookmarkIgnoreInController({
+            await updateFolderIgnoreInController({
               id: folderNode.id,
               title: newTitle,
             })
@@ -3114,7 +3464,7 @@ async function flatChildren({ parentId, freeSuffix }) {
           }
         }
       } else {
-        await removeBookmarkIgnoreInController(folderNode.id)
+        await removeFolderIgnoreInController(folderNode.id)
       }
     }
 
@@ -3133,16 +3483,17 @@ async function flatChildren({ parentId, freeSuffix }) {
 async function flatFolders() {
   const usedSuffix = await getMaxUsedSuffix()
   let freeSuffix = usedSuffix ? usedSuffix + 1 : 1;
+  const datedRootFolderId = await getDatedRootFolderId()
 
   await flatChildren({ parentId: BOOKMARKS_BAR_FOLDER_ID, freeSuffix })
-  await flatChildren({ parentId: OTHER_BOOKMARKS_FOLDER_ID, freeSuffix })
+  await flatChildren({ parentId: OTHER_BOOKMARKS_FOLDER_ID, freeSuffix, datedRootId: datedRootFolderId })
 }
 async function moveContent(fromFolderId, toFolderId) {
   const nodeList = await browser.bookmarks.getChildren(fromFolderId)
 
   await nodeList.reduce(
     (promiseChain, node) => promiseChain.then(
-      () => moveBookmarkIgnoreInController({ id: node.id, parentId: toFolderId })
+      () => moveNodeIgnoreInController({ id: node.id, parentId: toFolderId })
     ),
     Promise.resolve(),
   );
@@ -3190,7 +3541,7 @@ async function mergeSubFolder(parentId) {
 
   await moveTaskList.reduce(
     (promiseChain, { fromNode }) => promiseChain.then(
-      () => removeBookmarkIgnoreInController(fromNode.id)
+      () => removeFolderIgnoreInController(fromNode.id)
     ),
     Promise.resolve(),
   );
@@ -3214,7 +3565,7 @@ async function trimTitleInSubFolder(parentId) {
 
   await renameTaskList.reduce(
     (promiseChain, { id, title }) => promiseChain.then(
-      () => updateBookmarkIgnoreInController({ id,  title })
+      () => updateFolderIgnoreInController({ id,  title })
     ),
     Promise.resolve(),
   );
@@ -3233,7 +3584,7 @@ async function mergeFolders() {
 
   await reversedNodeList.reduce(
     (promiseChain, node) => promiseChain.then(
-      () => moveBookmarkIgnoreInController({ id: node.id, parentId: toFolderId, index: 0 })
+      () => moveNodeIgnoreInController({ id: node.id, parentId: toFolderId, index: 0 })
     ),
     Promise.resolve(),
   );
@@ -3254,7 +3605,7 @@ async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
 
   await folderList.reduce(
     (promiseChain, folderNode) => promiseChain.then(
-      () => removeBookmarkIgnoreInController(folderNode.id)
+      () => removeFolderIgnoreInController(folderNode.id)
     ),
     Promise.resolve(),
   );
@@ -3292,7 +3643,10 @@ async function moveRootBookmarksToUnclassified() {
   // await moveRootBookmarks({ fromId: BOOKMARKS_MENU_FOLDER_ID, unclassifiedId })
   await moveRootBookmarks({ fromId: OTHER_BOOKMARKS_FOLDER_ID, unclassifiedId })
 }
-async function moveFolderByName({ fromId, toId, isCondition }) {
+const logMF = makeLogFunction({ module: 'moveFoldersByName.js' })
+
+async function moveFoldersByName({ fromId, toId, isCondition }) {
+  logMF('moveFoldersByName () 00')
   const childrenList = await browser.bookmarks.getChildren(fromId)
   let moveList = childrenList
     .filter(({ url }) => !url)
@@ -3300,26 +3654,46 @@ async function moveRootBookmarksToUnclassified() {
   if (isCondition) {
     moveList = moveList.filter(({ title }) => isCondition(title))
   }
+  logMF('moveFoldersByName () 11', moveList)
 
   await moveList.reduce(
     (promiseChain, node) => promiseChain.then(
-      () => moveBookmarkIgnoreInController({ id: node.id, parentId: toId })
+      () => moveFolderIgnoreInController({ id: node.id, parentId: toId })
     ),
     Promise.resolve(),
   );
 }
 
-async function moveTodoToBkmBar() {
-  await moveFolderByName({
-    fromId: BOOKMARKS_BAR_FOLDER_ID,
-    toId: OTHER_BOOKMARKS_FOLDER_ID,
-    isCondition: (title) => !isStartWithTODO(title)
+async function moveOldDatedFolders({ fromId, toId }) {
+  const childrenList = await browser.bookmarks.getChildren(fromId)
+
+  const datedFolderList = childrenList
+    .filter(({ url, title }) => !url && isDatedFolderTitle(title))
+    .map(({ title, id }) => {
+      const partList = title.split(' ')
+      const fixedPart = partList.slice(0, -3).join(' ')
+
+      return { title, id, fixedPart }
+    })
+
+  const grouped = Object.groupBy(datedFolderList, ({ fixedPart }) => fixedPart);
+
+  const groupedMoveList = []
+  Object.entries(grouped).forEach(([, list]) => {
+    const moveListForFixedPart = list
+      .toSorted((a,b) => a.title.localeCompare(b.title))
+      .slice(3)
+
+    groupedMoveList.push(moveListForFixedPart)
   })
-  await moveFolderByName({
-    fromId: OTHER_BOOKMARKS_FOLDER_ID,
-    toId: BOOKMARKS_BAR_FOLDER_ID,
-    isCondition: (title) => isStartWithTODO(title)
-  })
+  const moveList = groupedMoveList.flat()
+
+  await moveList.reduce(
+    (promiseChain, node) => promiseChain.then(
+      () => moveFolderIgnoreInController({ id: node.id, parentId: toId })
+    ),
+    Promise.resolve(),
+  );
 }
 async function getDoubles() {
   const doubleList = []
@@ -3380,7 +3754,7 @@ async function removeDoubleBookmarks() {
     nRemovedDoubles: doubleList.length
   }
 }
-async function sortChildren(parentId) {
+async function sortFolders(parentId) {
   // console.log('sortChildFoldersOp',  parentId)
   const nodeList = await browser.bookmarks.getChildren(parentId)
 
@@ -3398,7 +3772,7 @@ async function removeDoubleBookmarks() {
     }
 
     if (nodeActual.index != index) {
-      await moveBookmarkIgnoreInController({ id: node.id, index })
+      await moveFolderIgnoreInController({ id: node.id, index })
 
       if (minMoveIndex == -1) {
         minMoveIndex = index
@@ -3415,30 +3789,50 @@ async function removeDoubleBookmarks() {
 
   // console.log('Sorted',  sortedNodeList.map(({ title }) => title))
 }
-
-async function sortFolders() {
-  await sortChildren(BOOKMARKS_BAR_FOLDER_ID)
-  await sortChildren(OTHER_BOOKMARKS_FOLDER_ID)
-}
 async function flatBookmarks() {
   tagList.blockTagList(true)
 
   try {
     await getOrCreateUnclassifiedFolderId()
+    await getOrCreateDatedRootFolderId()
+    const datedRootFolderId = await getDatedRootFolderId()
 
     if (IS_BROWSER_FIREFOX) {
-      await moveFolderByName({
+      await moveFoldersByName({
         fromId: BOOKMARKS_MENU_FOLDER_ID,
         toId: OTHER_BOOKMARKS_FOLDER_ID,
+        isCondition: (title) => !isDatedFolderTitle(title)
       })
     }
 
     await flatFolders()
     await moveRootBookmarksToUnclassified()
     await moveNotDescriptiveFoldersToUnclassified()
-    await moveTodoToBkmBar()
+
+    await moveFoldersByName({
+      fromId: BOOKMARKS_BAR_FOLDER_ID,
+      toId: OTHER_BOOKMARKS_FOLDER_ID,
+      isCondition: (title) => !(isStartWithTODO(title) || isDatedFolderTitle(title))
+    })
+    await moveFoldersByName({
+      fromId: OTHER_BOOKMARKS_FOLDER_ID,
+      toId: BOOKMARKS_BAR_FOLDER_ID,
+      isCondition: (title) => isStartWithTODO(title)
+    })
+    await moveOldDatedFolders({
+      fromId: BOOKMARKS_MENU_FOLDER_ID || BOOKMARKS_BAR_FOLDER_ID,
+      toId: datedRootFolderId,
+    })
+
     await mergeFolders()
-    await sortFolders()
+
+    await sortFolders(BOOKMARKS_BAR_FOLDER_ID)
+    await sortFolders(OTHER_BOOKMARKS_FOLDER_ID)
+    await sortFolders(datedRootFolderId)
+    if (IS_BROWSER_FIREFOX) {
+      await sortFolders(BOOKMARKS_MENU_FOLDER_ID)
+    }
+
     await removeDoubleBookmarks()
 
   } finally {
@@ -3447,20 +3841,12 @@ async function sortFolders() {
 }
 
 async function addBookmark({ url, title, parentId }) {
-  const bookmarkList = await browser.bookmarks.search({ url });
-  const isExist = bookmarkList.some((bkm) => bkm.parentId == parentId)
-  if (isExist) {
-    return false
-  }
-
-  await createBookmarkWithApi({
+  return await createBookmarkWithApi({
     index: 0,
     parentId,
     title,
     url
   })
-
-  return true
 }
 
 async function startAddBookmarkFromSelection() {
@@ -3468,7 +3854,7 @@ async function startAddBookmarkFromSelection() {
   const [activeTab] = tabs;
 
   if (activeTab?.id) {
-    await getSelectionInPage(activeTab.id)
+    await page.getSelectionInPage(activeTab.id)
   }
 }
 
@@ -3477,7 +3863,7 @@ async function startAddBookmarkFromInput() {
   const [activeTab] = tabs;
 
   if (activeTab?.id) {
-    await getUserInputInPage(activeTab.id)
+    await page.getUserInputInPage(activeTab.id)
   }
 }
 
@@ -3523,7 +3909,7 @@ async function removeFromUrlHashAndSearchParamsInActiveTab() {
     logCU('removeFromUrlHashAndSearchParamsInActiveTab () 22 cleanUrl', cleanUrl)
 
     if (activeTab.url !== cleanUrl) {
-      await changeUrlInTab({ tabId: activeTab.id, url: cleanUrl })
+      await page.changeUrlInTab({ tabId: activeTab.id, url: cleanUrl })
     }
   }
 }
@@ -3742,7 +4128,7 @@ async function getUrlFromUrl() {
 
     if (resultUrl) {
       logUU('getUrlFromUrl () 99 call replaceUrlInTab ()')
-      await replaceUrlInTab({ tabId: activeTab.id, url: resultUrl })
+      await page.replaceUrlInTab({ tabId: activeTab.id, url: resultUrl })
     }
   }
 }
@@ -3767,7 +4153,7 @@ async function getUrlFromUrl() {
   const [activeTab] = tabs;
 
   if (activeTab?.id) {
-    await toggleYoutubeHeaderInPage(activeTab.id)
+    await page.toggleYoutubeHeaderInPage(activeTab.id)
   }
 }
 
@@ -3996,11 +4382,22 @@ async function onIncomingMessage (message, sender) {
     }
     case EXTENSION_MSG_ID.ADD_BOOKMARK: {
       logIM('runtime.onMessage addBookmark');
-      await addBookmark({
+      const isAddedNewBookmark = await addBookmark({
         url: message.url,
         title: message.title,
         parentId: message.parentId,
       })
+      if (!isAddedNewBookmark) {
+        // to remove optimistic add
+        const tabId = sender?.tab?.id;
+        if (tabId == memo.activeTabId) {
+          updateActiveTab({
+            tabId,
+            debugCaller: 'runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME',
+            useCache: true,
+          })
+        }
+      }
 
       break
     }
@@ -4265,7 +4662,7 @@ const tabsController = {
 const windowsController = {
   async onFocusChanged(windowId) {
     logWC('windows.onFocusChanged', windowId);
-    
+
     if (0 < windowId) {
       logWC('windows.onFocusChanged', windowId);
       await setFirstActiveTab({ debugCaller: 'windows.onFocusChanged' })

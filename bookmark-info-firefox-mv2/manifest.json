@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Bookmark Info",
-  "version": "2.17.0",
+  "version": "2.18.0",
   "browser_specific_settings": {
     "gecko": {
       "id": "{d270de14-df6e-4f0b-a81a-7163af0368f3}"
