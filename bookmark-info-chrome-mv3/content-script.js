@@ -292,6 +292,9 @@ ${semanticTagsStyle}
   display: inline-block;
   padding-left: 0.5ch;
 }
+.bkm-info--tag:hover span {
+  background-color: transparent;
+}
 .bkm-info--fix-mark {
   width: 0;
   height: 0;
