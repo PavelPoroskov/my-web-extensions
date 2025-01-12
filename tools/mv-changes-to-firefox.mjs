@@ -71,6 +71,7 @@ createFileForFirefox(
     'command/moveToFlatFolderStructure.js',
     'command/switchShowRecentList.js',
     'command/unfixTag.js',
+    'command/updateAvailableRows.js',
     'command/toggleYoutubeHeader.js',
     'command/index.js',
 

@@ -2,6 +2,14 @@ import {
   singular,
 } from '../api-low/index.js';
 
+export const isDescriptiveFolderTitle = (title) => !!title
+  && !(
+    title.startsWith('New folder')
+    || title.startsWith('[Folder Name]')
+    || title.startsWith('New Folder')
+    || title.startsWith('(to title)')
+  )
+
 export const trimTitle = (title) => title
   .trim()
   .replace(/\s+/, ' ')

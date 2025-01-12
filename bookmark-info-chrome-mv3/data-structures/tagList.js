@@ -5,7 +5,6 @@ import {
 import {
   USER_OPTION,
   INTERNAL_VALUES,
-  TAG_LIST_MAX_LIST_LENGTH,
   TAG_LIST_PINNED_TAGS_POSITION_OPTIONS,
 } from '../constant/index.js'
 import {
@@ -36,10 +35,12 @@ class TagList {
   _tagList = []
 
   USE_TAG_LIST = false
-  LIST_LIMIT
   USE_FLAT_FOLDER_STRUCTURE
   HIGHLIGHT_LAST
   HIGHLIGHT_ALPHABET
+
+  AVAILABLE_ROWS
+  _nFixedTags = 0
 
   changeCount = 0
   changeProcessedCount = -1
@@ -52,9 +53,20 @@ class TagList {
     if (this.changeProcessedCount !== this.changeCount) {
       this.changeProcessedCount = this.changeCount
       this._tagList = this.refillList()
+      this._nFixedTags = Object.keys(this._fixedTagObj).length
     }
 
     return this._tagList
+  }
+  get nFixedTags() {
+    if (this.changeProcessedCount !== this.changeCount) {
+      this.changeProcessedCount = this.changeCount
+      this._tagList = this.refillList()
+      this._nFixedTags = Object.keys(this._fixedTagObj).length
+    }
+    logTL('get nFixedTags() 00', this._nFixedTags)
+
+    return this._nFixedTags
   }
   markUpdates() {
     this.changeCount += 1
@@ -83,7 +95,6 @@ class TagList {
     this.USE_TAG_LIST = settings[USER_OPTION.USE_TAG_LIST]
     this._enableTagList(this.USE_TAG_LIST)
 
-    this.LIST_LIMIT = settings[USER_OPTION.TAG_LIST_LIST_LENGTH]
     this.USE_FLAT_FOLDER_STRUCTURE = settings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]
     this.HIGHLIGHT_LAST = settings[USER_OPTION.TAG_LIST_HIGHLIGHT_LAST]
     this.HIGHLIGHT_ALPHABET = settings[USER_OPTION.TAG_LIST_HIGHLIGHT_ALPHABET]
@@ -93,11 +104,13 @@ class TagList {
       INTERNAL_VALUES.TAG_LIST_SESSION_STARTED,
       INTERNAL_VALUES.TAG_LIST_RECENT_MAP,
       INTERNAL_VALUES.TAG_LIST_FIXED_MAP,
+      INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS,
     ]);
+    this.AVAILABLE_ROWS = savedObj[INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS]
 
     let actualRecentTagObj = {}
     if (!savedObj[INTERNAL_VALUES.TAG_LIST_SESSION_STARTED]) {
-      actualRecentTagObj = await getRecentTagObj(TAG_LIST_MAX_LIST_LENGTH)
+      actualRecentTagObj = await getRecentTagObj(this.AVAILABLE_ROWS)
     }
 
     this._recentTagObj = {
@@ -117,6 +130,25 @@ class TagList {
       })
     }
 
+    this.markUpdates()
+  }
+  async updateAvailableRows(availableRows) {
+    logTL('updateAvailableRows () 00', availableRows)
+    const beforeAvailableRows = this.AVAILABLE_ROWS
+    this.AVAILABLE_ROWS = availableRows
+
+    if (beforeAvailableRows < availableRows) {
+      let actualRecentTagObj = await getRecentTagObj(this.AVAILABLE_ROWS)
+      this._recentTagObj = {
+        ...this._recentTagObj,
+        ...actualRecentTagObj,
+      }
+      const isFlatStructure = this.USE_FLAT_FOLDER_STRUCTURE
+      this._recentTagObj = await filterRecentTagObj(this._recentTagObj, isFlatStructure)
+      await setOptions({
+        [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj,
+      })
+    }
     this.markUpdates()
   }
   async filterTagListForFlatFolderStructure() {
@@ -141,7 +173,7 @@ class TagList {
   }
   refillList() {
     const recentTagLimit = Math.max(
-      this.LIST_LIMIT - Object.keys(this._fixedTagObj).length,
+      this.AVAILABLE_ROWS - Object.keys(this._fixedTagObj).length,
       0
     )
 
@@ -161,11 +193,10 @@ class TagList {
 
     const fullList = [].concat(
       recentTagList
-        .map(({ parentId, title }) => ({ parentId, title, isFixed: false })),
+        .map(({ parentId, title }, index) => ({ parentId, title, isFixed: false, ageIndex: index })),
       Object.entries(this._fixedTagObj)
         .map(([parentId, title]) => ({
           parentId,
-          // title: this._recentTagObj[parentId]?.title || title,
           title,
           isFixed: true,
         }))
@@ -234,11 +265,11 @@ class TagList {
       }
     }
 
-    if (TAG_LIST_MAX_LIST_LENGTH + 30 < Object.keys(this._recentTagObj).length) {
+    if (this.AVAILABLE_ROWS + 30 < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
         .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
         .sort((a, b) => -(a.dateAdded - b.dateAdded))
-        .slice(TAG_LIST_MAX_LIST_LENGTH)
+        .slice(this.AVAILABLE_ROWS)
         .map(({ parentId }) => parentId)
 
       redundantIdList.forEach((id) => {

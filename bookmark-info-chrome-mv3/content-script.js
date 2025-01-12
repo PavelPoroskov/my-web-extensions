@@ -19,6 +19,7 @@
     TAB_IS_READY: 'TAB_IS_READY',
     SHOW_TAG_LIST: 'SHOW_TAG_LIST',
     ADD_RECENT_TAG: 'ADD_RECENT_TAG',
+    AVAILABLE_ROWS: 'AVAILABLE_ROWS',
   }
   // TODO-DOUBLE remove duplication in CONTENT_SCRIPT_MSG_ID: message-id.js and content-scripts.js
   const CONTENT_SCRIPT_MSG_ID = {
@@ -491,7 +492,7 @@ ${semanticTagsStyle}
         const findIndex = tagList.findIndex((item) => item.parentId == parentId)
         if (-1 < findIndex) {
           tag = tagList[findIndex]
-          const newTagList = tagList.with(findIndex, { ...tag, isFixed: false })
+          const newTagList = tagList.with(findIndex, { ...tag, isFixed: false, ageIndex: 0 })
           stateContainer.update({ tagList: newTagList })
         }
 
@@ -516,7 +517,7 @@ ${semanticTagsStyle}
 
     const visitString = input.visitString || ''
     const isShowTitle = input.isShowTitle || false
-    const inTagList = input.tagList || []
+    const tagList = input.tagList || []
     const tagListOpenMode = input.tagListOpenMode
     const isTagListOpen = tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL
       ? (input.isTagListOpenGlobal || false)
@@ -529,10 +530,6 @@ ${semanticTagsStyle}
 
 
     const usedParentIdSet = new Set(bookmarkList.map(({ parentId }) => parentId))
-    const tagList = inTagList.map((tag) => ({
-      ...tag,
-      isUsed: usedParentIdSet.has(tag.parentId)
-    }))
 
     const drawList = []
     let prevTitle
@@ -571,13 +568,37 @@ ${semanticTagsStyle}
       drawList.push({ type: 'separator' })
 
       if (isTagListOpen) {
-        tagList.forEach((tag) => {
+        const usedRows = drawList.length
+
+        let filteredTagList = tagList
+
+        if (input.nTagListAvailableRows) {
+          const nAvailableTags = Math.max(0, input.nTagListAvailableRows - usedRows)
+
+          if (nAvailableTags < tagList.length) {
+            if (input.nFixedTags < nAvailableTags) {
+              const nAvailableRecentTags = nAvailableTags - input.nFixedTags
+              // ageIndex: 0..m, 0 - the most recent
+              filteredTagList = tagList
+                .filter(({ isFixed, ageIndex }) => isFixed || ageIndex < nAvailableRecentTags)
+            } else {
+              filteredTagList = tagList
+                .filter(({ isFixed }) => isFixed)
+                .slice(0, nAvailableTags)
+            }
+          }
+        }
+
+        filteredTagList.forEach((tag) => {
           drawList.push({
             type: 'tag',
-            value: tag,
+            value: {
+              ...tag,
+              isUsed: usedParentIdSet.has(tag.parentId)
+            },
           })
         })
-      }
+    }
     }
 
     let rootStyleMutable = document.getElementById(bkmInfoMutableStyleId);
@@ -835,6 +856,23 @@ ${semanticTagsStyle}
       rootDiv.removeChild(rootDiv.lastChild);
       rawListLength -= 1;
     }
+
+    if (rootDiv.firstChild) {
+      const viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0)
+      const rowHeight = rootDiv.firstChild.clientHeight
+      const availableRows = Math.floor(viewportHeight / rowHeight)
+
+      if (availableRows != input.nTagListAvailableRows) {
+        updateAvailableRows(availableRows)
+      }
+    }
+  }
+
+  async function updateAvailableRows(availableRows) {
+    await chrome.runtime.sendMessage({
+      command: EXTENSION_MSG_ID.AVAILABLE_ROWS,
+      value: availableRows,
+    });
   }
 
   class TaskQueue {
@@ -890,7 +928,8 @@ ${semanticTagsStyle}
       }
     }
     updateNoRender(updateObj) {
-      this.updates.push(updateObj)
+      //this.updates.push(updateObj)
+      Object.assign(this.state, updateObj)
     }
     getState() {
       return { ...this.state }
@@ -1183,18 +1222,19 @@ ${semanticTagsStyle}
     const tagListOpenMode = fullState.tagListOpenMode
 
     if (document.hidden) {
-      if (tagListOpenMode && tagListOpenMode != TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL
-        && fullState.isTagListOpenLocal) {
-
-        stateContainer.updateNoRender({ isTagListOpenLocal: false })
-      }
-    } else {
-      stateContainer.updateNoRender({
+      const update = {
         optimisticDelFromTagList: 0,
         optimisticAddFromTagList: 0,
         optimisticToStorageDel: 0,
         optimisticToStorageAdd: 0,
-      })
+      }
+
+      if (tagListOpenMode && tagListOpenMode != TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL
+        && fullState.isTagListOpenLocal) {
+        Object.assign(update, { isTagListOpenLocal: false })
+      }
+      stateContainer.updateNoRender(update)
+    } else {
       sendTabIsReady()
     }
   });

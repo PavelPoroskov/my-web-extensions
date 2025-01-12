@@ -38,9 +38,6 @@ const USER_OPTION_META = {
   TAG_LIST_HIGHLIGHT_ALPHABET: {
     default: true,
   },
-  TAG_LIST_LIST_LENGTH: {
-    default: 35
-  },
   TAG_LIST_OPEN_MODE: {
     default: TAG_LIST_OPEN_MODE_OPTIONS.PER_PAGE,
   },
@@ -75,6 +72,9 @@ const INTERNAL_VALUES_META = {
   },
   TAG_LIST_FIXED_MAP: {
     default: {},
+  },
+  TAG_LIST_AVAILABLE_ROWS: {
+    default: 35,
   },
   BROWSER_START_TIME: {
     storage: STORAGE_TYPE.SESSION,
@@ -112,6 +112,3 @@ export const USER_OPTION_STORAGE_KEY_LIST = USER_OPTION_KEY_LIST.map((key) => ST
 export const INTERNAL_VALUES = Object.fromEntries(
   Object.keys(INTERNAL_VALUES_META).map((key) => [key, key])
 )
-
-// rename ADD_BOOKMARK_LIST_MAX -> TAG_LIST_MAX_LIST_LENGTH
-export const TAG_LIST_MAX_LIST_LENGTH = 50

@@ -7,6 +7,7 @@ import {
   moveToFlatFolderStructure,
   switchShowRecentList,
   unfixTag,
+  updateAvailableRows,
 } from '../command/index.js'
 import {
   extensionSettings,
@@ -84,6 +85,12 @@ export async function onIncomingMessage (message, sender) {
     case EXTENSION_MSG_ID.SHOW_TAG_LIST: {
       logIM('runtime.onMessage SHOW_RECENT_LIST');
       await switchShowRecentList(message.value)
+
+      break
+    }
+    case EXTENSION_MSG_ID.AVAILABLE_ROWS: {
+      logIM('runtime.onMessage AVAILABLE_ROWS', message.value);
+      await updateAvailableRows(message.value)
 
       break
     }

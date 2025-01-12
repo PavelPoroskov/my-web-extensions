@@ -21,7 +21,7 @@ import {
 import { page } from './page.api.js'
 import { initExtension } from './init-extension.js'
 
-const logTA = makeLogFunction({ module: 'tabs.api' })
+const logTA = makeLogFunction({ module: 'tabs.api.js' })
 
 async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
   logTA(`UPDATE-TAB () 00 <- ${debugCaller}`, tabId);
@@ -56,7 +56,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     getBookmarkInfoUni({ url, useCache, isShowTitle }),
     isShowVisits && getHistoryInfo({ url }),
   ])
-  logTA(`UPDATE-TAB () 22 bookmarkInfo.bookmarkList`, bookmarkInfo.bookmarkList);
+  // logTA(`UPDATE-TAB () 22 bookmarkInfo.bookmarkList`, bookmarkInfo.bookmarkList);
 
   if (isShowVisits) {
     visitsData = {
@@ -73,6 +73,8 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     tagListOpenMode: settings[USER_OPTION.TAG_LIST_OPEN_MODE],
     isTagListOpenGlobal: settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN],
     tagList: tagList.list,
+    nTagListAvailableRows: settings[INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS],
+    nFixedTags: tagList.nFixedTags,
 
     fontSize: settings[USER_OPTION.FONT_SIZE],
     tagLength: settings[USER_OPTION.TAG_LIST_TAG_LENGTH],

@@ -101,12 +101,6 @@ function restoreOptions(settings) {
   element.checked = settings[optionId];
   element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 
-  optionId = USER_OPTION.TAG_LIST_LIST_LENGTH;
-  domId = `#${optionId}`
-  element = document.querySelector(domId)
-  element.value = settings[optionId];
-  element.addEventListener('input', makeSaveInputHandler(optionId) );
-
   optionId = USER_OPTION.TAG_LIST_TAG_LENGTH;
   domId = `#${optionId}`
   element = document.querySelector(domId)

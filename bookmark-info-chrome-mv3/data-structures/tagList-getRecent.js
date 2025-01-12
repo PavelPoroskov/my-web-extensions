@@ -3,6 +3,7 @@ import {
   BOOKMARKS_BAR_FOLDER_ID,
   getDatedRootFolderId,
   getUnclassifiedFolderId,
+  isDatedFolderTitle,
   isDescriptiveFolderTitle,
 } from '../folder-api/index.js'
 import {
@@ -14,6 +15,7 @@ const logRA = makeLogFunction({ module: 'tagList-getRecent.js' })
 async function getRecentList(nItems) {
   logRA('getRecentList() 00', nItems)
   const list = await chrome.bookmarks.getRecent(nItems);
+  logRA('getRecentList() 11', list)
 
   const folderList = list
     .filter(({ url }) => !url)
@@ -78,6 +80,7 @@ async function filterFolders(idList, isFlatStructure) {
     .filter(Boolean)
     .filter(({ title }) => !!title)
     .filter(({ title }) => isDescriptiveFolderTitle(title))
+    .filter(({ title }) => !isDatedFolderTitle(title))
 
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {

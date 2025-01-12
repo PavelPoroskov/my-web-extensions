@@ -3,6 +3,7 @@ import {
 } from '../constant/index.js'
 import {
   getHostSettings,
+  makeIsSearchParamMatch,
 } from './url.api.js'
 import {
   isNotEmptyArray,
@@ -58,52 +59,6 @@ function isSearchParamsMatchForSearch({ url, requiredSearchParams }) {
 
   return Object.keys(requiredSearchParams)
     .every((key) => oSearchParams.get(key) === requiredSearchParams[key])
-}
-
-export function makeIsSearchParamMatch(patternList) {
-  logUS('makeIsSearchParamMatch () 00', patternList)
-  const isFnList = []
-
-  patternList.forEach((pattern) => {
-    logUS('makeIsSearchParamMatch () 11', 'pattern', pattern)
-    const asteriskIndex = pattern.indexOf('*')
-    const partsLength = pattern.split('*').length
-    switch (true) {
-      case asteriskIndex < 0: {
-        const fullPattern = pattern
-        isFnList.push((s) => s == fullPattern)
-        logUS('makeIsSearchParamMatch () 11', '(s) => s == fullPattern', fullPattern)
-        break
-      }
-      case asteriskIndex == 0 && partsLength == 2: {
-        if (pattern.length == 1) {
-          isFnList.push(() => true)
-          logUS('makeIsSearchParamMatch () 11', '() => true', pattern)
-        } else {
-          const end = pattern.slice(asteriskIndex + 1)
-          // isFnList.push((s) => s.endsWith(end) && end.length < s.length)
-          isFnList.push((s) => s.endsWith(end))
-          logUS('makeIsSearchParamMatch () 11', '(s) => s.endsWith(end)', end)
-        }
-        break
-      }
-      case 0 < asteriskIndex && partsLength == 2: {
-        const start = pattern.slice(0, asteriskIndex)
-        if (asteriskIndex == pattern.length - 1) {
-          isFnList.push((s) => s.startsWith(start))
-          logUS('makeIsSearchParamMatch () 11', '(s) => s.startsWith(start)', start)
-        } else {
-          const end = pattern.slice(asteriskIndex + 1)
-          const minLength = start.length + end.length
-          isFnList.push((s) => s.startsWith(start) && s.endsWith(end) && minLength <= s.length)
-          logUS('makeIsSearchParamMatch () 11', '(s) => s.startsWith(start) && s.endsWith(end) && minLength <= s.length', start, end)
-        }
-      }
-    }
-  })
-
-  logUS('makeIsSearchParamMatch () 99', 'isFnList.length', isFnList.length)
-  return (name) => isFnList.some((isFn) => isFn(name))
 }
 
 export async function startPartialUrlSearch(url) {

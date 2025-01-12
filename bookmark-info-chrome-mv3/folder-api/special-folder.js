@@ -59,11 +59,3 @@ export const getUnclassifiedFolderId = memoize(async () => getFolderByTitleInRoo
 
 export const getOrCreateDatedRootFolderId = async () => getOrCreateFolderByTitleInRoot(DATED_TITLE)
 export const getDatedRootFolderId = memoize(async () => getFolderByTitleInRoot(DATED_TITLE))
-
-export const isDescriptiveFolderTitle = (title) => !!title
-  && !(
-    title.startsWith('New folder')
-    || title.startsWith('[Folder Name]')
-    || title.startsWith('New Folder')
-    || title.startsWith('(to title)')
-  )
