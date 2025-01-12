@@ -36,7 +36,7 @@ const USER_OPTION_META = {
     default: 7
   },
   TAG_LIST_HIGHLIGHT_ALPHABET: {
-    default: false,
+    default: true,
   },
   TAG_LIST_LIST_LENGTH: {
     default: 35
@@ -45,7 +45,7 @@ const USER_OPTION_META = {
     default: TAG_LIST_OPEN_MODE_OPTIONS.PER_PAGE,
   },
   TAG_LIST_PINNED_TAGS_POSITION: {
-    default: TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.TOP,
+    default: TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.WITH_RECENT,
   },
   TAG_LIST_TAG_LENGTH: {
     default: 15
