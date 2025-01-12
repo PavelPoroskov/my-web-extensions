@@ -254,41 +254,18 @@ ${semanticTagsStyle}
   line-height: inherit;
   font-family: inherit !important;
   margin: inherit;
-}
-.bkm-info--fixed {
-  background-color: #40E0D0;
-}
-.bkm-info--fixed:active {
-  transform: translateY(0.1ch);
-}
-.bkm-info--fixed:hover, .bkm-info--btn-unfix:hover + .bkm-info--fixed {
-  max-width: fit-content;
-}
-.bkm-info--fixed:hover:not(.bkm-info--used-tag), .bkm-info--btn-unfix:hover + .bkm-info--fixed:not(.bkm-info--used-tag) {
-  background-color: #00FFFF;
-}
-.bkm-info--btn-unfix:has( + .bkm-info--fixed:hover) {
-  display: flex;
-  background-color: #32CD32;
-}
-.bkm-info--btn-unfix:hover {
-  display: flex;
-  background-color: #00FF00;
-}
-
-.bkm-info--recent {
   background-color: #DAF7A6;
 }
-.bkm-info--recent:active {
+.bkm-info--tag:active {
   transform: translateY(0.1ch);
 }
-.bkm-info--recent:hover, .bkm-info--btn-fix:hover + .bkm-info--recent {
+.bkm-info--tag:hover, .bkm-info--btn-fix:hover + .bkm-info--tag, .bkm-info--btn-unfix:hover + .bkm-info--tag {
   max-width: fit-content;
 }
-.bkm-info--recent:hover:not(.bkm-info--used-tag), .bkm-info--btn-fix:hover + .bkm-info--recent:not(.bkm-info--used-tag) {
+.bkm-info--tag:hover:not(.bkm-info--used-tag), .bkm-info--btn-fix:hover + .bkm-info--tag:not(.bkm-info--used-tag), .bkm-info--btn-unfix:hover + .bkm-info--tag:not(.bkm-info--used-tag) {
   background-color: #00FF00;
 }
-.bkm-info--btn-fix:has(+ .bkm-info--recent:hover) {
+.bkm-info--btn-fix:has(+ .bkm-info--tag:hover) {
   display: flex;
   background-color: #40E0D0;
 }
@@ -296,7 +273,14 @@ ${semanticTagsStyle}
   display: flex;
   background-color: #00BFFF;
 }
-
+.bkm-info--btn-unfix:has( + .bkm-info--tag:hover) {
+  display: flex;
+  background-color: #32CD32;
+}
+.bkm-info--btn-unfix:hover {
+  display: flex;
+  background-color: #00FF00;
+}
 .bkm-info--used-tag {
   color: gray;
 }
@@ -307,6 +291,18 @@ ${semanticTagsStyle}
   background-color: white;
   display: inline-block;
   padding-left: 0.5ch;
+}
+.bkm-info--fix-mark {
+  width: 0;
+  height: 0;
+  border-bottom: 0.5em solid #40E0D0;
+  border-right: 0.5em solid transparent;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+}
+.bkm-info--tag:hover .bkm-info--fix-mark {
+  border-bottom: 0.5em solid darkgray;
 }
 `
     )
@@ -574,7 +570,7 @@ ${semanticTagsStyle}
       if (isTagListOpen) {
         tagList.forEach((tag) => {
           drawList.push({
-            type: tag.isFixed ? 'fixedTag' : 'recentTag',
+            type: 'tag',
             value: tag,
           })
         })
@@ -737,19 +733,26 @@ ${semanticTagsStyle}
 
           break
         }
-        case 'recentTag': {
-          const { parentId, title, isHighlight, isUsed, isLast } = value
-          log('recentTag 11', title, isHighlight)
+        case 'tag': {
+          const { parentId, title, isUsed, isLast, isFixed, isHighlight } = value
+          log('tag 11', title)
           const divLabel = document.createElement('div');
-          divLabel.classList.add('bkm-info--tag', 'bkm-info--recent');
+          divLabel.classList.add('bkm-info--tag');
 
           if (isUsed) {
             divLabel.setAttribute('data-id', `ut#${parentId}`);
           } else {
             divLabel.setAttribute('data-id', `t#${parentId}`);
           }
+
           divLabel.classList.toggle('bkm-info--used-tag', isUsed);
           divLabel.classList.toggle('bkm-info--last-tag', isLast);
+
+          if (isFixed) {
+            const divTri = document.createElement('div');
+            divTri.classList.add('bkm-info--fix-mark');
+            divLabel.appendChild(divTri);
+          }
 
           if (isHighlight) {
             const elSpan = document.createElement('span');
@@ -766,67 +769,26 @@ ${semanticTagsStyle}
           }
 
           const divFixBtn = document.createElement('div');
-          divFixBtn.setAttribute('data-parentid', parentId);
-          divFixBtn.classList.add('bkm-info--btn', 'bkm-info--btn-fix');
-          divFixBtn.setAttribute('data-id', `fx#${parentId}`);
+          if (isFixed) {
+            divFixBtn.classList.add('bkm-info--btn', 'bkm-info--btn-unfix');
+            divFixBtn.setAttribute('data-id', `uf#${parentId}`);
 
-          const divFixBtnLetter = document.createElement('div');
-          divFixBtnLetter.classList.add('bkm-info--btn-letter');
-          const textNodeFix = document.createTextNode('⊙');
-          divFixBtnLetter.appendChild(textNodeFix);
-          divFixBtn.appendChild(divFixBtnLetter);
+            const divFixBtnLetter = document.createElement('div');
+            divFixBtnLetter.classList.add('bkm-info--btn-letter');
+            const textNodeFix = document.createTextNode('X');
 
-          const divLabelContainer = document.createElement('div');
-          divLabelContainer.classList.add('bkm-info--label-container');
-          divLabelContainer.appendChild(divFixBtn);
-          divLabelContainer.appendChild(divLabel);
-
-          divRow = document.createElement('div');
-          divRow.classList.add('bkm-info--row');
-          divRow.appendChild(divLabelContainer);
-
-          break
-        }
-        case 'fixedTag': {
-          const { parentId, title, isHighlight, isUsed, isLast } = value
-          log('fixedTag 11', title)
-          const divLabel = document.createElement('div');
-          divLabel.classList.add('bkm-info--tag', 'bkm-info--fixed');
-          divLabel.setAttribute('data-parentid', parentId);
-          if (isUsed) {
-            divLabel.setAttribute('data-id', `ut#${parentId}`);
+            divFixBtnLetter.appendChild(textNodeFix);
+            divFixBtn.appendChild(divFixBtnLetter);
           } else {
-            divLabel.setAttribute('data-id', `t#${parentId}`);
+            divFixBtn.classList.add('bkm-info--btn', 'bkm-info--btn-fix');
+            divFixBtn.setAttribute('data-id', `fx#${parentId}`);
+
+            const divFixBtnLetter = document.createElement('div');
+            divFixBtnLetter.classList.add('bkm-info--btn-letter');
+            const textNodeFix = document.createTextNode('⊙');
+            divFixBtnLetter.appendChild(textNodeFix);
+            divFixBtn.appendChild(divFixBtnLetter);
           }
-
-          divLabel.classList.toggle('bkm-info--used-tag', isUsed);
-          divLabel.classList.toggle('bkm-info--last-tag', isLast);
-
-          if (isHighlight) {
-            const elSpan = document.createElement('span');
-            const textNode1 = document.createTextNode(title.at(0).toUpperCase());
-            elSpan.appendChild(textNode1);
-            divLabel.appendChild(elSpan);
-            divLabel.style = 'padding-left: 0.2ch'
-
-            const textNodeLabel = document.createTextNode(title.slice(1));
-            divLabel.appendChild(textNodeLabel);
-          } else {
-            const textNodeLabel = document.createTextNode(`${title}`);
-            divLabel.appendChild(textNodeLabel);
-          }
-
-          const divFixBtn = document.createElement('div');
-          divFixBtn.setAttribute('data-parentid', parentId);
-          divFixBtn.classList.add('bkm-info--btn', 'bkm-info--btn-unfix');
-          divFixBtn.setAttribute('data-id', `uf#${parentId}`);
-
-          const divFixBtnLetter = document.createElement('div');
-          divFixBtnLetter.classList.add('bkm-info--btn-letter');
-          const textNodeFix = document.createTextNode('X');
-          divFixBtnLetter.appendChild(textNodeFix);
-
-          divFixBtn.appendChild(divFixBtnLetter);
 
           const divLabelContainer = document.createElement('div');
           divLabelContainer.classList.add('bkm-info--label-container');
