@@ -3,7 +3,7 @@
   <head>
     <title>Bookmark Info Options</title>
     <style>
-      #show-layers-values, #list-limit-values, #highlight-last-values {
+      #highlight-last-values {
         display: flex;
         justify-content: space-between;
         width: 100%;
@@ -79,31 +79,6 @@
         <input type="checkbox" id="USE_TAG_LIST" style="vertical-align: middle;"/>
         User can add bookmark from recent bookmarks.
       </label>
-      </article>
-
-      <article>
-      <label for="list-limit">
-        Size of recent tag list.
-      </label>
-      <div style="display: flex">
-        <div style="flex: 1">
-          <input type="range" id="TAG_LIST_LIST_LENGTH" name="list-limit" list="list-limit-values" min="10" max="50" step="5" style="width: 100%;" />
-          <datalist id="list-limit-values">
-            <option value="10" label="10">10</option>
-            <option value="15" label="15">15</option>
-            <option value="20" label="20">20</option>
-            <option value="25" label="25">25</option>
-            <option value="30" label="30">30</option>
-            <option value="35" label="35">35</option>
-            <option value="40" label="40">40</option>
-            <option value="45" label="45">45</option>
-            <option value="50" label="50">50</option>
-          </datalist>
-        </div>
-        <div style="flex: 1">
-
-        </div>
-      </div>
       </article>
 
       <article>
