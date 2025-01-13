@@ -1,5 +1,6 @@
 import {
   getUnclassifiedFolderId,
+  isDatedFolderTemplate,
 } from '../folder-api/index.js'
 import {
   memo,
@@ -9,6 +10,8 @@ import {
   debouncedUpdateActiveTab,
 } from '../api/tabs.api.js'
 import {
+  createBookmarkInDatedTemplate,
+  moveBookmarkInDatedTemplate,
   createBookmarkIgnoreInController,
   isBookmarkCreatedWithApi,
   moveBookmarkIgnoreInController,
@@ -40,11 +43,24 @@ export const bookmarksController = {
     logBC('bookmark.onCreated <-', node);
 
     if (node.url) {
-      if (node.index !== 0) {
-        await moveBookmarkIgnoreInController({ id: bookmarkId, index: 0 })
-      }
+      const { parentId, url } = node
+      const [parentNode] = await chrome.bookmarks.get(parentId)
 
-      await tagList.addRecentTagFromBkm(node)
+      if (isDatedFolderTemplate(parentNode.title)) {
+        await moveBookmarkInDatedTemplate({
+          parentId,
+          parentTitle: parentNode.title,
+          bookmarkId,
+          url,
+        })
+        return
+      } else {
+        if (node.index !== 0) {
+          await moveBookmarkIgnoreInController({ id: bookmarkId, index: 0 })
+        }
+
+        await tagList.addRecentTagFromBkm(node)
+      }
     } else {
       await tagList.addRecentTagFromFolder(node)
     }
@@ -83,47 +99,70 @@ export const bookmarksController = {
 
     logBC('bookmark.onMoved <-', { oldIndex, index, oldParentId, parentId });
     const [node] = await chrome.bookmarks.get(bookmarkId)
+    const { url, title } = node
 
     if (node.url) {
       if (parentId !== oldParentId) {
-        await tagList.addRecentTagFromBkm(node);
+        const [parentNode] = await chrome.bookmarks.get(parentId)
+        const isDatedTemplate = isDatedFolderTemplate(parentNode.title)
+        logBC('onMoved ', 'isDatedTemplate', isDatedTemplate);
+
+        if (!isDatedTemplate) {
+          await tagList.addRecentTagFromBkm(node);
+        }
 
         const isBookmarkWasCreatedManually = (
           bookmarkId == lastCreatedBkmId
           && memo.activeTabId == lastCreatedBkmTabId
           && !isBookmarkCreatedWithApi({ parentId: oldParentId, url: node.url })
         )
+        logBC('onMoved ', 'isBookmarkWasCreatedManually', isBookmarkWasCreatedManually);
 
-        if (isBookmarkWasCreatedManually) {
-          const bookmarkList = await chrome.bookmarks.search({ url: node.url });
-          const isFirstBookmark = bookmarkList.length == 1
-          const isMoveOnly = isBookmarkWasCreatedManually && isFirstBookmark && lastMovedBkmId != bookmarkId
+        const bookmarkList = await chrome.bookmarks.search({ url: node.url });
+        const isFirstBookmark = bookmarkList.length == 1
+        const isMoveOnly = isBookmarkWasCreatedManually && isFirstBookmark && lastMovedBkmId != bookmarkId
 
-          if (isMoveOnly) {
+        if (isMoveOnly) {
+          if (isDatedTemplate) {
+            await moveBookmarkInDatedTemplate({
+              parentId,
+              parentTitle: parentNode.title,
+              bookmarkId,
+              url,
+            })
+          } else {
             if (index !== 0) {
               await moveBookmarkIgnoreInController({ id: bookmarkId, index: 0 })
             }
-          } else {
-            let isReplaceMoveToCreate = false
+          }
+        } else {
+          let isReplaceMoveToCreate = false
 
-            if (IS_BROWSER_CHROME) {
-              const isChromeBookmarkManagerTabActive = !!memo.activeTabUrl && memo.activeTabUrl.startsWith('chrome://bookmarks');
-              isReplaceMoveToCreate = !isChromeBookmarkManagerTabActive
-            } else if (IS_BROWSER_FIREFOX) {
-              const childrenList = await chrome.bookmarks.getChildren(parentId)
-              const lastIndex = childrenList.length - 1
-                // isReplaceMoveToCreate = index == lastIndex && settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN]
-              isReplaceMoveToCreate = index == lastIndex
-            }
+          if (IS_BROWSER_CHROME) {
+            const isChromeBookmarkManagerTabActive = !!memo.activeTabUrl && memo.activeTabUrl.startsWith('chrome://bookmarks');
+            isReplaceMoveToCreate = !isChromeBookmarkManagerTabActive
+          } else if (IS_BROWSER_FIREFOX) {
+            const childrenList = await chrome.bookmarks.getChildren(parentId)
+            const lastIndex = childrenList.length - 1
+              // isReplaceMoveToCreate = index == lastIndex && settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN]
+            isReplaceMoveToCreate = index == lastIndex
+          }
 
-            const unclassifiedFolderId = await getUnclassifiedFolderId()
-            isReplaceMoveToCreate = isReplaceMoveToCreate && parentId !== unclassifiedFolderId
+          const unclassifiedFolderId = await getUnclassifiedFolderId()
+          isReplaceMoveToCreate = isReplaceMoveToCreate && parentId !== unclassifiedFolderId
 
-            if (isReplaceMoveToCreate) {
-              logBC('bookmark.onMoved 22');
-              await moveBookmarkIgnoreInController({ id: bookmarkId, parentId: oldParentId, index: oldIndex })
+          if (isReplaceMoveToCreate) {
+            logBC('bookmark.onMoved 22');
+            await moveBookmarkIgnoreInController({ id: bookmarkId, parentId: oldParentId, index: oldIndex })
 
-              const { url, title } = node
+            if (isDatedTemplate) {
+              await createBookmarkInDatedTemplate({
+                parentId,
+                parentTitle: parentNode.title,
+                title,
+                url,
+              })
+            } else {
               const newBkm = {
                 parentId,
                 title,

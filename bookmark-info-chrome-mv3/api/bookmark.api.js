@@ -3,7 +3,7 @@ import {
 } from '../data-structures/index.js';
 import {
   getDatedFolder,
-  isDatedTemplateFolder,
+  isDatedFolderTemplate,
   removePreviousDatedBookmarks,
 } from '../folder-api/index.js';
 import {
@@ -13,48 +13,66 @@ import {
 
 const logBA = makeLogFunction({ module: 'bookmark.api.js' })
 
+
 let lastCreatedBkmParentId
 let lastCreatedBkmUrl
 
-export async function createBookmarkWithApi({
-  index,
+export async function createBookmarkInCommonFolder({
   parentId,
   title,
   url
 }) {
-  logBA('createBookmarkWithApi () 00', 'parentId', parentId)
-  let actualParentId = parentId
-
-  const [folderNode] = await chrome.bookmarks.get(parentId)
-  logBA('createBookmarkWithApi () 22', 'folderNode', folderNode)
-  const isDatedTemplate = isDatedTemplateFolder(folderNode.title)
-  if (isDatedTemplate) {
-    const datedFolder = await getDatedFolder(folderNode)
-    logBA('createBookmarkWithApi () 33', 'datedFolder', datedFolder)
-    actualParentId = datedFolder.id
-  }
-
   const bookmarkList = await chrome.bookmarks.search({ url });
-  const isExist = bookmarkList.some((bkm) => bkm.parentId == actualParentId)
+  const isExist = bookmarkList.some((bkm) => bkm.parentId == parentId)
   if (isExist) {
-    return false
+    return
   }
 
-  lastCreatedBkmParentId = actualParentId
+  lastCreatedBkmParentId = parentId
   lastCreatedBkmUrl = url
 
-  await chrome.bookmarks.create({
-    index,
-    parentId: actualParentId,
+  return await chrome.bookmarks.create({
+    index: 0,
+    parentId,
     title,
     url
   })
+}
+
+export async function createBookmarkInDatedTemplate({
+  parentId,
+  parentTitle,
+  title,
+  url
+}) {
+  const datedFolder = await getDatedFolder(parentTitle)
+  logBA('createBookmarkInDatedTemplate () 11', 'datedFolder', datedFolder)
+
+  const result = await createBookmarkInCommonFolder({ parentId: datedFolder.id, title, url })
+
+  await tagList.addRecentTagFromFolder({ id: parentId, title: parentTitle })
+  removePreviousDatedBookmarks({ url, template: parentTitle })
+
+  return result
+}
+
+export async function createBookmark({ parentId, title, url }) {
+  const [folderNode] = await chrome.bookmarks.get(parentId)
+  const isDatedTemplate = isDatedFolderTemplate(folderNode.title)
+
+  let result
   if (isDatedTemplate) {
-    await tagList.addRecentTagFromFolder(folderNode)
-    removePreviousDatedBookmarks({ url, template: folderNode.title })
+    result = await createBookmarkInDatedTemplate({
+      parentId,
+      parentTitle: folderNode.title,
+      title,
+      url,
+    })
+  } else {
+    result = await createBookmarkInCommonFolder({ parentId, title, url })
   }
 
-  return true
+  return result
 }
 
 export function isBookmarkCreatedWithApi({ parentId, url }) {
@@ -97,4 +115,20 @@ export async function moveBookmarkIgnoreInController({ id, parentId, index }) {
 export async function removeBookmarkIgnoreInController(bkmId) {
   ignoreBkmControllerApiActionSet.addIgnoreRemove(bkmId)
   await chrome.bookmarks.remove(bkmId)
+}
+
+export async function moveBookmarkInDatedTemplate({
+  parentId,
+  parentTitle,
+  bookmarkId,
+  url,
+}) {
+  const datedFolder = await getDatedFolder(parentTitle)
+  logBA('moveBookmarkInDatedTemplate () 11', 'datedFolder', datedFolder)
+
+  // await chrome.bookmarks.move(bookmarkId, { parentId: datedFolder.id, index: 0 })
+  await moveBookmarkIgnoreInController({ id: bookmarkId, parentId: datedFolder.id, index: 0 })
+
+  await tagList.addRecentTagFromFolder({ id: parentId, title: parentTitle })
+  removePreviousDatedBookmarks({ url, template: parentTitle })
 }

@@ -1,14 +1,15 @@
 import { findOrCreateFolder } from '../folder-api/index.js'
-import { createBookmarkWithApi } from '../api/bookmark.api.js'
+import { createBookmark } from '../api/bookmark.api.js'
 import { page } from '../api/page.api.js'
 
-export async function addBookmark({ url, title, parentId }) {
-  return await createBookmarkWithApi({
-    index: 0,
+export async function addBookmarkFromRecentTag({ url, title, parentId }) {
+  const result = await createBookmark({
     parentId,
     title,
-    url
+    url,
   })
+
+  return !!result
 }
 
 export async function startAddBookmarkFromSelection() {
@@ -35,5 +36,11 @@ export async function addBookmarkFolderByName({ url, title, folderName }) {
   }
 
   const folder = await findOrCreateFolder(folderName)
-  return await addBookmark({ url, title, parentId: folder.id })
+  const result = await createBookmark({
+    parentId: folder.id,
+    title,
+    url,
+  })
+
+  return !!result
 }

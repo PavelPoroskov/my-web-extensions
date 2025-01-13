@@ -10,7 +10,7 @@ import {
 } from './folder-crud.js'
 import {
   isDatedFolderTitle,
-  isDatedTemplateFolder,
+  isDatedFolderTemplate,
 } from './folder-title.js';
 import {
   makeLogFunction,
@@ -37,13 +37,13 @@ function getDatedTitle(folderTitle) {
 }
 
 // folderTitle = 'DONE @D' 'selected @D' 'BEST @D'
-export async function getDatedFolder(folderNode) {
-  if (!isDatedTemplateFolder(folderNode.title)) {
+export async function getDatedFolder(templateTitle) {
+  if (!isDatedFolderTemplate(templateTitle)) {
     return
   }
-  logFD('getDatedFolder () 00', folderNode.title)
+  logFD('getDatedFolder () 00', templateTitle)
 
-  const datedTitle = getDatedTitle(folderNode.title)
+  const datedTitle = getDatedTitle(templateTitle)
   logFD('getDatedFolder () 11', 'datedTitle', datedTitle)
   const rootId = BOOKMARKS_MENU_FOLDER_ID || BOOKMARKS_BAR_FOLDER_ID
   let foundFolder = await findFolderWithExactTitle({ title: datedTitle, rootId })
@@ -71,7 +71,7 @@ export function isDatedTitleForTemplate({ title, template }) {
   logFD('isDatedTitleForTemplate () 00', title, template)
 
 
-  if (!isDatedTemplateFolder(template)) {
+  if (!isDatedFolderTemplate(template)) {
     return
   }
   if (!isDatedFolderTitle(title)) {

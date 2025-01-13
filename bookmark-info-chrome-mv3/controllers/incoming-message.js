@@ -1,5 +1,5 @@
 import {
-  addBookmark,
+  addBookmarkFromRecentTag,
   addBookmarkFolderByName,
   addRecentTagFromView,
   deleteBookmark,
@@ -57,7 +57,7 @@ export async function onIncomingMessage (message, sender) {
     }
     case EXTENSION_MSG_ID.ADD_BOOKMARK: {
       logIM('runtime.onMessage addBookmark');
-      const isAddedNewBookmark = await addBookmark({
+      const isAddedNewBookmark = await addBookmarkFromRecentTag({
         url: message.url,
         title: message.title,
         parentId: message.parentId,

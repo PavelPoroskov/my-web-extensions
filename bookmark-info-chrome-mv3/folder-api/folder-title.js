@@ -41,7 +41,7 @@ export function isStartWithTODO(str) {
   return !!str && str.slice(0, 4).toLowerCase() === 'todo'
 }
 
-export function isDatedTemplateFolder(folderTitle) {
+export function isDatedFolderTemplate(folderTitle) {
   return folderTitle.endsWith(' @D') && 3 < folderTitle.length
 }
 
