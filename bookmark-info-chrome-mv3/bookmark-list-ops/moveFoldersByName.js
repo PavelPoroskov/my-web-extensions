@@ -45,7 +45,7 @@ export async function moveOldDatedFolders({ fromId, toId }) {
   Object.entries(grouped).forEach(([, list]) => {
     const moveListForFixedPart = list
       .toSorted((a,b) => a.title.localeCompare(b.title))
-      .slice(3)
+      .slice(2)
 
     groupedMoveList.push(moveListForFixedPart)
   })
