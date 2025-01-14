@@ -784,13 +784,18 @@ ${semanticTagsStyle}
           }
 
           if (isHighlight) {
+            const Segmenter = new Intl.Segmenter();
+            const arLetters = Array.from(Segmenter.segment(title));
+            const firstLetter = arLetters[0].segment
+            const restLetters = arLetters.slice(1).map(({ segment }) => segment).join('')
+
             const elSpan = document.createElement('span');
-            const textNode1 = document.createTextNode(title.at(0).toUpperCase());
+            const textNode1 = document.createTextNode(firstLetter.toUpperCase());
             elSpan.appendChild(textNode1);
             divLabel.appendChild(elSpan);
             divLabel.style = 'padding-left: 0.2ch'
 
-            const textNodeLabel = document.createTextNode(title.slice(1));
+            const textNodeLabel = document.createTextNode(restLetters);
             divLabel.appendChild(textNodeLabel);
           } else {
             const textNodeLabel = document.createTextNode(`${title}`);
