@@ -135,9 +135,13 @@ function getGroupedLetterList(resultList) {
   return letterList
 }
 
+export function getFirstLetter(title) {
+  return new Intl.Segmenter().segment(title).containing(0).segment.toUpperCase()
+}
+
 export function highlightAlphabet({
   list = [],
-  fnGetFirstLetter = (i) => i.title.at(0).toUpperCase(),
+  fnGetFirstLetter = ({ title }) => getFirstLetter(title),
 }) {
   const midList = list.map((item) => ({
     ...item,

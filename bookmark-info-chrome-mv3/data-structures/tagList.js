@@ -17,6 +17,7 @@ import {
 } from './tagList-getRecent.js'
 import {
   highlightAlphabet,
+  getFirstLetter,
 } from './tagList-highlight.js'
 import {
   isDatedFolderTitle,
@@ -214,7 +215,7 @@ class TagList {
       if (this.HIGHLIGHT_ALPHABET) {
         resultList = highlightAlphabet({
           list: resultList,
-          fnGetFirstLetter: ({ isFixed, title }) => `${isFixed ? 'F': 'R'}#${title.at(0).toUpperCase()}`
+          fnGetFirstLetter: ({ isFixed, title }) => `${isFixed ? 'F': 'R'}#${getFirstLetter(title)}`
         })
       }
     } else {
@@ -223,7 +224,7 @@ class TagList {
       if (this.HIGHLIGHT_ALPHABET) {
         resultList = highlightAlphabet({
           list: resultList,
-          fnGetFirstLetter: ({ title }) => title.at(0).toUpperCase(),
+          fnGetFirstLetter: ({ title }) => getFirstLetter(title),
         })
       }
     }
