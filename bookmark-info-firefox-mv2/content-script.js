@@ -528,8 +528,48 @@ ${semanticTagsStyle}
     const optimisticDelFromTagList = input.optimisticDelFromTagList
     const optimisticAddFromTagList = input.optimisticAddFromTagList
 
+    let rootStyleMutable = document.getElementById(bkmInfoMutableStyleId);
+    let rootDiv = document.getElementById(bkmInfoRootId);
+    if (!rootStyleMutable) {
+      rootStyleMutable = document.createElement('style');
+      rootStyleMutable.setAttribute('id', bkmInfoMutableStyleId);
+      const textNodeStyle1 = document.createTextNode(
+        getMutableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting })
+      );
+      rootStyleMutable.appendChild(textNodeStyle1);
+
+      const rootStyleFixed = document.createElement('style');
+      rootStyleFixed.setAttribute('id', bkmInfoFixedStyleId);
+      const textNodeStyle2 = document.createTextNode(
+        getFixedStyleText()
+      );
+      rootStyleFixed.appendChild(textNodeStyle2);
+
+      document.body.insertAdjacentElement('afterbegin', rootStyleMutable);
+      rootStyleMutable.insertAdjacentElement('afterend', rootStyleFixed);
+
+      rootDiv = document.createElement('div');
+      rootDiv.setAttribute('id', bkmInfoRootId);
+      rootDiv.addEventListener('click', rootListener, { capture: true });
+      rootStyleFixed.insertAdjacentElement('afterend', rootDiv);
+    }
+
+    if (!(fontSize == prevState.fontSize && tagLength == prevState.tagLength
+      && isHideSemanticHtmlTagsOnPrinting == prevState.isHideSemanticHtmlTagsOnPrinting)) {
+      rootStyleMutable.firstChild.replaceWith(
+        getMutableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting })
+      )
+    }
 
     const usedParentIdSet = new Set(bookmarkList.map(({ parentId }) => parentId))
+    let nTagListAvailableRows = input.nTagListAvailableRows
+    if (rootDiv.firstChild) {
+      const viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0)
+      // const rowHeight = rootDiv.firstChild.clientHeight
+      const rowHeight = rootDiv.firstChild.getBoundingClientRect().height
+
+      nTagListAvailableRows = Math.floor(viewportHeight / rowHeight)
+    }
 
     const drawList = []
     let prevTitle
@@ -569,11 +609,10 @@ ${semanticTagsStyle}
 
       if (isTagListOpen) {
         const usedRows = drawList.length
-
         let filteredTagList = tagList
 
-        if (input.nTagListAvailableRows) {
-          const nAvailableTags = Math.max(0, input.nTagListAvailableRows - usedRows)
+        if (nTagListAvailableRows) {
+          const nAvailableTags = Math.max(0, nTagListAvailableRows - usedRows)
 
           if (nAvailableTags < tagList.length) {
             if (input.nFixedTags < nAvailableTags) {
@@ -598,40 +637,7 @@ ${semanticTagsStyle}
             },
           })
         })
-    }
-    }
-
-    let rootStyleMutable = document.getElementById(bkmInfoMutableStyleId);
-    let rootDiv = document.getElementById(bkmInfoRootId);
-    if (!rootStyleMutable) {
-      rootStyleMutable = document.createElement('style');
-      rootStyleMutable.setAttribute('id', bkmInfoMutableStyleId);
-      const textNodeStyle1 = document.createTextNode(
-        getMutableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting })
-      );
-      rootStyleMutable.appendChild(textNodeStyle1);
-
-      const rootStyleFixed = document.createElement('style');
-      rootStyleFixed.setAttribute('id', bkmInfoFixedStyleId);
-      const textNodeStyle2 = document.createTextNode(
-        getFixedStyleText()
-      );
-      rootStyleFixed.appendChild(textNodeStyle2);
-
-      document.body.insertAdjacentElement('afterbegin', rootStyleMutable);
-      rootStyleMutable.insertAdjacentElement('afterend', rootStyleFixed);
-
-      rootDiv = document.createElement('div');
-      rootDiv.setAttribute('id', bkmInfoRootId);
-      rootDiv.addEventListener('click', rootListener, { capture: true });
-      rootStyleFixed.insertAdjacentElement('afterend', rootDiv);
-    }
-
-    if (!(fontSize == prevState.fontSize && tagLength == prevState.tagLength
-      && isHideSemanticHtmlTagsOnPrinting == prevState.isHideSemanticHtmlTagsOnPrinting)) {
-      rootStyleMutable.firstChild.replaceWith(
-        getMutableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting })
-      )
+      }
     }
 
     const rawNodeList = rootDiv.childNodes;
@@ -759,7 +765,6 @@ ${semanticTagsStyle}
         }
         case 'tag': {
           const { parentId, title, isUsed, isLast, isFixed, isHighlight } = value
-          log('tag 11', title)
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag');
 
@@ -779,13 +784,18 @@ ${semanticTagsStyle}
           }
 
           if (isHighlight) {
+            const Segmenter = new Intl.Segmenter();
+            const arLetters = Array.from(Segmenter.segment(title));
+            const firstLetter = arLetters[0].segment
+            const restLetters = arLetters.slice(1).map(({ segment }) => segment).join('')
+
             const elSpan = document.createElement('span');
-            const textNode1 = document.createTextNode(title.at(0).toUpperCase());
+            const textNode1 = document.createTextNode(firstLetter.toUpperCase());
             elSpan.appendChild(textNode1);
             divLabel.appendChild(elSpan);
             divLabel.style = 'padding-left: 0.2ch'
 
-            const textNodeLabel = document.createTextNode(title.slice(1));
+            const textNodeLabel = document.createTextNode(restLetters);
             divLabel.appendChild(textNodeLabel);
           } else {
             const textNodeLabel = document.createTextNode(`${title}`);
@@ -859,7 +869,7 @@ ${semanticTagsStyle}
 
     if (rootDiv.firstChild) {
       const viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0)
-      const rowHeight = rootDiv.firstChild.clientHeight
+      const rowHeight = rootDiv.firstChild.getBoundingClientRect().height
       const availableRows = Math.floor(viewportHeight / rowHeight)
 
       if (availableRows != input.nTagListAvailableRows) {

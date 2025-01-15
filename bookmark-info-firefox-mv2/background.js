@@ -1989,9 +1989,13 @@ function getGroupedLetterList(resultList) {
   return letterList
 }
 
+function getFirstLetter(title) {
+  return new Intl.Segmenter().segment(title).containing(0).segment.toUpperCase()
+}
+
 function highlightAlphabet({
   list = [],
-  fnGetFirstLetter = (i) => i.title.at(0).toUpperCase(),
+  fnGetFirstLetter = ({ title }) => getFirstLetter(title),
 }) {
   const midList = list.map((item) => ({
     ...item,
@@ -2204,7 +2208,7 @@ class TagList {
       if (this.HIGHLIGHT_ALPHABET) {
         resultList = highlightAlphabet({
           list: resultList,
-          fnGetFirstLetter: ({ isFixed, title }) => `${isFixed ? 'F': 'R'}#${title.at(0).toUpperCase()}`
+          fnGetFirstLetter: ({ isFixed, title }) => `${isFixed ? 'F': 'R'}#${getFirstLetter(title)}`
         })
       }
     } else {
@@ -2213,7 +2217,7 @@ class TagList {
       if (this.HIGHLIGHT_ALPHABET) {
         resultList = highlightAlphabet({
           list: resultList,
-          fnGetFirstLetter: ({ title }) => title.at(0).toUpperCase(),
+          fnGetFirstLetter: ({ title }) => getFirstLetter(title),
         })
       }
     }
