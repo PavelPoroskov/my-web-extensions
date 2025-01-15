@@ -5,13 +5,12 @@ import {
   deleteBookmark,
   fixTag,
   moveToFlatFolderStructure,
-  switchShowRecentList,
   unfixTag,
-  updateAvailableRows,
 } from '../command/index.js'
 import {
   extensionSettings,
   memo,
+  tagList,
 } from '../data-structures/index.js'
 import {
   updateActiveTab,
@@ -84,13 +83,13 @@ export async function onIncomingMessage (message, sender) {
     }
     case EXTENSION_MSG_ID.SHOW_TAG_LIST: {
       logIM('runtime.onMessage SHOW_RECENT_LIST');
-      await switchShowRecentList(message.value)
+      await tagList.openTagList(message.value)
 
       break
     }
-    case EXTENSION_MSG_ID.AVAILABLE_ROWS: {
-      logIM('runtime.onMessage AVAILABLE_ROWS', message.value);
-      await updateAvailableRows(message.value)
+    case EXTENSION_MSG_ID.UPDATE_AVAILABLE_ROWS: {
+      logIM('runtime.onMessage UPDATE_AVAILABLE_ROWS', message.value);
+      await tagList.updateAvailableRows(message.value)
 
       break
     }

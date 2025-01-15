@@ -19,7 +19,7 @@
     TAB_IS_READY: 'TAB_IS_READY',
     SHOW_TAG_LIST: 'SHOW_TAG_LIST',
     ADD_RECENT_TAG: 'ADD_RECENT_TAG',
-    AVAILABLE_ROWS: 'AVAILABLE_ROWS',
+    UPDATE_AVAILABLE_ROWS: 'UPDATE_AVAILABLE_ROWS',
   }
   // TODO-DOUBLE remove duplication in CONTENT_SCRIPT_MSG_ID: message-id.js and content-scripts.js
   const CONTENT_SCRIPT_MSG_ID = {
@@ -873,14 +873,14 @@ ${semanticTagsStyle}
       const availableRows = Math.floor(viewportHeight / rowHeight)
 
       if (availableRows != input.nTagListAvailableRows) {
-        updateAvailableRows(availableRows)
+        updateAvailableRowsInExtension(availableRows)
       }
     }
   }
 
-  async function updateAvailableRows(availableRows) {
+  async function updateAvailableRowsInExtension(availableRows) {
     await chrome.runtime.sendMessage({
-      command: EXTENSION_MSG_ID.AVAILABLE_ROWS,
+      command: EXTENSION_MSG_ID.UPDATE_AVAILABLE_ROWS,
       value: availableRows,
     });
   }

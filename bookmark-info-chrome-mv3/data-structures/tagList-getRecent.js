@@ -52,7 +52,6 @@ async function getRecentList(nItems) {
 
   return Object.entries(folderByIdMap)
     .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-    .filter(({ title }) => isDescriptiveFolderTitle(title))
     .sort((a,b) => -(a.dateAdded - b.dateAdded))
 }
 

@@ -40,6 +40,7 @@ class TagList {
   HIGHLIGHT_LAST
   HIGHLIGHT_ALPHABET
 
+  isOpenGlobal
   AVAILABLE_ROWS
   _nFixedTags = 0
 
@@ -69,6 +70,9 @@ class TagList {
 
     return this._nFixedTags
   }
+  get nAvailableRows() {
+    return this.AVAILABLE_ROWS
+  }
   markUpdates() {
     this.changeCount += 1
   }
@@ -95,6 +99,9 @@ class TagList {
 
     this.USE_TAG_LIST = settings[USER_OPTION.USE_TAG_LIST]
     this._enableTagList(this.USE_TAG_LIST)
+    if (!this.USE_TAG_LIST) {
+      return
+    }
 
     this.USE_FLAT_FOLDER_STRUCTURE = settings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]
     this.HIGHLIGHT_LAST = settings[USER_OPTION.TAG_LIST_HIGHLIGHT_LAST]
@@ -105,8 +112,10 @@ class TagList {
       INTERNAL_VALUES.TAG_LIST_SESSION_STARTED,
       INTERNAL_VALUES.TAG_LIST_RECENT_MAP,
       INTERNAL_VALUES.TAG_LIST_FIXED_MAP,
+      INTERNAL_VALUES.TAG_LIST_IS_OPEN,
       INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS,
     ]);
+    this.isOpenGlobal = savedObj[INTERNAL_VALUES.TAG_LIST_IS_OPEN]
     this.AVAILABLE_ROWS = savedObj[INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS]
 
     let actualRecentTagObj = {}
@@ -138,6 +147,10 @@ class TagList {
     const beforeAvailableRows = this.AVAILABLE_ROWS
     this.AVAILABLE_ROWS = availableRows
 
+    const updateObj = {
+      [INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS]: availableRows,
+    }
+
     if (beforeAvailableRows < availableRows) {
       let actualRecentTagObj = await getRecentTagObj(this.AVAILABLE_ROWS)
       this._recentTagObj = {
@@ -146,11 +159,19 @@ class TagList {
       }
       const isFlatStructure = this.USE_FLAT_FOLDER_STRUCTURE
       this._recentTagObj = await filterRecentTagObj(this._recentTagObj, isFlatStructure)
-      await setOptions({
+      Object.assign(updateObj, {
         [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj,
       })
     }
+
+    await setOptions(updateObj)
     this.markUpdates()
+  }
+  async openTagList(isOpen) {
+    this.isOpenGlobal = isOpen
+    await setOptions({
+      [INTERNAL_VALUES.TAG_LIST_IS_OPEN]: isOpen
+    })
   }
   async filterTagListForFlatFolderStructure() {
     const savedObj = await getOptions([

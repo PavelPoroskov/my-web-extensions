@@ -11,7 +11,6 @@ import {
 } from './history.api.js'
 import {
   USER_OPTION,
-  INTERNAL_VALUES,
 } from '../constant/index.js'
 import {
   extensionSettings,
@@ -71,9 +70,9 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     ...visitsData,
     // recent list
     tagListOpenMode: settings[USER_OPTION.TAG_LIST_OPEN_MODE],
-    isTagListOpenGlobal: settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN],
+    isTagListOpenGlobal: tagList.isOpenGlobal,
     tagList: tagList.list,
-    nTagListAvailableRows: settings[INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS],
+    nTagListAvailableRows: tagList.nAvailableRows,
     nFixedTags: tagList.nFixedTags,
 
     fontSize: settings[USER_OPTION.FONT_SIZE],
