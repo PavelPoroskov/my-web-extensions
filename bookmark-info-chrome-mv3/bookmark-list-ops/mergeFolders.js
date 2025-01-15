@@ -3,7 +3,7 @@ import {
   OTHER_BOOKMARKS_FOLDER_ID,
   normalizeTitle,
   trimTitle,
-  removeFolderIgnoreInController,
+  removeFolder,
   updateFolderIgnoreInController,
   moveNodeIgnoreInController,
 } from '../folder-api/index.js';
@@ -62,7 +62,7 @@ async function mergeSubFolder(parentId) {
 
   await moveTaskList.reduce(
     (promiseChain, { fromNode }) => promiseChain.then(
-      () => removeFolderIgnoreInController(fromNode.id)
+      () => removeFolder(fromNode.id)
     ),
     Promise.resolve(),
   );

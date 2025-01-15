@@ -47,3 +47,8 @@ export async function removeFolderIgnoreInController(bkmId) {
   ignoreBkmControllerApiActionSet.addIgnoreRemove(bkmId)
   await chrome.bookmarks.remove(bkmId)
 }
+
+export async function removeFolder(bkmId) {
+  ignoreBkmControllerApiActionSet.addIgnoreRemove(bkmId)
+  await chrome.bookmarks.remove(bkmId)
+}
