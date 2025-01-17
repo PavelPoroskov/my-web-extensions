@@ -29,6 +29,11 @@ const urlSettingsUse = {
       '/courses/:id/',
     ]
   },
+  'github.com': {
+    searchParamList: [
+      ['tab'],
+    ],
+  },
   'imdb.com': {
     searchParamList: [
       ['ref_'],
