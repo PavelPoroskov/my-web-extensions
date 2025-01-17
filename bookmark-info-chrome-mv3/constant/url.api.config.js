@@ -110,6 +110,10 @@ const urlSettingsRu = {
       'professional_role',
       'resume',
     ],
+    theSame: [
+      '/vacancy/:vacancyId',
+      '?vacancyId=:vacancyId',
+    ],
   },
   'opennet.ru': {
     searchParamList: [
