@@ -13,10 +13,7 @@ import {
 const logRA = makeLogFunction({ module: 'tagList-getRecent.js' })
 
 async function getRecentList(nItems) {
-  logRA('getRecentList() 00', nItems)
   const list = await chrome.bookmarks.getRecent(nItems);
-  logRA('getRecentList() 11', list)
-
   const folderList = list
     .filter(({ url }) => !url)
 
@@ -44,7 +41,9 @@ async function getRecentList(nItems) {
     .map(([id]) => id)
 
   if (unknownIdList.length > 0) {
+    // logRA('getRecentList () 11 before await chrome.bookmarks.get(unknownIdList)')
     const unknownFolderList = await chrome.bookmarks.get(unknownIdList)
+    // logRA('getRecentList () 11 after', unknownFolderList.length)
     unknownFolderList.forEach(({ id, title }) => {
       folderByIdMap[id].title = title
     })
@@ -57,9 +56,11 @@ async function getRecentList(nItems) {
 
 export async function getRecentTagObj(nItems) {
   let list = await getRecentList(nItems * 4)
+  logRA('getRecentTagObj () 11', list.length, list)
 
   if (0 < list.length && list.length < nItems) {
     list = await getRecentList(nItems * 10)
+    logRA('getRecentTagObj () 22', list.length, list)
   }
 
   return Object.fromEntries(
@@ -70,13 +71,21 @@ export async function getRecentTagObj(nItems) {
 }
 
 async function filterFolders(idList, isFlatStructure) {
+  logRA('filterFolders () 00', idList.length, idList )
   if (idList.length === 0) {
     return []
   }
 
-  const folderList = await chrome.bookmarks.get(idList)
+  // const folderList = await chrome.bookmarks.get(idList)
+  const folderList = await Promise.all(
+    idList.map(
+      (id) => chrome.bookmarks.get(id).catch(() => undefined)
+    )
+  )
+  logRA('filterFolders () 22', 'folderList', folderList.length, folderList)
   let filteredFolderList = folderList
     .filter(Boolean)
+    .flat()
     .filter(({ title }) => !!title)
     .filter(({ title }) => isDescriptiveFolderTitle(title))
     .filter(({ title }) => !isDatedFolderTitle(title))
@@ -94,11 +103,13 @@ async function filterFolders(idList, isFlatStructure) {
         ({ id }) => id !== unclassifiedFolderId && id !== datedRootFolderId
       )
   }
+  logRA('filterFolders () 33', 'filteredFolderList', filteredFolderList.length, filteredFolderList)
 
   return filteredFolderList
 }
 
 export async function filterRecentTagObj(obj = {}, isFlatStructure) {
+  logRA('filterRecentTagObj () 00')
   const filteredFolderList = await filterFolders(Object.keys(obj), isFlatStructure)
 
   return Object.fromEntries(
@@ -113,6 +124,7 @@ export async function filterRecentTagObj(obj = {}, isFlatStructure) {
 }
 
 export async function filterFixedTagObj(obj = {}, isFlatStructure) {
+  logRA('filterFixedTagObj () 00')
   const filteredFolderList = await filterFolders(Object.keys(obj), isFlatStructure)
 
   return Object.fromEntries(

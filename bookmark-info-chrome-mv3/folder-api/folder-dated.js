@@ -88,13 +88,12 @@ export async function removePreviousDatedBookmarks({ url, template }) {
   const bookmarkList = await chrome.bookmarks.search({ url });
   logFD('removePreviousDatedBookmarks () 00', bookmarkList)
 
-  const parentFolderArList = await Promise.all(
-    bookmarkList.map(
-      ({ parentId }) => chrome.bookmarks.get(parentId)
-    )
-  )
+  const parentIdList = bookmarkList.map(({ parentId }) => parentId)
+  const uniqueParentIdList = Array.from(new Set(parentIdList))
+  const parentFolderList = await chrome.bookmarks.get(uniqueParentIdList)
+
   const parentMap = Object.fromEntries(
-    parentFolderArList.flat()
+    parentFolderList
       .map(({ id, title}) => [id, title])
   )
 

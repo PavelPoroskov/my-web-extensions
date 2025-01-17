@@ -621,6 +621,7 @@ ${semanticTagsStyle}
       const rowHeight = rootDiv.firstChild.getBoundingClientRect().height
 
       nTagListAvailableRows = Math.floor(viewportHeight / rowHeight)
+      // log('viewportHeight 11', viewportHeight, 'rowHeight', rowHeight, 'nTagListAvailableRows', nTagListAvailableRows)
     }
 
     const drawList = []
@@ -910,6 +911,7 @@ ${semanticTagsStyle}
       const viewportHeight = window.visualViewport.height || window.innerHeight
       const rowHeight = rootDiv.firstChild.getBoundingClientRect().height
       const availableRows = Math.floor(viewportHeight / rowHeight)
+      // log('viewportHeight 22', viewportHeight, 'rowHeight', rowHeight, 'nTagListAvailableRows', nTagListAvailableRows)
 
       if (availableRows != input.nTagListAvailableRows) {
         updateAvailableRowsInExtension(availableRows)
