@@ -34,7 +34,7 @@ const BROWSER_SPECIFIC = Object.fromEntries(
   OPTIONS_ASKS_FLAT_BOOKMARKS: 'OPTIONS_ASKS_FLAT_BOOKMARKS',
   FLAT_BOOKMARKS_RESULT: 'FLAT_BOOKMARKS_RESULT',
   OPTIONS_ASKS_SAVE: 'OPTIONS_ASKS_SAVE',
-  AVAILABLE_ROWS: 'AVAILABLE_ROWS',
+  UPDATE_AVAILABLE_ROWS: 'UPDATE_AVAILABLE_ROWS',
 }
 
 // TODO remove duplication in CONTENT_SCRIPT_MSG_ID: message-id.js and content-scripts.js
@@ -248,6 +248,11 @@ const urlSettingsUse = {
       '/courses/:id/',
     ]
   },
+  'github.com': {
+    searchParamList: [
+      ['tab'],
+    ],
+  },
   'imdb.com': {
     searchParamList: [
       ['ref_'],
@@ -323,6 +328,10 @@ const urlSettingsRu = {
       'text',
       'professional_role',
       'resume',
+    ],
+    theSame: [
+      '/vacancy/:vacancyId',
+      '?vacancyId=:vacancyId',
     ],
   },
   'opennet.ru': {
@@ -1058,11 +1067,6 @@ const memo = {
 logM('IMPORT END', 'memo.js', new Date().toISOString())
 const logES = makeLogFunction({ module: 'extensionSettings' })
 
-const READ_OPTIONS_LIST = USER_OPTION_KEY_LIST.concat([
-  INTERNAL_VALUES.TAG_LIST_IS_OPEN,
-  INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS,
-])
-
 class ExtensionSettings {
   _isActual = false
   _settings = {}
@@ -1090,7 +1094,7 @@ class ExtensionSettings {
       this.fnReject = fnReject;
     });
 
-    await getOptions(READ_OPTIONS_LIST)
+    await getOptions(USER_OPTION_KEY_LIST)
       .then((result) => {
         this._settings = result
         this.fnResolve()
@@ -1305,6 +1309,11 @@ async function moveFolderIgnoreInController({ id, parentId, index }) {
 }
 
 async function removeFolderIgnoreInController(bkmId) {
+  ignoreBkmControllerApiActionSet.addIgnoreRemove(bkmId)
+  await browser.bookmarks.remove(bkmId)
+}
+
+async function removeFolder(bkmId) {
   ignoreBkmControllerApiActionSet.addIgnoreRemove(bkmId)
   await browser.bookmarks.remove(bkmId)
 }
@@ -1721,13 +1730,12 @@ async function removePreviousDatedBookmarks({ url, template }) {
   const bookmarkList = await browser.bookmarks.search({ url });
   logFD('removePreviousDatedBookmarks () 00', bookmarkList)
 
-  const parentFolderArList = await Promise.all(
-    bookmarkList.map(
-      ({ parentId }) => browser.bookmarks.get(parentId)
-    )
-  )
+  const parentIdList = bookmarkList.map(({ parentId }) => parentId)
+  const uniqueParentIdList = Array.from(new Set(parentIdList))
+  const parentFolderList = await browser.bookmarks.get(uniqueParentIdList)
+
   const parentMap = Object.fromEntries(
-    parentFolderArList.flat()
+    parentFolderList
       .map(({ id, title}) => [id, title])
   )
 
@@ -1752,10 +1760,7 @@ async function removePreviousDatedBookmarks({ url, template }) {
 const logRA = makeLogFunction({ module: 'tagList-getRecent.js' })
 
 async function getRecentList(nItems) {
-  logRA('getRecentList() 00', nItems)
   const list = await browser.bookmarks.getRecent(nItems);
-  logRA('getRecentList() 11', list)
-
   const folderList = list
     .filter(({ url }) => !url)
 
@@ -1783,7 +1788,9 @@ async function getRecentList(nItems) {
     .map(([id]) => id)
 
   if (unknownIdList.length > 0) {
+    // logRA('getRecentList () 11 before await browser.bookmarks.get(unknownIdList)')
     const unknownFolderList = await browser.bookmarks.get(unknownIdList)
+    // logRA('getRecentList () 11 after', unknownFolderList.length)
     unknownFolderList.forEach(({ id, title }) => {
       folderByIdMap[id].title = title
     })
@@ -1791,15 +1798,16 @@ async function getRecentList(nItems) {
 
   return Object.entries(folderByIdMap)
     .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-    .filter(({ title }) => isDescriptiveFolderTitle(title))
     .sort((a,b) => -(a.dateAdded - b.dateAdded))
 }
 
 async function getRecentTagObj(nItems) {
   let list = await getRecentList(nItems * 4)
+  logRA('getRecentTagObj () 11', list.length, list)
 
   if (0 < list.length && list.length < nItems) {
     list = await getRecentList(nItems * 10)
+    logRA('getRecentTagObj () 22', list.length, list)
   }
 
   return Object.fromEntries(
@@ -1810,13 +1818,21 @@ async function getRecentTagObj(nItems) {
 }
 
 async function filterFolders(idList, isFlatStructure) {
+  logRA('filterFolders () 00', idList.length, idList )
   if (idList.length === 0) {
     return []
   }
 
-  const folderList = await browser.bookmarks.get(idList)
+  // const folderList = await browser.bookmarks.get(idList)
+  const folderList = await Promise.all(
+    idList.map(
+      (id) => browser.bookmarks.get(id).catch(() => undefined)
+    )
+  )
+  logRA('filterFolders () 22', 'folderList', folderList.length, folderList)
   let filteredFolderList = folderList
     .filter(Boolean)
+    .flat()
     .filter(({ title }) => !!title)
     .filter(({ title }) => isDescriptiveFolderTitle(title))
     .filter(({ title }) => !isDatedFolderTitle(title))
@@ -1834,11 +1850,13 @@ async function filterFolders(idList, isFlatStructure) {
         ({ id }) => id !== unclassifiedFolderId && id !== datedRootFolderId
       )
   }
+  logRA('filterFolders () 33', 'filteredFolderList', filteredFolderList.length, filteredFolderList)
 
   return filteredFolderList
 }
 
 async function filterRecentTagObj(obj = {}, isFlatStructure) {
+  logRA('filterRecentTagObj () 00')
   const filteredFolderList = await filterFolders(Object.keys(obj), isFlatStructure)
 
   return Object.fromEntries(
@@ -1853,6 +1871,7 @@ async function filterRecentTagObj(obj = {}, isFlatStructure) {
 }
 
 async function filterFixedTagObj(obj = {}, isFlatStructure) {
+  logRA('filterFixedTagObj () 00')
   const filteredFolderList = await filterFolders(Object.keys(obj), isFlatStructure)
 
   return Object.fromEntries(
@@ -2033,7 +2052,9 @@ class TagList {
   HIGHLIGHT_LAST
   HIGHLIGHT_ALPHABET
 
+  isOpenGlobal
   AVAILABLE_ROWS
+  MAX_AVAILABLE_ROWS
   _nFixedTags = 0
 
   changeCount = 0
@@ -2062,6 +2083,9 @@ class TagList {
 
     return this._nFixedTags
   }
+  get nAvailableRows() {
+    return this.AVAILABLE_ROWS
+  }
   markUpdates() {
     this.changeCount += 1
   }
@@ -2088,6 +2112,9 @@ class TagList {
 
     this.USE_TAG_LIST = settings[USER_OPTION.USE_TAG_LIST]
     this._enableTagList(this.USE_TAG_LIST)
+    if (!this.USE_TAG_LIST) {
+      return
+    }
 
     this.USE_FLAT_FOLDER_STRUCTURE = settings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]
     this.HIGHLIGHT_LAST = settings[USER_OPTION.TAG_LIST_HIGHLIGHT_LAST]
@@ -2098,9 +2125,12 @@ class TagList {
       INTERNAL_VALUES.TAG_LIST_SESSION_STARTED,
       INTERNAL_VALUES.TAG_LIST_RECENT_MAP,
       INTERNAL_VALUES.TAG_LIST_FIXED_MAP,
+      INTERNAL_VALUES.TAG_LIST_IS_OPEN,
       INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS,
     ]);
+    this.isOpenGlobal = savedObj[INTERNAL_VALUES.TAG_LIST_IS_OPEN]
     this.AVAILABLE_ROWS = savedObj[INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS]
+    this.MAX_AVAILABLE_ROWS = this.AVAILABLE_ROWS
 
     let actualRecentTagObj = {}
     if (!savedObj[INTERNAL_VALUES.TAG_LIST_SESSION_STARTED]) {
@@ -2130,6 +2160,11 @@ class TagList {
     logTL('updateAvailableRows () 00', availableRows)
     const beforeAvailableRows = this.AVAILABLE_ROWS
     this.AVAILABLE_ROWS = availableRows
+    this.MAX_AVAILABLE_ROWS = Math.max(this.MAX_AVAILABLE_ROWS, this.AVAILABLE_ROWS)
+
+    const updateObj = {
+      [INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS]: availableRows,
+    }
 
     if (beforeAvailableRows < availableRows) {
       let actualRecentTagObj = await getRecentTagObj(this.AVAILABLE_ROWS)
@@ -2139,11 +2174,19 @@ class TagList {
       }
       const isFlatStructure = this.USE_FLAT_FOLDER_STRUCTURE
       this._recentTagObj = await filterRecentTagObj(this._recentTagObj, isFlatStructure)
-      await setOptions({
+      Object.assign(updateObj, {
         [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj,
       })
     }
+
+    await setOptions(updateObj)
     this.markUpdates()
+  }
+  async openTagList(isOpen) {
+    this.isOpenGlobal = isOpen
+    await setOptions({
+      [INTERNAL_VALUES.TAG_LIST_IS_OPEN]: isOpen
+    })
   }
   async filterTagListForFlatFolderStructure() {
     const savedObj = await getOptions([
@@ -2259,11 +2302,11 @@ class TagList {
       }
     }
 
-    if (this.AVAILABLE_ROWS + 30 < Object.keys(this._recentTagObj).length) {
+    if (this.MAX_AVAILABLE_ROWS + 20 < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
         .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
         .sort((a, b) => -(a.dateAdded - b.dateAdded))
-        .slice(this.AVAILABLE_ROWS)
+        .slice(this.MAX_AVAILABLE_ROWS)
         .map(({ parentId }) => parentId)
 
       redundantIdList.forEach((id) => {
@@ -3368,9 +3411,9 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     ...visitsData,
     // recent list
     tagListOpenMode: settings[USER_OPTION.TAG_LIST_OPEN_MODE],
-    isTagListOpenGlobal: settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN],
+    isTagListOpenGlobal: tagList.isOpenGlobal,
     tagList: tagList.list,
-    nTagListAvailableRows: settings[INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS],
+    nTagListAvailableRows: tagList.nAvailableRows,
     nFixedTags: tagList.nFixedTags,
 
     fontSize: settings[USER_OPTION.FONT_SIZE],
@@ -3632,7 +3675,7 @@ async function mergeSubFolder(parentId) {
 
   await moveTaskList.reduce(
     (promiseChain, { fromNode }) => promiseChain.then(
-      () => removeFolderIgnoreInController(fromNode.id)
+      () => removeFolder(fromNode.id)
     ),
     Promise.resolve(),
   );
@@ -4238,19 +4281,8 @@ async function getUrlFromUrl() {
   await flatBookmarks()
   await tagList.filterTagListForFlatFolderStructure()
 }
-async function switchShowRecentList(isShow) {
-  await extensionSettings.update({
-    [INTERNAL_VALUES.TAG_LIST_IS_OPEN]: isShow
-  })
-}
 async function unfixTag(parentId) {
   await tagList.removeFixedTag(parentId)
-}
-async function updateAvailableRows(availableRows) {
-  await extensionSettings.update({
-    [INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS]: availableRows,
-  })
-  await tagList.updateAvailableRows(availableRows)
 }
 async function toggleYoutubeHeader() {
   const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
@@ -4549,13 +4581,22 @@ async function onIncomingMessage (message, sender) {
     }
     case EXTENSION_MSG_ID.SHOW_TAG_LIST: {
       logIM('runtime.onMessage SHOW_RECENT_LIST');
-      await switchShowRecentList(message.value)
+      await tagList.openTagList(message.value)
 
       break
     }
-    case EXTENSION_MSG_ID.AVAILABLE_ROWS: {
-      logIM('runtime.onMessage AVAILABLE_ROWS', message.value);
-      await updateAvailableRows(message.value)
+    case EXTENSION_MSG_ID.UPDATE_AVAILABLE_ROWS: {
+      logIM('runtime.onMessage UPDATE_AVAILABLE_ROWS', message.value);
+      await tagList.updateAvailableRows(message.value)
+
+      const tabId = sender?.tab?.id;
+      if (tabId == memo.activeTabId) {
+        updateActiveTab({
+          tabId,
+          debugCaller: 'runtime.onMessage UPDATE_AVAILABLE_ROWS',
+          useCache: true,
+        })
+      }
 
       break
     }
