@@ -616,7 +616,7 @@ ${semanticTagsStyle}
     const usedParentIdSet = new Set(bookmarkList.map(({ parentId }) => parentId))
     let nTagListAvailableRows = input.nTagListAvailableRows
     if (rootDiv.firstChild) {
-      const viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0)
+      const viewportHeight = window.visualViewport.height || window.innerHeight
       // const rowHeight = rootDiv.firstChild.clientHeight
       const rowHeight = rootDiv.firstChild.getBoundingClientRect().height
 
@@ -907,7 +907,7 @@ ${semanticTagsStyle}
     }
 
     if (rootDiv.firstChild) {
-      const viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0)
+      const viewportHeight = window.visualViewport.height || window.innerHeight
       const rowHeight = rootDiv.firstChild.getBoundingClientRect().height
       const availableRows = Math.floor(viewportHeight / rowHeight)
 
