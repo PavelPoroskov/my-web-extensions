@@ -91,6 +91,15 @@ export async function onIncomingMessage (message, sender) {
       logIM('runtime.onMessage UPDATE_AVAILABLE_ROWS', message.value);
       await tagList.updateAvailableRows(message.value)
 
+      const tabId = sender?.tab?.id;
+      if (tabId == memo.activeTabId) {
+        updateActiveTab({
+          tabId,
+          debugCaller: 'runtime.onMessage UPDATE_AVAILABLE_ROWS',
+          useCache: true,
+        })
+      }
+
       break
     }
     case EXTENSION_MSG_ID.FIX_TAG: {

@@ -505,6 +505,58 @@ ${semanticTagsStyle}
     }
   }
 
+  function filterTagList({ tagList, nAvailableRows, nUsedRows, nFixedTags }) {
+    log('filterTagList ', tagList)
+    if (!nAvailableRows) {
+      return tagList
+    }
+
+    const nAvailableTags = Math.max(0, nAvailableRows - nUsedRows)
+    if (nAvailableTags == 0) {
+      return []
+    }
+
+    if (tagList.length <= nAvailableTags) {
+      return tagList
+    }
+
+    const nAvailableRecentTags = nAvailableTags - nFixedTags
+
+    const resultList = []
+    let lostHighlight
+    let nVisible = 0
+    let iWhile = 0
+    while (nVisible < nAvailableTags && iWhile < tagList.length) {
+      const item = tagList[iWhile]
+      iWhile += 1
+      const { isHighlight, title } = item
+      // ageIndex: 0..m, 0 - the most recent
+      const isVisible = item.isFixed || item.ageIndex < nAvailableRecentTags
+
+      if (!isVisible) {
+        if (isHighlight) {
+          lostHighlight = new Intl.Segmenter().segment(title).containing(0).segment.toUpperCase()
+        }
+        continue
+      }
+
+      nVisible += 1
+      let isMoveHighlight = false
+      if (lostHighlight) {
+        const currentLetter = new Intl.Segmenter().segment(title).containing(0).segment.toUpperCase()
+        isMoveHighlight = currentLetter == lostHighlight
+        lostHighlight = undefined
+      }
+
+      const newItem = Object.assign({}, item)
+      if (isMoveHighlight) {
+        Object.assign(newItem, { isHighlight: 1 })
+      }
+      resultList.push(newItem)
+    }
+
+    return resultList
+  }
   function renderBookmarkInfo(input, prevState) {
     log('renderBookmarkInfo 00');
 
@@ -608,25 +660,12 @@ ${semanticTagsStyle}
       drawList.push({ type: 'separator' })
 
       if (isTagListOpen) {
-        const usedRows = drawList.length
-        let filteredTagList = tagList
-
-        if (nTagListAvailableRows) {
-          const nAvailableTags = Math.max(0, nTagListAvailableRows - usedRows)
-
-          if (nAvailableTags < tagList.length) {
-            if (input.nFixedTags < nAvailableTags) {
-              const nAvailableRecentTags = nAvailableTags - input.nFixedTags
-              // ageIndex: 0..m, 0 - the most recent
-              filteredTagList = tagList
-                .filter(({ isFixed, ageIndex }) => isFixed || ageIndex < nAvailableRecentTags)
-            } else {
-              filteredTagList = tagList
-                .filter(({ isFixed }) => isFixed)
-                .slice(0, nAvailableTags)
-            }
-          }
-        }
+        const filteredTagList = filterTagList({
+          tagList,
+          nAvailableRows: nTagListAvailableRows,
+          nUsedRows: drawList.length,
+          nFixedTags: input.nFixedTags,
+        })
 
         filteredTagList.forEach((tag) => {
           drawList.push({

@@ -42,6 +42,7 @@ class TagList {
 
   isOpenGlobal
   AVAILABLE_ROWS
+  MAX_AVAILABLE_ROWS
   _nFixedTags = 0
 
   changeCount = 0
@@ -117,6 +118,7 @@ class TagList {
     ]);
     this.isOpenGlobal = savedObj[INTERNAL_VALUES.TAG_LIST_IS_OPEN]
     this.AVAILABLE_ROWS = savedObj[INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS]
+    this.MAX_AVAILABLE_ROWS = this.AVAILABLE_ROWS
 
     let actualRecentTagObj = {}
     if (!savedObj[INTERNAL_VALUES.TAG_LIST_SESSION_STARTED]) {
@@ -146,6 +148,7 @@ class TagList {
     logTL('updateAvailableRows () 00', availableRows)
     const beforeAvailableRows = this.AVAILABLE_ROWS
     this.AVAILABLE_ROWS = availableRows
+    this.MAX_AVAILABLE_ROWS = Math.max(this.MAX_AVAILABLE_ROWS, this.AVAILABLE_ROWS)
 
     const updateObj = {
       [INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS]: availableRows,
@@ -287,11 +290,11 @@ class TagList {
       }
     }
 
-    if (this.AVAILABLE_ROWS + 30 < Object.keys(this._recentTagObj).length) {
+    if (this.MAX_AVAILABLE_ROWS + 20 < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
         .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
         .sort((a, b) => -(a.dateAdded - b.dateAdded))
-        .slice(this.AVAILABLE_ROWS)
+        .slice(this.MAX_AVAILABLE_ROWS)
         .map(({ parentId }) => parentId)
 
       redundantIdList.forEach((id) => {
