@@ -17,17 +17,24 @@ import {
 
 const logUAU = makeLogFunction({ module: 'url-author.js' })
 
-export async function showAuthorBookmarks({ tabId, url }) {
-  logUAU('showAuthorBookmarks () 00', tabId, url)
-  const targetHostSettings = getHostSettings(url)
+function getAuthorUrlFromPostUrl(url) {
+  const oUrl = new URL(url)
+  let pathPartList = oUrl.pathname.split(/(\/)/).filter(Boolean)
+  let iEnd = -1
 
-  if (targetHostSettings?.getAuthor) {
-    const { pagePattern, authorSelector } = targetHostSettings.getAuthor
-
-    if (isUrlMath({ url, pattern: pagePattern })) {
-      await page.sendMeAuthor({ tabId, authorSelector })
-    }
+  if (pathPartList.at(iEnd) == '/') {
+    iEnd -= 1
   }
+  if (pathPartList.at(iEnd)) {
+    iEnd -= 1
+  }
+  if (pathPartList.at(iEnd) == '/') {
+    iEnd -= 1
+  }
+
+  oUrl.pathname = pathPartList.slice(0, iEnd + 1).join('')
+
+  return oUrl.toString()
 }
 
 export async function showAuthorBookmarksStep2({ tabId, authorUrl }) {
@@ -44,4 +51,21 @@ export async function showAuthorBookmarksStep2({ tabId, authorUrl }) {
   }
   logUAU('showAuthorBookmarksStep2 () 99 sendMessage', tabId, data);
   await page.updateBookmarkInfoInPage({ tabId, data })
+}
+
+export async function showAuthorBookmarks({ tabId, url }) {
+  logUAU('showAuthorBookmarks () 00', tabId, url)
+  const targetHostSettings = getHostSettings(url)
+
+  if (targetHostSettings?.getAuthor) {
+    const { pagePattern, authorSelector } = targetHostSettings.getAuthor
+
+    if (isUrlMath({ url, pattern: pagePattern })) {
+      if (authorSelector) {
+        await page.sendMeAuthor({ tabId, authorSelector })
+      } else {
+        showAuthorBookmarksStep2({ tabId, authorUrl: getAuthorUrlFromPostUrl(url) })
+      }
+    }
+  }
 }

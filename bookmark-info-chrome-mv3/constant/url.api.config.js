@@ -30,6 +30,11 @@ const urlSettingsGo = {
 }
 
 const urlSettingsUse = {
+  'dev.to': {
+    getAuthor: {
+      pagePattern: '/:author/:post',
+    }
+  },
   'frontendmasters.com': {
     removeAllSearchParamForPath: [
       '/courses/:id/',
