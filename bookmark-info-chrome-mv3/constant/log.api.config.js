@@ -27,6 +27,8 @@ const logModuleList = [
   // 'tagList-getRecent.js',
   // 'tagList-highlight.js',
   // 'tagList.js',
+  // 'url-author.js',
+  // 'url-is.js',
   // 'url-search.api',
   // 'url.api.js',
   // 'windows.controller',

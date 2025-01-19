@@ -56,6 +56,9 @@ const USER_OPTION_META = {
   USE_TAG_LIST: {
     default: true
   },
+  URL_SHOW_AUTHOR_TAGS: {
+    default: false,
+  },
 }
 
 const INTERNAL_VALUES_META = {

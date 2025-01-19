@@ -3,8 +3,10 @@ import {
 } from '../constant/index.js'
 import {
   getHostSettings,
-  makeIsSearchParamMatch,
 } from './url.api.js'
+import {
+  makeIsSearchParamMatch,
+} from './url-is.js'
 import {
   isNotEmptyArray,
   makeLogFunction,
@@ -61,6 +63,7 @@ function isSearchParamsMatchForSearch({ url, requiredSearchParams }) {
     .every((key) => oSearchParams.get(key) === requiredSearchParams[key])
 }
 
+// ?TODO /posts == /posts?page=1 OR clean on open /posts?page=1 TO /posts IF page EQ 1
 export async function startPartialUrlSearch(url) {
   const settings = await extensionSettings.get()
   if (!settings[USER_OPTION.USE_PARTIAL_URL_SEARCH]) {

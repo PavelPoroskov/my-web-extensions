@@ -20,6 +20,7 @@
     SHOW_TAG_LIST: 'SHOW_TAG_LIST',
     ADD_RECENT_TAG: 'ADD_RECENT_TAG',
     UPDATE_AVAILABLE_ROWS: 'UPDATE_AVAILABLE_ROWS',
+    RESULT_AUTHOR: 'RESULT_AUTHOR',
   }
   // TODO-DOUBLE remove duplication in CONTENT_SCRIPT_MSG_ID: message-id.js and content-scripts.js
   const CONTENT_SCRIPT_MSG_ID = {
@@ -31,6 +32,7 @@
     GET_USER_INPUT: 'GET_USER_INPUT',
     GET_SELECTION: 'GET_SELECTION',
     REPLACE_URL: 'REPLACE_URL',
+    SEND_ME_AUTHOR: 'SEND_ME_AUTHOR',
   }
 
   // TODO-DOUBLE remove duplication BROWSER in browser-specific.js and content-scripts.js
@@ -183,6 +185,9 @@ ${semanticTagsStyle}
 }
 .bkm-info--bkm-2 {
   background-color: greenyellow;
+}
+.bkm-info--author {
+  background-color: bisque;
 }
 .bkm-info--btn-del {
   padding-right: ${BROWSER_SPECIFIC.DEL_BTN_RIGHT_PADDING};
@@ -566,6 +571,7 @@ ${semanticTagsStyle}
 
     const partialBookmarkList = (input.bookmarkList || [])
       .filter(({ source }) => source == 'substring')
+    const authorBookmarkList = input.authorBookmarkList || []
 
     const visitString = input.visitString || ''
     const isShowTitle = input.isShowTitle || false
@@ -641,11 +647,14 @@ ${semanticTagsStyle}
     partialBookmarkList.forEach((value, index) => {
       drawList.push({ type: 'partial-bookmark', value, bkmIndex: index + bookmarkList.length })
     })
+    authorBookmarkList.forEach((value) => {
+      drawList.push({ type: 'author-bookmark', value })
+    })
 
     if (tagList.length > 0) {
     //if (tagList.length > 0 && isTagListOpen) {
       const emptySlotsForDel = Math.max(0, optimisticDelFromTagList - optimisticAddFromTagList)
-      const emptySlotsForAdd = Math.max(0, 2 - bookmarkList.length - partialBookmarkList.length - emptySlotsForDel)
+      const emptySlotsForAdd = Math.max(0, 2 - bookmarkList.length - partialBookmarkList.length - authorBookmarkList.length - emptySlotsForDel)
       const emptySlots = emptySlotsForAdd + emptySlotsForDel
 
       for (let iEmpty = 0; iEmpty < emptySlots; iEmpty += 1) {
@@ -739,6 +748,28 @@ ${semanticTagsStyle}
           divLabel.appendChild(textNode);
           divLabel.setAttribute('data-restpath', `url*: ${url}`);
           divLabel.setAttribute('data-id', `pb#${id}`);
+
+          const divLabelContainer = document.createElement('div');
+          divLabelContainer.classList.add('bkm-info--label-container');
+          divLabelContainer.appendChild(divLabel);
+
+          divRow = document.createElement('div');
+          divRow.classList.add('bkm-info--row');
+          divRow.appendChild(divLabelContainer);
+
+          break
+        }
+        case 'author-bookmark': {
+          // TODO? go to original bookmark
+          const { id, folder, url } = value
+
+          const divLabel = document.createElement('div');
+          divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', 'bkm-info--author');
+
+          const textNode = document.createTextNode(`author: ${folder}`);
+          divLabel.appendChild(textNode);
+          divLabel.setAttribute('data-restpath', url);
+          divLabel.setAttribute('data-id', `ab#${id}`);
 
           const divLabelContainer = document.createElement('div');
           divLabelContainer.classList.add('bkm-info--label-container');
@@ -1143,6 +1174,13 @@ ${semanticTagsStyle}
     });
   }
 
+  async function returnAuthor(authorUrl) {
+    await chrome.runtime.sendMessage({
+      command: EXTENSION_MSG_ID.RESULT_AUTHOR,
+      authorUrl,
+    });
+  }
+
   chrome.runtime.onMessage.addListener((message) => {
     log('chrome.runtime.onMessage: ', message);
     switch (message.command) {
@@ -1158,7 +1196,8 @@ ${semanticTagsStyle}
         let optimisticToStorageAdd = fullState.optimisticToStorageAdd
 
         const bookmarkList = message.bookmarkList || []
-        const diff = bookmarkList.length - bookmarkListBefore.length
+        const authorBookmarkList = message.authorBookmarkList || []
+        const diff = (bookmarkList.length + authorBookmarkList.length) - bookmarkListBefore.length
 
         if (diff > 0) {
           if (diff > optimisticAddFromTagList - optimisticToStorageAdd) {
@@ -1240,6 +1279,25 @@ ${semanticTagsStyle}
       case CONTENT_SCRIPT_MSG_ID.GET_SELECTION: {
         const selection = document.getSelection().toString()
         addBookmarkByFolderName(selection)
+        break
+      }
+      case CONTENT_SCRIPT_MSG_ID.SEND_ME_AUTHOR: {
+        const authorSelector = message.authorSelector
+        let authorUrl
+
+        if (authorSelector) {
+          try {
+            const el = document.querySelector(authorSelector)
+            if (el?.href) {
+              authorUrl = el.href
+            }
+            // eslint-disable-next-line no-unused-vars
+          } catch (selectorSyntaxErr)
+          // eslint-disable-next-line no-empty
+          { }
+        }
+
+        returnAuthor(authorUrl)
         break
       }
     }

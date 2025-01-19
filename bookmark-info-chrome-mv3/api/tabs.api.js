@@ -17,10 +17,36 @@ import {
   memo,
   tagList,
 } from '../data-structures/index.js'
+import {
+  showAuthorBookmarks,
+} from './url-author.js'
 import { page } from './page.api.js'
 import { initExtension } from './init-extension.js'
 
 const logTA = makeLogFunction({ module: 'tabs.api.js' })
+
+async function showVisits({ tabId, url }) {
+  const visitInfo = await getHistoryInfo({ url })
+
+  const data = {
+    visitString: visitInfo.visitString,
+  }
+  logTA('showVisits () 99 sendMessage', tabId, data);
+  await page.updateBookmarkInfoInPage({ tabId, data })
+}
+
+async function showExtra({ tabId, url, settings }) {
+  const isShowVisits = settings[USER_OPTION.SHOW_PREVIOUS_VISIT]
+  const isShowAuthorBookmarks = settings[USER_OPTION.URL_SHOW_AUTHOR_TAGS]
+
+  if (isShowVisits) {
+    showVisits({ tabId, url })
+  }
+
+  if (isShowAuthorBookmarks) {
+    showAuthorBookmarks({ tabId, url })
+  }
+}
 
 async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
   logTA(`UPDATE-TAB () 00 <- ${debugCaller}`, tabId);
@@ -45,43 +71,26 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
   const settings = await extensionSettings.get()
   const isShowTitle = settings[USER_OPTION.SHOW_BOOKMARK_TITLE]
 
-  let visitsData
-  const isShowVisits = settings[USER_OPTION.SHOW_PREVIOUS_VISIT]
-
-  const [
-    bookmarkInfo,
-    visitInfo,
-  ] = await Promise.all([
-    getBookmarkInfoUni({ url, useCache, isShowTitle }),
-    isShowVisits && getHistoryInfo({ url }),
-  ])
-  // logTA(`UPDATE-TAB () 22 bookmarkInfo.bookmarkList`, bookmarkInfo.bookmarkList);
-
-  if (isShowVisits) {
-    visitsData = {
-      visitString: visitInfo.visitString,
-    }
-  }
+  const bookmarkInfo = await getBookmarkInfoUni({ url, useCache, isShowTitle })
 
   const data = {
     bookmarkList: bookmarkInfo.bookmarkList,
+    fontSize: settings[USER_OPTION.FONT_SIZE],
     isShowTitle: settings[USER_OPTION.SHOW_BOOKMARK_TITLE],
-    // visits history
-    ...visitsData,
-    // recent list
+
+    tagList: tagList.list,
     tagListOpenMode: settings[USER_OPTION.TAG_LIST_OPEN_MODE],
     isTagListOpenGlobal: tagList.isOpenGlobal,
-    tagList: tagList.list,
+    tagLength: settings[USER_OPTION.TAG_LIST_TAG_LENGTH],
     nTagListAvailableRows: tagList.nAvailableRows,
     nFixedTags: tagList.nFixedTags,
 
-    fontSize: settings[USER_OPTION.FONT_SIZE],
-    tagLength: settings[USER_OPTION.TAG_LIST_TAG_LENGTH],
     isHideSemanticHtmlTagsOnPrinting: settings[USER_OPTION.HIDE_TAG_HEADER_ON_PRINTING],
     isHideHeaderForYoutube: settings[USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE],
   }
   logTA('UPDATE-TAB () 99 sendMessage', tabId, data);
   await page.updateBookmarkInfoInPage({ tabId, data })
+  showExtra({ tabId, url, settings })
 }
 
 function updateTabTask(options) {

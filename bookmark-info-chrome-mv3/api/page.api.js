@@ -5,81 +5,98 @@ import {
   makeLogFunction,
 } from '../api-low/index.js'
 
-const logCSA = makeLogFunction({ module: 'page.api.js' })
+const logPA = makeLogFunction({ module: 'page.api.js' })
 
 async function changeUrlInTab({ tabId, url }) {
-  logCSA('changeUrlInTab () 00', tabId, url)
+  logPA('changeUrlInTab () 00', tabId, url)
   const msg = {
     command: CONTENT_SCRIPT_MSG_ID.CHANGE_URL,
     url,
   }
-  logCSA('changeUrlInTab () sendMessage', tabId, msg)
+  logPA('changeUrlInTab () sendMessage', tabId, msg)
   await chrome.tabs.sendMessage(tabId, msg)
     .catch((err) => {
-      logCSA('changeUrlInTab () IGNORE', err)
+      logPA('changeUrlInTab () IGNORE', err)
     })
 }
 
 async function replaceUrlInTab({ tabId, url }) {
-  logCSA('replaceUrlInTab () 00', tabId, url)
+  logPA('replaceUrlInTab () 00', tabId, url)
 
   const msg = {
     command: CONTENT_SCRIPT_MSG_ID.REPLACE_URL,
     url,
   }
-  logCSA('changeUrlInTab () sendMessage', tabId, msg)
+  logPA('changeUrlInTab () sendMessage', tabId, msg)
   await chrome.tabs.sendMessage(tabId, msg)
     .catch((err) => {
-      logCSA('changeUrlInTab () IGNORE', err)
+      logPA('changeUrlInTab () IGNORE', err)
     })
 }
 
 async function getSelectionInPage(tabId) {
-  logCSA('getSelectionInPage () 00', tabId)
+  logPA('getSelectionInPage () 00', tabId)
   const msg = {
     command: CONTENT_SCRIPT_MSG_ID.GET_SELECTION,
   }
-  logCSA('getSelectionInPage () sendMessage', tabId)
+  logPA('getSelectionInPage () sendMessage', tabId)
   await chrome.tabs.sendMessage(tabId, msg)
     .catch((err) => {
-      logCSA('getSelectionInPage () IGNORE', err)
+      logPA('getSelectionInPage () IGNORE', err)
     })
 }
 
 async function getUserInputInPage(tabId) {
-  logCSA('getUserInputInPage () 00', tabId)
+  logPA('getUserInputInPage () 00', tabId)
   const msg = {
     command: CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT,
   }
-  logCSA('getUserInputInPage () sendMessage', tabId)
+  logPA('getUserInputInPage () sendMessage', tabId)
   await chrome.tabs.sendMessage(tabId, msg)
     .catch((err) => {
-      logCSA('getUserInputInPage () IGNORE', err)
+      logPA('getUserInputInPage () IGNORE', err)
     })
 }
 
 async function toggleYoutubeHeaderInPage(tabId) {
-  logCSA('toggleYoutubeHeaderInPage () 00', tabId)
+  logPA('toggleYoutubeHeaderInPage () 00', tabId)
   const msg = {
     command: CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER,
   }
-  logCSA('toggleYoutubeHeaderInPage () sendMessage', tabId)
+  logPA('toggleYoutubeHeaderInPage () sendMessage', tabId)
   await chrome.tabs.sendMessage(tabId, msg)
     .catch((err) => {
-      logCSA('toggleYoutubeHeaderInPage () IGNORE', err)
+      logPA('toggleYoutubeHeaderInPage () IGNORE', err)
     })
 }
 
 async function updateBookmarkInfoInPage({ tabId, data }) {
-  logCSA('updateBookmarkInfo () 00', tabId)
+  logPA('updateBookmarkInfo () 00', tabId)
   const msg = {
     command: CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO,
     ...data,
   }
-  logCSA('updateBookmarkInfo () sendMessage', tabId)
+  logPA('updateBookmarkInfo () sendMessage', tabId)
   await chrome.tabs.sendMessage(tabId, msg)
     .catch((err) => {
-      logCSA('updateBookmarkInfo () IGNORE', err)
+      logPA('updateBookmarkInfo () IGNORE', err)
+    })
+}
+
+async function sendMeAuthor({ tabId, authorSelector }) {
+  if (!authorSelector) {
+    return
+  }
+
+  logPA('sendMeAuthor () 00', tabId)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.SEND_ME_AUTHOR,
+    authorSelector,
+  }
+  logPA('sendMeAuthor () sendMessage', tabId)
+  await chrome.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logPA('sendMeAuthor () IGNORE', err)
     })
 }
 
@@ -90,4 +107,5 @@ export const page = {
   getUserInputInPage,
   toggleYoutubeHeaderInPage,
   updateBookmarkInfoInPage,
+  sendMeAuthor,
 }

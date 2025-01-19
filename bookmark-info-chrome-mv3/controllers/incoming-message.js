@@ -26,6 +26,9 @@ import {
   HOST_LIST_FOR_PAGE_OPTIONS,
 } from '../api/url.api.js'
 import {
+  showAuthorBookmarksStep2,
+} from '../api/url-author.js'
+import {
   makeLogFunction,
 } from '../api-low/index.js'
 
@@ -214,6 +217,14 @@ export async function onIncomingMessage (message, sender) {
           })
         }
       }
+      break
+    }
+    case EXTENSION_MSG_ID.RESULT_AUTHOR: {
+      logIM('runtime.onMessage RESULT_AUTHOR', message.authorUrl);
+      showAuthorBookmarksStep2({
+        tabId: sender?.tab?.id,
+        authorUrl: message.authorUrl,
+      })
       break
     }
   }

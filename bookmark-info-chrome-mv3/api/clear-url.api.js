@@ -10,60 +10,14 @@ import {
 } from '../api-low/index.js'
 import {
   getHostSettings,
-  makeIsSearchParamMatch,
 } from './url.api.js'
+import {
+  isPathnameMatchForPattern,
+  makeIsSearchParamMatch,
+} from './url-is.js'
 import { page } from './page.api.js'
 
 const logCUA = makeLogFunction({ module: 'clear-url.api.js' })
-
-const isPathnameMatchForPattern = ({ pathname, patternList }) => {
-  logCUA('isPathnameMatch () 00', pathname)
-  logCUA('isPathnameMatch () 00', patternList)
-
-  const pathToList = (pathname) => {
-    let list = pathname.split(/(\/)/).filter(Boolean)
-
-    if (1 < list.length && list.at(-1) === '/') {
-      list = list.slice(0, -1)
-    }
-
-    return list
-  }
-  const isPartsEqual = (patternPart, pathPart) => {
-    let result
-
-    if (patternPart.startsWith(':')) {
-      result = pathPart && pathPart != '/'
-    } else {
-      result = pathPart === patternPart
-    }
-    logCUA('isPartsEqual () 11', patternPart, pathPart, result)
-
-    return result
-  }
-
-  if (patternList.includes('*')) {
-    return true
-  }
-
-  let isMath = false
-  const pathAsList = pathToList(pathname)
-  logCUA('isPathnameMatch () 11 pathAsList', pathAsList)
-
-  let i = 0
-  while (!isMath && i < patternList.length) {
-    const pattern = patternList[i]
-    const patternAsList = pathToList(pattern)
-    logCUA('isPathnameMatch () 11 patternAsList', patternAsList)
-
-    isMath = patternAsList.length > 0 && pathAsList.length === patternAsList.length
-      && patternAsList.every((patternPart, patternIndex) => isPartsEqual(patternPart, pathAsList[patternIndex])
-    )
-    i += 1
-  }
-
-  return isMath
-}
 
 const removeQueryParamsIfTarget = (url) => {
   logCUA('removeQueryParamsIfTarget () 00', url)

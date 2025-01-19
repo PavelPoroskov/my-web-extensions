@@ -117,6 +117,10 @@ const urlSettingsRu = {
       '/vacancy/:vacancyId',
       '?vacancyId=:vacancyId',
     ],
+    getAuthor: {
+      pagePattern: '/vacancy/:id',
+      authorSelector: '.vacancy-company-name a[href^="/employer/"]',
+    }
   },
   'opennet.ru': {
     searchParamList: [
