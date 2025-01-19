@@ -22,6 +22,10 @@ const urlSettingsGo = {
     searchParamList: [
       'v',
     ],
+    getAuthor: {
+      pagePattern: '/watch?v=:id',
+      authorSelector: '.ytd-channel-name a[href]',
+    }
   },
 }
 

@@ -99,13 +99,32 @@ export const isPathnameMatchForPattern = ({ pathname, patternList }) => {
   return isMath
 }
 
+function isSearchParamsMatchForPattern({ searchParams, searchParamsPattern }) {
+  if (!searchParamsPattern) {
+    return true
+  }
+
+  const keyList = searchParamsPattern
+    .split('&')
+    .map((keyValue) => keyValue.split('=')[0])
+
+  return keyList
+    .every((key) => searchParams.get(key) !== undefined)
+}
+
 export function isUrlMath({ url, pattern }) {
   if (!pattern) {
     return false
   }
 
   const oUrl = new URL(url);
-  const { pathname } = oUrl;
+  const { pathname, searchParams } = oUrl;
 
-  return isPathnameMatchForPattern({ pathname, patternList: [pattern] })
+  const [pathPattern, searchParamsPattern] = pattern.split('?')
+
+  if (!searchParamsPattern) {
+    return isPathnameMatchForPattern({ pathname, patternList: [pathPattern] })
+  }
+
+  return isPathnameMatchForPattern({ pathname, patternList: [pathPattern] }) && isSearchParamsMatchForPattern({ searchParams, searchParamsPattern })
 }
