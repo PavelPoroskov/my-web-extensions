@@ -31,6 +31,12 @@ const urlSettingsUse = {
       '/courses/:id/',
     ]
   },
+  'freecodecamp.org': {
+    getAuthor: {
+      pagePattern: '/news/:id',
+      authorSelector: '.author-card-name a[href^="/news/author/"]',
+    }
+  },
   'github.com': {
     searchParamList: [
       ['tab'],
