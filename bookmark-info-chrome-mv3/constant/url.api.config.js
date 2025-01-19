@@ -100,6 +100,12 @@ const urlSettingsRu = {
       ['utm_*'],
     ],
   },
+  'career.habr.com': {
+    getAuthor: {
+      pagePattern: '/vacancies/:id',
+      authorSelector: '.company_name a[href^="/companies/"]',
+    }
+  },
   'hh.ru': {
     removeAllSearchParamForPath: [
       '/employer/:id',
