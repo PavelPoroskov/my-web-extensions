@@ -3,6 +3,8 @@ export const DEFAULT_HOST_SETTINGS = {
   searchParamList: [
     '*id',
     ['utm_*'],
+    ['email_hash'],
+    ['sent_date'],
   ],
 }
 
@@ -100,8 +102,9 @@ const urlSettingsRu = {
   },
   'hh.ru': {
     removeAllSearchParamForPath: [
-      '/vacancy/:id',
+      '/employer/:id',
       '/resume/:id',
+      '/vacancy/:id',
     ],
     searchParamList: [
       ['hhtmFrom'],
