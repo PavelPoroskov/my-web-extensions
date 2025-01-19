@@ -1202,8 +1202,16 @@ ${semanticTagsStyle}
       case CONTENT_SCRIPT_MSG_ID.CHANGE_URL: {
         log('content-script: CHANGE_URL', message.url);
         const newUrl = message.url
+        let isCompatibleUrl
 
-        if (document.location.href.startsWith(newUrl)) {
+        try {
+          const oNewUrl = new URL(newUrl)
+          isCompatibleUrl = oNewUrl.origin == document.location.origin && oNewUrl.pathname == document.location.pathname
+        } catch (ignoreUrlErr) {
+          log('content-script: CHANGE_URL url-error', ignoreUrlErr);
+        }
+
+        if (isCompatibleUrl) {
           log('content-script 22');
           //document.location.href = newUrl
           //window.history.pushState(newUrl)

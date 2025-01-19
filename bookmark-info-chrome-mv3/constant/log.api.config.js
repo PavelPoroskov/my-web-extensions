@@ -3,6 +3,7 @@ const logModuleList = [
   // 'bookmarks.controller',
   // 'browserStartTime',
   // 'cache',
+  // 'clear-url.api.js',
   // 'clearUrlInActiveTab',
   // 'commands.controller',
   // 'contextMenu.controller',

@@ -14,7 +14,7 @@ import {
 } from './url.api.js'
 import { page } from './page.api.js'
 
-const logCUA = makeLogFunction({ module: 'clear-url.api' })
+const logCUA = makeLogFunction({ module: 'clear-url.api.js' })
 
 const isPathnameMatchForPattern = ({ pathname, patternList }) => {
   logCUA('isPathnameMatch () 00', pathname)
