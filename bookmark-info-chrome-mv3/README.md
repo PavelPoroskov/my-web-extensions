@@ -17,24 +17,34 @@ The extension improves the browser's capabilities for working with bookmarks.
 * fast delete bookmark  
     &nbsp;&nbsp;&nbsp;Hover over bookmark and click small red button
 
-## additional functionality
+## additional functionality for bookmarks
 * User can hide bookmark labels by clicking on label.  
   &nbsp;&nbsp;&nbsp;To get access to buttons and links on the page under this labels
-* Command 'clear url from hash and all search params' in page context menu.
-* The extension allows you to quickly switch to a flat folder structure.  
-    &nbsp;&nbsp;&nbsp;The flat folder structure allows you to quickly find the desired folder since all  folders are on the first level and sorted.  
-    &nbsp;&nbsp;&nbsp;In this mode on every browser start:  
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; * folders with name starting with 'todo' are moved to root folder 'Bookmarks Toolbar'  
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; * other folders are moved to root folder 'Other Bookmarks'  
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; * nested folders are moved to root folder. Empty nested folders are deleted.  
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; * folders are sorted  
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; * folders with equal names (case and plural insensitive) are merged  
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; * folders with not descriptive names (name starts with 'New folder', '[Folder Name]') are merged to 'Other bookmarks\zz-bookmark-info--unclassified'
+* Dated Bookmark Folders  
+  &nbsp;&nbsp;&nbsp;Dated folders are folders that have "@D" at the end of their name.  
+  &nbsp;&nbsp;&nbsp;When a user adds a bookmark to a dated folder "DONE @D", this extension replaces the @D with the actual date.  
+  &nbsp;&nbsp;&nbsp;I use "DONE @D" to mark a list of news items or a list of author publications that I have finished  
+  &nbsp;&nbsp;&nbsp;I use "Selected @D" to mark a page that I don't have time to rate right now.
+* Option "Show author bookmarks with post bookmarks"  
+  &nbsp;&nbsp;&nbsp;This feature implemented for youtube.com, dev.to, freecodecamp.org and can be extended to other sites.
 * Option 'Show bookmark title'.
-* The extension clears url from query params on opening for defined sites.
-* New bookmarks are added to the start of a folder.
+
+## flat folder structure for bookmarks
+The extension allows you to quickly switch to a flat folder structure for bookmarks.  
+    &nbsp;&nbsp;The flat folder structure allows you to quickly find the desired folder since all  folders are on the first level and sorted.  
+    &nbsp;&nbsp;In this mode on every browser start:  
+      &nbsp;&nbsp;&nbsp;&nbsp; * folders with name starting with 'todo' are moved to root folder 'Bookmarks Toolbar'  
+      &nbsp;&nbsp;&nbsp;&nbsp; * other folders are moved to root folder 'Other Bookmarks'  
+      &nbsp;&nbsp;&nbsp;&nbsp; * nested folders are moved to root folder. Empty nested folders are deleted.  
+      &nbsp;&nbsp;&nbsp;&nbsp; * folders are sorted  
+      &nbsp;&nbsp;&nbsp;&nbsp; * folders with equal names (case and plural insensitive) are merged  
+      &nbsp;&nbsp;&nbsp;&nbsp; * folders with not descriptive names (name starts with 'New folder', '[Folder Name]') are merged to 'Other bookmarks\zz-bookmark-info--unclassified'
+
+## extra functionality  
+* The extension clears url from search params on opening for defined sites.
+* Command 'clear url from hash and all search params' in page context menu.
 * Option 'Shows the previous visits'  
   &nbsp;&nbsp;&nbsp;User can distinguish between visited and new pages. New page don't have previous visits.
 * Command 'Close duplicate tabs' in page context menu.
-* Option 'Hide page header for youtube channel'.
 * Option 'Hide html-tags header, footer, aside, nav on printing.'.
+* Option 'Hide page header for youtube channel'.
