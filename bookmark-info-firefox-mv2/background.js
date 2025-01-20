@@ -35,6 +35,7 @@ const BROWSER_SPECIFIC = Object.fromEntries(
   FLAT_BOOKMARKS_RESULT: 'FLAT_BOOKMARKS_RESULT',
   OPTIONS_ASKS_SAVE: 'OPTIONS_ASKS_SAVE',
   UPDATE_AVAILABLE_ROWS: 'UPDATE_AVAILABLE_ROWS',
+  RESULT_AUTHOR: 'RESULT_AUTHOR',
 }
 
 // TODO remove duplication in CONTENT_SCRIPT_MSG_ID: message-id.js and content-scripts.js
@@ -47,6 +48,7 @@ const CONTENT_SCRIPT_MSG_ID = {
   GET_USER_INPUT: 'GET_USER_INPUT',
   GET_SELECTION: 'GET_SELECTION',
   REPLACE_URL: 'REPLACE_URL',
+  SEND_ME_AUTHOR: 'SEND_ME_AUTHOR',
 }
 const BASE_ID = 'BKM_INF';
 
@@ -126,6 +128,9 @@ const USER_OPTION_META = {
   USE_TAG_LIST: {
     default: true
   },
+  URL_SHOW_AUTHOR_TAGS: {
+    default: false,
+  },
 }
 
 const INTERNAL_VALUES_META = {
@@ -187,6 +192,7 @@ const INTERNAL_VALUES = Object.fromEntries(
   // 'bookmarks.controller',
   // 'browserStartTime',
   // 'cache',
+  // 'clear-url.api.js',
   // 'clearUrlInActiveTab',
   // 'commands.controller',
   // 'contextMenu.controller',
@@ -210,6 +216,8 @@ const INTERNAL_VALUES = Object.fromEntries(
   // 'tagList-getRecent.js',
   // 'tagList-highlight.js',
   // 'tagList.js',
+  // 'url-author.js',
+  // 'url-is.js',
   // 'url-search.api',
   // 'url.api.js',
   // 'windows.controller',
@@ -222,6 +230,8 @@ const logModuleMap = Object.fromEntries(
   searchParamList: [
     '*id',
     ['utm_*'],
+    ['email_hash'],
+    ['sent_date'],
   ],
 }
 
@@ -239,14 +249,30 @@ const urlSettingsGo = {
     searchParamList: [
       'v',
     ],
+    getAuthor: {
+      pagePattern: '/watch?v=:id',
+      authorSelector: '.ytd-channel-name a[href]',
+    }
   },
 }
 
 const urlSettingsUse = {
+  'dev.to': {
+    getAuthor: {
+      pagePattern: '/:author/:post',
+      authorSelector: '.crayons-article__header__meta a.crayons-link[href]',
+    }
+  },
   'frontendmasters.com': {
     removeAllSearchParamForPath: [
       '/courses/:id/',
     ]
+  },
+  'freecodecamp.org': {
+    getAuthor: {
+      pagePattern: '/news/:id',
+      authorSelector: '.author-card-name a[href^="/news/author/"]',
+    }
   },
   'github.com': {
     searchParamList: [
@@ -273,6 +299,23 @@ const urlSettingsUse = {
       // '/jobs/collections/recommended/?currentJobId=:currentJobId',
       // '/jobs/search/?currentJobId=:currentJobId',
     ],
+    getAuthor: [
+      {
+        pagePattern: '/jobs/view/:id',
+        authorSelector: '.job-details-jobs-unified-top-card__company-name a[href^="https://www.linkedin.com/company/"]',
+        cleanAuthorUrlMethod: 'pathname-remove-last',
+      },
+      {
+        pagePattern: '/jobs/collections/recommended/?currentJobId=:currentJobId',
+        authorSelector: '.job-details-jobs-unified-top-card__company-name a[href^="https://www.linkedin.com/company/"]',
+        cleanAuthorUrlMethod: 'pathname-remove-last',
+      },
+      {
+        pagePattern: '/jobs/search/?currentJobId=:currentJobId',
+        authorSelector: '.job-details-jobs-unified-top-card__company-name a[href^="https://www.linkedin.com/company/"]',
+        cleanAuthorUrlMethod: 'pathname-remove-last',
+      },
+    ]
   },
   'marketplace.visualstudio.com': {
     searchParamList: [
@@ -317,10 +360,17 @@ const urlSettingsRu = {
       ['utm_*'],
     ],
   },
+  'career.habr.com': {
+    getAuthor: {
+      pagePattern: '/vacancies/:id',
+      authorSelector: '.company_name a[href^="/companies/"]',
+    }
+  },
   'hh.ru': {
     removeAllSearchParamForPath: [
-      '/vacancy/:id',
+      '/employer/:id',
       '/resume/:id',
+      '/vacancy/:id',
     ],
     searchParamList: [
       ['hhtmFrom'],
@@ -333,6 +383,10 @@ const urlSettingsRu = {
       '/vacancy/:vacancyId',
       '?vacancyId=:vacancyId',
     ],
+    getAuthor: {
+      pagePattern: '/vacancy/:id',
+      authorSelector: '.vacancy-company-name a[href^="/employer/"]',
+    }
   },
   'opennet.ru': {
     searchParamList: [
@@ -2504,81 +2558,98 @@ async function moveBookmarkInDatedTemplate({
   await tagList.addRecentTagFromFolder({ id: parentId, title: parentTitle })
   removePreviousDatedBookmarks({ url, template: parentTitle })
 }
-const logCSA = makeLogFunction({ module: 'page.api.js' })
+const logPA = makeLogFunction({ module: 'page.api.js' })
 
 async function changeUrlInTab({ tabId, url }) {
-  logCSA('changeUrlInTab () 00', tabId, url)
+  logPA('changeUrlInTab () 00', tabId, url)
   const msg = {
     command: CONTENT_SCRIPT_MSG_ID.CHANGE_URL,
     url,
   }
-  logCSA('changeUrlInTab () sendMessage', tabId, msg)
+  logPA('changeUrlInTab () sendMessage', tabId, msg)
   await browser.tabs.sendMessage(tabId, msg)
     .catch((err) => {
-      logCSA('changeUrlInTab () IGNORE', err)
+      logPA('changeUrlInTab () IGNORE', err)
     })
 }
 
 async function replaceUrlInTab({ tabId, url }) {
-  logCSA('replaceUrlInTab () 00', tabId, url)
+  logPA('replaceUrlInTab () 00', tabId, url)
 
   const msg = {
     command: CONTENT_SCRIPT_MSG_ID.REPLACE_URL,
     url,
   }
-  logCSA('changeUrlInTab () sendMessage', tabId, msg)
+  logPA('changeUrlInTab () sendMessage', tabId, msg)
   await browser.tabs.sendMessage(tabId, msg)
     .catch((err) => {
-      logCSA('changeUrlInTab () IGNORE', err)
+      logPA('changeUrlInTab () IGNORE', err)
     })
 }
 
 async function getSelectionInPage(tabId) {
-  logCSA('getSelectionInPage () 00', tabId)
+  logPA('getSelectionInPage () 00', tabId)
   const msg = {
     command: CONTENT_SCRIPT_MSG_ID.GET_SELECTION,
   }
-  logCSA('getSelectionInPage () sendMessage', tabId)
+  logPA('getSelectionInPage () sendMessage', tabId)
   await browser.tabs.sendMessage(tabId, msg)
     .catch((err) => {
-      logCSA('getSelectionInPage () IGNORE', err)
+      logPA('getSelectionInPage () IGNORE', err)
     })
 }
 
 async function getUserInputInPage(tabId) {
-  logCSA('getUserInputInPage () 00', tabId)
+  logPA('getUserInputInPage () 00', tabId)
   const msg = {
     command: CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT,
   }
-  logCSA('getUserInputInPage () sendMessage', tabId)
+  logPA('getUserInputInPage () sendMessage', tabId)
   await browser.tabs.sendMessage(tabId, msg)
     .catch((err) => {
-      logCSA('getUserInputInPage () IGNORE', err)
+      logPA('getUserInputInPage () IGNORE', err)
     })
 }
 
 async function toggleYoutubeHeaderInPage(tabId) {
-  logCSA('toggleYoutubeHeaderInPage () 00', tabId)
+  logPA('toggleYoutubeHeaderInPage () 00', tabId)
   const msg = {
     command: CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER,
   }
-  logCSA('toggleYoutubeHeaderInPage () sendMessage', tabId)
+  logPA('toggleYoutubeHeaderInPage () sendMessage', tabId)
   await browser.tabs.sendMessage(tabId, msg)
     .catch((err) => {
-      logCSA('toggleYoutubeHeaderInPage () IGNORE', err)
+      logPA('toggleYoutubeHeaderInPage () IGNORE', err)
     })
 }
 
 async function updateBookmarkInfoInPage({ tabId, data }) {
-  logCSA('updateBookmarkInfo () 00', tabId)
+  logPA('updateBookmarkInfo () 00', tabId)
   const msg = {
     command: CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO,
     ...data,
   }
-  logCSA('updateBookmarkInfo () sendMessage', tabId)
+  logPA('updateBookmarkInfo () sendMessage', tabId)
   await browser.tabs.sendMessage(tabId, msg)
     .catch((err) => {
-      logCSA('updateBookmarkInfo () IGNORE', err)
+      logPA('updateBookmarkInfo () IGNORE', err)
+    })
+}
+
+async function sendMeAuthor({ tabId, authorSelector }) {
+  if (!authorSelector) {
+    return
+  }
+
+  logPA('sendMeAuthor () 00', tabId)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.SEND_ME_AUTHOR,
+    authorSelector,
+  }
+  logPA('sendMeAuthor () sendMessage', tabId)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logPA('sendMeAuthor () IGNORE', err)
     })
 }
 
@@ -2589,6 +2660,7 @@ const page = {
   getUserInputInPage,
   toggleYoutubeHeaderInPage,
   updateBookmarkInfoInPage,
+  sendMeAuthor,
 }
 const logUA = makeLogFunction({ module: 'url.api.js' })
 
@@ -2650,7 +2722,15 @@ const HOST_URL_SETTINGS_MAP = new Map(HOST_URL_SETTINGS_LIST)
 
 const getHostSettings = (url) => {
   logUA('getHostSettings 00', url)
-  const oUrl = new URL(url);
+
+  let oUrl
+  try {
+    oUrl = new URL(url);
+    // eslint-disable-next-line no-unused-vars
+  } catch (notUrlErr) {
+    return DEFAULT_HOST_SETTINGS_EXT
+  }
+
   const { hostname } = oUrl;
   logUA('getHostSettings 11', hostname)
 
@@ -2692,31 +2772,32 @@ const HOST_LIST_FOR_PAGE_OPTIONS = HOST_URL_SETTINGS_LIST_SHORT
     .map(
       ([hostname, obj]) => `${hostname}{${(obj.removeAllSearchParamForPath || []).toSorted().join(',')}}`
     )
+const logUIS = makeLogFunction({ module: 'url-is.js' })
 
 function makeIsSearchParamMatch(patternList) {
-  logUA('makeIsSearchParamMatch () 00', patternList)
+  logUIS('makeIsSearchParamMatch () 00', patternList)
   const isFnList = []
 
   patternList.forEach((pattern) => {
-    logUA('makeIsSearchParamMatch () 11', 'pattern', pattern)
+    logUIS('makeIsSearchParamMatch () 11', 'pattern', pattern)
     const asteriskIndex = pattern.indexOf('*')
     const partsLength = pattern.split('*').length
     switch (true) {
       case asteriskIndex < 0: {
         const fullPattern = pattern
         isFnList.push((s) => s == fullPattern)
-        logUA('makeIsSearchParamMatch () 11', '(s) => s == fullPattern', fullPattern)
+        logUIS('makeIsSearchParamMatch () 11', '(s) => s == fullPattern', fullPattern)
         break
       }
       case asteriskIndex == 0 && partsLength == 2: {
         if (pattern.length == 1) {
           isFnList.push(() => true)
-          logUA('makeIsSearchParamMatch () 11', '() => true', pattern)
+          logUIS('makeIsSearchParamMatch () 11', '() => true', pattern)
         } else {
           const end = pattern.slice(asteriskIndex + 1)
           // isFnList.push((s) => s.endsWith(end) && end.length < s.length)
           isFnList.push((s) => s.endsWith(end))
-          logUA('makeIsSearchParamMatch () 11', '(s) => s.endsWith(end)', end)
+          logUIS('makeIsSearchParamMatch () 11', '(s) => s.endsWith(end)', end)
         }
         break
       }
@@ -2724,143 +2805,24 @@ function makeIsSearchParamMatch(patternList) {
         const start = pattern.slice(0, asteriskIndex)
         if (asteriskIndex == pattern.length - 1) {
           isFnList.push((s) => s.startsWith(start))
-          logUA('makeIsSearchParamMatch () 11', '(s) => s.startsWith(start)', start)
+          logUIS('makeIsSearchParamMatch () 11', '(s) => s.startsWith(start)', start)
         } else {
           const end = pattern.slice(asteriskIndex + 1)
           const minLength = start.length + end.length
           isFnList.push((s) => s.startsWith(start) && s.endsWith(end) && minLength <= s.length)
-          logUA('makeIsSearchParamMatch () 11', '(s) => s.startsWith(start) && s.endsWith(end) && minLength <= s.length', start, end)
+          logUIS('makeIsSearchParamMatch () 11', '(s) => s.startsWith(start) && s.endsWith(end) && minLength <= s.length', start, end)
         }
       }
     }
   })
 
-  logUA('makeIsSearchParamMatch () 99', 'isFnList.length', isFnList.length)
+  logUIS('makeIsSearchParamMatch () 99', 'isFnList.length', isFnList.length)
   return (name) => isFnList.some((isFn) => isFn(name))
 }
-const logUS = makeLogFunction({ module: 'url-search.api' })
-
-function removeIndexFromPathname(pathname) {
-  let list = pathname.split(/(\/)/)
-  const last = list.at(-1)
-
-  if (last.startsWith('index.') || last === 'index') {
-    list = list.slice(0, -1)
-  }
-
-  return list.join('')
-}
-
-function removeLastSlashFromPathname(pathname) {
-  return pathname.length > 1 && pathname.endsWith('/')
-    ? pathname.slice(0, -1)
-    : pathname
-}
-
-const getPathnameForSearch = (pathname) => {
-  let mPathname = pathname
-
-  // no index in pathname
-  mPathname = removeIndexFromPathname(mPathname)
-  mPathname = removeLastSlashFromPathname(mPathname)
-
-  return mPathname
-}
-
-function isPathnameMatchForSearch({ url, pathnameForSearch }) {
-  const oUrl = new URL(url);
-  const normalizedPathname = getPathnameForSearch(oUrl.pathname);
-
-  return normalizedPathname === pathnameForSearch
-}
-
-function isSearchParamsMatchForSearch({ url, requiredSearchParams }) {
-  if (!requiredSearchParams) {
-    return true
-  }
-
-  const oUrl = new URL(url);
-  const oSearchParams = oUrl.searchParams;
-
-  return Object.keys(requiredSearchParams)
-    .every((key) => oSearchParams.get(key) === requiredSearchParams[key])
-}
-
-async function startPartialUrlSearch(url) {
-  const settings = await extensionSettings.get()
-  if (!settings[USER_OPTION.USE_PARTIAL_URL_SEARCH]) {
-    return {
-      isSearchAvailable: false,
-    }
-  }
-
-  logUS('startPartialUrlSearch () 00', url)
-
-  try {
-    const targetHostSettings = getHostSettings(url)
-    logUS('startPartialUrlSearch 11 targetHostSettings', !!targetHostSettings, targetHostSettings)
-
-    // if (!targetHostSettings) {
-    //   return {
-    //     isSearchAvailable: false,
-    //   }
-    // }
-
-    const oUrl = new URL(url);
-
-    let requiredSearchParams
-    if (targetHostSettings) {
-      const { importantSearchParamList } = targetHostSettings
-
-      if (isNotEmptyArray(importantSearchParamList)) {
-        const isSearchParamMatch = makeIsSearchParamMatch(importantSearchParamList)
-        const oSearchParams = oUrl.searchParams;
-        logUS('startPartialUrlSearch 22', 'oSearchParams', oSearchParams)
-
-        const matchedParamList = []
-        for (const [searchParam] of oSearchParams) {
-          logUS('startPartialUrlSearch 22', 'for (const [searchParam] of oSearchParams', searchParam)
-          if (isSearchParamMatch(searchParam)) {
-            matchedParamList.push(searchParam)
-          }
-        }
-
-        requiredSearchParams = {}
-        matchedParamList.forEach((searchParam) => {
-          requiredSearchParams[searchParam] = oSearchParams.get(searchParam)
-        })
-      }
-    }
-
-    if (!targetHostSettings?.isHashRequired) {
-      oUrl.hash = ''
-    }
-    oUrl.pathname = getPathnameForSearch(oUrl.pathname)
-    oUrl.search = ''
-    const urlForSearch = oUrl.toString();
-
-    const { pathname: pathnameForSearch } = new URL(urlForSearch);
-
-    logUS('startPartialUrlSearch 99', 'requiredSearchParams', requiredSearchParams)
-
-    return {
-      isSearchAvailable: true,
-      urlForSearch,
-      isUrlMatchToPartialUrlSearch: (testUrl) => isPathnameMatchForSearch({ url: testUrl, pathnameForSearch })
-        && isSearchParamsMatchForSearch({ url: testUrl, requiredSearchParams })
-    }
-    // eslint-disable-next-line no-unused-vars
-  } catch (_e) {
-    return {
-      isSearchAvailable: false,
-    }
-  }
-}
-const logCUA = makeLogFunction({ module: 'clear-url.api' })
 
 const isPathnameMatchForPattern = ({ pathname, patternList }) => {
-  logCUA('isPathnameMatch () 00', pathname)
-  logCUA('isPathnameMatch () 00', patternList)
+  logUIS('isPathnameMatch () 00', pathname)
+  logUIS('isPathnameMatch () 00', patternList)
 
   const pathToList = (pathname) => {
     let list = pathname.split(/(\/)/).filter(Boolean)
@@ -2879,7 +2841,7 @@ const isPathnameMatchForPattern = ({ pathname, patternList }) => {
     } else {
       result = pathPart === patternPart
     }
-    logCUA('isPartsEqual () 11', patternPart, pathPart, result)
+    logUIS('isPartsEqual () 11', patternPart, pathPart, result)
 
     return result
   }
@@ -2890,13 +2852,13 @@ const isPathnameMatchForPattern = ({ pathname, patternList }) => {
 
   let isMath = false
   const pathAsList = pathToList(pathname)
-  logCUA('isPathnameMatch () 11 pathAsList', pathAsList)
+  logUIS('isPathnameMatch () 11 pathAsList', pathAsList)
 
   let i = 0
   while (!isMath && i < patternList.length) {
     const pattern = patternList[i]
     const patternAsList = pathToList(pattern)
-    logCUA('isPathnameMatch () 11 patternAsList', patternAsList)
+    logUIS('isPathnameMatch () 11 patternAsList', patternAsList)
 
     isMath = patternAsList.length > 0 && pathAsList.length === patternAsList.length
       && patternAsList.every((patternPart, patternIndex) => isPartsEqual(patternPart, pathAsList[patternIndex])
@@ -2906,6 +2868,37 @@ const isPathnameMatchForPattern = ({ pathname, patternList }) => {
 
   return isMath
 }
+
+function isSearchParamsMatchForPattern({ searchParams, searchParamsPattern }) {
+  if (!searchParamsPattern) {
+    return true
+  }
+
+  const keyList = searchParamsPattern
+    .split('&')
+    .map((keyValue) => keyValue.split('=')[0])
+
+  return keyList
+    .every((key) => searchParams.get(key) !== undefined)
+}
+
+function isUrlMath({ url, pattern }) {
+  if (!pattern) {
+    return false
+  }
+
+  const oUrl = new URL(url);
+  const { pathname, searchParams } = oUrl;
+
+  const [pathPattern, searchParamsPattern] = pattern.split('?')
+
+  if (!searchParamsPattern) {
+    return isPathnameMatchForPattern({ pathname, patternList: [pathPattern] })
+  }
+
+  return isPathnameMatchForPattern({ pathname, patternList: [pathPattern] }) && isSearchParamsMatchForPattern({ searchParams, searchParamsPattern })
+}
+const logCUA = makeLogFunction({ module: 'clear-url.api.js' })
 
 const removeQueryParamsIfTarget = (url) => {
   logCUA('removeQueryParamsIfTarget () 00', url)
@@ -2981,6 +2974,125 @@ async function clearUrlOnPageOpen({ tabId, url }) {
   }
 
   return cleanUrl || url
+}
+const logUS = makeLogFunction({ module: 'url-search.api' })
+
+function removeIndexFromPathname(pathname) {
+  let list = pathname.split(/(\/)/)
+  const last = list.at(-1)
+
+  if (last.startsWith('index.') || last === 'index') {
+    list = list.slice(0, -1)
+  }
+
+  return list.join('')
+}
+
+function removeLastSlashFromPathname(pathname) {
+  return pathname.length > 1 && pathname.endsWith('/')
+    ? pathname.slice(0, -1)
+    : pathname
+}
+
+const getPathnameForSearch = (pathname) => {
+  let mPathname = pathname
+
+  // no index in pathname
+  mPathname = removeIndexFromPathname(mPathname)
+  mPathname = removeLastSlashFromPathname(mPathname)
+
+  return mPathname
+}
+
+function isPathnameMatchForSearch({ url, pathnameForSearch }) {
+  const oUrl = new URL(url);
+  const normalizedPathname = getPathnameForSearch(oUrl.pathname);
+
+  return normalizedPathname === pathnameForSearch
+}
+
+function isSearchParamsMatchForSearch({ url, requiredSearchParams }) {
+  if (!requiredSearchParams) {
+    return true
+  }
+
+  const oUrl = new URL(url);
+  const oSearchParams = oUrl.searchParams;
+
+  return Object.keys(requiredSearchParams)
+    .every((key) => oSearchParams.get(key) === requiredSearchParams[key])
+}
+
+// ?TODO /posts == /posts?page=1 OR clean on open /posts?page=1 TO /posts IF page EQ 1
+async function startPartialUrlSearch(url) {
+  const settings = await extensionSettings.get()
+  if (!settings[USER_OPTION.USE_PARTIAL_URL_SEARCH]) {
+    return {
+      isSearchAvailable: false,
+    }
+  }
+
+  logUS('startPartialUrlSearch () 00', url)
+
+  try {
+    const targetHostSettings = getHostSettings(url)
+    logUS('startPartialUrlSearch 11 targetHostSettings', !!targetHostSettings, targetHostSettings)
+
+    // if (!targetHostSettings) {
+    //   return {
+    //     isSearchAvailable: false,
+    //   }
+    // }
+
+    const oUrl = new URL(url);
+
+    let requiredSearchParams
+    if (targetHostSettings) {
+      const { importantSearchParamList } = targetHostSettings
+
+      if (isNotEmptyArray(importantSearchParamList)) {
+        const isSearchParamMatch = makeIsSearchParamMatch(importantSearchParamList)
+        const oSearchParams = oUrl.searchParams;
+        logUS('startPartialUrlSearch 22', 'oSearchParams', oSearchParams)
+
+        const matchedParamList = []
+        for (const [searchParam] of oSearchParams) {
+          logUS('startPartialUrlSearch 22', 'for (const [searchParam] of oSearchParams', searchParam)
+          if (isSearchParamMatch(searchParam)) {
+            matchedParamList.push(searchParam)
+          }
+        }
+
+        requiredSearchParams = {}
+        matchedParamList.forEach((searchParam) => {
+          requiredSearchParams[searchParam] = oSearchParams.get(searchParam)
+        })
+      }
+    }
+
+    if (!targetHostSettings?.isHashRequired) {
+      oUrl.hash = ''
+    }
+    oUrl.pathname = getPathnameForSearch(oUrl.pathname)
+    oUrl.search = ''
+    const urlForSearch = oUrl.toString();
+
+    const { pathname: pathnameForSearch } = new URL(urlForSearch);
+
+    logUS('startPartialUrlSearch 99', 'requiredSearchParams', requiredSearchParams)
+
+    return {
+      isSearchAvailable: true,
+      urlForSearch,
+      isUrlMatchToPartialUrlSearch: (testUrl) => isPathnameMatchForSearch({ url: testUrl, pathnameForSearch })
+        && isSearchParamsMatchForSearch({ url: testUrl, requiredSearchParams })
+    }
+    // eslint-disable-next-line no-unused-vars
+  } catch (_e) {
+    return {
+      isSearchAvailable: false,
+    }
+  }
 }
 const logGB = makeLogFunction({ module: 'get-bookmarks.api.js' })
 
@@ -3125,6 +3237,124 @@ async function getBookmarkInfoUni({ url, useCache=false, isShowTitle }) {
     bookmarkList,
     source,
   };
+}
+const logUAU = makeLogFunction({ module: 'url-author.js' })
+
+function getAuthorUrlFromPostUrl(url) {
+  const oUrl = new URL(url)
+  let pathPartList = oUrl.pathname.split(/(\/)/).filter(Boolean)
+  let iEnd = -1
+
+  if (pathPartList.at(iEnd) == '/') {
+    iEnd -= 1
+  }
+  if (pathPartList.at(iEnd)) {
+    iEnd -= 1
+  }
+  if (pathPartList.at(iEnd) == '/') {
+    iEnd -= 1
+  }
+
+  oUrl.pathname = pathPartList.slice(0, iEnd + 1).join('')
+
+  return oUrl.toString()
+}
+
+function cleanAuthorUrlRemoveLast(url) {
+  const oUrl = new URL(url)
+  const pathPartList = oUrl.pathname.split(/(\/)/).filter(Boolean)
+
+  oUrl.pathname = pathPartList.slice(0, -1).join('')
+
+  return oUrl.toString()
+}
+
+function cleanAuthorUrl({ url, method }) {
+  if (method == 'pathname-remove-last') {
+    return cleanAuthorUrlRemoveLast(url)
+  } else {
+    return url
+  }
+}
+
+function getMatchedGetAuthor(url) {
+  // logUAU('getMatchedGetAuthor () 00', url)
+  const targetHostSettings = getHostSettings(url)
+
+  if (!targetHostSettings?.getAuthor) {
+    return
+  }
+
+  const getAuthorList = Array.isArray(targetHostSettings.getAuthor)
+    ? targetHostSettings.getAuthor
+    : [targetHostSettings.getAuthor]
+
+  let matchedGetAuthor
+  let iWhile = 0
+  while (!matchedGetAuthor && iWhile < getAuthorList.length) {
+    const { pagePattern } = getAuthorList[iWhile]
+
+    if (isUrlMath({ url, pattern: pagePattern })) {
+      matchedGetAuthor = getAuthorList[iWhile]
+    }
+
+    iWhile += 1
+  }
+
+  return matchedGetAuthor
+}
+
+async function showAuthorBookmarksStep2({ tabId, url, authorUrl }) {
+  logUAU('showAuthorBookmarksStep2 () 00', tabId, authorUrl, url)
+  let authorBookmarkList = []
+
+  if (authorUrl) {
+    let cleanedAuthorUrl = removeQueryParamsIfTarget(authorUrl);
+
+    const matchedGetAuthor = getMatchedGetAuthor(url)
+    if (matchedGetAuthor?.cleanAuthorUrlMethod) {
+      // https://www.linkedin.com/company/companyOne/life -> https://www.linkedin.com/company/companyOne
+      cleanedAuthorUrl = cleanAuthorUrl({
+        url: cleanedAuthorUrl,
+        method: matchedGetAuthor.cleanAuthorUrlMethod,
+      })
+    }
+
+    logUAU('showAuthorBookmarksStep2 () 11', 'cleanedAuthorUrl', cleanedAuthorUrl)
+    const bookmarkInfo = await getBookmarkInfoUni({ url: cleanedAuthorUrl, useCache: true })
+    authorBookmarkList = bookmarkInfo.bookmarkList
+  }
+
+  const data = {
+    authorBookmarkList,
+  }
+  logUAU('showAuthorBookmarksStep2 () 99 sendMessage', tabId, data);
+  await page.updateBookmarkInfoInPage({ tabId, data })
+}
+
+async function showAuthorBookmarks({ tabId, url }) {
+  const matchedGetAuthor = getMatchedGetAuthor(url)
+  logUAU('showAuthorBookmarks () 00', tabId, url, matchedGetAuthor)
+
+  switch (true) {
+    case !!matchedGetAuthor?.authorSelector: {
+      await page.sendMeAuthor({
+        tabId,
+        authorSelector: matchedGetAuthor.authorSelector,
+      })
+      break
+    }
+    case !!matchedGetAuthor: {
+      showAuthorBookmarksStep2({
+        tabId,
+        url,
+        authorUrl: getAuthorUrlFromPostUrl(url),
+      })
+      break
+    }
+    default:
+      showAuthorBookmarksStep2({ tabId })
+  }
 }
 const logHA = makeLogFunction({ module: 'history.api' })
 
@@ -3363,6 +3593,29 @@ async function initExtension({ debugCaller='' }) {
 }
 const logTA = makeLogFunction({ module: 'tabs.api.js' })
 
+async function showVisits({ tabId, url }) {
+  const visitInfo = await getHistoryInfo({ url })
+
+  const data = {
+    visitString: visitInfo.visitString,
+  }
+  logTA('showVisits () 99 sendMessage', tabId, data);
+  await page.updateBookmarkInfoInPage({ tabId, data })
+}
+
+async function showExtra({ tabId, url, settings }) {
+  const isShowVisits = settings[USER_OPTION.SHOW_PREVIOUS_VISIT]
+  const isShowAuthorBookmarks = settings[USER_OPTION.URL_SHOW_AUTHOR_TAGS]
+
+  if (isShowVisits) {
+    showVisits({ tabId, url })
+  }
+
+  if (isShowAuthorBookmarks) {
+    showAuthorBookmarks({ tabId, url })
+  }
+}
+
 async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
   logTA(`UPDATE-TAB () 00 <- ${debugCaller}`, tabId);
   let url = inUrl
@@ -3386,43 +3639,26 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
   const settings = await extensionSettings.get()
   const isShowTitle = settings[USER_OPTION.SHOW_BOOKMARK_TITLE]
 
-  let visitsData
-  const isShowVisits = settings[USER_OPTION.SHOW_PREVIOUS_VISIT]
-
-  const [
-    bookmarkInfo,
-    visitInfo,
-  ] = await Promise.all([
-    getBookmarkInfoUni({ url, useCache, isShowTitle }),
-    isShowVisits && getHistoryInfo({ url }),
-  ])
-  // logTA(`UPDATE-TAB () 22 bookmarkInfo.bookmarkList`, bookmarkInfo.bookmarkList);
-
-  if (isShowVisits) {
-    visitsData = {
-      visitString: visitInfo.visitString,
-    }
-  }
+  const bookmarkInfo = await getBookmarkInfoUni({ url, useCache, isShowTitle })
 
   const data = {
     bookmarkList: bookmarkInfo.bookmarkList,
+    fontSize: settings[USER_OPTION.FONT_SIZE],
     isShowTitle: settings[USER_OPTION.SHOW_BOOKMARK_TITLE],
-    // visits history
-    ...visitsData,
-    // recent list
+
+    tagList: tagList.list,
     tagListOpenMode: settings[USER_OPTION.TAG_LIST_OPEN_MODE],
     isTagListOpenGlobal: tagList.isOpenGlobal,
-    tagList: tagList.list,
+    tagLength: settings[USER_OPTION.TAG_LIST_TAG_LENGTH],
     nTagListAvailableRows: tagList.nAvailableRows,
     nFixedTags: tagList.nFixedTags,
 
-    fontSize: settings[USER_OPTION.FONT_SIZE],
-    tagLength: settings[USER_OPTION.TAG_LIST_TAG_LENGTH],
     isHideSemanticHtmlTagsOnPrinting: settings[USER_OPTION.HIDE_TAG_HEADER_ON_PRINTING],
     isHideHeaderForYoutube: settings[USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE],
   }
   logTA('UPDATE-TAB () 99 sendMessage', tabId, data);
   await page.updateBookmarkInfoInPage({ tabId, data })
+  showExtra({ tabId, url, settings })
 }
 
 function updateTabTask(options) {
@@ -4712,6 +4948,15 @@ async function onIncomingMessage (message, sender) {
           })
         }
       }
+      break
+    }
+    case EXTENSION_MSG_ID.RESULT_AUTHOR: {
+      logIM('runtime.onMessage RESULT_AUTHOR', message.authorUrl);
+      showAuthorBookmarksStep2({
+        tabId: sender?.tab?.id,
+        url: message.url,
+        authorUrl: message.authorUrl,
+      })
       break
     }
   }
