@@ -19,7 +19,7 @@ import { page } from './page.api.js'
 
 const logCUA = makeLogFunction({ module: 'clear-url.api.js' })
 
-const removeQueryParamsIfTarget = (url) => {
+export const removeQueryParamsIfTarget = (url) => {
   logCUA('removeQueryParamsIfTarget () 00', url)
   let cleanUrl = url
 

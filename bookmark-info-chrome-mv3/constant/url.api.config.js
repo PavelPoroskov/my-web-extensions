@@ -33,6 +33,7 @@ const urlSettingsUse = {
   'dev.to': {
     getAuthor: {
       pagePattern: '/:author/:post',
+      authorSelector: '.crayons-article__header__meta a.crayons-link[href]',
     }
   },
   'frontendmasters.com': {

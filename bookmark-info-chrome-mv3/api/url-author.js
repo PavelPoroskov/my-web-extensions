@@ -83,26 +83,27 @@ function getMatchedGetAuthor(url) {
 
 export async function showAuthorBookmarksStep2({ tabId, url, authorUrl }) {
   logUAU('showAuthorBookmarksStep2 () 00', tabId, authorUrl, url)
-  if (!authorUrl) {
-    return
+  let authorBookmarkList = []
+
+  if (authorUrl) {
+    let cleanedAuthorUrl = removeQueryParamsIfTarget(authorUrl);
+
+    const matchedGetAuthor = getMatchedGetAuthor(url)
+    if (matchedGetAuthor?.cleanAuthorUrlMethod) {
+      // https://www.linkedin.com/company/companyOne/life -> https://www.linkedin.com/company/companyOne
+      cleanedAuthorUrl = cleanAuthorUrl({
+        url: cleanedAuthorUrl,
+        method: matchedGetAuthor.cleanAuthorUrlMethod,
+      })
+    }
+
+    logUAU('showAuthorBookmarksStep2 () 11', 'cleanedAuthorUrl', cleanedAuthorUrl)
+    const bookmarkInfo = await getBookmarkInfoUni({ url: cleanedAuthorUrl, useCache: true })
+    authorBookmarkList = bookmarkInfo.bookmarkList
   }
-
-  let cleanedAuthorUrl = removeQueryParamsIfTarget(authorUrl);
-
-  const matchedGetAuthor = getMatchedGetAuthor(url)
-  if (matchedGetAuthor?.cleanAuthorUrlMethod) {
-    // https://www.linkedin.com/company/companyOne/life -> https://www.linkedin.com/company/companyOne
-    cleanedAuthorUrl = cleanAuthorUrl({
-      url: cleanedAuthorUrl,
-      method: matchedGetAuthor.cleanAuthorUrlMethod,
-    })
-  }
-
-  logUAU('showAuthorBookmarksStep2 () 11', 'cleanedAuthorUrl', cleanedAuthorUrl)
-  const bookmarkInfo = await getBookmarkInfoUni({ url: cleanedAuthorUrl, useCache: true })
 
   const data = {
-    authorBookmarkList: bookmarkInfo.bookmarkList,
+    authorBookmarkList,
   }
   logUAU('showAuthorBookmarksStep2 () 99 sendMessage', tabId, data);
   await page.updateBookmarkInfoInPage({ tabId, data })
@@ -112,17 +113,23 @@ export async function showAuthorBookmarks({ tabId, url }) {
   const matchedGetAuthor = getMatchedGetAuthor(url)
   logUAU('showAuthorBookmarks () 00', tabId, url, matchedGetAuthor)
 
-  if (matchedGetAuthor) {
-    const { authorSelector } = matchedGetAuthor
-
-    if (authorSelector) {
-      await page.sendMeAuthor({ tabId, authorSelector })
-    } else {
+  switch (true) {
+    case !!matchedGetAuthor?.authorSelector: {
+      await page.sendMeAuthor({
+        tabId,
+        authorSelector: matchedGetAuthor.authorSelector,
+      })
+      break
+    }
+    case !!matchedGetAuthor: {
       showAuthorBookmarksStep2({
         tabId,
         url,
         authorUrl: getAuthorUrlFromPostUrl(url),
       })
+      break
     }
+    default:
+      showAuthorBookmarksStep2({ tabId })
   }
 }
