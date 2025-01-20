@@ -68,7 +68,15 @@ const HOST_URL_SETTINGS_MAP = new Map(HOST_URL_SETTINGS_LIST)
 
 export const getHostSettings = (url) => {
   logUA('getHostSettings 00', url)
-  const oUrl = new URL(url);
+
+  let oUrl
+  try {
+    oUrl = new URL(url);
+    // eslint-disable-next-line no-unused-vars
+  } catch (notUrlErr) {
+    return DEFAULT_HOST_SETTINGS_EXT
+  }
+
   const { hostname } = oUrl;
   logUA('getHostSettings 11', hostname)
 

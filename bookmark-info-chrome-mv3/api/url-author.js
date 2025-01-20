@@ -37,14 +37,69 @@ function getAuthorUrlFromPostUrl(url) {
   return oUrl.toString()
 }
 
-export async function showAuthorBookmarksStep2({ tabId, authorUrl }) {
-  logUAU('showAuthorBookmarksStep2 () 00', tabId, authorUrl)
+function cleanAuthorUrlRemoveLast(url) {
+  const oUrl = new URL(url)
+  const pathPartList = oUrl.pathname.split(/(\/)/).filter(Boolean)
+
+  oUrl.pathname = pathPartList.slice(0, -1).join('')
+
+  return oUrl.toString()
+}
+
+function cleanAuthorUrl({ url, method }) {
+  if (method == 'pathname-remove-last') {
+    return cleanAuthorUrlRemoveLast(url)
+  } else {
+    return url
+  }
+}
+
+function getMatchedGetAuthor(url) {
+  // logUAU('getMatchedGetAuthor () 00', url)
+  const targetHostSettings = getHostSettings(url)
+
+  if (!targetHostSettings?.getAuthor) {
+    return
+  }
+
+  const getAuthorList = Array.isArray(targetHostSettings.getAuthor)
+    ? targetHostSettings.getAuthor
+    : [targetHostSettings.getAuthor]
+
+  let matchedGetAuthor
+  let iWhile = 0
+  while (!matchedGetAuthor && iWhile < getAuthorList.length) {
+    const { pagePattern } = getAuthorList[iWhile]
+
+    if (isUrlMath({ url, pattern: pagePattern })) {
+      matchedGetAuthor = getAuthorList[iWhile]
+    }
+
+    iWhile += 1
+  }
+
+  return matchedGetAuthor
+}
+
+export async function showAuthorBookmarksStep2({ tabId, url, authorUrl }) {
+  logUAU('showAuthorBookmarksStep2 () 00', tabId, authorUrl, url)
   if (!authorUrl) {
     return
   }
 
-  const url = removeQueryParamsIfTarget(authorUrl);
-  const bookmarkInfo = await getBookmarkInfoUni({ url, useCache: true })
+  let cleanedAuthorUrl = removeQueryParamsIfTarget(authorUrl);
+
+  const matchedGetAuthor = getMatchedGetAuthor(url)
+  if (matchedGetAuthor?.cleanAuthorUrlMethod) {
+    // https://www.linkedin.com/company/companyOne/life -> https://www.linkedin.com/company/companyOne
+    cleanedAuthorUrl = cleanAuthorUrl({
+      url: cleanedAuthorUrl,
+      method: matchedGetAuthor.cleanAuthorUrlMethod,
+    })
+  }
+
+  logUAU('showAuthorBookmarksStep2 () 11', 'cleanedAuthorUrl', cleanedAuthorUrl)
+  const bookmarkInfo = await getBookmarkInfoUni({ url: cleanedAuthorUrl, useCache: true })
 
   const data = {
     authorBookmarkList: bookmarkInfo.bookmarkList,
@@ -54,18 +109,20 @@ export async function showAuthorBookmarksStep2({ tabId, authorUrl }) {
 }
 
 export async function showAuthorBookmarks({ tabId, url }) {
-  logUAU('showAuthorBookmarks () 00', tabId, url)
-  const targetHostSettings = getHostSettings(url)
+  const matchedGetAuthor = getMatchedGetAuthor(url)
+  logUAU('showAuthorBookmarks () 00', tabId, url, matchedGetAuthor)
 
-  if (targetHostSettings?.getAuthor) {
-    const { pagePattern, authorSelector } = targetHostSettings.getAuthor
+  if (matchedGetAuthor) {
+    const { authorSelector } = matchedGetAuthor
 
-    if (isUrlMath({ url, pattern: pagePattern })) {
-      if (authorSelector) {
-        await page.sendMeAuthor({ tabId, authorSelector })
-      } else {
-        showAuthorBookmarksStep2({ tabId, authorUrl: getAuthorUrlFromPostUrl(url) })
-      }
+    if (authorSelector) {
+      await page.sendMeAuthor({ tabId, authorSelector })
+    } else {
+      showAuthorBookmarksStep2({
+        tabId,
+        url,
+        authorUrl: getAuthorUrlFromPostUrl(url),
+      })
     }
   }
 }

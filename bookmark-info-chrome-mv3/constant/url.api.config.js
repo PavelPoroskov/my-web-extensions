@@ -71,6 +71,23 @@ const urlSettingsUse = {
       // '/jobs/collections/recommended/?currentJobId=:currentJobId',
       // '/jobs/search/?currentJobId=:currentJobId',
     ],
+    getAuthor: [
+      {
+        pagePattern: '/jobs/view/:id',
+        authorSelector: '.job-details-jobs-unified-top-card__company-name a[href^="https://www.linkedin.com/company/"]',
+        cleanAuthorUrlMethod: 'pathname-remove-last',
+      },
+      {
+        pagePattern: '/jobs/collections/recommended/?currentJobId=:currentJobId',
+        authorSelector: '.job-details-jobs-unified-top-card__company-name a[href^="https://www.linkedin.com/company/"]',
+        cleanAuthorUrlMethod: 'pathname-remove-last',
+      },
+      {
+        pagePattern: '/jobs/search/?currentJobId=:currentJobId',
+        authorSelector: '.job-details-jobs-unified-top-card__company-name a[href^="https://www.linkedin.com/company/"]',
+        cleanAuthorUrlMethod: 'pathname-remove-last',
+      },
+    ]
   },
   'marketplace.visualstudio.com': {
     searchParamList: [

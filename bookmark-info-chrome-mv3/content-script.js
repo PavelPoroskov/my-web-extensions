@@ -1174,11 +1174,43 @@ ${semanticTagsStyle}
     });
   }
 
-  async function returnAuthor(authorUrl) {
+  async function returnAuthor({ url, authorUrl }) {
     await chrome.runtime.sendMessage({
       command: EXTENSION_MSG_ID.RESULT_AUTHOR,
+      url,
       authorUrl,
     });
+  }
+
+  function getAuthor({ authorSelector, nTry, msDelay }) {
+    let authorUrl
+    try {
+      const el = document.querySelector(authorSelector)
+      if (el?.href) {
+        authorUrl = el.href
+      }
+      // eslint-disable-next-line no-unused-vars
+    } catch (selectorSyntaxErr)
+    // eslint-disable-next-line no-empty
+    { }
+
+    const restNTry = nTry - 1
+
+    if (authorUrl) {
+      returnAuthor({
+        url: document.location.href,
+        authorUrl,
+      })
+    } else {
+      if (restNTry > 0) {
+        setTimeout(
+          () => {
+            getAuthor({ authorSelector, nTry: restNTry, msDelay })
+          },
+          msDelay,
+        )
+      }
+    }
   }
 
   chrome.runtime.onMessage.addListener((message) => {
@@ -1283,21 +1315,11 @@ ${semanticTagsStyle}
       }
       case CONTENT_SCRIPT_MSG_ID.SEND_ME_AUTHOR: {
         const authorSelector = message.authorSelector
-        let authorUrl
 
         if (authorSelector) {
-          try {
-            const el = document.querySelector(authorSelector)
-            if (el?.href) {
-              authorUrl = el.href
-            }
-            // eslint-disable-next-line no-unused-vars
-          } catch (selectorSyntaxErr)
-          // eslint-disable-next-line no-empty
-          { }
+          getAuthor({ authorSelector, nTry: 4, msDelay: 150 })
         }
 
-        returnAuthor(authorUrl)
         break
       }
     }

@@ -223,6 +223,7 @@ export async function onIncomingMessage (message, sender) {
       logIM('runtime.onMessage RESULT_AUTHOR', message.authorUrl);
       showAuthorBookmarksStep2({
         tabId: sender?.tab?.id,
+        url: message.url,
         authorUrl: message.authorUrl,
       })
       break

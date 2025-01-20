@@ -26,7 +26,7 @@ The extension improves the browser's capabilities for working with bookmarks.
   &nbsp;&nbsp;&nbsp;I use "DONE @D" to mark a list of news items or a list of author publications that I have finished  
   &nbsp;&nbsp;&nbsp;I use "Selected @D" to mark a page that I don't have time to rate right now.
 * Option "Show author bookmarks with post bookmarks"  
-  &nbsp;&nbsp;&nbsp;This feature implemented for youtube.com, dev.to, freecodecamp.org and can be extended to other sites.
+  &nbsp;&nbsp;&nbsp;This feature implemented for dev.to, freecodecamp.org, linkedin.com, youtube.com and can be extended to other sites.
 * Option 'Show bookmark title'.
 
 ## flat folder structure for bookmarks
