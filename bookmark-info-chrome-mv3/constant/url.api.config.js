@@ -132,6 +132,10 @@ const urlSettingsRu = {
     searchParamList: [
       ['utm_*'],
     ],
+    getAuthor: {
+      pagePattern: '/:location/vakansii/:id',
+      authorSelector: '.js-seller-info-name a[href]',
+    }
   },
   'career.habr.com': {
     getAuthor: {
