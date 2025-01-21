@@ -77,6 +77,18 @@ function restoreOptions(settings) {
   element.checked = settings[optionId];
   element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 
+  optionId = USER_OPTION.USE_PARTIAL_URL_SEARCH;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.checked = settings[optionId];
+  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
+
+  optionId = USER_OPTION.URL_SHOW_AUTHOR_TAGS;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.checked = settings[optionId];
+  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
+
   optionId = USER_OPTION.SHOW_PREVIOUS_VISIT;
   domId = `#${optionId}`
   element = document.querySelector(domId)
@@ -163,18 +175,6 @@ function restoreOptions(settings) {
   element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 
   optionId = USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE;
-  domId = `#${optionId}`
-  element = document.querySelector(domId)
-  element.checked = settings[optionId];
-  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
-
-  optionId = USER_OPTION.USE_PARTIAL_URL_SEARCH;
-  domId = `#${optionId}`
-  element = document.querySelector(domId)
-  element.checked = settings[optionId];
-  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
-
-  optionId = USER_OPTION.URL_SHOW_AUTHOR_TAGS;
   domId = `#${optionId}`
   element = document.querySelector(domId)
   element.checked = settings[optionId];

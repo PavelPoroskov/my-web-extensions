@@ -50,6 +50,20 @@
 
     <article>
       <label>
+        <input type="checkbox" id="USE_PARTIAL_URL_SEARCH" style="vertical-align: middle;"/>
+        Use partial url search to get bookmarks. Experimental.
+      </label>
+    </article>
+
+    <article>
+      <label>
+        <input type="checkbox" id="URL_SHOW_AUTHOR_TAGS" style="vertical-align: middle;"/>
+        Show author bookmarks with post bookmarks.
+      </label>
+    </article>
+
+    <article>
+      <label>
         <input type="checkbox" id="SHOW_PREVIOUS_VISIT" style="vertical-align: middle;"/>
         Show previous visits
       </label>
@@ -61,10 +75,10 @@
       </label>
       <div style="display: flex">
         <div style="flex: 1">
-          <input type="range" id="FONT_SIZE" name="FONT_SIZE_NAME" list="FONT_SIZE_LIST" min="14" max="24" step="1" style="width: 100%;" />
+          <input type="range" id="FONT_SIZE" name="FONT_SIZE_NAME" list="FONT_SIZE_LIST" min="14" max="20" step="1" style="width: 100%;" />
           <datalist id="FONT_SIZE_LIST">
             <option value="14" label="14">14</option>
-            <option value="24" label="24">24</option>
+            <option value="20" label="20">20</option>
           </datalist>
         </div>
         <div style="flex: 1; padding-left: 2ch; padding-top: 0.7ch;">
@@ -195,21 +209,6 @@
       <label>
         <input type="checkbox" id="HIDE_PAGE_HEADER_FOR_YOUTUBE" style="vertical-align: middle;"/>
         Hide page header for youtube channel.
-      </label>
-    </article>
-
-
-    <article>
-      <label>
-        <input type="checkbox" id="USE_PARTIAL_URL_SEARCH" style="vertical-align: middle;"/>
-        Use partial url search. Experimental.
-      </label>
-    </article>
-
-    <article>
-      <label>
-        <input type="checkbox" id="URL_SHOW_AUTHOR_TAGS" style="vertical-align: middle;"/>
-        Show author bookmarks with post bookmarks.
       </label>
     </article>
 
