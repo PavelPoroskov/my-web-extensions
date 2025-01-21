@@ -766,7 +766,7 @@ ${semanticTagsStyle}
           const textNode = document.createTextNode(`author: ${folder}`);
           divLabel.appendChild(textNode);
           divLabel.setAttribute('data-restpath', url);
-          divLabel.setAttribute('data-id', `ab#${id}`);
+          divLabel.setAttribute('data-id', `h#${id}`);
 
           const divLabelContainer = document.createElement('div');
           divLabelContainer.classList.add('bkm-info--label-container');

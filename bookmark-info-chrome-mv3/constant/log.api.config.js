@@ -20,7 +20,7 @@ const logModuleList = [
   // 'moveFoldersByName.js',
   // 'page.api.js',
   // 'runtime.controller',
-  // 'showAuthorBookmarks.js'',
+  // 'showAuthorBookmarks.js',
   // 'storage.api.js',
   // 'storage.controller',
   // 'updateTab.js',

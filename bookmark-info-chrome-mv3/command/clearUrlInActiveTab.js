@@ -1,24 +1,12 @@
-
+import {
+  removeHashAndSearchParams,
+} from '../url-api/index.js'
 import { page } from '../api/page.api.js'
 import {
   makeLogFunction,
 } from '../api-low/index.js'
 
 const logCU = makeLogFunction({ module: 'clearUrlInActiveTab.js' })
-
-function removeHashAndSearchParams(url) {
-  logCU('removeHashAndSearchParams () 00', url)
-  try {
-    const oUrl = new URL(url);
-    oUrl.search = ''
-    oUrl.hash = ''
-
-    return oUrl.toString();
-  // eslint-disable-next-line no-unused-vars
-  } catch (e) {
-    return url
-  }
-}
 
 export async function removeFromUrlHashAndSearchParamsInActiveTab() {
   logCU('removeFromUrlHashAndSearchParamsInActiveTab () 00')

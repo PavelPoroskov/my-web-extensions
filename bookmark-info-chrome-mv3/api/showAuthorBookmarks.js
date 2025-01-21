@@ -6,7 +6,7 @@ import {
   cleanAuthorUrl,
   getAuthorUrlFromPostUrl,
   getMatchedGetAuthor,
-  removeQueryParamsIfTarget,
+  removeHashAndSearchParams,
 } from '../url-api/index.js'
 import {
   makeLogFunction,
@@ -19,7 +19,7 @@ export async function showAuthorBookmarksStep2({ tabId, url, authorUrl }) {
   let authorBookmarkList = []
 
   if (authorUrl) {
-    let cleanedAuthorUrl = removeQueryParamsIfTarget(authorUrl);
+    let cleanedAuthorUrl = removeHashAndSearchParams(authorUrl);
 
     const matchedGetAuthor = getMatchedGetAuthor(url)
     if (matchedGetAuthor?.cleanAuthorUrlMethod) {
@@ -31,7 +31,7 @@ export async function showAuthorBookmarksStep2({ tabId, url, authorUrl }) {
     }
 
     logSHA('showAuthorBookmarksStep2 () 11', 'cleanedAuthorUrl', cleanedAuthorUrl)
-    const bookmarkInfo = await getBookmarkInfoUni({ url: cleanedAuthorUrl, useCache: true })
+    const bookmarkInfo = await getBookmarkInfoUni({ url: cleanedAuthorUrl, useCache: true, isShowUrl: true })
     authorBookmarkList = bookmarkInfo.bookmarkList
   }
 

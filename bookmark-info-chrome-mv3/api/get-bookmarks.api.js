@@ -81,11 +81,10 @@ async function addBookmarkParentInfo({ bookmarkList, folderByIdMap, isFullPath =
   }
 }
 
-async function getBookmarkInfo({ url, isShowTitle }) {
+async function getBookmarkInfo({ url, isShowTitle, isShowUrl }) {
   logGB('getBookmarkInfo () 00', url)
-  const bkmListForUrl = await chrome.bookmarks.search({ url });
-  logGB('getBookmarkInfo () 11 search({ url })', bkmListForUrl.length, bkmListForUrl)
-  const bookmarkList = bkmListForUrl.map((item) => ({ ...item, source: 'original url' }))
+  const bookmarkList = await chrome.bookmarks.search({ url });
+  logGB('getBookmarkInfo () 11 search({ url })', bookmarkList.length, bookmarkList)
 
   await addBookmarkParentInfo({
     bookmarkList,
@@ -104,12 +103,13 @@ async function getBookmarkInfo({ url, isShowTitle }) {
         path: fullPathList.slice(0, -1).concat('').join('/ '),
         parentId: bookmarkItem.parentId,
         source: bookmarkItem.source,
+        ...(isShowUrl ? { url: bookmarkItem.url } : {}),
         ...(isShowTitle ? { title: bookmarkItem.title } : {})
       }
     });
 }
 
-export async function getBookmarkInfoUni({ url, useCache=false, isShowTitle }) {
+export async function getBookmarkInfoUni({ url, useCache=false, isShowTitle, isShowUrl }) {
   if (!url || !isSupportedProtocol(url)) {
     return;
   }
@@ -127,7 +127,7 @@ export async function getBookmarkInfoUni({ url, useCache=false, isShowTitle }) {
   }
 
   if (!bookmarkList) {
-    bookmarkList = await getBookmarkInfo({ url, isShowTitle });
+    bookmarkList = await getBookmarkInfo({ url, isShowTitle, isShowUrl });
     source = SOURCE.ACTUAL;
     memo.cacheUrlToInfo.add(url, bookmarkList);
   }

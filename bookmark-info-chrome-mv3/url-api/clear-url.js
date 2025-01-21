@@ -72,3 +72,17 @@ export const removeQueryParamsIfTarget = (url) => {
 
   return cleanUrl
 }
+
+export function removeHashAndSearchParams(url) {
+  // logCUA('removeHashAndSearchParams () 00', url)
+  try {
+    const oUrl = new URL(url);
+    oUrl.search = ''
+    oUrl.hash = ''
+
+    return oUrl.toString();
+  // eslint-disable-next-line no-unused-vars
+  } catch (e) {
+    return url
+  }
+}
