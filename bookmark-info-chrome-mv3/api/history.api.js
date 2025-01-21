@@ -1,5 +1,7 @@
+
 import {
   IS_BROWSER_FIREFOX,
+  USER_OPTION,
 } from '../constant/index.js';
 import {
   browserStartTime,
@@ -8,6 +10,7 @@ import {
   startPartialUrlSearch,
 } from '../url-api/index.js'
 import {
+  extensionSettings,
   makeLogFunction,
 } from '../api-low/index.js'
 
@@ -113,15 +116,17 @@ async function getVisitListForUrlList(urlList) {
 }
 
 async function getPreviousVisitList(url) {
-  const {
-    isSearchAvailable,
-    urlForSearch,
-    isUrlMatchToPartialUrlSearch,
-  } = await startPartialUrlSearch(url)
+  const settings = await extensionSettings.get()
+  const isPartialSearchEnabled = settings[USER_OPTION.USE_PARTIAL_URL_SEARCH]
 
   let historyItemList
 
-  if (isSearchAvailable) {
+  if (isPartialSearchEnabled) {
+    const {
+      urlForSearch,
+      isUrlMatchToPartialUrlSearch,
+    } = await startPartialUrlSearch(url)
+
     historyItemList = (await chrome.history.search({
       text: urlForSearch,
       maxResults: 10,

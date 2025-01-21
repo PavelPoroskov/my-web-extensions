@@ -35,7 +35,7 @@ const getFullPath = (id, bkmFolderById) => {
   return path.filter(Boolean).toReversed()
 }
 
-async function addBookmarkParentInfo(bookmarkList, bookmarkByIdMap) {
+async function addBookmarkParentInfo({ bookmarkList, folderByIdMap, isFullPath = true }) {
   // parentIdList.length <= bookmarkList.length
   // for root folders parentIdList=[]
   const parentIdList = getParentIdList(bookmarkList)
@@ -48,20 +48,20 @@ async function addBookmarkParentInfo(bookmarkList, bookmarkByIdMap) {
   const unknownParentIdList = [];
 
   parentIdList.forEach((id) => {
-    if (bookmarkByIdMap.has(id)) {
+    if (folderByIdMap.has(id)) {
       knownParentIdList.push(id)
     } else {
       unknownParentIdList.push(id)
     }
   })
 
-  const knownFolderList = knownParentIdList.map((id) => bookmarkByIdMap.get(id))
+  const knownFolderList = knownParentIdList.map((id) => folderByIdMap.get(id))
 
   if (unknownParentIdList.length > 0) {
     const unknownFolderList = await chrome.bookmarks.get(unknownParentIdList)
 
     unknownFolderList.forEach((folder) => {
-      bookmarkByIdMap.add(
+      folderByIdMap.add(
         folder.id,
         {
           title: folder.title,
@@ -72,7 +72,13 @@ async function addBookmarkParentInfo(bookmarkList, bookmarkByIdMap) {
     })
   }
 
-  return await addBookmarkParentInfo(knownFolderList, bookmarkByIdMap)
+  if (isFullPath) {
+    return await addBookmarkParentInfo({
+      bookmarkList: knownFolderList,
+      folderByIdMap,
+      isFullPath,
+    })
+  }
 }
 
 async function getBookmarkInfo({ url, isShowTitle }) {
@@ -81,35 +87,11 @@ async function getBookmarkInfo({ url, isShowTitle }) {
   logGB('getBookmarkInfo () 11 search({ url })', bkmListForUrl.length, bkmListForUrl)
   const bookmarkList = bkmListForUrl.map((item) => ({ ...item, source: 'original url' }))
 
-  // 1 < pathname.length : it is not root path
-  //    for https://www.youtube.com/watch?v=qqqqq other conditions than 1 < pathname.length
-  // urlForSearch !== url : original url has search params, ending /, index[.xxxx]
-  //  original url can be normalized yet, but I want get url with search params, ending /, index[.xxxx]
-
-  const {
-    isSearchAvailable,
-    urlForSearch,
-    isUrlMatchToPartialUrlSearch,
-  } = await startPartialUrlSearch(url)
-  logGB('getBookmarkInfo () 22 startPartialUrlSearch', { isSearchAvailable, urlForSearch })
-
-  if (isSearchAvailable) {
-    const bkmListForSubstring = await chrome.bookmarks.search(urlForSearch);
-    logGB('getBookmarkInfo () 33 search(normalizedUrl)', bkmListForSubstring.length, bkmListForSubstring)
-
-    const yetSet = new Set(bkmListForUrl.map(({ id }) => id))
-
-    bkmListForSubstring.forEach((bkm) => {
-      if (bkm.url && isUrlMatchToPartialUrlSearch(bkm.url) && !yetSet.has(bkm.id)) {
-        bookmarkList.push({
-          ...bkm,
-          source: 'substring',
-        })
-      }
-    })
-  }
-
-  await addBookmarkParentInfo(bookmarkList, memo.bkmFolderById)
+  await addBookmarkParentInfo({
+    bookmarkList,
+    folderByIdMap: memo.bkmFolderById,
+    isFullPath: true,
+  })
 
   logGB('getBookmarkInfo () 99 bookmarkList', bookmarkList.length, bookmarkList)
   return bookmarkList
@@ -122,7 +104,6 @@ async function getBookmarkInfo({ url, isShowTitle }) {
         path: fullPathList.slice(0, -1).concat('').join('/ '),
         parentId: bookmarkItem.parentId,
         source: bookmarkItem.source,
-        url: bookmarkItem.url,
         ...(isShowTitle ? { title: bookmarkItem.title } : {})
       }
     });
@@ -155,4 +136,51 @@ export async function getBookmarkInfoUni({ url, useCache=false, isShowTitle }) {
     bookmarkList,
     source,
   };
+}
+
+export async function getPartialBookmarkList({ url, exactBkmIdList = [] }) {
+  // 1 < pathname.length : it is not root path
+  //    for https://www.youtube.com/watch?v=qqqqq other conditions than 1 < pathname.length
+  // urlForSearch !== url : original url has search params, ending /, index[.xxxx]
+  //  original url can be normalized yet, but I want get url with search params, ending /, index[.xxxx]
+
+  const {
+    isSearchAvailable,
+    urlForSearch,
+    isUrlMatchToPartialUrlSearch,
+  } = await startPartialUrlSearch(url)
+  logGB('getPartialBookmarkList () 22 startPartialUrlSearch', { isSearchAvailable, urlForSearch })
+
+  if (!isSearchAvailable) {
+    return []
+  }
+
+  const bkmListForSubstring = await chrome.bookmarks.search(urlForSearch);
+  logGB('getPartialBookmarkList () 33 search(normalizedUrl)', bkmListForSubstring.length, bkmListForSubstring)
+
+  const yetSet = new Set(exactBkmIdList)
+  const partialBookmarkList = []
+  bkmListForSubstring.forEach((bkm) => {
+    if (bkm.url && isUrlMatchToPartialUrlSearch(bkm.url) && !yetSet.has(bkm.id)) {
+      partialBookmarkList.push(bkm)
+    }
+  })
+
+  await addBookmarkParentInfo({
+    bookmarkList: partialBookmarkList,
+    folderByIdMap: memo.bkmFolderById,
+    isFullPath: false,
+  })
+
+  return partialBookmarkList
+    .map((bookmarkItem) => {
+      const folder = memo.bkmFolderById.get(bookmarkItem.parentId);
+
+      return {
+        id: bookmarkItem.id,
+        folder: folder?.title,
+        parentId: bookmarkItem.parentId,
+        url: bookmarkItem.url,
+      }
+    });
 }

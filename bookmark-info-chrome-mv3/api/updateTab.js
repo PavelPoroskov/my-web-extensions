@@ -6,6 +6,7 @@ import {
 } from '../api-low/index.js'
 import {
   getBookmarkInfoUni,
+  getPartialBookmarkList,
 } from './get-bookmarks.api.js'
 import {
   getHistoryInfo,
@@ -35,12 +36,27 @@ async function showVisits({ tabId, url }) {
   await page.updateBookmarkInfoInPage({ tabId, data })
 }
 
-async function showExtra({ tabId, url, settings }) {
+async function showPartialBookmarks({ tabId, url, exactBkmIdList }) {
+  const partialBookmarkList = await getPartialBookmarkList({ url, exactBkmIdList })
+
+  const data = {
+    partialBookmarkList,
+  }
+  logUTB('showPartialBookmarks () 99 sendMessage', tabId, data);
+  await page.updateBookmarkInfoInPage({ tabId, data })
+}
+
+async function showExtra({ tabId, url, settings, exactBkmIdList }) {
   const isShowVisits = settings[USER_OPTION.SHOW_PREVIOUS_VISIT]
+  const isShowPartialBookmarks = settings[USER_OPTION.USE_PARTIAL_URL_SEARCH]
   const isShowAuthorBookmarks = settings[USER_OPTION.URL_SHOW_AUTHOR_TAGS]
 
   if (isShowVisits) {
     showVisits({ tabId, url })
+  }
+
+  if (isShowPartialBookmarks) {
+    showPartialBookmarks({ tabId, url, exactBkmIdList })
   }
 
   if (isShowAuthorBookmarks) {
@@ -90,7 +106,12 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
   }
   logUTB('UPDATE-TAB () 99 sendMessage', tabId, data);
   await page.updateBookmarkInfoInPage({ tabId, data })
-  showExtra({ tabId, url, settings })
+  showExtra({
+    tabId,
+    url,
+    settings,
+    exactBkmIdList: bookmarkInfo.bookmarkList.map(({ id }) => id)
+  })
 }
 
 function updateTabTask(options) {

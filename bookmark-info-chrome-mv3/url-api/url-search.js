@@ -1,14 +1,10 @@
 import {
-  USER_OPTION
-} from '../constant/index.js'
-import {
   getHostSettings,
 } from './url-settings.js'
 import {
   makeIsSearchParamMatch,
 } from './url-is.js'
 import {
-  extensionSettings,
   isNotEmptyArray,
   makeLogFunction,
 } from '../api-low/index.js'
@@ -63,13 +59,6 @@ function isSearchParamsMatchForSearch({ url, requiredSearchParams }) {
 
 // ?TODO /posts == /posts?page=1 OR clean on open /posts?page=1 TO /posts IF page EQ 1
 export async function startPartialUrlSearch(url) {
-  const settings = await extensionSettings.get()
-  if (!settings[USER_OPTION.USE_PARTIAL_URL_SEARCH]) {
-    return {
-      isSearchAvailable: false,
-    }
-  }
-
   logUS('startPartialUrlSearch () 00', url)
 
   try {
