@@ -1,4 +1,5 @@
 export * from './common.js'
+export * from './extensionSettings.js'
 export * from './ignoreBkmControllerApiActionSet.js'
 export * from './log.api.js'
 export * from './pluralize.js'

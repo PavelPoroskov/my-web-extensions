@@ -8,9 +8,6 @@ import {
   TAG_LIST_PINNED_TAGS_POSITION_OPTIONS,
 } from '../constant/index.js'
 import {
-  extensionSettings,
-} from './extensionSettings.js'
-import {
   filterFixedTagObj,
   filterRecentTagObj,
   getRecentTagObj,
@@ -23,6 +20,7 @@ import {
   isDatedFolderTitle,
 } from '../folder-api/index.js'
 import {
+  extensionSettings,
   getOptions,
   setOptions,
   makeLogFunction,

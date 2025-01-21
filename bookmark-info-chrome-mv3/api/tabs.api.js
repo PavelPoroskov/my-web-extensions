@@ -1,5 +1,6 @@
 import {
   debounce,
+  extensionSettings,
   isSupportedProtocol,
   makeLogFunction,
 } from '../api-low/index.js'
@@ -13,7 +14,6 @@ import {
   USER_OPTION,
 } from '../constant/index.js'
 import {
-  extensionSettings,
   memo,
   tagList,
 } from '../data-structures/index.js'

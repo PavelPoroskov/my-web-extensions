@@ -8,12 +8,10 @@ import {
   makeIsSearchParamMatch,
 } from './url-is.js'
 import {
+  extensionSettings,
   isNotEmptyArray,
   makeLogFunction,
 } from '../api-low/index.js'
-import {
-  extensionSettings,
-} from '../data-structures/index.js'
 
 const logUS = makeLogFunction({ module: 'url-search.api' })
 

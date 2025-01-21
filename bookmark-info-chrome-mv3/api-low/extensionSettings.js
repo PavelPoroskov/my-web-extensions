@@ -1,13 +1,15 @@
 import {
   getOptions,
   setOptions,
+} from './storage.api.js'
+import {
   makeLogFunction,
-} from '../api-low/index.js'
+} from './log.api.js'
 import {
   USER_OPTION_KEY_LIST,
 } from '../constant/index.js'
 
-const logES = makeLogFunction({ module: 'extensionSettings' })
+const logES = makeLogFunction({ module: 'extensionSettings.js' })
 
 class ExtensionSettings {
   _isActual = false

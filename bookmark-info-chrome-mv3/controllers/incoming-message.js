@@ -8,7 +8,6 @@ import {
   unfixTag,
 } from '../command/index.js'
 import {
-  extensionSettings,
   memo,
   tagList,
 } from '../data-structures/index.js'
@@ -29,6 +28,7 @@ import {
   showAuthorBookmarksStep2,
 } from '../api/url-author.js'
 import {
+  extensionSettings,
   makeLogFunction,
 } from '../api-low/index.js'
 

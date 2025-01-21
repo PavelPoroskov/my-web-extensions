@@ -3,8 +3,6 @@ import {
 } from '../constant/index.js'
 import {
   extensionSettings,
-} from '../data-structures/index.js'
-import {
   isNotEmptyArray,
   makeLogFunction,
 } from '../api-low/index.js'
