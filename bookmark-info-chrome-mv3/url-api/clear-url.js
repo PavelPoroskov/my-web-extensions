@@ -1,21 +1,16 @@
 import {
-  USER_OPTION,
-} from '../constant/index.js'
-import {
-  extensionSettings,
   isNotEmptyArray,
   makeLogFunction,
 } from '../api-low/index.js'
 import {
   getHostSettings,
-} from './url.api.js'
+} from './url-settings.js'
 import {
   isPathnameMatchForPattern,
   makeIsSearchParamMatch,
 } from './url-is.js'
-import { page } from './page.api.js'
 
-const logCUA = makeLogFunction({ module: 'clear-url.api.js' })
+const logCUA = makeLogFunction({ module: 'clear-url.js' })
 
 export const removeQueryParamsIfTarget = (url) => {
   logCUA('removeQueryParamsIfTarget () 00', url)
@@ -76,19 +71,4 @@ export const removeQueryParamsIfTarget = (url) => {
   logCUA('removeQueryParamsIfTarget () 99 cleanUrl', cleanUrl)
 
   return cleanUrl
-}
-
-export async function clearUrlOnPageOpen({ tabId, url }) {
-  let cleanUrl
-  const settings = await extensionSettings.get()
-
-  if (settings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN]) {
-    cleanUrl = removeQueryParamsIfTarget(url);
-
-    if (url !== cleanUrl) {
-      await page.changeUrlInTab({ tabId, url: cleanUrl })
-    }
-  }
-
-  return cleanUrl || url
 }

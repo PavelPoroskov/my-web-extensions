@@ -16,17 +16,17 @@ import {
 } from '../api/tabs.api.js'
 import {
   clearUrlOnPageOpen,
-} from '../api/clear-url.api.js'
+} from '../api/clearUrlOnPageOpen.js'
 import {
   EXTENSION_MSG_ID,
   USER_OPTION,
 } from '../constant/index.js'
 import {
   HOST_LIST_FOR_PAGE_OPTIONS,
-} from '../api/url.api.js'
+} from '../url-api/index.js'
 import {
   showAuthorBookmarksStep2,
-} from '../api/url-author.js'
+} from '../api/showAuthorBookmarks.js'
 import {
   extensionSettings,
   makeLogFunction,

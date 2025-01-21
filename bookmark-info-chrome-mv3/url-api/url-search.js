@@ -3,7 +3,7 @@ import {
 } from '../constant/index.js'
 import {
   getHostSettings,
-} from './url.api.js'
+} from './url-settings.js'
 import {
   makeIsSearchParamMatch,
 } from './url-is.js'
@@ -13,7 +13,7 @@ import {
   makeLogFunction,
 } from '../api-low/index.js'
 
-const logUS = makeLogFunction({ module: 'url-search.api' })
+const logUS = makeLogFunction({ module: 'url-search.js' })
 
 function removeIndexFromPathname(pathname) {
   let list = pathname.split(/(\/)/)

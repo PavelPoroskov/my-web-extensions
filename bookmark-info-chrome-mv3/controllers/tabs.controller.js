@@ -9,7 +9,7 @@ import {
 } from '../api/tabs.api.js'
 import {
   clearUrlOnPageOpen,
-} from '../api/clear-url.api.js'
+} from '../api/clearUrlOnPageOpen.js'
 
 const logTC = makeLogFunction({ module: 'tabs.controller' })
 

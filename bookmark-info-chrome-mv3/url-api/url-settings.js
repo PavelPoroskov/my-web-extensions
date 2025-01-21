@@ -8,7 +8,7 @@ import {
   HOST_URL_SETTINGS_SHORT,
 } from '../constant/url.api.config.js'
 
-const logUA = makeLogFunction({ module: 'url.api.js' })
+const logUST = makeLogFunction({ module: 'url-settings.js' })
 
 function extendsSettings(oSettings) {
   let mSettings = typeof oSettings == 'string'
@@ -67,7 +67,7 @@ const HOST_URL_SETTINGS_LIST = Object.entries(HOST_URL_SETTINGS)
 const HOST_URL_SETTINGS_MAP = new Map(HOST_URL_SETTINGS_LIST)
 
 export const getHostSettings = (url) => {
-  logUA('getHostSettings 00', url)
+  logUST('getHostSettings 00', url)
 
   let oUrl
   try {
@@ -78,21 +78,21 @@ export const getHostSettings = (url) => {
   }
 
   const { hostname } = oUrl;
-  logUA('getHostSettings 11', hostname)
+  logUST('getHostSettings 11', hostname)
 
   let targetHostSettings = HOST_URL_SETTINGS_MAP.get(hostname)
-  logUA('targetHostSettings 22 hostname', targetHostSettings)
+  logUST('targetHostSettings 22 hostname', targetHostSettings)
 
   if (!targetHostSettings) {
     const [firstPart, ...restPart] = hostname.split('.')
-    logUA('targetHostSettings 33', firstPart, restPart.join('.'))
+    logUST('targetHostSettings 33', firstPart, restPart.join('.'))
 
     if (firstPart == 'www') {
       targetHostSettings = HOST_URL_SETTINGS_MAP.get(restPart.join('.'))
-      logUA('targetHostSettings 44', targetHostSettings)
+      logUST('targetHostSettings 44', targetHostSettings)
     } else {
       targetHostSettings = HOST_URL_SETTINGS_MAP.get(`www.${hostname}`)
-      logUA('targetHostSettings 55', targetHostSettings)
+      logUST('targetHostSettings 55', targetHostSettings)
     }
   }
 
@@ -100,7 +100,7 @@ export const getHostSettings = (url) => {
     const baseDomain = hostname.split('.').slice(-2).join('.')
 
     targetHostSettings = HOST_URL_SETTINGS_MAP.get(baseDomain)
-    logUA('targetHostSettings 66 baseDomain', baseDomain, targetHostSettings)
+    logUST('targetHostSettings 66 baseDomain', baseDomain, targetHostSettings)
   }
 
   return targetHostSettings || DEFAULT_HOST_SETTINGS_EXT

@@ -4,7 +4,7 @@ import {
   makeLogFunction,
 } from '../api-low/index.js'
 
-const logCU = makeLogFunction({ module: 'clearUrlInActiveTab' })
+const logCU = makeLogFunction({ module: 'clearUrlInActiveTab.js' })
 
 function removeHashAndSearchParams(url) {
   logCU('removeHashAndSearchParams () 00', url)

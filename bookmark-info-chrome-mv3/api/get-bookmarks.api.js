@@ -10,7 +10,7 @@ import {
 } from '../constant/index.js'
 import {
   startPartialUrlSearch,
-} from './url-search.api.js'
+} from '../url-api/index.js'
 
 const logGB = makeLogFunction({ module: 'get-bookmarks.api.js' })
 

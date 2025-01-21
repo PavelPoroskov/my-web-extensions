@@ -19,7 +19,7 @@ import {
 } from '../data-structures/index.js'
 import {
   showAuthorBookmarks,
-} from './url-author.js'
+} from './showAuthorBookmarks.js'
 import { page } from './page.api.js'
 import { initExtension } from './init-extension.js'
 

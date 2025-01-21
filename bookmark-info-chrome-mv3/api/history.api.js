@@ -6,7 +6,7 @@ import {
 } from '../data-structures/index.js';
 import {
   startPartialUrlSearch,
-} from './url-search.api.js'
+} from '../url-api/index.js'
 import {
   makeLogFunction,
 } from '../api-low/index.js'
