@@ -53,7 +53,7 @@ createFileForFirefox(
     'api/history.api.js',
     'api/init-extension.js',
     'api/showAuthorBookmarks.js',
-    'api/tabs.api.js',
+    'api/updateTab.js',
     'api/clearUrlOnPageOpen.js',
 
     'bookmark-list-ops/flatFolders.js',

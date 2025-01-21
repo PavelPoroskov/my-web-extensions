@@ -1,6 +1,6 @@
 import {
   debouncedUpdateActiveTab,
-} from '../api/tabs.api.js'
+} from '../api/updateTab.js'
 import {
   flatBookmarks,
 } from '../bookmark-list-ops/index.js'

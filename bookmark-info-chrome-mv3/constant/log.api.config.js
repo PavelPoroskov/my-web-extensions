@@ -23,7 +23,7 @@ const logModuleList = [
   // 'showAuthorBookmarks.js'',
   // 'storage.api.js',
   // 'storage.controller',
-  // 'tabs.api.js',
+  // 'updateTab.js',
   // 'tabs.controller',
   // 'tagList-getRecent.js',
   // 'tagList-highlight.js',

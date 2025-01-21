@@ -23,7 +23,7 @@ import {
 import { page } from './page.api.js'
 import { initExtension } from './init-extension.js'
 
-const logTA = makeLogFunction({ module: 'tabs.api.js' })
+const logUTB = makeLogFunction({ module: 'updateTab.js' })
 
 async function showVisits({ tabId, url }) {
   const visitInfo = await getHistoryInfo({ url })
@@ -31,7 +31,7 @@ async function showVisits({ tabId, url }) {
   const data = {
     visitString: visitInfo.visitString,
   }
-  logTA('showVisits () 99 sendMessage', tabId, data);
+  logUTB('showVisits () 99 sendMessage', tabId, data);
   await page.updateBookmarkInfoInPage({ tabId, data })
 }
 
@@ -49,7 +49,7 @@ async function showExtra({ tabId, url, settings }) {
 }
 
 async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
-  logTA(`UPDATE-TAB () 00 <- ${debugCaller}`, tabId);
+  logUTB(`UPDATE-TAB () 00 <- ${debugCaller}`, tabId);
   let url = inUrl
 
   if (!url) {
@@ -57,7 +57,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
       const Tab = await chrome.tabs.get(tabId);
       url = Tab?.url
     } catch (er) {
-      logTA('IGNORING. tab was deleted', er);
+      logUTB('IGNORING. tab was deleted', er);
     }
   }
 
@@ -65,7 +65,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     return
   }
 
-  logTA('UPDATE-TAB () 11', url);
+  logUTB('UPDATE-TAB () 11', url);
 
   await initExtension({ debugCaller: 'updateTab ()' })
   const settings = await extensionSettings.get()
@@ -88,7 +88,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     isHideSemanticHtmlTagsOnPrinting: settings[USER_OPTION.HIDE_TAG_HEADER_ON_PRINTING],
     isHideHeaderForYoutube: settings[USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE],
   }
-  logTA('UPDATE-TAB () 99 sendMessage', tabId, data);
+  logUTB('UPDATE-TAB () 99 sendMessage', tabId, data);
   await page.updateBookmarkInfoInPage({ tabId, data })
   showExtra({ tabId, url, settings })
 }
@@ -104,7 +104,7 @@ function updateTabTask(options) {
 const debouncedUpdateTab = debounce(updateTabTask, 30)
 
 export function debouncedUpdateActiveTab({ debugCaller } = {}) {
-  logTA('debouncedUpdateActiveTab () 00', 'memo[\'activeTabId\']', memo['activeTabId'])
+  logUTB('debouncedUpdateActiveTab () 00', 'memo[\'activeTabId\']', memo['activeTabId'])
 
   if (memo.activeTabId) {
     debouncedUpdateTab({

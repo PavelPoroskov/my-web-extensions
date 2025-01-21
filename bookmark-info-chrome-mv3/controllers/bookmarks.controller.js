@@ -8,7 +8,7 @@ import {
 } from '../data-structures/index.js'
 import {
   debouncedUpdateActiveTab,
-} from '../api/tabs.api.js'
+} from '../api/updateTab.js'
 import {
   createBookmarkInDatedTemplate,
   moveBookmarkInDatedTemplate,

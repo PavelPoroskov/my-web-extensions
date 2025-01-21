@@ -13,7 +13,7 @@ import {
 } from '../data-structures/index.js'
 import {
   updateActiveTab,
-} from '../api/tabs.api.js'
+} from '../api/updateTab.js'
 import {
   clearUrlOnPageOpen,
 } from '../api/clearUrlOnPageOpen.js'

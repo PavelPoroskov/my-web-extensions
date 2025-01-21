@@ -3,7 +3,7 @@ import {
 } from '../api-low/index.js'
 import {
   debouncedUpdateActiveTab,
-} from '../api/tabs.api.js'
+} from '../api/updateTab.js'
 import {
   setFirstActiveTab,
 } from '../api/init-extension.js'
