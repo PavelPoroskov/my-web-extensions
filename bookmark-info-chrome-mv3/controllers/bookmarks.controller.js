@@ -22,8 +22,10 @@ import {
 } from '../constant/index.js'
 import {
   ignoreBkmControllerApiActionSet,
+} from '../bookmark-controller-api/index.js'
+import {
   makeLogFunction,
-} from '../api-low/index.js'
+} from '../api-low/index.js';
 
 const logBC = makeLogFunction({ module: 'bookmarks.controller' })
 

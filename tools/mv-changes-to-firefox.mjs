@@ -19,7 +19,6 @@ createFileForFirefox(
     'api-low/pluralize.js',
     'api-low/log.api.js',
     'api-low/storage.api.js',
-    'api-low/ignoreBkmControllerApiActionSet.js',
     'api-low/extensionSettings.js', // dependencies: storage.api.js, log.api.js
     'api-low/index.js',
 
@@ -27,6 +26,9 @@ createFileForFirefox(
     'data-structures/cache.js',
     'data-structures/memo.js',
     'data-structures/browserStartTime.js',
+
+    'bookmark-controller-api/ignoreBkmControllerApiActionSet.js',
+    'bookmark-controller-api/index.js',
 
     'folder-api/folder-title.js',
     'folder-api/folder-crud.js',
