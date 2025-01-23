@@ -1,6 +1,6 @@
 import {
   ignoreBkmControllerApiActionSet,
-} from '../bookmark-controller-api/index.js'
+} from '../bookmark-controller-api/ignoreBkmControllerApiActionSet.js'
 
 export async function createFolderIgnoreInController({
   title,

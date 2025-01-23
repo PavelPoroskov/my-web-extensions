@@ -8,7 +8,7 @@ import {
 } from '../folder-api/index.js';
 import {
   ignoreBkmControllerApiActionSet,
-} from '../bookmark-controller-api/index.js'
+} from '../bookmark-controller-api/ignoreBkmControllerApiActionSet.js'
 import {
   makeLogFunction,
 } from '../api-low/index.js';

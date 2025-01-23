@@ -28,7 +28,6 @@ createFileForFirefox(
     'data-structures/browserStartTime.js',
 
     'bookmark-controller-api/ignoreBkmControllerApiActionSet.js',
-    'bookmark-controller-api/index.js',
 
     'folder-api/folder-title.js',
     'folder-api/folder-crud.js',
@@ -80,6 +79,11 @@ createFileForFirefox(
     'command/unfixTag.js',
     'command/toggleYoutubeHeader.js',
     'command/index.js',
+
+    'bookmark-controller-api/nodeTaskQueue.js',
+    'bookmark-controller-api/bookmarkQueue.js',
+    'bookmark-controller-api/folderQueue.js',
+    'bookmark-controller-api/index.js',
 
     'controllers/bookmarks.controller.js',
     'controllers/commands.controller.js',
