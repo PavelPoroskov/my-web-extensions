@@ -90,6 +90,12 @@ const urlSettingsUse = {
       },
     ]
   },
+  'blog.logrocket.com': {
+    getAuthor: {
+      pagePattern: '/:post/',
+      authorSelector: 'a#post-author-name[href]',
+    }
+  },
   'marketplace.visualstudio.com': {
     searchParamList: [
       'itemName',
