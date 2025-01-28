@@ -33,6 +33,7 @@ createFileForFirefox(
     'folder-api/folder-crud.js',
     'folder-api/special-folder.js',
     'folder-api/find-folder.js',
+    'folder-api/folder-dated-title.js',
     'folder-api/folder-dated.js',
     'folder-api/index.js',
 

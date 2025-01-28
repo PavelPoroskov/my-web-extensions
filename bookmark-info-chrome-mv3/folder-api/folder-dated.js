@@ -9,32 +9,15 @@ import {
   createFolderIgnoreInController,
 } from './folder-crud.js'
 import {
-  isDatedFolderTitle,
+  getDatedTitle,
   isDatedFolderTemplate,
-} from './folder-title.js';
+  isDatedTitleForTemplate,
+} from './folder-title-dated.js';
 import {
   makeLogFunction,
 } from '../api-low/index.js';
 
 const logFD = makeLogFunction({ module: 'folder-dated.js' })
-
-const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric'})
-const weekdayFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'short' })
-const futureDate = new Date('01/01/2125')
-const oneDayMs = 24*60*60*1000
-
-function getDatedTitle(folderTitle) {
-  const fixedPart = folderTitle.slice(0, -3).trim()
-
-  const today = new Date()
-  const sToday = dateFormatter.format(today).replaceAll('/', '-')
-  const sWeekday = weekdayFormatter.format(today)
-
-  const days = Math.floor((futureDate - today)/oneDayMs)
-  const sDays = new Number(days).toString(36).padStart(3,'0')
-
-  return `${fixedPart} ${sDays} ${sToday} ${sWeekday}`
-}
 
 // folderTitle = 'DONE @D' 'selected @D' 'BEST @D'
 export async function getDatedFolder(templateTitle) {
@@ -65,23 +48,6 @@ export async function getDatedFolder(templateTitle) {
   }
 
   return foundFolder
-}
-
-export function isDatedTitleForTemplate({ title, template }) {
-  logFD('isDatedTitleForTemplate () 00', title, template)
-
-
-  if (!isDatedFolderTemplate(template)) {
-    return
-  }
-  if (!isDatedFolderTitle(title)) {
-    return false
-  }
-
-  const fixedPartFromTitle = title.split(' ').slice(0, -3).join(' ')
-  const fixedPartFromTemplate = template.slice(0, -3).trim()
-
-  return fixedPartFromTitle == fixedPartFromTemplate
 }
 
 export async function removePreviousDatedBookmarks({ url, template }) {
