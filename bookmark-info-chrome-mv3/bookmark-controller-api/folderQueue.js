@@ -6,13 +6,33 @@ import {
   debouncedUpdateActiveTab,
 } from '../api/updateTab.js'
 import {
+  BOOKMARKS_BAR_FOLDER_ID,
+  BOOKMARKS_MENU_FOLDER_ID,
+  OTHER_BOOKMARKS_FOLDER_ID,
+} from '../folder-api/index.js'
+import {
   NODE_ACTION,
   NodeTaskQueue
 } from './nodeTaskQueue.js'
+import {
+  moveFolderIgnoreInController,
+} from './folder-ignore.js'
 
 async function onCreateFolder(task) {
   const { node } = task
   await tagList.addRecentTagFromFolder(node)
+
+  const rootArray = [BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID].filter(Boolean)
+  const { id, parentId, title } = node
+
+  if (rootArray.includes(parentId)) {
+    const firstLevelNodeList = await chrome.bookmarks.getChildren(parentId)
+    const findIndex = firstLevelNodeList.find((item) => title.localeCompare(item.title) < 0)
+
+    if (findIndex) {
+      moveFolderIgnoreInController({ id, index: findIndex.index })
+    }
+  }
 
   // changes in active tab
   debouncedUpdateActiveTab({
