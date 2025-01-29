@@ -1,7 +1,9 @@
 import {
   isDatedFolderTitle,
+} from '../folder-api/index.js'
+import {
   moveFolderIgnoreInController,
-} from '../folder-api/index.js';
+} from '../bookmark-controller-api/index.js'
 import {
   makeLogFunction,
 } from '../api-low/index.js';

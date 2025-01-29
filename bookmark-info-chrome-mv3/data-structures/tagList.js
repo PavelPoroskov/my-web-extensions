@@ -1,6 +1,7 @@
 import {
   getUnclassifiedFolderId,
   isDescriptiveFolderTitle,
+  isDatedFolderTitle,
 } from '../folder-api/index.js'
 import {
   USER_OPTION,
@@ -16,9 +17,6 @@ import {
   highlightAlphabet,
   getFirstLetter,
 } from './tagList-highlight.js'
-import {
-  isDatedFolderTitle,
-} from '../folder-api/index.js'
 import {
   extensionSettings,
   getOptions,

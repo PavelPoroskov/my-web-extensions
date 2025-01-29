@@ -3,9 +3,11 @@ import {
   isDescriptiveFolderTitle,
   BOOKMARKS_BAR_FOLDER_ID,
   OTHER_BOOKMARKS_FOLDER_ID,
+} from '../folder-api/index.js'
+import {
   moveNodeIgnoreInController,
   removeFolderIgnoreInController,
-} from '../folder-api/index.js';
+} from '../bookmark-controller-api/index.js'
 
 async function moveContentToStart(fromFolderId, toFolderId) {
   const nodeList = await chrome.bookmarks.getChildren(fromFolderId)

@@ -2,10 +2,12 @@ import {
   getDatedRootFolderId,
   BOOKMARKS_BAR_FOLDER_ID,
   OTHER_BOOKMARKS_FOLDER_ID,
+} from '../folder-api/index.js';
+import {
   moveFolderIgnoreInController,
   removeFolderIgnoreInController,
   updateFolderIgnoreInController,
-} from '../folder-api/index.js';
+} from '../bookmark-controller-api/index.js';
 
 async function getMaxUsedSuffix() {
   function getFoldersFromTree(tree) {

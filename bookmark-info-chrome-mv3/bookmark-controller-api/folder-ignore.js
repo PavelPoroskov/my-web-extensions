@@ -1,6 +1,6 @@
 import {
   ignoreBkmControllerApiActionSet,
-} from '../bookmark-controller-api/ignoreBkmControllerApiActionSet.js'
+} from './ignoreBkmControllerApiActionSet.js'
 
 export async function createFolderIgnoreInController({
   title,
@@ -48,7 +48,3 @@ export async function removeFolderIgnoreInController(bkmId) {
   await chrome.bookmarks.remove(bkmId)
 }
 
-export async function removeFolder(bkmId) {
-  ignoreBkmControllerApiActionSet.addIgnoreRemove(bkmId)
-  await chrome.bookmarks.remove(bkmId)
-}

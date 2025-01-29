@@ -1,6 +1,6 @@
 import {
   moveFolderIgnoreInController,
-} from '../folder-api/index.js';
+} from '../bookmark-controller-api/index.js'
 
 export async function sortFolders(parentId) {
   // console.log('sortChildFoldersOp',  parentId)

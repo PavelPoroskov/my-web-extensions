@@ -3,15 +3,10 @@ import {
   OTHER_BOOKMARKS_FOLDER_ID,
 } from './special-folder.js';
 import {
-  isStartWithTODO,
   trimLow,
   trimLowSingular,
   normalizeTitle,
 } from './folder-title.js';
-import {
-  createFolderIgnoreInController,
-  updateFolderIgnoreInController,
-} from './folder-crud.js'
 import {
   makeLogFunction,
 } from '../api-low/index.js';
@@ -217,7 +212,7 @@ async function findTitleDropEnding(title) {
   return foundItem
 }
 
-async function findFolder(title) {
+export async function findFolder(title) {
   logFF('findFolder 00 title', title)
   let foundItem
 
@@ -267,39 +262,4 @@ async function findFolder(title) {
   }
 
   return foundItem
-}
-
-export async function findOrCreateFolder(title) {
-  let folder = await findFolder(title)
-
-  if (!folder) {
-    const parentId = isStartWithTODO(title)
-      ? BOOKMARKS_BAR_FOLDER_ID
-      : OTHER_BOOKMARKS_FOLDER_ID
-
-    const firstLevelNodeList = await chrome.bookmarks.getChildren(parentId)
-    const findIndex = firstLevelNodeList.find((node) => title.localeCompare(node.title) < 0)
-    logFF('findOrCreateFolder 11 findIndex', findIndex?.index, findIndex?.title)
-
-    const folderParams = {
-      parentId,
-      title,
-    }
-
-    if (findIndex) {
-      folderParams.index = findIndex.index
-    }
-
-    folder = await createFolderIgnoreInController(folderParams)
-  } else {
-    const oldBigLetterN = folder.title.replace(/[^A-Z]+/g, "").length
-    const newBigLetterN = title.replace(/[^A-Z]+/g, "").length
-    // const isAbbreviation = title.length == newBigLetterN
-
-    if (oldBigLetterN < newBigLetterN) {
-      await updateFolderIgnoreInController({ id: folder.id, title })
-    }
-  }
-
-  return folder
 }

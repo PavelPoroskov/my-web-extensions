@@ -3,7 +3,7 @@ import {
 } from '../data-structures/index.js'
 import {
   removeBookmarkIgnoreInController,
-} from '../api/bookmark.api.js'
+} from '../bookmark-controller-api/index.js'
 
 async function getDoubles() {
   const doubleList = []

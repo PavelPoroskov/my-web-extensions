@@ -4,7 +4,7 @@ import {
 } from '../folder-api/index.js';
 import {
   moveBookmarkIgnoreInController,
-} from '../api/bookmark.api.js';
+} from '../bookmark-controller-api/index.js'
 
 async function moveRootBookmarks({ fromId, unclassifiedId }) {
   // console.log('### moveRootBookmarks 00,', fromId)

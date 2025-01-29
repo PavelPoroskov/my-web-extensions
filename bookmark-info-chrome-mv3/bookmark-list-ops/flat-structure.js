@@ -2,47 +2,51 @@ import {
   isDatedFolderTitle,
   isStartWithTODO,
   getDatedRootFolderId,
-  getOrCreateDatedRootFolderId,
-  getOrCreateUnclassifiedFolderId,
   BOOKMARKS_BAR_FOLDER_ID,
   BOOKMARKS_MENU_FOLDER_ID,
   OTHER_BOOKMARKS_FOLDER_ID,
-} from '../folder-api/index.js';
+  UNCLASSIFIED_TITLE,
+  DATED_TITLE,
+} from '../folder-api/index.js'
+import {
+  getOrCreateFolderByTitleInRoot,
+} from '../bookmark-controller-api/index.js'
 import {
   tagList,
-} from '../data-structures/index.js';
+} from '../data-structures/index.js'
 import {
   flatFolders,
-} from './flatFolders.js';
+} from './flatFolders.js'
 import {
   mergeFolders,
-} from './mergeFolders.js';
+} from './mergeFolders.js'
 import {
   moveNotDescriptiveFoldersToUnclassified,
-} from './moveNotDescriptiveFolders.js';
+} from './moveNotDescriptiveFolders.js'
 import {
   moveRootBookmarksToUnclassified,
-} from './moveRootBookmarks.js';
+} from './moveRootBookmarks.js'
 import {
   moveFoldersByName,
   moveOldDatedFolders,
-} from './moveFoldersByName.js';
+} from './moveFoldersByName.js'
 import {
   removeDoubleBookmarks,
-} from './removeDoubleBookmarks.js';
+} from './removeDoubleBookmarks.js'
 import {
   sortFolders,
-} from './sortFolders.js';
+} from './sortFolders.js'
 import {
   IS_BROWSER_FIREFOX,
-} from '../constant/index.js';
+} from '../constant/index.js'
 
 export async function flatBookmarks() {
   tagList.blockTagList(true)
 
   try {
-    await getOrCreateUnclassifiedFolderId()
-    await getOrCreateDatedRootFolderId()
+    await getOrCreateFolderByTitleInRoot(UNCLASSIFIED_TITLE)
+    await getOrCreateFolderByTitleInRoot(DATED_TITLE)
+
     const datedRootFolderId = await getDatedRootFolderId()
 
     if (IS_BROWSER_FIREFOX) {

@@ -10,12 +10,16 @@ import {
   debouncedUpdateActiveTab,
 } from '../api/updateTab.js'
 import {
+  createBookmarkIgnoreInController,
+  moveBookmarkIgnoreInController,
+} from './bookmark-ignore.js'
+import {
+  isBookmarkCreatedWithApi,
+} from './bookmark-create1.js'
+import {
   createBookmarkInDatedTemplate,
   moveBookmarkInDatedTemplate,
-  createBookmarkIgnoreInController,
-  isBookmarkCreatedWithApi,
-  moveBookmarkIgnoreInController,
-} from '../api/bookmark.api.js'
+} from './bookmark-dated.js'
 import {
   IS_BROWSER_CHROME,
   IS_BROWSER_FIREFOX,

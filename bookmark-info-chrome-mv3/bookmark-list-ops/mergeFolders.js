@@ -3,10 +3,12 @@ import {
   OTHER_BOOKMARKS_FOLDER_ID,
   normalizeTitle,
   trimTitle,
+} from '../folder-api/index.js'
+import {
   removeFolder,
   updateFolderIgnoreInController,
   moveNodeIgnoreInController,
-} from '../folder-api/index.js';
+} from '../bookmark-controller-api/index.js'
 
 
 async function moveContent(fromFolderId, toFolderId) {

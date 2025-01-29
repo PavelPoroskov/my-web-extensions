@@ -64,9 +64,6 @@ export function isDatedFolderTitle(str) {
 }
 
 export function isDatedTitleForTemplate({ title, template }) {
-  logFD('isDatedTitleForTemplate () 00', title, template)
-
-
   if (!isDatedFolderTemplate(template)) {
     return
   }

@@ -27,14 +27,10 @@ createFileForFirefox(
     'data-structures/memo.js',
     'data-structures/browserStartTime.js',
 
-    'bookmark-controller-api/ignoreBkmControllerApiActionSet.js',
-
     'folder-api/folder-title.js',
-    'folder-api/folder-crud.js',
     'folder-api/special-folder.js',
     'folder-api/find-folder.js',
     'folder-api/folder-dated-title.js',
-    'folder-api/folder-dated.js',
     'folder-api/index.js',
 
     'data-structures/tagList-getRecent.js',
@@ -49,7 +45,6 @@ createFileForFirefox(
     'url-api/url-author.js',
     'url-api/index.js',
 
-    'api/bookmark.api.js',
     'api/page.api.js',
     'api/get-bookmarks.api.js',
     'api/history.api.js',
@@ -57,6 +52,18 @@ createFileForFirefox(
     'api/showAuthorBookmarks.js',
     'api/updateTab.js',
     'api/clearUrlOnPageOpen.js',
+
+    'bookmark-controller-api/ignoreBkmControllerApiActionSet.js',
+    'bookmark-controller-api/folder-ignore.js',
+    'bookmark-controller-api/folder-create.js',
+    'bookmark-controller-api/bookmark-create1.js',
+    'bookmark-controller-api/bookmark-ignore.js',
+    'bookmark-controller-api/bookmark-dated.js',
+    'bookmark-controller-api/bookmark-create.js',
+    'bookmark-controller-api/nodeTaskQueue.js',
+    'bookmark-controller-api/bookmarkQueue.js',
+    'bookmark-controller-api/folderQueue.js',
+    'bookmark-controller-api/index.js',
 
     'bookmark-list-ops/flatFolders.js',
     'bookmark-list-ops/mergeFolders.js',
@@ -80,11 +87,6 @@ createFileForFirefox(
     'command/unfixTag.js',
     'command/toggleYoutubeHeader.js',
     'command/index.js',
-
-    'bookmark-controller-api/nodeTaskQueue.js',
-    'bookmark-controller-api/bookmarkQueue.js',
-    'bookmark-controller-api/folderQueue.js',
-    'bookmark-controller-api/index.js',
 
     'controllers/bookmarks.controller.js',
     'controllers/commands.controller.js',
