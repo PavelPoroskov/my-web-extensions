@@ -1,4 +1,7 @@
 import {
+  makeLogFunction,
+} from '../api-low/index.js'
+import {
   getUnclassifiedFolderId,
   isDatedFolderTemplate,
 } from '../folder-api/index.js'
@@ -29,6 +32,8 @@ import {
   NodeTaskQueue,
 } from './nodeTaskQueue.js'
 
+const logBQ = makeLogFunction({ module: 'bookmarkQueue.js' })
+
 let lastCreatedBkmId
 let lastCreatedBkmTabId
 let lastMovedBkmId
@@ -36,6 +41,7 @@ let lastMovedBkmId
 async function onCreateBookmark(task) {
   const { bookmarkId, node } = task
   const { parentId, url } = node
+  logBQ('onCreateBookmark () 00', url)
 
   lastCreatedBkmId = bookmarkId
   lastCreatedBkmTabId = memo.activeTabId

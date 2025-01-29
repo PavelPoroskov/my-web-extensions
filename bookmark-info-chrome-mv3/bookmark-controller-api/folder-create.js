@@ -13,7 +13,6 @@ import {
 } from '../folder-api/index.js';
 import {
   createFolderIgnoreInController,
-  updateFolderIgnoreInController,
 } from './folder-ignore.js'
 
 const logFCR = makeLogFunction({ module: 'folder-create.js' })
@@ -44,9 +43,11 @@ export async function findOrCreateFolder(title) {
     const oldBigLetterN = folder.title.replace(/[^A-Z]+/g, "").length
     const newBigLetterN = title.replace(/[^A-Z]+/g, "").length
     // const isAbbreviation = title.length == newBigLetterN
+    logFCR('findOrCreateFolder () 22', oldBigLetterN, newBigLetterN)
 
     if (oldBigLetterN < newBigLetterN) {
-      await updateFolderIgnoreInController({ id: folder.id, title })
+      // await updateFolderIgnoreInController({ id: folder.id, title })
+      await chrome.bookmarks.update(folder.id, { title })
     }
   }
 

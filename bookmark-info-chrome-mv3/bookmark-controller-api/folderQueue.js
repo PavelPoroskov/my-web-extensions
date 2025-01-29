@@ -1,4 +1,7 @@
 import {
+  makeLogFunction,
+} from '../api-low/index.js'
+import {
   memo,
   tagList,
 } from '../data-structures/index.js'
@@ -18,12 +21,16 @@ import {
   moveFolderIgnoreInController,
 } from './folder-ignore.js'
 
+const logFQ = makeLogFunction({ module: 'folderQueue.js' })
+
 async function onCreateFolder(task) {
   const { node } = task
+  const { id, parentId, title } = node
+  logFQ('onCreateFolder () 00', title)
+
   await tagList.addRecentTagFromFolder(node)
 
   const rootArray = [BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID].filter(Boolean)
-  const { id, parentId, title } = node
 
   if (rootArray.includes(parentId)) {
     const firstLevelNodeList = await chrome.bookmarks.getChildren(parentId)
