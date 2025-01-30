@@ -63,7 +63,9 @@ export async function getDatedFolder(templateTitle) {
 
   const datedTitle = getDatedTitle(templateTitle)
   logFCR('getDatedFolder () 11', 'datedTitle', datedTitle)
-  const rootId = BOOKMARKS_MENU_FOLDER_ID || BOOKMARKS_BAR_FOLDER_ID
+  const rootId = isStartWithTODO(datedTitle)
+    ? BOOKMARKS_BAR_FOLDER_ID
+    : BOOKMARKS_MENU_FOLDER_ID || BOOKMARKS_BAR_FOLDER_ID
   let foundFolder = await findFolderWithExactTitle({ title: datedTitle, rootId })
 
   if (!foundFolder) {
