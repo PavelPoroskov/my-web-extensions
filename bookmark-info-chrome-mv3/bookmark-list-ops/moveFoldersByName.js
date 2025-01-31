@@ -29,6 +29,8 @@ export async function moveFoldersByName({ fromId, toId, isCondition }) {
   );
 }
 
+const KEEP_DATED_FOLDERS = 3
+
 export async function moveOldDatedFolders({ fromId, toId }) {
   const childrenList = await chrome.bookmarks.getChildren(fromId)
 
@@ -47,7 +49,7 @@ export async function moveOldDatedFolders({ fromId, toId }) {
   Object.entries(grouped).forEach(([, list]) => {
     const moveListForFixedPart = list
       .toSorted((a,b) => a.title.localeCompare(b.title))
-      .slice(2)
+      .slice(KEEP_DATED_FOLDERS)
 
     groupedMoveList.push(moveListForFixedPart)
   })
