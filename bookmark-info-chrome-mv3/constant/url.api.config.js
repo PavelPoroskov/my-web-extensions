@@ -176,7 +176,9 @@ const urlSettingsRu = {
       'num',
     ],
   },
-
+  'web.telegram.org': {
+    isHashRequired: true,
+  },
 }
 
 export const HOST_URL_SETTINGS = Object.assign(
