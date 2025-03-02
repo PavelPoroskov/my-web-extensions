@@ -1109,16 +1109,31 @@ ${semanticTagsStyle}
     }
   }
 
+  function isYouTubeChannel(location) {
+    let result = true
+
+    switch (location.pathname) {
+      case '/':
+      case '/watch':
+        result = false
+    }
+
+    return result
+  }
+
   function toggleYoutubePageHeader({ nTry } = { nTry: 1 }) {
     const isHideHeaderForYoutube = options.isHideHeaderForYoutube || false
 
     if (isHideHeaderForYoutube) {
       const isYoutubePage = document.location.hostname.endsWith('youtube.com')
-      const isChannel = isYoutubePage && (
-        document.location.pathname.startsWith('/@')
-        || document.location.pathname.startsWith('/c/')
-        || document.location.pathname.startsWith('/channel/')
-      )
+      const isChannel = isYoutubePage
+      // && (
+      //   document.location.pathname.startsWith('/@')
+      //   || document.location.pathname.startsWith('/c/')
+      //   || document.location.pathname.startsWith('/channel/')
+      //   || document.location.pathname.startsWith('/user/')
+      // )
+      && document.location.pathname.endsWith('/videos')
 
       if (isChannel) {
         const ytDiv = document.querySelector('#page-header-container');
