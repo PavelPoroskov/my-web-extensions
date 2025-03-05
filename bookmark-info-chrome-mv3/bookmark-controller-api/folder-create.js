@@ -49,6 +49,13 @@ export async function findOrCreateFolder(title) {
       // await updateFolderIgnoreInController({ id: folder.id, title })
       await chrome.bookmarks.update(folder.id, { title })
     }
+
+    const oldDashN = folder.title.replace(/[^-]+/g,"").length
+    const newDashN = title.replace(/[^-]+/g,"").length
+    if (newDashN < oldDashN) {
+      // await updateFolderIgnoreInController({ id: folder.id, title })
+      await chrome.bookmarks.update(folder.id, { title })
+    }
   }
 
   return folder
