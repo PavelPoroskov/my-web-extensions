@@ -20,6 +20,7 @@ createFileForFirefox(
     'api-low/log.api.js',
     'api-low/storage.api.js',
     'api-low/extensionSettings.js', // dependencies: storage.api.js, log.api.js
+    'api-low/youtube.js',
     'api-low/index.js',
 
     'data-structures/extraMap.js',

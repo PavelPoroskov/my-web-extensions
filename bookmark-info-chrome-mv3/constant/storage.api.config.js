@@ -20,9 +20,6 @@ const USER_OPTION_META = {
   FONT_SIZE: {
     default: 14,
   },
-  HIDE_PAGE_HEADER_FOR_YOUTUBE: {
-    default: false
-  },
   HIDE_TAG_HEADER_ON_PRINTING: {
     default: false
   },
@@ -58,6 +55,12 @@ const USER_OPTION_META = {
   },
   URL_SHOW_AUTHOR_TAGS: {
     default: false,
+  },
+  YOUTUBE_HIDE_PAGE_HEADER: {
+    default: false
+  },
+  YOUTUBE_REDIRECT_CHANNEL_TO_VIDEOS: {
+    default: false
   },
 }
 

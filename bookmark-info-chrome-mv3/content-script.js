@@ -1109,50 +1109,13 @@ ${semanticTagsStyle}
     }
   }
 
-  // function isYouTubeChannel(location) {
-  //   let result = true
-
-  //   switch (location.pathname) {
-  //     case '/':
-  //     case '/watch':
-  //       result = false
-  //   }
-
-  //   return result
-  // }
-  // function isYouTubeChannelWithoutSubdir(pathname) {
-  //   const [part1, part2, part3] = pathname.split('/').filter(Boolean)
-  //   let result = false
-
-  //   switch (true) {
-  //     case part1.startsWith('/@'):
-  //       result = !part2
-  //       break
-  //     case part1 == 'c':
-  //     case part1 == 'channel':
-  //     case part1 == 'user':
-  //       result = !part3
-  //       break
-  //     // case part1 == 'watch':
-  //     // case !part1:
-  //     //   result = false
-  //   }
-
-  //   return result
-  // }
-
   function toggleYoutubePageHeader({ nTry } = { nTry: 1 }) {
     const isHideHeaderForYoutube = options.isHideHeaderForYoutube || false
 
     if (isHideHeaderForYoutube) {
       const isYoutubePage = document.location.hostname.endsWith('youtube.com')
       const isChannel = isYoutubePage
-      // && (
-      //   document.location.pathname.startsWith('/@')
-      //   || document.location.pathname.startsWith('/c/')
-      //   || document.location.pathname.startsWith('/channel/')
-      //   || document.location.pathname.startsWith('/user/')
-      // )
+      // && isYouTubeChannel(document.location.pathname)
       && document.location.pathname.endsWith('/videos')
 
       if (isChannel) {

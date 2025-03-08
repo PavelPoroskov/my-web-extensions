@@ -49,7 +49,7 @@ export async function createContextMenu(settings) {
     title: 'close bookmarked tabs',
   });
 
-  if (settings[USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE]) {
+  if (settings[USER_OPTION.YOUTUBE_HIDE_PAGE_HEADER]) {
     chrome.contextMenus.create({
       id: CONTEXT_MENU_CMD_ID.TOGGLE_YOUTUBE_HEADER,
       contexts: BROWSER_SPECIFIC.MENU_CONTEXT,

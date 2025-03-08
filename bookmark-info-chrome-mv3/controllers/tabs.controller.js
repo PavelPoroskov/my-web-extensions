@@ -1,7 +1,10 @@
 import {
+  extensionSettings,
   makeLogFunction,
+  isYouTubeChannelWithoutSubdir,
 } from '../api-low/index.js'
 import {
+  CacheWithLimit,
   memo,
 } from '../data-structures/index.js'
 import {
@@ -10,8 +13,12 @@ import {
 import {
   clearUrlOnPageOpen,
 } from '../api/clearUrlOnPageOpen.js'
+import {
+  USER_OPTION,
+} from '../constant/index.js'
 
 const logTC = makeLogFunction({ module: 'tabs.controller' })
+const redirectedUrl = new CacheWithLimit({ name: 'redirectedUrl', size: 20 })
 
 export const tabsController = {
   // onCreated({ pendingUrl: url, index, id }) {
@@ -28,6 +35,41 @@ export const tabsController = {
     //     }
     //   }
     // }
+
+    let checkUrl
+    switch (changeInfo?.status) {
+      case ('loading'): {
+        checkUrl = changeInfo?.url
+        break;
+      }
+      case ('complete'): {
+        checkUrl = changeInfo?.url
+        break;
+      }
+    }
+
+    if (checkUrl) {
+      const settings = await extensionSettings.get()
+
+      if (settings[USER_OPTION.YOUTUBE_REDIRECT_CHANNEL_TO_VIDEOS]) {
+        const oUrl = new URL(checkUrl)
+
+        if (isYouTubeChannelWithoutSubdir(oUrl)) {
+          const isRedirectedBefore = !!redirectedUrl.get(`${tabId}#${checkUrl}`)
+          logTC('tabs.onUpdated ', checkUrl, 'isRedirectedBefore ', isRedirectedBefore);
+
+          if (!isRedirectedBefore) {
+            oUrl.pathname = `${oUrl.pathname}/videos`
+            const redirectUrl = oUrl.toString()
+            logTC('tabs.onUpdated ', changeInfo?.status, 'tabId', tabId, 'redirectUrl', redirectUrl);
+
+            redirectedUrl.add(`${tabId}#${checkUrl}`)
+            await chrome.tabs.update(tabId, { url: redirectUrl })
+            return
+          }
+        }
+      }
+    }
 
     switch (changeInfo?.status) {
       case ('complete'): {

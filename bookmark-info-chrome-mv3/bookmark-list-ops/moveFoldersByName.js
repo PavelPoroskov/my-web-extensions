@@ -29,7 +29,7 @@ export async function moveFoldersByName({ fromId, toId, isCondition }) {
   );
 }
 
-const KEEP_DATED_FOLDERS = 3
+const KEEP_DATED_FOLDERS = 7
 
 export async function moveOldDatedFolders({ fromId, toId }) {
   const childrenList = await chrome.bookmarks.getChildren(fromId)

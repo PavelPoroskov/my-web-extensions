@@ -21,6 +21,7 @@ const urlSettingsGo = {
   'youtube.com': {
     searchParamList: [
       'v',
+      'list',
     ],
     getAuthor: {
       pagePattern: '/watch?v=:id',

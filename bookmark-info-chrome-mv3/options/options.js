@@ -174,7 +174,13 @@ function restoreOptions(settings) {
   element.checked = settings[optionId];
   element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 
-  optionId = USER_OPTION.HIDE_PAGE_HEADER_FOR_YOUTUBE;
+  optionId = USER_OPTION.YOUTUBE_HIDE_PAGE_HEADER;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.checked = settings[optionId];
+  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
+
+  optionId = USER_OPTION.YOUTUBE_REDIRECT_CHANNEL_TO_VIDEOS;
   domId = `#${optionId}`
   element = document.querySelector(domId)
   element.checked = settings[optionId];
