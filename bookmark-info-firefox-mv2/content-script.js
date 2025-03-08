@@ -567,10 +567,8 @@ ${semanticTagsStyle}
 
     const bookmarkList = (input.bookmarkList || [])
       .filter(({ optimisticDel }) => !optimisticDel)
-      .filter(({ source }) => source !== 'substring')
 
-    const partialBookmarkList = (input.bookmarkList || [])
-      .filter(({ source }) => source == 'substring')
+    const partialBookmarkList = input.partialBookmarkList || []
     const authorBookmarkList = input.authorBookmarkList || []
 
     const visitString = input.visitString || ''
@@ -760,7 +758,6 @@ ${semanticTagsStyle}
           break
         }
         case 'author-bookmark': {
-          // TODO? go to original bookmark
           const { id, folder, url } = value
 
           const divLabel = document.createElement('div');
@@ -769,7 +766,7 @@ ${semanticTagsStyle}
           const textNode = document.createTextNode(`author: ${folder}`);
           divLabel.appendChild(textNode);
           divLabel.setAttribute('data-restpath', url);
-          divLabel.setAttribute('data-id', `ab#${id}`);
+          divLabel.setAttribute('data-id', `h#${id}`);
 
           const divLabelContainer = document.createElement('div');
           divLabelContainer.classList.add('bkm-info--label-container');
@@ -1117,11 +1114,9 @@ ${semanticTagsStyle}
 
     if (isHideHeaderForYoutube) {
       const isYoutubePage = document.location.hostname.endsWith('youtube.com')
-      const isChannel = isYoutubePage && (
-        document.location.pathname.startsWith('/@')
-        || document.location.pathname.startsWith('/c/')
-        || document.location.pathname.startsWith('/channel/')
-      )
+      const isChannel = isYoutubePage
+      // && isYouTubeChannel(document.location.pathname)
+      && document.location.pathname.endsWith('/videos')
 
       if (isChannel) {
         const ytDiv = document.querySelector('#page-header-container');
@@ -1221,6 +1216,8 @@ ${semanticTagsStyle}
       case CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO: {
         const fullState = stateContainer.getState()
         const bookmarkListBefore = (fullState.bookmarkList || []).filter(({ optimisticAdd }) => !optimisticAdd)
+        const partialBookmarkListBefore = fullState.partialBookmarkList || []
+        const authorBookmarkListBefore = fullState.authorBookmarkList || []
 
         let optimisticDelFromTagList = fullState.optimisticDelFromTagList
         let optimisticAddFromTagList = fullState.optimisticAddFromTagList
@@ -1228,8 +1225,12 @@ ${semanticTagsStyle}
         let optimisticToStorageAdd = fullState.optimisticToStorageAdd
 
         const bookmarkList = message.bookmarkList || []
+        const partialBookmarkList = message.partialBookmarkList || []
         const authorBookmarkList = message.authorBookmarkList || []
-        const diff = (bookmarkList.length + authorBookmarkList.length) - bookmarkListBefore.length
+        const diff = (bookmarkList.length + partialBookmarkList.length + authorBookmarkList.length)
+          - bookmarkListBefore.length
+          - partialBookmarkListBefore.length
+          - authorBookmarkListBefore.length
 
         if (diff > 0) {
           if (diff > optimisticAddFromTagList - optimisticToStorageAdd) {
