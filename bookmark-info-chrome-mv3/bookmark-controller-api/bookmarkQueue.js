@@ -38,6 +38,26 @@ let lastCreatedBkmId
 let lastCreatedBkmTabId
 let lastMovedBkmId
 
+var lastCreatedTime
+var lastCreatedParentId
+const MS_DIFF_FOR_SINGLE_BKM = 80
+
+function isSingleBookmarkCreation(inParentId) {
+  let result
+  let now = Date.now()
+
+  if (lastCreatedTime) {
+    result = (MS_DIFF_FOR_SINGLE_BKM < now - lastCreatedTime) || inParentId != lastCreatedParentId
+  } else {
+    result = true
+  }
+
+  lastCreatedTime = now
+  lastCreatedParentId = inParentId
+
+  return result
+}
+
 async function onCreateBookmark(task) {
   const { bookmarkId, node } = task
   const { parentId, url } = node
@@ -47,6 +67,7 @@ async function onCreateBookmark(task) {
   lastCreatedBkmTabId = memo.activeTabId
 
   const [parentNode] = await chrome.bookmarks.get(parentId)
+  const isSingle = isSingleBookmarkCreation(parentId)
 
   if (isDatedFolderTemplate(parentNode.title)) {
     await moveBookmarkInDatedTemplate({
@@ -54,9 +75,10 @@ async function onCreateBookmark(task) {
       parentTitle: parentNode.title,
       bookmarkId,
       url,
+      isSingle,
     })
   } else {
-    if (node.index !== 0) {
+    if (node.index !== 0 && isSingle) {
       await moveBookmarkIgnoreInController({ id: bookmarkId, index: 0 })
     }
 

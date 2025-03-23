@@ -72,12 +72,17 @@ export async function moveBookmarkInDatedTemplate({
   parentTitle,
   bookmarkId,
   url,
+  isSingle,
 }) {
   const datedFolder = await getDatedFolder(parentTitle)
   logBDT('moveBookmarkInDatedTemplate () 11', 'datedFolder', datedFolder)
 
   // await chrome.bookmarks.move(bookmarkId, { parentId: datedFolder.id, index: 0 })
-  await moveBookmarkIgnoreInController({ id: bookmarkId, parentId: datedFolder.id, index: 0 })
+  await moveBookmarkIgnoreInController({
+    id: bookmarkId,
+    parentId: datedFolder.id,
+    index: isSingle? 0 : undefined,
+  })
 
   await tagList.addRecentTagFromFolder({ id: parentId, title: parentTitle })
   removePreviousDatedBookmarks({ url, template: parentTitle })
