@@ -3766,12 +3766,17 @@ async function moveBookmarkInDatedTemplate({
   parentTitle,
   bookmarkId,
   url,
+  isSingle,
 }) {
   const datedFolder = await getDatedFolder(parentTitle)
   logBDT('moveBookmarkInDatedTemplate () 11', 'datedFolder', datedFolder)
 
   // await browser.bookmarks.move(bookmarkId, { parentId: datedFolder.id, index: 0 })
-  await moveBookmarkIgnoreInController({ id: bookmarkId, parentId: datedFolder.id, index: 0 })
+  await moveBookmarkIgnoreInController({
+    id: bookmarkId,
+    parentId: datedFolder.id,
+    index: isSingle? 0 : undefined,
+  })
 
   await tagList.addRecentTagFromFolder({ id: parentId, title: parentTitle })
   removePreviousDatedBookmarks({ url, template: parentTitle })
@@ -3795,15 +3800,23 @@ async function moveBookmarkInDatedTemplate({
   return result
 }
 
-async function createBookmarkFolderByName({ url, title, folderName }) {
-  const folder = await findOrCreateFolder(folderName)
-  const result = await createBookmarkFolderById({
-    parentId: folder.id,
-    title,
-    url,
-  })
+async function createBookmarkFolderByName({ url, title, folderNameList }) {
+  const createFolderListResult = await Promise.allSettled(folderNameList.map(
+    (folderName) => findOrCreateFolder(folderName)
+  ))
+  const folderNodeList = createFolderListResult.map((result) => result.value).filter(Boolean)
 
-  return result
+  const createBookmarkListResult = await Promise.allSettled(folderNodeList.map(
+    (folder) => createBookmarkFolderById({
+      parentId: folder.id,
+      title,
+      url,
+    })
+  ))
+
+  const bookmarkList = createBookmarkListResult.map((result) => result.value).filter(Boolean)
+
+  return bookmarkList.length > 0
 }
 const NODE_ACTION = {
   CREATE: `CREATE`,
@@ -3860,6 +3873,26 @@ let lastCreatedBkmId
 let lastCreatedBkmTabId
 let lastMovedBkmId
 
+var lastCreatedTime
+var lastCreatedParentId
+const MS_DIFF_FOR_SINGLE_BKM = 80
+
+function isSingleBookmarkCreation(inParentId) {
+  let result
+  let now = Date.now()
+
+  if (lastCreatedTime) {
+    result = (MS_DIFF_FOR_SINGLE_BKM < now - lastCreatedTime) || inParentId != lastCreatedParentId
+  } else {
+    result = true
+  }
+
+  lastCreatedTime = now
+  lastCreatedParentId = inParentId
+
+  return result
+}
+
 async function onCreateBookmark(task) {
   const { bookmarkId, node } = task
   const { parentId, url } = node
@@ -3869,6 +3902,7 @@ async function onCreateBookmark(task) {
   lastCreatedBkmTabId = memo.activeTabId
 
   const [parentNode] = await browser.bookmarks.get(parentId)
+  const isSingle = isSingleBookmarkCreation(parentId)
 
   if (isDatedFolderTemplate(parentNode.title)) {
     await moveBookmarkInDatedTemplate({
@@ -3876,9 +3910,10 @@ async function onCreateBookmark(task) {
       parentTitle: parentNode.title,
       bookmarkId,
       url,
+      isSingle,
     })
   } else {
-    if (node.index !== 0) {
+    if (node.index !== 0 && isSingle) {
       await moveBookmarkIgnoreInController({ id: bookmarkId, index: 0 })
     }
 
@@ -4646,12 +4681,14 @@ async function startAddBookmarkFromInput() {
   }
 }
 
-async function addBookmarkFolderByName({ url, title, folderName }) {
-  if (folderName.length > 40) {
+async function addBookmarkFolderByName({ url, title, folderNameList }) {
+  const list = folderNameList.filter((name) => !(40 < name.length))
+
+  if (list.length == 0) {
     return false
   }
 
-  const result = await createBookmarkFolderByName({ url, title, folderName })
+  const result = await createBookmarkFolderByName({ url, title, folderNameList: list })
 
   return !!result
 }
@@ -5062,7 +5099,7 @@ async function onIncomingMessage (message, sender) {
         if (tabId == memo.activeTabId) {
           updateActiveTab({
             tabId,
-            debugCaller: 'runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME',
+            debugCaller: 'runtime.onMessage ADD_BOOKMARK',
             useCache: true,
           })
         }
@@ -5184,20 +5221,25 @@ async function onIncomingMessage (message, sender) {
       break
     }
     case EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME: {
-      logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', message.folderName);
-      if (!message.folderName) {
+      logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', message.folderNameList);
+      if (!message.folderNameList) {
         break
       }
-      const folderName = message.folderName.trim()
-      if (!folderName) {
+
+      const folderNameList = message.folderNameList
+        .map((s) => s.trim())
+        .filter(Boolean)
+
+      if (folderNameList.length == 0) {
         break
       }
 
       const isAddedNewBookmark = await addBookmarkFolderByName({
         url: message.url,
         title: message.title,
-        folderName: folderName,
+        folderNameList,
       })
+
       if (!isAddedNewBookmark) {
         // to remove optimistic add
         const tabId = sender?.tab?.id;

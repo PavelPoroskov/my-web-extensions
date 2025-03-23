@@ -32,12 +32,14 @@ export async function startAddBookmarkFromInput() {
   }
 }
 
-export async function addBookmarkFolderByName({ url, title, folderName }) {
-  if (folderName.length > 40) {
+export async function addBookmarkFolderByName({ url, title, folderNameList }) {
+  const list = folderNameList.filter((name) => !(40 < name.length))
+
+  if (list.length == 0) {
     return false
   }
 
-  const result = await createBookmarkFolderByName({ url, title, folderName })
+  const result = await createBookmarkFolderByName({ url, title, folderNameList: list })
 
   return !!result
 }

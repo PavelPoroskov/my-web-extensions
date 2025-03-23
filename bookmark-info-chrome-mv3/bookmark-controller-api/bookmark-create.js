@@ -30,13 +30,21 @@ export async function createBookmarkFolderById({ parentId, title, url }) {
   return result
 }
 
-export async function createBookmarkFolderByName({ url, title, folderName }) {
-  const folder = await findOrCreateFolder(folderName)
-  const result = await createBookmarkFolderById({
-    parentId: folder.id,
-    title,
-    url,
-  })
+export async function createBookmarkFolderByName({ url, title, folderNameList }) {
+  const createFolderListResult = await Promise.allSettled(folderNameList.map(
+    (folderName) => findOrCreateFolder(folderName)
+  ))
+  const folderNodeList = createFolderListResult.map((result) => result.value).filter(Boolean)
 
-  return result
+  const createBookmarkListResult = await Promise.allSettled(folderNodeList.map(
+    (folder) => createBookmarkFolderById({
+      parentId: folder.id,
+      title,
+      url,
+    })
+  ))
+
+  const bookmarkList = createBookmarkListResult.map((result) => result.value).filter(Boolean)
+
+  return bookmarkList.length > 0
 }

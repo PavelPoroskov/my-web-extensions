@@ -1140,32 +1140,35 @@ ${semanticTagsStyle}
     }
   }
 
-  async function addBookmarkByFolderName(folderName) {
-    if (!folderName) {
-      return
-    }
-    const trimmedFolderName = folderName.trim()
-    if (!trimmedFolderName) {
+  async function addBookmarkByFolderNameList(inFolderNameList) {
+    const folderNameList = inFolderNameList
+      .map((s) => s.trim())
+      .filter(Boolean)
+
+    if (folderNameList.length == 0) {
       return
     }
 
     const fullState = stateContainer.getState()
     const bookmarkList = fullState.bookmarkList || []
-    const newBookmarkList = bookmarkList.concat({
-      id: '',
-      title: document.title,
-      folder: trimmedFolderName,
-      path: '',
-      parentId: '',
-      optimisticAdd: true,
-    })
+    const newBookmarkList = bookmarkList.concat(
+      folderNameList.map((folderName) => ({
+        id: '',
+        title: document.title,
+        folder: folderName,
+        path: '',
+        parentId: '',
+        optimisticAdd: true,
+      })
+    ))
     stateContainer.update({ bookmarkList: newBookmarkList })
 
     await chrome.runtime.sendMessage({
       command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
       url: document.location.href,
       title: document.title,
-      folderName: trimmedFolderName,
+      // folderName: trimmedFolderName,
+      folderNameList,
     });
   }
 
@@ -1306,12 +1309,21 @@ ${semanticTagsStyle}
       case CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT: {
         const userInput = window.prompt("Enter folder for your bookmark")
         // addBookmarkListByNameWithComma(userInput)
-        addBookmarkByFolderName(userInput)
+        if (!userInput) {
+          break
+        }
+
+        const folderNameList = userInput
+          .split('---')
+          .map((s) => s.trim())
+          .filter(Boolean)
+
+        addBookmarkByFolderNameList(folderNameList)
         break
       }
       case CONTENT_SCRIPT_MSG_ID.GET_SELECTION: {
         const selection = document.getSelection().toString()
-        addBookmarkByFolderName(selection)
+        addBookmarkByFolderNameList([selection])
         break
       }
       case CONTENT_SCRIPT_MSG_ID.SEND_ME_AUTHOR: {

@@ -70,7 +70,7 @@ export async function onIncomingMessage (message, sender) {
         if (tabId == memo.activeTabId) {
           updateActiveTab({
             tabId,
-            debugCaller: 'runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME',
+            debugCaller: 'runtime.onMessage ADD_BOOKMARK',
             useCache: true,
           })
         }
@@ -192,20 +192,25 @@ export async function onIncomingMessage (message, sender) {
       break
     }
     case EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME: {
-      logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', message.folderName);
-      if (!message.folderName) {
+      logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', message.folderNameList);
+      if (!message.folderNameList) {
         break
       }
-      const folderName = message.folderName.trim()
-      if (!folderName) {
+
+      const folderNameList = message.folderNameList
+        .map((s) => s.trim())
+        .filter(Boolean)
+
+      if (folderNameList.length == 0) {
         break
       }
 
       const isAddedNewBookmark = await addBookmarkFolderByName({
         url: message.url,
         title: message.title,
-        folderName: folderName,
+        folderNameList,
       })
+
       if (!isAddedNewBookmark) {
         // to remove optimistic add
         const tabId = sender?.tab?.id;
