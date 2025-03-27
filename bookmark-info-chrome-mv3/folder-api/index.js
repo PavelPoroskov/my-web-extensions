@@ -1,4 +1,5 @@
 export * from './find-folder.js'
-export * from './folder-title.js'
 export * from './folder-dated-title.js'
+export * from './folder-place.js'
+export * from './folder-title.js'
 export * from './special-folder.js'

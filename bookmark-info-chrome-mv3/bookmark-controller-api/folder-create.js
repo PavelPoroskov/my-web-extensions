@@ -2,14 +2,12 @@ import {
   makeLogFunction,
 } from '../api-low/index.js';
 import {
-  BOOKMARKS_BAR_FOLDER_ID,
-  BOOKMARKS_MENU_FOLDER_ID,
   OTHER_BOOKMARKS_FOLDER_ID,
   findFolder,
   findFolderWithExactTitle,
   getDatedTitle,
   isDatedFolderTemplate,
-  isStartWithTODO,
+  getNewFolderRootId,
 } from '../folder-api/index.js';
 import {
   createFolderIgnoreInController,
@@ -21,10 +19,7 @@ export async function findOrCreateFolder(title) {
   let folder = await findFolder(title)
 
   if (!folder) {
-    const parentId = isStartWithTODO(title)
-      ? BOOKMARKS_BAR_FOLDER_ID
-      : OTHER_BOOKMARKS_FOLDER_ID
-
+    const parentId = getNewFolderRootId(title)
     const firstLevelNodeList = await chrome.bookmarks.getChildren(parentId)
     const findIndex = firstLevelNodeList.find((node) => title.localeCompare(node.title) < 0)
     logFCR('findOrCreateFolder 11 findIndex', findIndex?.index, findIndex?.title)
@@ -70,9 +65,7 @@ export async function getDatedFolder(templateTitle) {
 
   const datedTitle = getDatedTitle(templateTitle)
   logFCR('getDatedFolder () 11', 'datedTitle', datedTitle)
-  const rootId = isStartWithTODO(datedTitle)
-    ? BOOKMARKS_BAR_FOLDER_ID
-    : BOOKMARKS_MENU_FOLDER_ID || BOOKMARKS_BAR_FOLDER_ID
+  const rootId = getNewFolderRootId(datedTitle)
   let foundFolder = await findFolderWithExactTitle({ title: datedTitle, rootId })
 
   if (!foundFolder) {

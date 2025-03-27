@@ -1,6 +1,6 @@
 import {
   isDatedFolderTitle,
-  isStartWithTODO,
+  isTopFolder,
   getDatedRootFolderId,
   BOOKMARKS_BAR_FOLDER_ID,
   BOOKMARKS_MENU_FOLDER_ID,
@@ -75,13 +75,13 @@ export async function flatBookmarks() {
       fromId: BOOKMARKS_BAR_FOLDER_ID,
       toId: OTHER_BOOKMARKS_FOLDER_ID,
       isCondition: IS_BROWSER_FIREFOX
-        ? (title) => !isStartWithTODO(title)
-        : (title) => !(isStartWithTODO(title) || isDatedFolderTitle(title))
+        ? (title) => !isTopFolder(title)
+        : (title) => !(isTopFolder(title) || isDatedFolderTitle(title))
     })
     await moveFoldersByName({
       fromId: OTHER_BOOKMARKS_FOLDER_ID,
       toId: BOOKMARKS_BAR_FOLDER_ID,
-      isCondition: (title) => isStartWithTODO(title)
+      isCondition: (title) => isTopFolder(title)
     })
 
     await mergeFolders()
