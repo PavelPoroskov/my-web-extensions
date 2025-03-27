@@ -1,5 +1,6 @@
 import {
   BOOKMARKS_BAR_FOLDER_ID,
+  BOOKMARKS_MENU_FOLDER_ID,
   OTHER_BOOKMARKS_FOLDER_ID,
   normalizeTitle,
   trimTitle,
@@ -96,8 +97,14 @@ async function trimTitleInSubFolder(parentId) {
 
 export async function mergeFolders() {
   await mergeSubFolder(BOOKMARKS_BAR_FOLDER_ID)
+  if (BOOKMARKS_MENU_FOLDER_ID) {
+    await mergeSubFolder(BOOKMARKS_MENU_FOLDER_ID)
+  }
   await mergeSubFolder(OTHER_BOOKMARKS_FOLDER_ID)
 
   await trimTitleInSubFolder(BOOKMARKS_BAR_FOLDER_ID)
+  if (BOOKMARKS_MENU_FOLDER_ID) {
+    await trimTitleInSubFolder(BOOKMARKS_MENU_FOLDER_ID)
+  }
   await trimTitleInSubFolder(OTHER_BOOKMARKS_FOLDER_ID)
 }
