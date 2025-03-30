@@ -1,5 +1,7 @@
 import {
   isDatedFolderTitle,
+  getDatedTemplate,
+  findOrCreateFolder,
 } from '../folder-api/index.js'
 import {
   moveFolderIgnoreInController,
@@ -8,42 +10,29 @@ import {
   makeLogFunction,
 } from '../api-low/index.js';
 
-const logMF = makeLogFunction({ module: 'moveFoldersByName.js' })
-
-export async function moveFoldersByName({ fromId, toId, isCondition }) {
-  logMF('moveFoldersByName () 00')
-  const childrenList = await chrome.bookmarks.getChildren(fromId)
-  let moveList = childrenList
-    .filter(({ url }) => !url)
-
-  if (isCondition) {
-    moveList = moveList.filter(({ title }) => isCondition(title))
-  }
-  logMF('moveFoldersByName () 11', moveList)
-
-  await moveList.reduce(
-    (promiseChain, node) => promiseChain.then(
-      () => moveFolderIgnoreInController({ id: node.id, parentId: toId })
-    ),
-    Promise.resolve(),
-  );
-}
+const logMOD = makeLogFunction({ module: 'moveOldDatedFolders.js' })
 
 const KEEP_DATED_FOLDERS = 7
 
-export async function moveOldDatedFolders({ fromId, toId }) {
+export async function moveOldDatedFolders(fromId) {
+  logMOD('moveOldDatedFolders 00')
   const childrenList = await chrome.bookmarks.getChildren(fromId)
 
   const datedFolderList = childrenList
     .filter(({ url, title }) => !url && isDatedFolderTitle(title))
-    .map(({ title, id }) => {
-      const partList = title.split(' ')
-      const fixedPart = partList.slice(0, -3).join(' ')
+    .map(({ title, id }) => ({
+        id,
+        datedTemplate: getDatedTemplate(title),
+    }))
 
-      return { title, id, fixedPart }
-    })
+  const grouped = Object.groupBy(datedFolderList, ({ datedTemplate }) => datedTemplate);
 
-  const grouped = Object.groupBy(datedFolderList, ({ fixedPart }) => fixedPart);
+  const folderNodeList = await Promise.all(Object.keys(grouped).map(
+    (title) => findOrCreateFolder(title)
+  ))
+  const mapDatedTemplateToId = Object.fromEntries(
+    folderNodeList.map(({ id, title }) => [title, id])
+  )
 
   const groupedMoveList = []
   Object.entries(grouped).forEach(([, list]) => {
@@ -57,7 +46,7 @@ export async function moveOldDatedFolders({ fromId, toId }) {
 
   await moveList.reduce(
     (promiseChain, node) => promiseChain.then(
-      () => moveFolderIgnoreInController({ id: node.id, parentId: toId })
+      () => moveFolderIgnoreInController({ id: node.id, parentId: mapDatedTemplateToId[node.datedTemplate] })
     ),
     Promise.resolve(),
   );

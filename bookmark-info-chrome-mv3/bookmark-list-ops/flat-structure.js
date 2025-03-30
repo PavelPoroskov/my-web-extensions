@@ -1,7 +1,4 @@
 import {
-  isDatedFolderTitle,
-  isTopFolder,
-  getDatedRootFolderId,
   BOOKMARKS_BAR_FOLDER_ID,
   BOOKMARKS_MENU_FOLDER_ID,
   OTHER_BOOKMARKS_FOLDER_ID,
@@ -15,8 +12,8 @@ import {
   tagList,
 } from '../data-structures/index.js'
 import {
-  flatFolders,
-} from './flatFolders.js'
+  moveFolders,
+} from './moveFolders.js'
 import {
   mergeFolders,
 } from './mergeFolders.js'
@@ -27,7 +24,6 @@ import {
   moveRootBookmarksToUnclassified,
 } from './moveRootBookmarks.js'
 import {
-  moveFoldersByName,
   moveOldDatedFolders,
 } from './moveFoldersByName.js'
 import {
@@ -40,54 +36,21 @@ import {
   IS_BROWSER_FIREFOX,
 } from '../constant/index.js'
 
-export async function flatBookmarks() {
+export async function orderBookmarks() {
   tagList.blockTagList(true)
 
   try {
     await getOrCreateFolderByTitleInRoot(UNCLASSIFIED_TITLE)
     await getOrCreateFolderByTitleInRoot(DATED_TITLE)
 
-    const datedRootFolderId = await getDatedRootFolderId()
-
+    await moveFolders()
+    await moveOldDatedFolders(BOOKMARKS_BAR_FOLDER_ID)
     if (IS_BROWSER_FIREFOX) {
-      await moveFoldersByName({
-        fromId: BOOKMARKS_MENU_FOLDER_ID,
-        toId: OTHER_BOOKMARKS_FOLDER_ID,
-        isCondition: (title) => !isDatedFolderTitle(title)
-      })
+      await moveOldDatedFolders(BOOKMARKS_MENU_FOLDER_ID)
     }
 
-    await flatFolders()
     await moveRootBookmarksToUnclassified()
     await moveNotDescriptiveFoldersToUnclassified()
-
-    await moveOldDatedFolders({
-      fromId: BOOKMARKS_BAR_FOLDER_ID,
-      toId: datedRootFolderId,
-    })
-    if (IS_BROWSER_FIREFOX) {
-      await moveOldDatedFolders({
-        fromId: BOOKMARKS_MENU_FOLDER_ID,
-        toId: datedRootFolderId,
-      })
-    }
-    await moveFoldersByName({
-      fromId: BOOKMARKS_BAR_FOLDER_ID,
-      toId: OTHER_BOOKMARKS_FOLDER_ID,
-      isCondition: IS_BROWSER_FIREFOX
-        ? (title) => !isTopFolder(title)
-        : (title) => !(isTopFolder(title) || isDatedFolderTitle(title))
-    })
-    await moveFoldersByName({
-      fromId: OTHER_BOOKMARKS_FOLDER_ID,
-      toId: BOOKMARKS_BAR_FOLDER_ID,
-      isCondition: (title) => isTopFolder(title)
-    })
-    await moveFoldersByName({
-      fromId: OTHER_BOOKMARKS_FOLDER_ID,
-      toId: datedRootFolderId,
-      isCondition: (title) => isDatedFolderTitle(title),
-    })
 
     await mergeFolders()
 
@@ -96,7 +59,6 @@ export async function flatBookmarks() {
       await sortFolders(BOOKMARKS_MENU_FOLDER_ID)
     }
     await sortFolders(OTHER_BOOKMARKS_FOLDER_ID)
-    await sortFolders(datedRootFolderId)
 
     await removeDoubleBookmarks()
 

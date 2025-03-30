@@ -1,4 +1,8 @@
 import {
+  OTHER_BOOKMARKS_FOLDER_ID,
+  isDatedFolderTemplate,
+} from '../folder-api/index.js';
+import {
   moveFolderIgnoreInController,
 } from '../bookmark-controller-api/index.js'
 
@@ -34,6 +38,18 @@ export async function sortFolders(parentId) {
     ),
     Promise.resolve(),
   );
+
+  if (parentId == OTHER_BOOKMARKS_FOLDER_ID) {
+    const subfolderList = sortedNodeList
+      .filter(({ title }) => isDatedFolderTemplate(title))
+
+    await subfolderList.reduce(
+      (promiseChain, node) => promiseChain.then(
+        () => sortFolders(node.id)
+      ),
+      Promise.resolve(),
+    );
+  }
 
   // console.log('Sorted',  sortedNodeList.map(({ title }) => title))
 }

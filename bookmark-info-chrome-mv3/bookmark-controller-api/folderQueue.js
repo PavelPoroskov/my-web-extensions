@@ -1,6 +1,10 @@
 import {
+  getOptions,
   makeLogFunction,
 } from '../api-low/index.js'
+import {
+  USER_OPTION,
+} from '../constant/index.js'
 import {
   memo,
   tagList,
@@ -12,6 +16,7 @@ import {
   BOOKMARKS_BAR_FOLDER_ID,
   BOOKMARKS_MENU_FOLDER_ID,
   OTHER_BOOKMARKS_FOLDER_ID,
+  getNewFolderRootId,
 } from '../folder-api/index.js'
 import {
   NODE_ACTION,
@@ -28,16 +33,37 @@ async function onCreateFolder(task) {
   const { id, parentId, title } = node
   logFQ('onCreateFolder () 00', title)
 
+  let correctParentId
+  const savedObj = await getOptions([
+    USER_OPTION.USE_FLAT_FOLDER_STRUCTURE,
+  ]);
+
+  if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
+    correctParentId = getNewFolderRootId(title)
+  }
+
   await tagList.addRecentTagFromFolder(node)
 
   const rootArray = [BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID].filter(Boolean)
 
-  if (rootArray.includes(parentId)) {
-    const firstLevelNodeList = await chrome.bookmarks.getChildren(parentId)
+  const actualParentId = correctParentId || parentId
+  if (rootArray.includes(actualParentId)) {
+    const firstLevelNodeList = await chrome.bookmarks.getChildren(actualParentId)
     const findIndex = firstLevelNodeList.find((item) => title.localeCompare(item.title) < 0)
 
+    const moveArgs = {}
+    if (correctParentId && parentId != correctParentId) {
+      moveArgs.parentId = correctParentId
+    }
     if (findIndex) {
-      moveFolderIgnoreInController({ id, index: findIndex.index })
+      moveArgs.index = findIndex.index
+    }
+
+    if (Object.keys(moveArgs).length > 0) {
+      moveFolderIgnoreInController({
+        id,
+        ...moveArgs,
+      })
     }
   }
 

@@ -76,3 +76,9 @@ export function isDatedTitleForTemplate({ title, template }) {
 
   return fixedPartFromTitle == fixedPartFromTemplate
 }
+
+export function getDatedTemplate(title) {
+  const fixedPartFromTitle = title.split(' ').slice(0, -3).join(' ')
+
+  return `${fixedPartFromTitle} @D`
+}

@@ -16,7 +16,7 @@ const logModuleList = [
   // 'incoming-message',
   // 'init-extension',
   // 'memo',
-  // 'moveFoldersByName.js',
+  // 'moveOldDatedFolders.js',
   // 'page.api.js',
   // 'runtime.controller',
   // 'showAuthorBookmarks.js',

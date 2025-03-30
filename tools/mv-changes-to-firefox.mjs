@@ -70,6 +70,7 @@ createFileForFirefox(
     'bookmark-list-ops/mergeFolders.js',
     'bookmark-list-ops/moveNotDescriptiveFolders.js',
     'bookmark-list-ops/moveRootBookmarks.js',
+    'bookmark-list-ops/moveFolders.js',
     'bookmark-list-ops/moveFoldersByName.js',
     'bookmark-list-ops/removeDoubleBookmarks.js',
     'bookmark-list-ops/sortFolders.js',

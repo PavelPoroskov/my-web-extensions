@@ -2,7 +2,7 @@ import {
   debouncedUpdateActiveTab,
 } from '../api/updateTab.js'
 import {
-  flatBookmarks,
+  orderBookmarks,
 } from '../bookmark-list-ops/index.js'
 import {
   USER_OPTION,
@@ -32,7 +32,7 @@ export const runtimeController = {
     ]);
 
     if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
-      await flatBookmarks()
+      await orderBookmarks()
     }
   },
   async onInstalled () {

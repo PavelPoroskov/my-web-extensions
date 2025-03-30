@@ -1,5 +1,4 @@
 import {
-  getDatedRootFolderId,
   BOOKMARKS_BAR_FOLDER_ID,
   OTHER_BOOKMARKS_FOLDER_ID,
 } from '../folder-api/index.js';
@@ -169,8 +168,7 @@ async function flatChildren({ parentId, freeSuffix, datedRootId }) {
 export async function flatFolders() {
   const usedSuffix = await getMaxUsedSuffix()
   let freeSuffix = usedSuffix ? usedSuffix + 1 : 1;
-  const datedRootFolderId = await getDatedRootFolderId()
 
   await flatChildren({ parentId: BOOKMARKS_BAR_FOLDER_ID, freeSuffix })
-  await flatChildren({ parentId: OTHER_BOOKMARKS_FOLDER_ID, freeSuffix, datedRootId: datedRootFolderId })
+  await flatChildren({ parentId: OTHER_BOOKMARKS_FOLDER_ID, freeSuffix })
 }
