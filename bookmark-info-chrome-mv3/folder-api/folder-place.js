@@ -10,7 +10,7 @@ import {
 export function isTopFolder(folderName) {
   const name = folderName.trim().toLowerCase()
 
-  return name.startsWith('todo') || name.endsWith('todo')
+  return name.startsWith('todo')
     || name.startsWith('list') || name.endsWith('list')
     || name.endsWith('#top')
 }
