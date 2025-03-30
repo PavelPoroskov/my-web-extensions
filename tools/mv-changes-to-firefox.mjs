@@ -32,6 +32,7 @@ createFileForFirefox(
     'folder-api/special-folder.js',
     'folder-api/find-folder.js',
     'folder-api/folder-dated-title.js',
+    'folder-api/folder-place.js',
     'folder-api/index.js',
 
     'data-structures/tagList-getRecent.js',
