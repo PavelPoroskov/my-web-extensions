@@ -71,10 +71,10 @@ createFileForFirefox(
     'bookmark-list-ops/moveNotDescriptiveFolders.js',
     'bookmark-list-ops/moveRootBookmarks.js',
     'bookmark-list-ops/moveFolders.js',
-    'bookmark-list-ops/moveFoldersByName.js',
+    'bookmark-list-ops/moveOldDatedFolders.js',
     'bookmark-list-ops/removeDoubleBookmarks.js',
     'bookmark-list-ops/sortFolders.js',
-    'bookmark-list-ops/flat-structure.js',
+    'bookmark-list-ops/orderBookmarks.js',
     'bookmark-list-ops/index.js',
 
     'command/addBookmark.js',

@@ -25,7 +25,7 @@ import {
 } from './moveRootBookmarks.js'
 import {
   moveOldDatedFolders,
-} from './moveFoldersByName.js'
+} from './moveOldDatedFolders.js'
 import {
   removeDoubleBookmarks,
 } from './removeDoubleBookmarks.js'
