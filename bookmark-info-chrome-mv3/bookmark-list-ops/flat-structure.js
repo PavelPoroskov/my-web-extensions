@@ -83,6 +83,11 @@ export async function flatBookmarks() {
       toId: BOOKMARKS_BAR_FOLDER_ID,
       isCondition: (title) => isTopFolder(title)
     })
+    await moveFoldersByName({
+      fromId: OTHER_BOOKMARKS_FOLDER_ID,
+      toId: datedRootFolderId,
+      isCondition: (title) => isDatedFolderTitle(title),
+    })
 
     await mergeFolders()
 
