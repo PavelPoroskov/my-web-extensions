@@ -177,6 +177,14 @@ const urlSettingsRu = {
       'num',
     ],
   },
+  'rabota.ru': {
+    searchParamList: [
+      [recommendationId],
+      [methodRecommendationId],
+      [methodRecommendationType],
+      [methodRecommendationName],
+    ],
+  },
   'web.telegram.org': {
     isHashRequired: true,
   },
