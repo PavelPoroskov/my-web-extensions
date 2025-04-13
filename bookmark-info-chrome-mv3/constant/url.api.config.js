@@ -179,10 +179,10 @@ const urlSettingsRu = {
   },
   'rabota.ru': {
     searchParamList: [
-      [recommendationId],
-      [methodRecommendationId],
-      [methodRecommendationType],
-      [methodRecommendationName],
+      ['recommendationId'],
+      ['methodRecommendationId'],
+      ['methodRecommendationType'],
+      ['methodRecommendationName'],
     ],
   },
   'web.telegram.org': {

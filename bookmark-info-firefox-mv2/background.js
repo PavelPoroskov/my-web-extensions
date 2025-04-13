@@ -208,7 +208,7 @@ const INTERNAL_VALUES = Object.fromEntries(
   // 'incoming-message',
   // 'init-extension',
   // 'memo',
-  // 'moveFoldersByName.js',
+  // 'moveOldDatedFolders.js',
   // 'page.api.js',
   // 'runtime.controller',
   // 'showAuthorBookmarks.js',
@@ -404,6 +404,14 @@ const urlSettingsRu = {
   'opennet.ru': {
     searchParamList: [
       'num',
+    ],
+  },
+  'rabota.ru': {
+    searchParamList: [
+      ['recommendationId'],
+      ['methodRecommendationId'],
+      ['methodRecommendationType'],
+      ['methodRecommendationName'],
     ],
   },
   'web.telegram.org': {
@@ -1262,10 +1270,6 @@ const trimLowSingular = (title) => {
 }
 
 const normalizeTitle = (title) => trimLowSingular(title.replaceAll('-', ''))
-
-function isStartWithTODO(str) {
-  return !!str && str.slice(0, 4).toLowerCase() === 'todo'
-}
 const BOOKMARKS_BAR_FOLDER_ID = IS_BROWSER_FIREFOX ? 'toolbar_____' : '1'
 const BOOKMARKS_MENU_FOLDER_ID = IS_BROWSER_FIREFOX ? 'menu________' : undefined
 const OTHER_BOOKMARKS_FOLDER_ID = IS_BROWSER_FIREFOX ? 'unfiled_____' : '2'
@@ -1628,6 +1632,32 @@ function isDatedTitleForTemplate({ title, template }) {
   const fixedPartFromTemplate = template.slice(0, -3).trim()
 
   return fixedPartFromTitle == fixedPartFromTemplate
+}
+
+function getDatedTemplate(title) {
+  const fixedPartFromTitle = title.split(' ').slice(0, -3).join(' ')
+
+  return `${fixedPartFromTitle} @D`
+}
+function isTopFolder(folderName) {
+  const name = folderName.trim().toLowerCase()
+
+  return name.startsWith('todo')
+    || name.startsWith('list') || name.endsWith('list')
+    || name.endsWith('#top')
+}
+
+function getNewFolderRootId(folderName) {
+  if (isTopFolder(folderName)) {
+    return BOOKMARKS_BAR_FOLDER_ID
+  }
+
+  if (isDatedFolderTitle(folderName)) {
+    // BOOKMARKS_MENU_FOLDER_ID for Firefox, BOOKMARKS_BAR_FOLDER_ID for Chrome
+    return BOOKMARKS_MENU_FOLDER_ID || BOOKMARKS_BAR_FOLDER_ID
+  }
+
+  return OTHER_BOOKMARKS_FOLDER_ID
 }
 
 const logRA = makeLogFunction({ module: 'tagList-getRecent.js' })
@@ -3553,10 +3583,7 @@ async function findOrCreateFolder(title) {
   let folder = await findFolder(title)
 
   if (!folder) {
-    const parentId = isStartWithTODO(title)
-      ? BOOKMARKS_BAR_FOLDER_ID
-      : OTHER_BOOKMARKS_FOLDER_ID
-
+    const parentId = getNewFolderRootId(title)
     const firstLevelNodeList = await browser.bookmarks.getChildren(parentId)
     const findIndex = firstLevelNodeList.find((node) => title.localeCompare(node.title) < 0)
     logFCR('findOrCreateFolder 11 findIndex', findIndex?.index, findIndex?.title)
@@ -3602,9 +3629,7 @@ async function getDatedFolder(templateTitle) {
 
   const datedTitle = getDatedTitle(templateTitle)
   logFCR('getDatedFolder () 11', 'datedTitle', datedTitle)
-  const rootId = isStartWithTODO(datedTitle)
-    ? BOOKMARKS_BAR_FOLDER_ID
-    : BOOKMARKS_MENU_FOLDER_ID || BOOKMARKS_BAR_FOLDER_ID
+  const rootId = getNewFolderRootId(datedTitle)
   let foundFolder = await findFolderWithExactTitle({ title: datedTitle, rootId })
 
   if (!foundFolder) {
@@ -4052,16 +4077,37 @@ async function onCreateFolder(task) {
   const { id, parentId, title } = node
   logFQ('onCreateFolder () 00', title)
 
+  let correctParentId
+  const savedObj = await getOptions([
+    USER_OPTION.USE_FLAT_FOLDER_STRUCTURE,
+  ]);
+
+  if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
+    correctParentId = getNewFolderRootId(title)
+  }
+
   await tagList.addRecentTagFromFolder(node)
 
   const rootArray = [BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID].filter(Boolean)
 
-  if (rootArray.includes(parentId)) {
-    const firstLevelNodeList = await browser.bookmarks.getChildren(parentId)
+  const actualParentId = correctParentId || parentId
+  if (rootArray.includes(actualParentId)) {
+    const firstLevelNodeList = await browser.bookmarks.getChildren(actualParentId)
     const findIndex = firstLevelNodeList.find((item) => title.localeCompare(item.title) < 0)
 
+    const moveArgs = {}
+    if (correctParentId && parentId != correctParentId) {
+      moveArgs.parentId = correctParentId
+    }
     if (findIndex) {
-      moveFolderIgnoreInController({ id, index: findIndex.index })
+      moveArgs.index = findIndex.index
+    }
+
+    if (Object.keys(moveArgs).length > 0) {
+      moveFolderIgnoreInController({
+        id,
+        ...moveArgs,
+      })
     }
   }
 
@@ -4285,10 +4331,9 @@ async function flatChildren({ parentId, freeSuffix, datedRootId }) {
 async function flatFolders() {
   const usedSuffix = await getMaxUsedSuffix()
   let freeSuffix = usedSuffix ? usedSuffix + 1 : 1;
-  const datedRootFolderId = await getDatedRootFolderId()
 
   await flatChildren({ parentId: BOOKMARKS_BAR_FOLDER_ID, freeSuffix })
-  await flatChildren({ parentId: OTHER_BOOKMARKS_FOLDER_ID, freeSuffix, datedRootId: datedRootFolderId })
+  await flatChildren({ parentId: OTHER_BOOKMARKS_FOLDER_ID, freeSuffix })
 }
 async function moveContent(fromFolderId, toFolderId) {
   const nodeList = await browser.bookmarks.getChildren(fromFolderId)
@@ -4375,9 +4420,15 @@ async function trimTitleInSubFolder(parentId) {
 
 async function mergeFolders() {
   await mergeSubFolder(BOOKMARKS_BAR_FOLDER_ID)
+  if (BOOKMARKS_MENU_FOLDER_ID) {
+    await mergeSubFolder(BOOKMARKS_MENU_FOLDER_ID)
+  }
   await mergeSubFolder(OTHER_BOOKMARKS_FOLDER_ID)
 
   await trimTitleInSubFolder(BOOKMARKS_BAR_FOLDER_ID)
+  if (BOOKMARKS_MENU_FOLDER_ID) {
+    await trimTitleInSubFolder(BOOKMARKS_MENU_FOLDER_ID)
+  }
   await trimTitleInSubFolder(OTHER_BOOKMARKS_FOLDER_ID)
 }
 async function moveContentToStart(fromFolderId, toFolderId) {
@@ -4445,42 +4496,133 @@ async function moveRootBookmarksToUnclassified() {
   // await moveRootBookmarks({ fromId: BOOKMARKS_MENU_FOLDER_ID, unclassifiedId })
   await moveRootBookmarks({ fromId: OTHER_BOOKMARKS_FOLDER_ID, unclassifiedId })
 }
-const logMF = makeLogFunction({ module: 'moveFoldersByName.js' })
+const cacheForDatedTemplate = {}
 
-async function moveFoldersByName({ fromId, toId, isCondition }) {
-  logMF('moveFoldersByName () 00')
-  const childrenList = await browser.bookmarks.getChildren(fromId)
-  let moveList = childrenList
-    .filter(({ url }) => !url)
+async function getParentIdForDatedFolder(title) {
+  const templateTitle = getDatedTemplate(title)
 
-  if (isCondition) {
-    moveList = moveList.filter(({ title }) => isCondition(title))
+  let parentId = cacheForDatedTemplate[templateTitle]
+
+  if (!parentId) {
+    parentId = await findOrCreateFolder(templateTitle)
+    cacheForDatedTemplate[templateTitle] = parentId
   }
-  logMF('moveFoldersByName () 11', moveList)
 
-  await moveList.reduce(
+  return parentId;
+}
+
+async function getFolderCorrectParentId(title) {
+  let parentId = OTHER_BOOKMARKS_FOLDER_ID
+  let secondParentId
+
+  if (isTopFolder(title)) {
+    parentId = BOOKMARKS_BAR_FOLDER_ID
+  }
+
+  if (isDatedFolderTitle(title)) {
+    parentId = BOOKMARKS_MENU_FOLDER_ID || BOOKMARKS_BAR_FOLDER_ID
+    secondParentId = await getParentIdForDatedFolder(title)
+  }
+
+  return {
+    parentId,
+    secondParentId,
+  }
+}
+
+async function orderChildren(parentId) {
+  if (!parentId) {
+    return []
+  }
+
+  const moveList = []
+
+  async function traverseSubFolder(folderNode, folderLevel) {
+
+    const correct = await getFolderCorrectParentId(folderNode.title)
+
+    let correctParentId = correct.parentId
+    let isCorrect = folderNode.parentId == correctParentId
+    if (!isCorrect && correct.secondParentId) {
+      correctParentId = correct.secondParentId
+      isCorrect = folderNode.parentId == correctParentId
+    }
+    if (!isCorrect) {
+      moveList.push({
+        id: folderNode.id,
+        parentId: correctParentId,
+        level: folderLevel,
+      })
+    }
+
+    const folderList = folderNode.children
+      .filter(({ url }) => !url)
+
+    await folderList.reduce(
+      (promiseChain, node) => promiseChain.then(
+        () => traverseSubFolder(node, folderLevel + 1)
+      ),
+      Promise.resolve(),
+    );
+  }
+
+  const [rootFolder] = await browser.bookmarks.getSubTree(parentId)
+  const folderList = rootFolder.children.filter(({ url }) => !url)
+
+  await folderList.reduce(
     (promiseChain, node) => promiseChain.then(
-      () => moveFolderIgnoreInController({ id: node.id, parentId: toId })
+      () => traverseSubFolder(node, 1)
+    ),
+    Promise.resolve(),
+  );
+
+  return moveList;
+}
+
+async function moveFolders() {
+
+  const moveList1 = await orderChildren(BOOKMARKS_BAR_FOLDER_ID)
+  const moveList2 = await orderChildren(BOOKMARKS_MENU_FOLDER_ID)
+  const moveList3 = await orderChildren(OTHER_BOOKMARKS_FOLDER_ID)
+
+  const totalMoveList = [
+    moveList1,
+    moveList2,
+    moveList3,
+  ]
+    .flat()
+    .sort((a,b) => -(a.level - b.level))
+
+  await totalMoveList.reduce(
+    (promiseChain, { id, parentId }) => promiseChain.then(
+      () => moveFolderIgnoreInController({ id, parentId })
     ),
     Promise.resolve(),
   );
 }
+const logMOD = makeLogFunction({ module: 'moveOldDatedFolders.js' })
 
 const KEEP_DATED_FOLDERS = 7
 
-async function moveOldDatedFolders({ fromId, toId }) {
+async function moveOldDatedFolders(fromId) {
+  logMOD('moveOldDatedFolders 00')
   const childrenList = await browser.bookmarks.getChildren(fromId)
 
   const datedFolderList = childrenList
     .filter(({ url, title }) => !url && isDatedFolderTitle(title))
-    .map(({ title, id }) => {
-      const partList = title.split(' ')
-      const fixedPart = partList.slice(0, -3).join(' ')
+    .map(({ title, id }) => ({
+        id,
+        datedTemplate: getDatedTemplate(title),
+    }))
 
-      return { title, id, fixedPart }
-    })
+  const grouped = Object.groupBy(datedFolderList, ({ datedTemplate }) => datedTemplate);
 
-  const grouped = Object.groupBy(datedFolderList, ({ fixedPart }) => fixedPart);
+  const folderNodeList = await Promise.all(Object.keys(grouped).map(
+    (title) => findOrCreateFolder(title)
+  ))
+  const mapDatedTemplateToId = Object.fromEntries(
+    folderNodeList.map(({ id, title }) => [title, id])
+  )
 
   const groupedMoveList = []
   Object.entries(grouped).forEach(([, list]) => {
@@ -4494,7 +4636,7 @@ async function moveOldDatedFolders({ fromId, toId }) {
 
   await moveList.reduce(
     (promiseChain, node) => promiseChain.then(
-      () => moveFolderIgnoreInController({ id: node.id, parentId: toId })
+      () => moveFolderIgnoreInController({ id: node.id, parentId: mapDatedTemplateToId[node.datedTemplate] })
     ),
     Promise.resolve(),
   );
@@ -4591,51 +4733,35 @@ async function removeDoubleBookmarks() {
     Promise.resolve(),
   );
 
+  if (parentId == OTHER_BOOKMARKS_FOLDER_ID) {
+    const subfolderList = sortedNodeList
+      .filter(({ title }) => isDatedFolderTemplate(title))
+
+    await subfolderList.reduce(
+      (promiseChain, node) => promiseChain.then(
+        () => sortFolders(node.id)
+      ),
+      Promise.resolve(),
+    );
+  }
+
   // console.log('Sorted',  sortedNodeList.map(({ title }) => title))
 }
-async function flatBookmarks() {
+async function orderBookmarks() {
   tagList.blockTagList(true)
 
   try {
     await getOrCreateFolderByTitleInRoot(UNCLASSIFIED_TITLE)
     await getOrCreateFolderByTitleInRoot(DATED_TITLE)
 
-    const datedRootFolderId = await getDatedRootFolderId()
-
+    await moveFolders()
+    await moveOldDatedFolders(BOOKMARKS_BAR_FOLDER_ID)
     if (IS_BROWSER_FIREFOX) {
-      await moveFoldersByName({
-        fromId: BOOKMARKS_MENU_FOLDER_ID,
-        toId: OTHER_BOOKMARKS_FOLDER_ID,
-        isCondition: (title) => !isDatedFolderTitle(title)
-      })
+      await moveOldDatedFolders(BOOKMARKS_MENU_FOLDER_ID)
     }
 
-    await flatFolders()
     await moveRootBookmarksToUnclassified()
     await moveNotDescriptiveFoldersToUnclassified()
-
-    await moveOldDatedFolders({
-      fromId: BOOKMARKS_BAR_FOLDER_ID,
-      toId: datedRootFolderId,
-    })
-    if (IS_BROWSER_FIREFOX) {
-      await moveOldDatedFolders({
-        fromId: BOOKMARKS_MENU_FOLDER_ID,
-        toId: datedRootFolderId,
-      })
-    }
-    await moveFoldersByName({
-      fromId: BOOKMARKS_BAR_FOLDER_ID,
-      toId: OTHER_BOOKMARKS_FOLDER_ID,
-      isCondition: IS_BROWSER_FIREFOX
-        ? (title) => !isStartWithTODO(title)
-        : (title) => !(isStartWithTODO(title) || isDatedFolderTitle(title))
-    })
-    await moveFoldersByName({
-      fromId: OTHER_BOOKMARKS_FOLDER_ID,
-      toId: BOOKMARKS_BAR_FOLDER_ID,
-      isCondition: (title) => isStartWithTODO(title)
-    })
 
     await mergeFolders()
 
@@ -4644,7 +4770,6 @@ async function removeDoubleBookmarks() {
       await sortFolders(BOOKMARKS_MENU_FOLDER_ID)
     }
     await sortFolders(OTHER_BOOKMARKS_FOLDER_ID)
-    await sortFolders(datedRootFolderId)
 
     await removeDoubleBookmarks()
 
@@ -4940,7 +5065,8 @@ async function getUrlFromUrl() {
     [USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]: true,
   })
 
-  await flatBookmarks()
+  await flatFolders()
+  await orderBookmarks()
   await tagList.filterTagListForFlatFolderStructure()
 }
 async function unfixTag(parentId) {
@@ -5280,7 +5406,7 @@ const runtimeController = {
     ]);
 
     if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
-      await flatBookmarks()
+      await orderBookmarks()
     }
   },
   async onInstalled () {

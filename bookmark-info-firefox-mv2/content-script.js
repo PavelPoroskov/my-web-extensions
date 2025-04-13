@@ -1073,7 +1073,14 @@ ${semanticTagsStyle}
     //setTimeout(callback, 0)
   })
 
+  // const v = localStorage.getItem("BkmkInfoGlobalOptions-isHideHeaderForYoutube");
   const options = {}
+  if (document.location.hostname.endsWith('youtube.com')) {
+    const v = document.cookie.split(";").some((item) => item.includes('isHideHeaderForYoutube=true'))
+    options.isHideHeaderForYoutube = v
+  }
+  log('## after options = ', options);
+
   let cToggleYoutubePageHeader = 0
   let ytHeaderPadding
   // eslint-disable-next-line no-unused-vars
@@ -1081,7 +1088,7 @@ ${semanticTagsStyle}
 
   function toggleYoutubePageHeaderInDom() {
     const ytDiv = document.querySelector('#page-header-container');
-    log('isHideHeaderForYoutube 00 ytDiv', ytDiv?.id, ytDiv);
+    log('toggleYoutubePageHeaderInDom() 00 ytDiv', ytDiv?.id, ytDiv);
 
     if (ytDiv) {
       const isShowNow = !ytDiv.style.display
@@ -1110,34 +1117,51 @@ ${semanticTagsStyle}
   }
 
   function toggleYoutubePageHeader({ nTry } = { nTry: 1 }) {
-    const isHideHeaderForYoutube = options.isHideHeaderForYoutube || false
+    log('toggleYoutubePageHeader() 00', nTry);
+    const ytDiv = document.querySelector('#page-header-container');
+    const restNTry = nTry - 1
 
-    if (isHideHeaderForYoutube) {
-      const isYoutubePage = document.location.hostname.endsWith('youtube.com')
-      const isChannel = isYoutubePage
-      // && isYouTubeChannel(document.location.pathname)
-      && document.location.pathname.endsWith('/videos')
-
-      if (isChannel) {
-        const ytDiv = document.querySelector('#page-header-container');
-        const restNTry = nTry - 1
-
-        if (ytDiv) {
-          toggleYoutubePageHeaderInDom()
-        } else {
-          log('isHideHeaderForYoutube 00 nTry', nTry, 'empty ytDiv');
-          if (restNTry > 0) {
-            log('isHideHeaderForYoutube 00 set timeout 200');
-            ytTimerId = setTimeout(
-              () => {
-                toggleYoutubePageHeader({ nTry: restNTry })
-              },
-              200,
-            )
-          }
-        }
+    if (ytDiv) {
+      toggleYoutubePageHeaderInDom()
+      options.isStartedToggleYoutubePageHeader = false
+    } else {
+      log('isHideHeaderForYoutube 00 nTry', nTry, 'empty ytDiv');
+      if (restNTry > 0) {
+        log('isHideHeaderForYoutube 00 set timeout 200');
+        ytTimerId = setTimeout(
+          () => {
+            toggleYoutubePageHeader({ nTry: restNTry })
+          },
+          200,
+        )
       }
     }
+  }
+  function startHideYoutubePageHeader() {
+    log('startToggleYoutubePageHeader() 00 options?.isHideHeaderForYoutube', options?.isHideHeaderForYoutube);
+    if (!options?.isHideHeaderForYoutube) {
+      log('startToggleYoutubePageHeader() 00 return', options?.isHideHeaderForYoutube);
+      return
+    }
+
+    log('startToggleYoutubePageHeader() 11', options);
+    if (options.isStartedToggleYoutubePageHeader) {
+      return
+    }
+    options.isStartedToggleYoutubePageHeader = true
+
+    log('startToggleYoutubePageHeader() 22', options);
+    const isYoutubePage = document.location.hostname.endsWith('youtube.com')
+    const isChannel = isYoutubePage
+    // && isYouTubeChannel(document.location.pathname)
+    && document.location.pathname.endsWith('/videos')
+
+    if (!isChannel) {
+      return
+    }
+
+    log('startToggleYoutubePageHeader() 33', options);
+    toggleYoutubePageHeader({ nTry: 30 })
   }
 
   async function addBookmarkByFolderNameList(inFolderNameList) {
@@ -1271,7 +1295,12 @@ ${semanticTagsStyle}
         })
 
         options.isHideHeaderForYoutube = message.isHideHeaderForYoutube || false
-        toggleYoutubePageHeader({ nTry: 30 })
+        startHideYoutubePageHeader()
+        // localStorage.setItem("BkmkInfoGlobalOptions-isHideHeaderForYoutube", options.isHideHeaderForYoutube);
+        if (document.location.hostname.endsWith('youtube.com')) {
+          document.cookie = `isHideHeaderForYoutube=${options.isHideHeaderForYoutube} ;path=/`;
+        }
+        // log('document.cookie ', document.cookie)
         break
       }
       case CONTENT_SCRIPT_MSG_ID.CHANGE_URL: {
@@ -1303,7 +1332,7 @@ ${semanticTagsStyle}
       }
       case CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER: {
         cToggleYoutubePageHeader += 1
-        toggleYoutubePageHeader({ nTry: 1 })
+        toggleYoutubePageHeaderInDom()
         break
       }
       case CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT: {
@@ -1389,6 +1418,22 @@ ${semanticTagsStyle}
     } else {
       sendTabIsReady()
     }
+  });
+  // document.addEventListener('readystatechange', () => {
+  //   log('event document.readystatechange', document.readyState);
+
+  //   if (!document.readyState == 'loading') {
+  //     startHideYoutubePageHeader()
+  //   }
+  // });
+
+  // window.addEventListener('load', () => {
+  //   log('event window.load');
+  //   startHideYoutubePageHeader()
+  // });
+  window.addEventListener('pageshow', () => {
+    log('event window.pageshow');
+    startHideYoutubePageHeader()
   });
 
   if (!document.hidden) {
