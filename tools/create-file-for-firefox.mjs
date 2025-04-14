@@ -23,7 +23,10 @@ const convertFile = async (inFilePath) => {
     content,
     usedDependencies: usedDependencies
       .map((dep) => path.resolve(fileDir, dep))
-      .map((dep) => dep.replace(`${BASE_DIR_CHROME}/`,'')),
+      .map((dep) => dep.replace(`${BASE_DIR_CHROME}/`,''))
+      // for windows
+      .map((dep) => dep.replace(`${BASE_DIR_CHROME}\\`,''))
+      .map((dep) => dep.replace(`\\`,'/')),
     filePath: inFilePath,
   }
 }
@@ -47,7 +50,7 @@ export const createFileForFirefox = async (arInFilePath, outFilePath) => {
 
   await writeFile(
     path.join(BASE_DIR_FIREFOX, outFilePath),
-    convertedContent, 
+    convertedContent,
   )
 }
 
@@ -71,10 +74,10 @@ export const moveVersionToManifest = async () => {
       /"version": "([^"]*)"/g,
       `"version": "${version}"`
     )
-  
+
     await writeFile(
       path.join(BASE_DIR_FIREFOX, 'manifest.json'),
-      toContent, 
-    )  
+      toContent,
+    )
   }
 }
