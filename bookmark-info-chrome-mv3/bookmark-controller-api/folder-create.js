@@ -33,7 +33,7 @@ export async function findOrCreateFolder(title) {
       folderParams.index = findIndex.index
     }
 
-    folder = await createFolderIgnoreInController(folderParams)
+    folder = await chrome.bookmarks.create(folderParams)
   } else {
     const oldBigLetterN = folder.title.replace(/[^A-Z]+/g, "").length
     const newBigLetterN = title.replace(/[^A-Z]+/g, "").length
