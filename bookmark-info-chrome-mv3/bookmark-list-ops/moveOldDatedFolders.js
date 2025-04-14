@@ -1,9 +1,9 @@
 import {
   isDatedFolderTitle,
   getDatedTemplate,
-  findOrCreateFolder,
 } from '../folder-api/index.js'
 import {
+  findOrCreateFolder,
   moveFolderIgnoreInController,
 } from '../bookmark-controller-api/index.js'
 import {
