@@ -5,13 +5,11 @@ import {
 import { page } from '../api/page.api.js'
 
 export async function addBookmarkFromRecentTag({ url, title, parentId }) {
-  const result = await createBookmarkFolderById({
+  await createBookmarkFolderById({
     parentId,
     title,
     url,
   })
-
-  return !!result
 }
 
 export async function startAddBookmarkFromSelection() {
@@ -39,7 +37,5 @@ export async function addBookmarkFolderByName({ url, title, folderNameList }) {
     return false
   }
 
-  const result = await createBookmarkFolderByName({ url, title, folderNameList: list })
-
-  return !!result
+  await createBookmarkFolderByName({ url, title, folderNameList: list })
 }

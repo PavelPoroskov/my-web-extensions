@@ -35,11 +35,12 @@ import {
 const logIM = makeLogFunction({ module: 'incoming-message' })
 
 export async function onIncomingMessage (message, sender) {
+  const tabId = sender?.tab?.id;
+
   switch (message?.command) {
 
     // IT IS ONLY when new tab load first url
     case EXTENSION_MSG_ID.TAB_IS_READY: {
-      const tabId = sender?.tab?.id;
       const url = message.url
       logIM('runtime.onMessage contentScriptReady 00', 'tabId', tabId, 'memo[\'activeTabId\']', memo['activeTabId']);
       logIM('#  runtime.onMessage contentScriptReady 00', url);
@@ -59,22 +60,15 @@ export async function onIncomingMessage (message, sender) {
     }
     case EXTENSION_MSG_ID.ADD_BOOKMARK: {
       logIM('runtime.onMessage addBookmark');
-      const isAddedNewBookmark = await addBookmarkFromRecentTag({
+      await addBookmarkFromRecentTag({
         url: message.url,
         title: message.title,
         parentId: message.parentId,
       })
-      if (!isAddedNewBookmark) {
-        // to remove optimistic add
-        const tabId = sender?.tab?.id;
-        if (tabId == memo.activeTabId) {
-          updateActiveTab({
-            tabId,
-            debugCaller: 'runtime.onMessage ADD_BOOKMARK',
-            useCache: true,
-          })
-        }
-      }
+      updateActiveTab({
+        tabId,
+        debugCaller: 'runtime.onMessage ADD_BOOKMARK',
+      })
 
       break
     }
@@ -94,14 +88,11 @@ export async function onIncomingMessage (message, sender) {
       logIM('runtime.onMessage UPDATE_AVAILABLE_ROWS', message.value);
       await tagList.updateAvailableRows(message.value)
 
-      const tabId = sender?.tab?.id;
-      if (tabId == memo.activeTabId) {
-        updateActiveTab({
-          tabId,
-          debugCaller: 'runtime.onMessage UPDATE_AVAILABLE_ROWS',
-          useCache: true,
-        })
-      }
+      updateActiveTab({
+        tabId,
+        debugCaller: 'runtime.onMessage UPDATE_AVAILABLE_ROWS',
+        useCache: true,
+      })
 
       break
     }
@@ -112,14 +103,11 @@ export async function onIncomingMessage (message, sender) {
         title: message.title,
       })
 
-      const tabId = sender?.tab?.id;
-      if (tabId == memo.activeTabId) {
-        updateActiveTab({
-          tabId,
-          debugCaller: 'runtime.onMessage fixTag',
-          useCache: true,
-        })
-      }
+      updateActiveTab({
+        tabId,
+        debugCaller: 'runtime.onMessage fixTag',
+        useCache: true,
+      })
 
       break
     }
@@ -127,14 +115,11 @@ export async function onIncomingMessage (message, sender) {
       logIM('runtime.onMessage unfixTag');
       await unfixTag(message.parentId)
 
-      const tabId = sender?.tab?.id;
-      if (tabId == memo.activeTabId) {
-        updateActiveTab({
-          tabId,
-          debugCaller: 'runtime.onMessage unfixTag',
-          useCache: true,
-        })
-      }
+      updateActiveTab({
+        tabId,
+        debugCaller: 'runtime.onMessage unfixTag',
+        useCache: true,
+      })
 
       break
     }
@@ -142,14 +127,11 @@ export async function onIncomingMessage (message, sender) {
       logIM('runtime.onMessage ADD_RECENT_TAG');
       await addRecentTagFromView(message.bookmarkId)
 
-      // const tabId = sender?.tab?.id;
-      // if (tabId == memo.activeTabId) {
       //   updateActiveTab({
       //     tabId,
       //     debugCaller: 'runtime.onMessage ADD_RECENT_TAG',
       //     useCache: true,
       //   })
-      // }
 
       break
     }
@@ -205,29 +187,22 @@ export async function onIncomingMessage (message, sender) {
         break
       }
 
-      const isAddedNewBookmark = await addBookmarkFolderByName({
+      await addBookmarkFolderByName({
         url: message.url,
         title: message.title,
         folderNameList,
       })
 
-      if (!isAddedNewBookmark) {
-        // to remove optimistic add
-        const tabId = sender?.tab?.id;
-        if (tabId == memo.activeTabId) {
-          updateActiveTab({
-            tabId,
-            debugCaller: 'runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME',
-            useCache: true,
-          })
-        }
-      }
+      updateActiveTab({
+        tabId,
+        debugCaller: 'runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME',
+      })
       break
     }
     case EXTENSION_MSG_ID.RESULT_AUTHOR: {
       logIM('runtime.onMessage RESULT_AUTHOR', message.authorUrl);
       showAuthorBookmarksStep2({
-        tabId: sender?.tab?.id,
+        tabId,
         url: message.url,
         authorUrl: message.authorUrl,
       })

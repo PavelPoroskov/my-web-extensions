@@ -1,3 +1,7 @@
+import {
+  createBookmarkIgnoreInController,
+} from './bookmark-ignore.js'
+
 let lastCreatedBkmParentId
 let lastCreatedBkmUrl
 
@@ -15,7 +19,7 @@ export async function createBookmarkInCommonFolder({
   lastCreatedBkmParentId = parentId
   lastCreatedBkmUrl = url
 
-  return await chrome.bookmarks.create({
+  return await createBookmarkIgnoreInController({
     index: 0,
     parentId,
     title,

@@ -36,15 +36,11 @@ export async function createBookmarkFolderByName({ url, title, folderNameList })
   ))
   const folderNodeList = createFolderListResult.map((result) => result.value).filter(Boolean)
 
-  const createBookmarkListResult = await Promise.allSettled(folderNodeList.map(
+  await Promise.allSettled(folderNodeList.map(
     (folder) => createBookmarkFolderById({
       parentId: folder.id,
       title,
       url,
     })
   ))
-
-  const bookmarkList = createBookmarkListResult.map((result) => result.value).filter(Boolean)
-
-  return bookmarkList.length > 0
 }
