@@ -72,12 +72,39 @@ export async function onIncomingMessage (message, sender) {
 
       break
     }
+    case EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME: {
+      logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', message.folderNameList);
+      if (!message.folderNameList) {
+        break
+      }
+
+      const folderNameList = message.folderNameList
+        .map((s) => s.trim())
+        .filter(Boolean)
+
+      if (folderNameList.length == 0) {
+        break
+      }
+
+      await addBookmarkFolderByName({
+        url: message.url,
+        title: message.title,
+        folderNameList,
+      })
+
+      updateActiveTab({
+        tabId,
+        debugCaller: 'runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME',
+      })
+      break
+    }
     case EXTENSION_MSG_ID.DELETE_BOOKMARK: {
       logIM('runtime.onMessage deleteBookmark');
 
       deleteBookmark(message.bookmarkId);
       break
     }
+
     case EXTENSION_MSG_ID.SHOW_TAG_LIST: {
       logIM('runtime.onMessage SHOW_RECENT_LIST');
       await tagList.openTagList(message.value)
@@ -171,32 +198,6 @@ export async function onIncomingMessage (message, sender) {
         success,
       });
 
-      break
-    }
-    case EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME: {
-      logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', message.folderNameList);
-      if (!message.folderNameList) {
-        break
-      }
-
-      const folderNameList = message.folderNameList
-        .map((s) => s.trim())
-        .filter(Boolean)
-
-      if (folderNameList.length == 0) {
-        break
-      }
-
-      await addBookmarkFolderByName({
-        url: message.url,
-        title: message.title,
-        folderNameList,
-      })
-
-      updateActiveTab({
-        tabId,
-        debugCaller: 'runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME',
-      })
       break
     }
     case EXTENSION_MSG_ID.RESULT_AUTHOR: {
