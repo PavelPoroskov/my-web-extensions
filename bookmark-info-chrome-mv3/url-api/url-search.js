@@ -11,6 +11,10 @@ import {
 
 const logUS = makeLogFunction({ module: 'url-search.js' })
 
+function isHostnameMatchForSearch({ oUrl, hostname }) {
+  return oUrl.hostname === hostname
+}
+
 function removeIndexFromPathname(pathname) {
   let list = pathname.split(/(\/)/)
   const last = list.at(-1)
@@ -38,19 +42,17 @@ export const getPathnameForSearch = (pathname) => {
   return mPathname
 }
 
-function isPathnameMatchForSearch({ url, pathnameForSearch }) {
-  const oUrl = new URL(url);
+function isPathnameMatchForSearch({ oUrl, pathname }) {
   const normalizedPathname = getPathnameForSearch(oUrl.pathname);
 
-  return normalizedPathname === pathnameForSearch
+  return normalizedPathname === pathname
 }
 
-function isSearchParamsMatchForSearch({ url, requiredSearchParams }) {
+function isSearchParamsMatchForSearch({ oUrl, requiredSearchParams }) {
   if (!requiredSearchParams) {
     return true
   }
 
-  const oUrl = new URL(url);
   const oSearchParams = oUrl.searchParams;
 
   return Object.keys(requiredSearchParams)
@@ -103,16 +105,23 @@ export async function startPartialUrlSearch(url) {
     oUrl.pathname = getPathnameForSearch(oUrl.pathname)
     oUrl.search = ''
     const urlForSearch = oUrl.toString();
-
-    const { pathname: pathnameForSearch } = new URL(urlForSearch);
+    const {
+      hostname: hostnameForSearch,
+      pathname: pathnameForSearch,
+    } = new URL(urlForSearch);
 
     logUS('startPartialUrlSearch 99', 'requiredSearchParams', requiredSearchParams)
 
     return {
       isSearchAvailable: true,
       urlForSearch,
-      isUrlMatchToPartialUrlSearch: (testUrl) => isPathnameMatchForSearch({ url: testUrl, pathnameForSearch })
-        && isSearchParamsMatchForSearch({ url: testUrl, requiredSearchParams })
+      isUrlMatchToPartialUrlSearch: (testUrl) => {
+        const oUrl = new URL(testUrl)
+
+        return isHostnameMatchForSearch({ oUrl, hostname: hostnameForSearch })
+          && isPathnameMatchForSearch({ oUrl, pathname: pathnameForSearch })
+          && isSearchParamsMatchForSearch({ oUrl, requiredSearchParams })
+      }
     }
     // eslint-disable-next-line no-unused-vars
   } catch (_e) {
