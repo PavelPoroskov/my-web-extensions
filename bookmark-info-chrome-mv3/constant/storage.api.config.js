@@ -39,7 +39,7 @@ const USER_OPTION_META = {
     default: TAG_LIST_OPEN_MODE_OPTIONS.PER_PAGE,
   },
   TAG_LIST_PINNED_TAGS_POSITION: {
-    default: TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.WITH_RECENT,
+    default: TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.TOP,
   },
   TAG_LIST_TAG_LENGTH: {
     default: 15
@@ -54,13 +54,13 @@ const USER_OPTION_META = {
     default: true
   },
   URL_SHOW_AUTHOR_TAGS: {
-    default: false,
+    default: true,
   },
   YOUTUBE_HIDE_PAGE_HEADER: {
-    default: false
+    default: true
   },
   YOUTUBE_REDIRECT_CHANNEL_TO_VIDEOS: {
-    default: false
+    default: true
   },
 }
 
