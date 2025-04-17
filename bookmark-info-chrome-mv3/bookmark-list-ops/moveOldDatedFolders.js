@@ -22,6 +22,7 @@ export async function moveOldDatedFolders(fromId) {
     .filter(({ url, title }) => !url && isDatedFolderTitle(title))
     .map(({ title, id }) => ({
         id,
+        title,
         datedTemplate: getDatedTemplate(title),
     }))
 

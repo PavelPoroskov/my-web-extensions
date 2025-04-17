@@ -13,11 +13,16 @@ import {
 } from '../data-structures/index.js'
 
 export async function moveToFlatFolderStructure() {
-  await extensionSettings.update({
-    [USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]: true,
-  })
+  const settings = await extensionSettings.get()
 
-  await flatFolders()
+  if (!settings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
+    await extensionSettings.update({
+      [USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]: true,
+    })
+
+    await flatFolders()
+  }
+
   await orderBookmarks()
   await tagList.filterTagListForFlatFolderStructure()
 }
