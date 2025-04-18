@@ -6,6 +6,7 @@ import {
 import {
   CacheWithLimit,
   memo,
+  visitedUrls,
 } from '../data-structures/index.js'
 import {
   updateActiveTab,
@@ -84,8 +85,10 @@ export const tabsController = {
 
           if (url !== memo.activeTabUrl) {
             logTC('tabs.onUpdated complete 22 Tab.url !== memo.activeTabUrl');
-            memo.activeTabUrl = url
             const cleanUrl = await clearUrlOnPageOpen({ tabId, url })
+            visitedUrls.onCloseUrl(memo.activeTabUrl)
+            visitedUrls.onVisitUrl(cleanUrl, Tab.title, tabId)
+            memo.activeTabUrl = cleanUrl
             updateActiveTab({
               tabId,
               url: cleanUrl,
@@ -119,13 +122,29 @@ export const tabsController = {
       if (Tab) {
         logTC('tabs.onActivated 11', Tab.index, tabId, Tab.url);
         memo.activeTabUrl = Tab.url
+
+        // QUESTION: on open windows with stored tabs. every tab is activated?
+        visitedUrls.onVisitUrl(memo.activeTabUrl, Tab.title, tabId)
       }
     } catch (er) {
       logTC('tabs.onActivated. IGNORING. tab was deleted', er);
     }
   },
-  // // eslint-disable-next-line no-unused-vars
-  // async onRemoved(tabId) {
-  //   // deleteUncleanUrlBookmarkForTab(tabId)
-  // }
+  // eslint-disable-next-line no-unused-vars
+  async onRemoved(tabId, { isWindowClosing }) {
+    // if (isWindowClosing) {
+    //   return
+    // }
+
+    // 1) manually close active tab
+    // 2) manually close not active tab?
+    // 3) close tab on close window
+
+    // visited page
+    //  url in active tab
+    //  ?user scroll
+    //  user close
+
+    visitedUrls.onCloseTab(tabId)
+  }
 }

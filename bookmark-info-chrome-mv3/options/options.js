@@ -185,6 +185,19 @@ function restoreOptions(settings) {
   element = document.querySelector(domId)
   element.checked = settings[optionId];
   element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
+
+
+  optionId = USER_OPTION.MARK_CLOSED_PAGE_AS_VISITED;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.checked = settings[optionId];
+  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
+
+  optionId = USER_OPTION.SHOW_VISITED;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.value = settings[optionId];
+  element.addEventListener('change', makeSaveSelectHandler(optionId) );
 }
 
 let HOST_LIST_FOR_PAGE_OPTIONS

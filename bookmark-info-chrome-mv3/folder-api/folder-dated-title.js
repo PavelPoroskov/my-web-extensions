@@ -4,6 +4,8 @@ const futureDate = new Date('01/01/2125')
 const oneDayMs = 24*60*60*1000
 const weekdaySet = new Set(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
 
+export const DATED_TEMPLATE_VISITED = 'visited @D'
+
 const inRange = ({ n, from, to }) => {
   if (!Number.isInteger(n)) {
     return false
@@ -81,4 +83,12 @@ export function getDatedTemplate(title) {
   const fixedPartFromTitle = title.split(' ').slice(0, -3).join(' ')
 
   return `${fixedPartFromTitle} @D`
+}
+
+export function isServiceDatedTemplate(templateTitle) {
+  return templateTitle == DATED_TEMPLATE_VISITED || templateTitle.toLowerCase().startsWith('done ')
+}
+
+export function isVisitedDatedTitle(title) {
+  return title.startsWith('visited ') && isDatedTitleForTemplate({ title, template: DATED_TEMPLATE_VISITED })
 }

@@ -9,10 +9,14 @@ import {
   getPartialBookmarkList,
 } from './get-bookmarks.api.js'
 import {
+  isVisitedDatedTitle
+} from '../folder-api/index.js'
+import {
   getHistoryInfo,
 } from './history.api.js'
 import {
   USER_OPTION,
+  SHOW_VISITED_OPTIONS,
 } from '../constant/index.js'
 import {
   memo,
@@ -88,6 +92,11 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
   const isShowTitle = settings[USER_OPTION.SHOW_BOOKMARK_TITLE]
 
   const bookmarkInfo = await getBookmarkInfoUni({ url, useCache, isShowTitle })
+
+  let bookmarkList = bookmarkInfo.bookmarkList
+  if (settings[USER_OPTION.SHOW_VISITED] === SHOW_VISITED_OPTIONS.IF_NO_OTHER && 1 < bookmarkList.length) {
+    bookmarkList = bookmarkList.filter(({ folder }) => !isVisitedDatedTitle(folder))
+  }
 
   const data = {
     bookmarkList: bookmarkInfo.bookmarkList,

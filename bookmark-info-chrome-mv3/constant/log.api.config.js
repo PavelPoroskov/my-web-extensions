@@ -30,6 +30,7 @@ const logModuleList = [
   // 'url-is.js',
   // 'url-search.js',
   // 'url-settings.js',
+  // 'visited-urls.js',
   // 'windows.controller',
 ]
 export const logModuleMap = Object.fromEntries(

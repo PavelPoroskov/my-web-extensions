@@ -1,5 +1,6 @@
 import {
   isDatedFolderTitle,
+  isServiceDatedTemplate,
 } from './folder-dated-title.js';
 import {
   BOOKMARKS_BAR_FOLDER_ID,
@@ -26,4 +27,13 @@ export function getNewFolderRootId(folderName) {
   }
 
   return OTHER_BOOKMARKS_FOLDER_ID
+}
+
+export function getNewFolderRootIdForDated(templateTitle, templateId) {
+
+  if (isServiceDatedTemplate(templateTitle)) {
+    return templateId
+  }
+
+  return BOOKMARKS_MENU_FOLDER_ID || BOOKMARKS_BAR_FOLDER_ID
 }

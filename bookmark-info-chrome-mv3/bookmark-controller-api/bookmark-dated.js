@@ -56,7 +56,7 @@ export async function createBookmarkInDatedTemplate({
   title,
   url
 }) {
-  const datedFolder = await getDatedFolder(parentTitle)
+  const datedFolder = await getDatedFolder(parentTitle, parentId)
   logBDT('createBookmarkInDatedTemplate () 11', 'datedFolder', datedFolder)
 
   const result = await createBookmarkInCommonFolder({ parentId: datedFolder.id, title, url })
@@ -74,7 +74,7 @@ export async function moveBookmarkInDatedTemplate({
   url,
   isSingle,
 }) {
-  const datedFolder = await getDatedFolder(parentTitle)
+  const datedFolder = await getDatedFolder(parentTitle, parentId)
   logBDT('moveBookmarkInDatedTemplate () 11', 'datedFolder', datedFolder)
 
   // await chrome.bookmarks.move(bookmarkId, { parentId: datedFolder.id, index: 0 })

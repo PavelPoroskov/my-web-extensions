@@ -38,6 +38,7 @@ createFileForFirefox(
     'data-structures/tagList-getRecent.js',
     'data-structures/tagList-highlight.js',
     'data-structures/tagList.js',
+    'data-structures/visited-urls.js',
     'data-structures/index.js',
 
     'url-api/url-settings.js',
@@ -47,14 +48,6 @@ createFileForFirefox(
     'url-api/url-author.js',
     'url-api/index.js',
 
-    'api/page.api.js',
-    'api/get-bookmarks.api.js',
-    'api/history.api.js',
-    'api/init-extension.js',
-    'api/showAuthorBookmarks.js',
-    'api/updateTab.js',
-    'api/clearUrlOnPageOpen.js',
-
     'bookmark-controller-api/ignoreBkmControllerApiActionSet.js',
     'bookmark-controller-api/folder-ignore.js',
     'bookmark-controller-api/folder-create.js',
@@ -63,6 +56,16 @@ createFileForFirefox(
     'bookmark-controller-api/bookmark-dated.js',
     'bookmark-controller-api/bookmark-create.js',
     'bookmark-controller-api/nodeTaskQueue.js',
+
+    'api/init-extension.js',
+
+    'api/page.api.js',
+    'api/get-bookmarks.api.js',
+    'api/history.api.js',
+    'api/showAuthorBookmarks.js',
+    'api/updateTab.js',
+    'api/clearUrlOnPageOpen.js',
+
     'bookmark-controller-api/bookmarkQueue.js',
     'bookmark-controller-api/folderQueue.js',
     'bookmark-controller-api/index.js',

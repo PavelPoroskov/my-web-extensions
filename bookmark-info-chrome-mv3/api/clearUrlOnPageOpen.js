@@ -9,6 +9,7 @@ import {
 } from '../api-low/index.js'
 import { page } from './page.api.js'
 
+// TODO check settings only on init as for tagList. use null or functional method
 export async function clearUrlOnPageOpen({ tabId, url }) {
   let cleanUrl
   const settings = await extensionSettings.get()

@@ -7,15 +7,19 @@ import {
   browserStartTime,
   tagList,
   memo,
+  visitedUrls,
 } from '../data-structures/index.js'
 import {
   extensionSettings,
   makeLogFunction,
 } from '../api-low/index.js'
+import {
+  createBookmarkVisited,
+} from '../bookmark-controller-api/bookmark-create.js'
 
 const logIX = makeLogFunction({ module: 'init-extension' })
 
-export async function createContextMenu(settings) {
+async function createContextMenu(settings) {
   await chrome.contextMenus.removeAll();
 
   chrome.contextMenus.create({
@@ -74,11 +78,15 @@ export async function setFirstActiveTab({ debugCaller='' }) {
 
 async function initFromUserOptions() {
   await extensionSettings.restoreFromStorage()
-  const settings = await extensionSettings.get()
+  const userSettings = await extensionSettings.get()
 
   await Promise.all([
-    createContextMenu(settings),
-    tagList.readFromStorage(),
+    createContextMenu(userSettings),
+    tagList.readFromStorage(userSettings),
+    visitedUrls.connect({
+      isOn: userSettings[USER_OPTION.MARK_CLOSED_PAGE_AS_VISITED],
+      onMarkUrlVisited: createBookmarkVisited,
+    }),
   ])
 }
 

@@ -21,10 +21,10 @@ chrome.windows.onFocusChanged.addListener(windowsController.onFocusChanged);
 chrome.tabs.onUpdated.addListener(tabsController.onUpdated);
 // listen for tab switching
 chrome.tabs.onActivated.addListener(tabsController.onActivated);
-// chrome.tabs.onRemoved.addListener(tabsController.onRemoved);
+chrome.tabs.onRemoved.addListener(tabsController.onRemoved);
 
 chrome.commands.onCommand.addListener(commandsController.onCommand);
-chrome.contextMenus.onClicked.addListener(contextMenusController.onClicked); 
+chrome.contextMenus.onClicked.addListener(contextMenusController.onClicked);
 
 chrome.runtime.onStartup.addListener(runtimeController.onStartup)
 chrome.runtime.onInstalled.addListener(runtimeController.onInstalled);

@@ -8,6 +8,7 @@ import {
   getDatedTitle,
   isDatedFolderTemplate,
   getNewFolderRootId,
+  getNewFolderRootIdForDated,
 } from '../folder-api/index.js';
 import {
   createFolderIgnoreInController,
@@ -57,7 +58,7 @@ export async function findOrCreateFolder(title) {
 }
 
 // folderTitle = 'DONE @D' 'selected @D' 'BEST @D'
-export async function getDatedFolder(templateTitle) {
+export async function getDatedFolder(templateTitle, templateId) {
   if (!isDatedFolderTemplate(templateTitle)) {
     return
   }
@@ -65,7 +66,7 @@ export async function getDatedFolder(templateTitle) {
 
   const datedTitle = getDatedTitle(templateTitle)
   logFCR('getDatedFolder () 11', 'datedTitle', datedTitle)
-  const rootId = getNewFolderRootId(datedTitle)
+  const rootId = getNewFolderRootIdForDated(templateTitle, templateId)
   let foundFolder = await findFolderWithExactTitle({ title: datedTitle, rootId })
 
   if (!foundFolder) {

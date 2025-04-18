@@ -18,7 +18,6 @@ import {
   getFirstLetter,
 } from './tagList-highlight.js'
 import {
-  extensionSettings,
   getOptions,
   setOptions,
   makeLogFunction,
@@ -91,19 +90,17 @@ class TagList {
       this._enableTagList(!isBlocking)
     }
   }
-  async readFromStorage() {
-    const settings = await extensionSettings.get()
-
-    this.USE_TAG_LIST = settings[USER_OPTION.USE_TAG_LIST]
+  async readFromStorage(userSettings) {
+    this.USE_TAG_LIST = userSettings[USER_OPTION.USE_TAG_LIST]
     this._enableTagList(this.USE_TAG_LIST)
     if (!this.USE_TAG_LIST) {
       return
     }
 
-    this.USE_FLAT_FOLDER_STRUCTURE = settings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]
-    this.HIGHLIGHT_LAST = settings[USER_OPTION.TAG_LIST_HIGHLIGHT_LAST]
-    this.HIGHLIGHT_ALPHABET = settings[USER_OPTION.TAG_LIST_HIGHLIGHT_ALPHABET]
-    this.PINNED_TAGS_POSITION = settings[USER_OPTION.TAG_LIST_PINNED_TAGS_POSITION]
+    this.USE_FLAT_FOLDER_STRUCTURE = userSettings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]
+    this.HIGHLIGHT_LAST = userSettings[USER_OPTION.TAG_LIST_HIGHLIGHT_LAST]
+    this.HIGHLIGHT_ALPHABET = userSettings[USER_OPTION.TAG_LIST_HIGHLIGHT_ALPHABET]
+    this.PINNED_TAGS_POSITION = userSettings[USER_OPTION.TAG_LIST_PINNED_TAGS_POSITION]
 
     const savedObj = await getOptions([
       INTERNAL_VALUES.TAG_LIST_SESSION_STARTED,

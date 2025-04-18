@@ -12,6 +12,10 @@ export const TAG_LIST_PINNED_TAGS_POSITION_OPTIONS = {
   TOP: 'TOP',
   WITH_RECENT: 'WITH_RECENT',
 }
+export const SHOW_VISITED_OPTIONS = {
+  ALWAYS: 'ALWAYS',
+  IF_NO_OTHER: 'IF_NO_OTHER',
+}
 
 const USER_OPTION_META = {
   CLEAR_URL_ON_PAGE_OPEN: {
@@ -22,6 +26,12 @@ const USER_OPTION_META = {
   },
   HIDE_TAG_HEADER_ON_PRINTING: {
     default: false
+  },
+  MARK_CLOSED_PAGE_AS_VISITED: {
+    default: false
+  },
+  SHOW_VISITED: {
+    default: SHOW_VISITED_OPTIONS.IF_NO_OTHER
   },
   SHOW_BOOKMARK_TITLE: {
     default: false

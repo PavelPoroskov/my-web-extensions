@@ -1,5 +1,6 @@
 import {
   isDatedFolderTemplate,
+  DATED_TEMPLATE_VISITED,
 } from '../folder-api/index.js';
 import {
   createBookmarkInCommonFolder,
@@ -43,4 +44,8 @@ export async function createBookmarkFolderByName({ url, title, folderNameList })
       url,
     })
   ))
+}
+
+export async function createBookmarkVisited({ url, title }) {
+  await createBookmarkFolderByName({ url, title, folderNameList: [DATED_TEMPLATE_VISITED] })
 }
