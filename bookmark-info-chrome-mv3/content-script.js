@@ -901,6 +901,12 @@ ${semanticTagsStyle}
           divRow.classList.add('bkm-info--row');
           divRow.appendChild(divLabelContainer);
 
+          if (isUsed) {
+            divRow.setAttribute('data-id', `ut#${parentId}`);
+          } else {
+            divRow.setAttribute('data-id', `t#${parentId}`);
+          }
+
           break
         }
         case 'title': {
