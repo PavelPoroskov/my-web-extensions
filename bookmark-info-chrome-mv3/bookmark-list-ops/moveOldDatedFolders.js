@@ -1,6 +1,7 @@
 import {
-  isDatedFolderTitle,
   getDatedTemplate,
+  isDatedFolderTitle,
+  isServiceDatedTemplate
 } from '../folder-api/index.js'
 import {
   findOrCreateFolder,
@@ -29,19 +30,24 @@ export async function moveOldDatedFolders(fromId) {
   const grouped = Object.groupBy(datedFolderList, ({ datedTemplate }) => datedTemplate);
 
   const folderNodeList = await Promise.all(Object.keys(grouped).map(
-    (title) => findOrCreateFolder(title)
+    (datedTemplate) => findOrCreateFolder(datedTemplate)
   ))
   const mapDatedTemplateToId = Object.fromEntries(
     folderNodeList.map(({ id, title }) => [title, id])
   )
 
   const groupedMoveList = []
-  Object.entries(grouped).forEach(([, list]) => {
-    const moveListForFixedPart = list
-      .toSorted((a,b) => a.title.localeCompare(b.title))
-      .slice(KEEP_DATED_FOLDERS)
+  Object.entries(grouped).forEach(([datedTemplate, list]) => {
 
-    groupedMoveList.push(moveListForFixedPart)
+    if (isServiceDatedTemplate(datedTemplate)) {
+      groupedMoveList.push(list)
+    } else {
+      const moveListForFixedPart = list
+        .toSorted((a,b) => a.title.localeCompare(b.title))
+        .slice(KEEP_DATED_FOLDERS)
+
+      groupedMoveList.push(moveListForFixedPart)
+    }
   })
   const moveList = groupedMoveList.flat()
 
