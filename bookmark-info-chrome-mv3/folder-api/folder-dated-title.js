@@ -5,6 +5,7 @@ const oneDayMs = 24*60*60*1000
 const weekdaySet = new Set(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
 
 export const DATED_TEMPLATE_VISITED = 'visited @D'
+export const DATED_TEMPLATE_OPENED = 'opened @D'
 
 const inRange = ({ n, from, to }) => {
   if (!Number.isInteger(n)) {
@@ -86,9 +87,14 @@ export function getDatedTemplate(title) {
 }
 
 export function isServiceDatedTemplate(templateTitle) {
-  return templateTitle == DATED_TEMPLATE_VISITED || templateTitle.toLowerCase().startsWith('done ')
+  return templateTitle == DATED_TEMPLATE_VISITED
+    || templateTitle == DATED_TEMPLATE_OPENED
+    || templateTitle.toLowerCase().startsWith('done ')
 }
 
 export function isVisitedDatedTitle(title) {
-  return title.startsWith('visited ') && isDatedTitleForTemplate({ title, template: DATED_TEMPLATE_VISITED })
+  return (
+    (title.startsWith('visited ') && isDatedTitleForTemplate({ title, template: DATED_TEMPLATE_VISITED }))
+    || (title.startsWith('opened ') && isDatedTitleForTemplate({ title, template: DATED_TEMPLATE_OPENED }))
+  )
 }

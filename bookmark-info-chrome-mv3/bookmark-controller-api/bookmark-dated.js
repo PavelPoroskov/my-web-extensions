@@ -50,6 +50,30 @@ async function removePreviousDatedBookmarks({ url, template }) {
   )
 }
 
+export async function removeDatedBookmarksForTemplate({ url, template }) {
+  const bookmarkList = await chrome.bookmarks.search({ url });
+  logBDT('removePreviousDatedBookmarks () 00', bookmarkList)
+
+  const parentIdList = bookmarkList.map(({ parentId }) => parentId)
+  const uniqueParentIdList = Array.from(new Set(parentIdList))
+  const parentFolderList = await chrome.bookmarks.get(uniqueParentIdList)
+
+  const parentMap = Object.fromEntries(
+    parentFolderList
+      .map(({ id, title}) => [id, title])
+  )
+
+  const removeFolderList = bookmarkList
+    .map(({ id, parentId }) => ({ id, parentTitle: parentMap[parentId] }))
+    .filter(({ parentTitle }) => isDatedTitleForTemplate({ title: parentTitle, template }))
+
+  await Promise.all(
+    removeFolderList.map(
+      ({ id }) => chrome.bookmarks.remove(id)
+    )
+  )
+}
+
 export async function createBookmarkInDatedTemplate({
   parentId,
   parentTitle,

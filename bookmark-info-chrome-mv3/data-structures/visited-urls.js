@@ -17,6 +17,7 @@ class VisitedUrls {
   onCloseUrl = () => { }
   onCloseTab = () => { }
   onMarkUrlVisited = () => { }
+  onMarkUrlOpened = () => { }
 
   _onVisitUrl(url, title, tabId) {
     logVU("onVisitUrl", url)
@@ -24,23 +25,28 @@ class VisitedUrls {
     this.cacheUrl.add(url, title)
     this.cacheTabId.add(tabId, url)
   }
-  _onCloseUrl(url) {
+  async _onCloseUrl(url) {
     logVU("onCloseUrl 11", url)
     // value = this.cacheUrl.get(url)
     // if (value != undefined) {
     //   const { title, tabId } = value
 
     const title = this.cacheUrl.get(url)
-    if (title != undefined) {
+    if (title) {
       logVU("onCloseUrl 22", title)
       this.onMarkUrlVisited({ url, title })
-      this.cacheUrl.delete(url)
-
-      // urlInTab = this.cacheTabId.get(tabId)
-      // if (urlInTab == url) {
-      //   this.cacheTabId.delete(tabId)
-      // }
+    } else {
+      let title = url
+      const historyItemList = await chrome.history.search({
+        text: url,
+        maxResults: 1,
+      })
+      if (0 < historyItemList.length) {
+        title = historyItemList[0].title
+      }
+      this.onMarkUrlOpened({ url, title })
     }
+    this.cacheUrl.delete(url)
   }
   _onCloseTab(tabId) {
     const url = this.cacheTabId.get(tabId)
@@ -51,12 +57,13 @@ class VisitedUrls {
     }
   }
 
-  connect({ isOn, onMarkUrlVisited }) {
+  connect({ isOn, onMarkUrlVisited, onMarkUrlOpened }) {
     if (isOn) {
       this.onVisitUrl = this._onVisitUrl
       this.onCloseUrl = this._onCloseUrl
       this.onCloseTab = this._onCloseTab
       this.onMarkUrlVisited = onMarkUrlVisited
+      this.onMarkUrlOpened = onMarkUrlOpened
     } else {
       this.onOpenUrl = () => { }
       this.onCloseUrl = () => { }

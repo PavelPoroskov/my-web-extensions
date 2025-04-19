@@ -1,5 +1,6 @@
 import {
   isDatedFolderTemplate,
+  DATED_TEMPLATE_OPENED,
   DATED_TEMPLATE_VISITED,
 } from '../folder-api/index.js';
 import {
@@ -7,6 +8,7 @@ import {
 } from './bookmark-create1.js';
 import {
   createBookmarkInDatedTemplate,
+  removeDatedBookmarksForTemplate,
 } from './bookmark-dated.js';
 import {
   findOrCreateFolder,
@@ -48,4 +50,11 @@ export async function createBookmarkFolderByName({ url, title, folderNameList })
 
 export async function createBookmarkVisited({ url, title }) {
   await createBookmarkFolderByName({ url, title, folderNameList: [DATED_TEMPLATE_VISITED] })
+
+  // visited replaces opened
+  await removeDatedBookmarksForTemplate({ url, template: DATED_TEMPLATE_OPENED })
+}
+
+export async function createBookmarkOpened({ url, title }) {
+  await createBookmarkFolderByName({ url, title, folderNameList: [DATED_TEMPLATE_OPENED] })
 }

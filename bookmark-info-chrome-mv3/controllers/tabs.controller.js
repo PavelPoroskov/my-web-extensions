@@ -130,8 +130,7 @@ export const tabsController = {
       logTC('tabs.onActivated. IGNORING. tab was deleted', er);
     }
   },
-  // eslint-disable-next-line no-unused-vars
-  async onRemoved(tabId, { isWindowClosing }) {
+  async onRemoved(tabId) {
     // if (isWindowClosing) {
     //   return
     // }

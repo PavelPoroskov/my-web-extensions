@@ -94,7 +94,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
   const bookmarkInfo = await getBookmarkInfoUni({ url, useCache, isShowTitle })
 
   let bookmarkList = bookmarkInfo.bookmarkList
-  if (settings[USER_OPTION.SHOW_VISITED] === SHOW_VISITED_OPTIONS.IF_NO_OTHER && 1 < bookmarkList.length) {
+  if (settings[USER_OPTION.SHOW_VISITED] === SHOW_VISITED_OPTIONS.IF_NO_OTHER) {
     bookmarkList = bookmarkList.filter(({ folder }) => !isVisitedDatedTitle(folder))
   }
 

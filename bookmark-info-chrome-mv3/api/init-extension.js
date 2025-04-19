@@ -15,6 +15,7 @@ import {
 } from '../api-low/index.js'
 import {
   createBookmarkVisited,
+  createBookmarkOpened,
 } from '../bookmark-controller-api/bookmark-create.js'
 
 const logIX = makeLogFunction({ module: 'init-extension' })
@@ -86,6 +87,7 @@ async function initFromUserOptions() {
     visitedUrls.connect({
       isOn: userSettings[USER_OPTION.MARK_CLOSED_PAGE_AS_VISITED],
       onMarkUrlVisited: createBookmarkVisited,
+      onMarkUrlOpened: createBookmarkOpened,
     }),
   ])
 }
