@@ -8,15 +8,14 @@ import {
   unfixTag,
 } from '../command/index.js'
 import {
-  memo,
   tagList,
 } from '../data-structures/index.js'
 import {
   updateActiveTab,
 } from '../api/updateTab.js'
 import {
-  clearUrlOnPageOpen,
-} from '../api/clearUrlOnPageOpen.js'
+  debouncedOnPageReady,
+} from '../api/onPageReady.js'
 import {
   EXTENSION_MSG_ID,
   USER_OPTION,
@@ -41,20 +40,7 @@ export async function onIncomingMessage (message, sender) {
 
     // IT IS ONLY when new tab load first url
     case EXTENSION_MSG_ID.TAB_IS_READY: {
-      const url = message.url
-      logIM('runtime.onMessage contentScriptReady 00', 'tabId', tabId, 'memo[\'activeTabId\']', memo['activeTabId']);
-      logIM('#  runtime.onMessage contentScriptReady 00', url);
-
-      if (tabId && tabId == memo.activeTabId) {
-        logIM('runtime.onMessage contentScriptReady 11 updateTab', 'tabId', tabId, 'memo[\'activeTabId\']', memo['activeTabId']);
-        memo.activeTabUrl = url
-        const cleanUrl = await clearUrlOnPageOpen({ tabId, url })
-        updateActiveTab({
-          tabId,
-          url: cleanUrl,
-          debugCaller: 'runtime.onMessage contentScriptReady',
-        })
-      }
+      debouncedOnPageReady({ tabId, url: message.url });
 
       break
     }

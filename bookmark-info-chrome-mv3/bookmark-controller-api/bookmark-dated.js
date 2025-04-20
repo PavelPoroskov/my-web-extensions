@@ -19,9 +19,9 @@ import {
 
 const logBDT = makeLogFunction({ module: 'bookmark-dated.js' })
 
-async function removePreviousDatedBookmarks({ url, template }) {
+export async function getDatedBookmarks({ url, template }) {
   const bookmarkList = await chrome.bookmarks.search({ url });
-  logBDT('removePreviousDatedBookmarks () 00', bookmarkList)
+  logBDT('getDatedBookmarks () 00', bookmarkList)
 
   const parentIdList = bookmarkList.map(({ parentId }) => parentId)
   const uniqueParentIdList = Array.from(new Set(parentIdList))
@@ -32,12 +32,19 @@ async function removePreviousDatedBookmarks({ url, template }) {
       .map(({ id, title}) => [id, title])
   )
 
-  const removeFolderList = bookmarkList
+  const selectedList = bookmarkList
     .map(({ id, parentId }) => ({ id, parentTitle: parentMap[parentId] }))
     .filter(({ parentTitle }) => isDatedTitleForTemplate({ title: parentTitle, template }))
+
+  return selectedList
+}
+
+async function removePreviousDatedBookmarks({ url, template }) {
+  const bookmarkList = await getDatedBookmarks({ url, template })
+
+  const removeFolderList = bookmarkList
     .toSorted((a,b) => a.parentTitle.localeCompare(b.parentTitle))
     .slice(1)
-  logBDT('removePreviousDatedBookmarks () 00', 'removeFolderList', removeFolderList)
 
   if (removeFolderList.length == 0) {
     return
@@ -51,21 +58,7 @@ async function removePreviousDatedBookmarks({ url, template }) {
 }
 
 export async function removeDatedBookmarksForTemplate({ url, template }) {
-  const bookmarkList = await chrome.bookmarks.search({ url });
-  logBDT('removePreviousDatedBookmarks () 00', bookmarkList)
-
-  const parentIdList = bookmarkList.map(({ parentId }) => parentId)
-  const uniqueParentIdList = Array.from(new Set(parentIdList))
-  const parentFolderList = await chrome.bookmarks.get(uniqueParentIdList)
-
-  const parentMap = Object.fromEntries(
-    parentFolderList
-      .map(({ id, title}) => [id, title])
-  )
-
-  const removeFolderList = bookmarkList
-    .map(({ id, parentId }) => ({ id, parentTitle: parentMap[parentId] }))
-    .filter(({ parentTitle }) => isDatedTitleForTemplate({ title: parentTitle, template }))
+  const removeFolderList = await getDatedBookmarks({ url, template })
 
   await Promise.all(
     removeFolderList.map(

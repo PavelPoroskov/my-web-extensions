@@ -96,10 +96,14 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
   let bookmarkList = bookmarkInfo.bookmarkList
   if (settings[USER_OPTION.SHOW_VISITED] === SHOW_VISITED_OPTIONS.IF_NO_OTHER) {
     bookmarkList = bookmarkList.filter(({ folder }) => !isVisitedDatedTitle(folder))
+
+    if (bookmarkList.length == 0) {
+      bookmarkList = bookmarkInfo.bookmarkList
+    }
   }
 
   const data = {
-    bookmarkList: bookmarkInfo.bookmarkList,
+    bookmarkList,
     fontSize: settings[USER_OPTION.FONT_SIZE],
     isShowTitle: settings[USER_OPTION.SHOW_BOOKMARK_TITLE],
 

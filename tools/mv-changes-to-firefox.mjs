@@ -65,6 +65,7 @@ createFileForFirefox(
     'api/showAuthorBookmarks.js',
     'api/updateTab.js',
     'api/clearUrlOnPageOpen.js',
+    'api/onPageReady.js',
 
     'bookmark-controller-api/bookmarkQueue.js',
     'bookmark-controller-api/folderQueue.js',

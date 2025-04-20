@@ -8,11 +8,17 @@ import {
 } from './bookmark-create1.js';
 import {
   createBookmarkInDatedTemplate,
+  getDatedBookmarks,
   removeDatedBookmarksForTemplate,
 } from './bookmark-dated.js';
 import {
   findOrCreateFolder,
 } from './folder-create.js';
+import {
+  makeLogFunction,
+} from '../api-low/index.js'
+
+const logCBK = makeLogFunction({ module: 'bookmark-create.js' })
 
 export async function createBookmarkFolderById({ parentId, title, url }) {
   const [folderNode] = await chrome.bookmarks.get(parentId)
@@ -49,6 +55,7 @@ export async function createBookmarkFolderByName({ url, title, folderNameList })
 }
 
 export async function createBookmarkVisited({ url, title }) {
+  logCBK('createBookmarkVisited 00', url)
   await createBookmarkFolderByName({ url, title, folderNameList: [DATED_TEMPLATE_VISITED] })
 
   // visited replaces opened
@@ -56,5 +63,11 @@ export async function createBookmarkVisited({ url, title }) {
 }
 
 export async function createBookmarkOpened({ url, title }) {
+  const list = await getDatedBookmarks({ url, template: DATED_TEMPLATE_VISITED })
+
+  if (0 < list.length) {
+    return
+  }
+
   await createBookmarkFolderByName({ url, title, folderNameList: [DATED_TEMPLATE_OPENED] })
 }

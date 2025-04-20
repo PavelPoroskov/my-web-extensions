@@ -12,8 +12,8 @@ import {
   updateActiveTab,
 } from '../api/updateTab.js'
 import {
-  clearUrlOnPageOpen,
-} from '../api/clearUrlOnPageOpen.js'
+  debouncedOnPageReady,
+} from '../api/onPageReady.js'
 import {
   USER_OPTION,
 } from '../constant/index.js'
@@ -26,16 +26,8 @@ export const tabsController = {
   //   logTC('tabs.onCreated', index, id, url);
   // },
   async onUpdated(tabId, changeInfo, Tab) {
-    // logTC('tabs.onUpdated 00', 'tabId', tabId, 'Tab.index', Tab.index);
-    // logTC('tabs.onUpdated 00 ------changeInfo', changeInfo);
-
-    // if (changeInfo?.url) {
-    //   if (tabId === memo.activeTabId) {
-    //     if (memo.activeTabUrl != changeInfo.url) {
-    //       memo.activeTabUrl = changeInfo.url
-    //     }
-    //   }
-    // }
+    logTC('tabs.onUpdated 00', 'tabId', tabId, 'Tab.index', Tab.index);
+    logTC('tabs.onUpdated 00 ------changeInfo', changeInfo);
 
     let checkUrl
     switch (changeInfo?.status) {
@@ -72,30 +64,16 @@ export const tabsController = {
       }
     }
 
+    if (changeInfo?.url) {
+      visitedUrls.onUpdateTab(tabId, { url: changeInfo.url });
+    }
+    if (changeInfo?.title) {
+      visitedUrls.onUpdateTab(tabId, { title: changeInfo.title });
+    }
+
     switch (changeInfo?.status) {
       case ('complete'): {
-        logTC('tabs.onUpdated complete 00', 'tabId', tabId, 'memo.activeTabId', memo.activeTabId);
-        logTC('tabs.onUpdated complete 00 -------Tab',Tab);
-
-        if (tabId === memo.activeTabId) {
-          logTC('tabs.onUpdated complete 11 tabId === memo.activeTabId');
-          // we here after message page-is-ready. that message triggers update. not necessary to update here
-          // no message ready in chrome, in the tab click on url
-          const url = Tab.url
-
-          if (url !== memo.activeTabUrl) {
-            logTC('tabs.onUpdated complete 22 Tab.url !== memo.activeTabUrl');
-            const cleanUrl = await clearUrlOnPageOpen({ tabId, url })
-            visitedUrls.onCloseUrl(memo.activeTabUrl)
-            visitedUrls.onVisitUrl(cleanUrl, Tab.title, tabId)
-            memo.activeTabUrl = cleanUrl
-            updateActiveTab({
-              tabId,
-              url: cleanUrl,
-              debugCaller: 'tabs.onUpdated complete',
-            })
-          }
-        }
+        debouncedOnPageReady({ tabId, url: Tab.url });
 
         break;
       }
@@ -121,28 +99,22 @@ export const tabsController = {
 
       if (Tab) {
         logTC('tabs.onActivated 11', Tab.index, tabId, Tab.url);
+        // console.log('CHANGE memo.activeTabUrl tabs.onActivated 1', memo.activeTabUrl);
+        // console.log('CHANGE memo.activeTabUrl tabs.onActivated 2', Tab.url);
         memo.activeTabUrl = Tab.url
 
         // QUESTION: on open windows with stored tabs. every tab is activated?
-        visitedUrls.onVisitUrl(memo.activeTabUrl, Tab.title, tabId)
+        visitedUrls.onActivateTab(tabId, Tab.url, Tab.title)
       }
     } catch (er) {
       logTC('tabs.onActivated. IGNORING. tab was deleted', er);
     }
   },
   async onRemoved(tabId) {
-    // if (isWindowClosing) {
-    //   return
-    // }
-
+    logTC('tabs.onRemoved 00', tabId);
     // 1) manually close active tab
-    // 2) manually close not active tab?
+    // 2) manually close not active tab
     // 3) close tab on close window
-
-    // visited page
-    //  url in active tab
-    //  ?user scroll
-    //  user close
 
     visitedUrls.onCloseTab(tabId)
   }
