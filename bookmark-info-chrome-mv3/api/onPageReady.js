@@ -9,7 +9,7 @@ import {
   visitedUrls,
 } from '../data-structures/index.js'
 import {
-  debounce,
+  debounce_leading,
   makeLogFunction,
 } from '../api-low/index.js'
 
@@ -47,4 +47,4 @@ async function onPageReady({ tabId, url }) {
   }
 }
 
-export const debouncedOnPageReady = debounce(onPageReady, 50)
+export const debouncedOnPageReady = debounce_leading(onPageReady, 100)

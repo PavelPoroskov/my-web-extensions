@@ -25,6 +25,10 @@ export async function getDatedBookmarks({ url, template }) {
 
   const parentIdList = bookmarkList.map(({ parentId }) => parentId)
   const uniqueParentIdList = Array.from(new Set(parentIdList))
+  if (uniqueParentIdList.length == 0) {
+    return []
+  }
+
   const parentFolderList = await chrome.bookmarks.get(uniqueParentIdList)
 
   const parentMap = Object.fromEntries(

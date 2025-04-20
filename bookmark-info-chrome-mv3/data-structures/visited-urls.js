@@ -15,10 +15,26 @@ class VisitedUrls {
 
   onUpdateTab = () => { }
   onActivateTab = () => { }
+  onReplaceUrlInActiveTab = () => { }
   onCloseTab = () => { }
 
   onMarkUrlVisited = () => { }
   onMarkUrlOpened = () => { }
+
+  markUrlVisited ({ url, title }) {
+    if (url.startsWith('chrome:') || url.startsWith('about:')) {
+      return
+    }
+
+    this.onMarkUrlVisited({ url, title })
+  }
+  markUrlOpened ({ url, title }) {
+    if (url.startsWith('chrome:') || url.startsWith('about:')) {
+      return
+    }
+
+    this.onMarkUrlOpened({ url, title })
+  }
 
   _onActivateTab(tabId, url, title) {
     logVU("_onActivateTab", url)
@@ -47,7 +63,7 @@ class VisitedUrls {
     logVU("_onReplaceUrlInTab 22", 'title', title)
 
     if (title) {
-      this.onMarkUrlVisited({ url: oldUrl, title })
+      this.markUrlVisited({ url: oldUrl, title })
     }
 
     // mark newUrl as activated
@@ -61,7 +77,7 @@ class VisitedUrls {
 
     if (urlTitle) {
       logVU("onCloseUrl 22", urlTitle)
-      this.onMarkUrlVisited({ url, title: urlTitle })
+      this.markUrlVisited({ url, title: urlTitle })
     } else {
       let title = tabTitle
 
@@ -79,7 +95,7 @@ class VisitedUrls {
         title = url
       }
 
-      this.onMarkUrlOpened({ url, title })
+      this.markUrlOpened({ url, title })
     }
 
     this.cacheTabId.delete(tabId)
