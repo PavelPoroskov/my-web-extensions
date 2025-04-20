@@ -220,14 +220,14 @@ const INTERNAL_VALUES = Object.fromEntries(
   // 'init-extension',
   // 'memo',
   // 'moveOldDatedFolders.js',
-    'onPageReady.js',
+  // 'onPageReady.js',
   // 'page.api.js',
   // 'runtime.controller',
   // 'showAuthorBookmarks.js',
   // 'storage.api.js',
   // 'storage.controller',
   // 'updateTab.js',
-  'tabs.controller',
+  // 'tabs.controller',
   // 'tagList-getRecent.js',
   // 'tagList-highlight.js',
   // 'tagList.js',
@@ -452,7 +452,7 @@ const HOST_URL_SETTINGS_SHORT = Object.assign(
 function isSupportedProtocol(urlString) {
   try {
     const url = new URL(urlString);
-    
+
     return supportedProtocols.includes(url.protocol);
   // eslint-disable-next-line no-unused-vars
   } catch (_er) {
@@ -468,6 +468,24 @@ function debounce(func, timeout = 300){
     timer = setTimeout(
       () => {
         func.apply(this, args);
+      },
+      timeout,
+    );
+  };
+}
+
+function debounce_leading(func, timeout = 300){
+  let timer;
+
+  return (...args) => {
+    if (!timer) {
+      func.apply(this, args);
+    }
+
+    clearTimeout(timer);
+    timer = setTimeout(
+      () => {
+        timer = undefined;
       },
       timeout,
     );
@@ -2331,10 +2349,26 @@ class VisitedUrls {
 
   onUpdateTab = () => { }
   onActivateTab = () => { }
+  onReplaceUrlInActiveTab = () => { }
   onCloseTab = () => { }
 
   onMarkUrlVisited = () => { }
   onMarkUrlOpened = () => { }
+
+  markUrlVisited ({ url, title }) {
+    if (url.startsWith('chrome:') || url.startsWith('about:')) {
+      return
+    }
+
+    this.onMarkUrlVisited({ url, title })
+  }
+  markUrlOpened ({ url, title }) {
+    if (url.startsWith('chrome:') || url.startsWith('about:')) {
+      return
+    }
+
+    this.onMarkUrlOpened({ url, title })
+  }
 
   _onActivateTab(tabId, url, title) {
     logVU("_onActivateTab", url)
@@ -2363,7 +2397,7 @@ class VisitedUrls {
     logVU("_onReplaceUrlInTab 22", 'title', title)
 
     if (title) {
-      this.onMarkUrlVisited({ url: oldUrl, title })
+      this.markUrlVisited({ url: oldUrl, title })
     }
 
     // mark newUrl as activated
@@ -2377,7 +2411,7 @@ class VisitedUrls {
 
     if (urlTitle) {
       logVU("onCloseUrl 22", urlTitle)
-      this.onMarkUrlVisited({ url, title: urlTitle })
+      this.markUrlVisited({ url, title: urlTitle })
     } else {
       let title = tabTitle
 
@@ -2395,7 +2429,7 @@ class VisitedUrls {
         title = url
       }
 
-      this.onMarkUrlOpened({ url, title })
+      this.markUrlOpened({ url, title })
     }
 
     this.cacheTabId.delete(tabId)
@@ -3191,6 +3225,10 @@ async function getDatedBookmarks({ url, template }) {
 
   const parentIdList = bookmarkList.map(({ parentId }) => parentId)
   const uniqueParentIdList = Array.from(new Set(parentIdList))
+  if (uniqueParentIdList.length == 0) {
+    return []
+  }
+
   const parentFolderList = await browser.bookmarks.get(uniqueParentIdList)
 
   const parentMap = Object.fromEntries(
@@ -4124,7 +4162,7 @@ async function onPageReady({ tabId, url }) {
   }
 }
 
-const debouncedOnPageReady = debounce(onPageReady, 50)
+const debouncedOnPageReady = debounce_leading(onPageReady, 100)
 const logBQ = makeLogFunction({ module: 'bookmarkQueue.js' })
 
 let lastCreatedBkmId
