@@ -1,17 +1,19 @@
 import {
+  memo,
+} from '../data-structures/index.js'
+import {
+  debounce_leading,
+  makeLogFunction,
+} from '../api-low/index.js'
+import {
   clearUrlOnPageOpen,
 } from './clearUrlOnPageOpen.js'
 import {
   updateActiveTab,
 } from './updateTab.js'
 import {
-  memo,
   visitedUrls,
-} from '../data-structures/index.js'
-import {
-  debounce_leading,
-  makeLogFunction,
-} from '../api-low/index.js'
+} from './visited-urls.js'
 
 const logPR = makeLogFunction({ module: 'onPageReady.js' })
 

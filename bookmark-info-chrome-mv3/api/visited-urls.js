@@ -3,7 +3,7 @@ import {
 } from '../api-low/index.js'
 import {
   CacheWithLimit,
-} from './cache.js'
+} from '../data-structures/index.js'
 
 const logVU = makeLogFunction({ module: 'visited-urls.js' })
 

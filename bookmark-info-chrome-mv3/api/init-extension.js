@@ -7,7 +7,6 @@ import {
   browserStartTime,
   tagList,
   memo,
-  visitedUrls,
 } from '../data-structures/index.js'
 import {
   extensionSettings,
@@ -17,6 +16,9 @@ import {
   createBookmarkVisited,
   createBookmarkOpened,
 } from '../bookmark-controller-api/bookmark-create.js'
+import {
+  visitedUrls,
+} from './visited-urls.js'
 
 const logIX = makeLogFunction({ module: 'init-extension' })
 

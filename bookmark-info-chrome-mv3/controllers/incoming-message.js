@@ -11,11 +11,10 @@ import {
   tagList,
 } from '../data-structures/index.js'
 import {
-  updateActiveTab,
-} from '../api/updateTab.js'
-import {
   debouncedOnPageReady,
-} from '../api/onPageReady.js'
+  showAuthorBookmarksStep2,
+  updateActiveTab,
+} from '../api/index.js'
 import {
   EXTENSION_MSG_ID,
   USER_OPTION,
@@ -23,9 +22,6 @@ import {
 import {
   HOST_LIST_FOR_PAGE_OPTIONS,
 } from '../url-api/index.js'
-import {
-  showAuthorBookmarksStep2,
-} from '../api/showAuthorBookmarks.js'
 import {
   extensionSettings,
   makeLogFunction,

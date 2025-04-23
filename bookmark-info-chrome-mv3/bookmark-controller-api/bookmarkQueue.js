@@ -11,7 +11,7 @@ import {
 } from '../data-structures/index.js'
 import {
   debouncedUpdateActiveTab,
-} from '../api/updateTab.js'
+} from '../api/index.js'
 import {
   createBookmarkIgnoreInController,
   moveBookmarkIgnoreInController,

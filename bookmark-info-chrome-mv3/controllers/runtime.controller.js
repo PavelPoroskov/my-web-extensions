@@ -1,6 +1,6 @@
 import {
   debouncedUpdateActiveTab,
-} from '../api/updateTab.js'
+} from '../api/index.js'
 import {
   orderBookmarks,
 } from '../bookmark-list-ops/index.js'

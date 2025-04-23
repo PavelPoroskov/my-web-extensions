@@ -6,14 +6,12 @@ import {
 import {
   CacheWithLimit,
   memo,
-  visitedUrls,
 } from '../data-structures/index.js'
 import {
-  updateActiveTab,
-} from '../api/updateTab.js'
-import {
   debouncedOnPageReady,
-} from '../api/onPageReady.js'
+  updateActiveTab,
+  visitedUrls,
+} from '../api/index.js'
 import {
   USER_OPTION,
 } from '../constant/index.js'
