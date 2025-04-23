@@ -1,5 +1,4 @@
 export * from './common.js'
-export * from './extensionSettings.js'
 export * from './log.api.js'
 export * from './pluralize.js'
 export * from './storage.api.js'

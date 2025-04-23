@@ -1,4 +1,4 @@
-import { page } from '../api/page.api.js'
+import { page } from '../api-mid/index.js'
 
 export async function toggleYoutubeHeader() {
   const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });

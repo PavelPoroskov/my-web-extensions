@@ -24,6 +24,8 @@ import {
 } from '../url-api/index.js'
 import {
   extensionSettings,
+} from '../api-mid/index.js'
+import {
   makeLogFunction,
 } from '../api-low/index.js'
 

@@ -19,9 +19,12 @@ createFileForFirefox(
     'api-low/pluralize.js',
     'api-low/log.api.js',
     'api-low/storage.api.js',
-    'api-low/extensionSettings.js', // dependencies: storage.api.js, log.api.js
     'api-low/youtube.js',
     'api-low/index.js',
+
+    'api-mid/extensionSettings.js', // dependencies: storage.api.js, log.api.js
+    'api-mid/page.api.js',
+    'api-mid/index.js',
 
     'data-structures/extraMap.js',
     'data-structures/cache.js',
@@ -59,7 +62,6 @@ createFileForFirefox(
     'api/visited-urls.js',
     'api/init-extension.js',
 
-    'api/page.api.js',
     'api/get-bookmarks.api.js',
     'api/history.api.js',
     'api/showAuthorBookmarks.js',

@@ -1,10 +1,8 @@
 import {
   getOptions,
   setOptions,
-} from './storage.api.js'
-import {
   makeLogFunction,
-} from './log.api.js'
+} from '../api-low/index.js'
 import {
   USER_OPTION_KEY_LIST,
 } from '../constant/index.js'

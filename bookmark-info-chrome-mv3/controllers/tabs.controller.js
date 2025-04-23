@@ -1,5 +1,7 @@
 import {
   extensionSettings,
+} from '../api-mid/index.js'
+import {
   makeLogFunction,
   isYouTubeChannelWithoutSubdir,
 } from '../api-low/index.js'

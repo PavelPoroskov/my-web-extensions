@@ -1,13 +1,13 @@
 import {
   getBookmarkInfoUni,
 } from './get-bookmarks.api.js'
-import { page } from './page.api.js'
 import {
   cleanAuthorUrl,
   getAuthorUrlFromPostUrl,
   getMatchedGetAuthor,
   removeHashAndSearchParams,
 } from '../url-api/index.js'
+import { page } from '../api-mid/index.js'
 import {
   makeLogFunction,
 } from '../api-low/index.js'

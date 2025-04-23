@@ -2,7 +2,7 @@ import {
   createBookmarkFolderById,
   createBookmarkFolderByName,
 } from '../bookmark-controller-api/index.js'
-import { page } from '../api/page.api.js'
+import { page } from '../api-mid/index.js'
 
 export async function addBookmarkFromRecentTag({ url, title, parentId }) {
   await createBookmarkFolderById({

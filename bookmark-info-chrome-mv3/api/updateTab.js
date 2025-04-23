@@ -1,6 +1,9 @@
 import {
-  debounce,
   extensionSettings,
+  page
+} from '../api-mid/index.js'
+import {
+  debounce,
   isSupportedProtocol,
   makeLogFunction,
 } from '../api-low/index.js'
@@ -25,7 +28,6 @@ import {
 import {
   showAuthorBookmarks,
 } from './showAuthorBookmarks.js'
-import { page } from './page.api.js'
 import { initExtension } from './init-extension.js'
 
 const logUTB = makeLogFunction({ module: 'updateTab.js' })

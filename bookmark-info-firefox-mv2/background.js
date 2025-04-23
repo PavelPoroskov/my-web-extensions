@@ -1027,6 +1027,47 @@ async function getOptions(keyList) {
     ...sessionObj,
   }
 }
+// return pathname.startsWith('/@')
+//   || pathname.startsWith('/c/')
+//   || pathname.startsWith('/channel/')
+//   || pathname.startsWith('/user/')
+// function isYouTubeChannel(pathname) {
+//   let result = true
+
+//   switch (pathname) {
+//     case '/':
+//     case '/watch':
+//       result = false
+//   }
+
+//   return result
+// }
+
+const isYoutube = (hostname) => hostname.endsWith('youtube.com')
+
+function isYouTubeChannelPathWithoutSubdir(pathname) {
+  const [part1, part2, part3] = pathname.split('/').filter(Boolean)
+  let result = false
+
+  switch (true) {
+    case part1.startsWith('@'):
+      result = !part2
+      break
+    case part1 == 'c':
+    case part1 == 'channel':
+    case part1 == 'user':
+      result = !part3
+      break
+    // case part1 == 'watch':
+    // case !part1:
+    //   result = false
+  }
+
+  return result
+}
+
+const isYouTubeChannelWithoutSubdir = (oUrl) => isYoutube(oUrl.hostname) && isYouTubeChannelPathWithoutSubdir(oUrl.pathname)
+
 const logES = makeLogFunction({ module: 'extensionSettings.js' })
 
 class ExtensionSettings {
@@ -1077,46 +1118,110 @@ class ExtensionSettings {
 }
 
 const extensionSettings = new ExtensionSettings()
-// return pathname.startsWith('/@')
-//   || pathname.startsWith('/c/')
-//   || pathname.startsWith('/channel/')
-//   || pathname.startsWith('/user/')
-// function isYouTubeChannel(pathname) {
-//   let result = true
+const logPA = makeLogFunction({ module: 'page.api.js' })
 
-//   switch (pathname) {
-//     case '/':
-//     case '/watch':
-//       result = false
-//   }
-
-//   return result
-// }
-
-const isYoutube = (hostname) => hostname.endsWith('youtube.com')
-
-function isYouTubeChannelPathWithoutSubdir(pathname) {
-  const [part1, part2, part3] = pathname.split('/').filter(Boolean)
-  let result = false
-
-  switch (true) {
-    case part1.startsWith('@'):
-      result = !part2
-      break
-    case part1 == 'c':
-    case part1 == 'channel':
-    case part1 == 'user':
-      result = !part3
-      break
-    // case part1 == 'watch':
-    // case !part1:
-    //   result = false
+async function changeUrlInTab({ tabId, url }) {
+  logPA('changeUrlInTab () 00', tabId, url)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.CHANGE_URL,
+    url,
   }
-
-  return result
+  logPA('changeUrlInTab () sendMessage', tabId, msg)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logPA('changeUrlInTab () IGNORE', err)
+    })
 }
 
-const isYouTubeChannelWithoutSubdir = (oUrl) => isYoutube(oUrl.hostname) && isYouTubeChannelPathWithoutSubdir(oUrl.pathname)
+async function replaceUrlInTab({ tabId, url }) {
+  logPA('replaceUrlInTab () 00', tabId, url)
+
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.REPLACE_URL,
+    url,
+  }
+  logPA('changeUrlInTab () sendMessage', tabId, msg)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logPA('changeUrlInTab () IGNORE', err)
+    })
+}
+
+async function getSelectionInPage(tabId) {
+  logPA('getSelectionInPage () 00', tabId)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.GET_SELECTION,
+  }
+  logPA('getSelectionInPage () sendMessage', tabId)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logPA('getSelectionInPage () IGNORE', err)
+    })
+}
+
+async function getUserInputInPage(tabId) {
+  logPA('getUserInputInPage () 00', tabId)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT,
+  }
+  logPA('getUserInputInPage () sendMessage', tabId)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logPA('getUserInputInPage () IGNORE', err)
+    })
+}
+
+async function toggleYoutubeHeaderInPage(tabId) {
+  logPA('toggleYoutubeHeaderInPage () 00', tabId)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER,
+  }
+  logPA('toggleYoutubeHeaderInPage () sendMessage', tabId)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logPA('toggleYoutubeHeaderInPage () IGNORE', err)
+    })
+}
+
+async function updateBookmarkInfoInPage({ tabId, data }) {
+  logPA('updateBookmarkInfo () 00', tabId)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO,
+    ...data,
+  }
+  logPA('updateBookmarkInfo () sendMessage', tabId)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logPA('updateBookmarkInfo () IGNORE', err)
+    })
+}
+
+async function sendMeAuthor({ tabId, authorSelector }) {
+  if (!authorSelector) {
+    return
+  }
+
+  logPA('sendMeAuthor () 00', tabId)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.SEND_ME_AUTHOR,
+    authorSelector,
+  }
+  logPA('sendMeAuthor () sendMessage', tabId)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logPA('sendMeAuthor () IGNORE', err)
+    })
+}
+
+const page = {
+  changeUrlInTab,
+  replaceUrlInTab,
+  getSelectionInPage,
+  getUserInputInPage,
+  toggleYoutubeHeaderInPage,
+  updateBookmarkInfoInPage,
+  sendMeAuthor,
+}
 
 class ExtraMap extends Map {
   sum(key, addValue) {
@@ -2339,127 +2444,6 @@ class TagList {
 }
 
 const tagList = new TagList()
-const logVU = makeLogFunction({ module: 'visited-urls.js' })
-
-class VisitedUrls {
-  constructor () {
-    this.cacheVisitedUrls = new CacheWithLimit({ name: 'cacheVisitedUrls', size: 500 });
-    this.cacheTabId = new CacheWithLimit({ name: 'cacheVisitedTabIds', size: 500 });
-  }
-
-  onUpdateTab = () => { }
-  onActivateTab = () => { }
-  onReplaceUrlInActiveTab = () => { }
-  onCloseTab = () => { }
-
-  onMarkUrlVisited = () => { }
-  onMarkUrlOpened = () => { }
-
-  markUrlVisited ({ url, title }) {
-    if (url.startsWith('chrome:') || url.startsWith('about:')) {
-      return
-    }
-
-    this.onMarkUrlVisited({ url, title })
-  }
-  markUrlOpened ({ url, title }) {
-    if (url.startsWith('chrome:') || url.startsWith('about:')) {
-      return
-    }
-
-    this.onMarkUrlOpened({ url, title })
-  }
-
-  _onActivateTab(tabId, url, title) {
-    logVU("_onActivateTab", url)
-    this.cacheVisitedUrls.add(url, title)
-    this.cacheTabId.add(tabId, { url, title })
-  }
-  _onUpdateTab(tabId, oData) {
-    logVU("_onUpdateTab 11", tabId, oData)
-
-    const before = this.cacheTabId.get(tabId)
-    const after = {
-      ...before,
-      ...oData,
-    }
-    this.cacheTabId.add(tabId, after)
-  }
-  _onReplaceUrlInActiveTab({ tabId, oldUrl, newUrl, newTitle }) {
-    if (oldUrl == newUrl) {
-      return
-    }
-    logVU("_onReplaceUrlInTab 11/1", tabId, oldUrl)
-    logVU("_onReplaceUrlInTab 11/2", tabId, newUrl)
-
-    // mark oldUrl as visited
-    const title = this.cacheVisitedUrls.get(oldUrl)
-    logVU("_onReplaceUrlInTab 22", 'title', title)
-
-    if (title) {
-      this.markUrlVisited({ url: oldUrl, title })
-    }
-
-    // mark newUrl as activated
-    this.cacheVisitedUrls.add(newUrl, newTitle)
-  }
-  async _onCloseTab(tabId) {
-    logVU("_onCloseTab 11", tabId)
-    const { url, title: tabTitle } = this.cacheTabId.get(tabId)
-
-    const urlTitle = this.cacheVisitedUrls.get(url)
-
-    if (urlTitle) {
-      logVU("onCloseUrl 22", urlTitle)
-      this.markUrlVisited({ url, title: urlTitle })
-    } else {
-      let title = tabTitle
-
-      if (!title) {
-        const historyItemList = await browser.history.search({
-          text: url,
-          maxResults: 1,
-        })
-        if (0 < historyItemList.length) {
-          title = historyItemList[0].title
-        }
-      }
-
-      if (!title) {
-        title = url
-      }
-
-      this.markUrlOpened({ url, title })
-    }
-
-    this.cacheTabId.delete(tabId)
-  }
-
-  connect({ isOn, onMarkUrlVisited, onMarkUrlOpened }) {
-    if (isOn) {
-      this.onUpdateTab = this._onUpdateTab
-      this.onActivateTab = this._onActivateTab
-      this.onReplaceUrlInActiveTab = this._onReplaceUrlInActiveTab
-      this.onCloseTab = this._onCloseTab
-
-      this.onMarkUrlOpened = onMarkUrlOpened
-      this.onMarkUrlVisited = onMarkUrlVisited
-    } else {
-      this.onUpdateTab = () => { }
-      this.onActivateTab = () => { }
-      this.onReplaceUrlInTab = () => { }
-      this.onCloseTab = () => { }
-
-      this.onMarkUrlOpened = () => { }
-      this.onMarkUrlVisited = () => { }
-
-      this.cacheVisitedUrls.clear()
-      this.cacheTabId.clear()
-    }
-  }
-}
-
-const visitedUrls = new VisitedUrls()
 
 const logUST = makeLogFunction({ module: 'url-settings.js' })
 
@@ -3410,6 +3394,127 @@ class NodeTaskQueue {
     this.enqueue({ ...task, action: NODE_ACTION.DELETE });
   }
 }
+const logVU = makeLogFunction({ module: 'visited-urls.js' })
+
+class VisitedUrls {
+  constructor () {
+    this.cacheVisitedUrls = new CacheWithLimit({ name: 'cacheVisitedUrls', size: 500 });
+    this.cacheTabId = new CacheWithLimit({ name: 'cacheVisitedTabIds', size: 500 });
+  }
+
+  onUpdateTab = () => { }
+  onActivateTab = () => { }
+  onReplaceUrlInActiveTab = () => { }
+  onCloseTab = () => { }
+
+  onMarkUrlVisited = () => { }
+  onMarkUrlOpened = () => { }
+
+  markUrlVisited ({ url, title }) {
+    if (url.startsWith('chrome:') || url.startsWith('about:')) {
+      return
+    }
+
+    this.onMarkUrlVisited({ url, title })
+  }
+  markUrlOpened ({ url, title }) {
+    if (url.startsWith('chrome:') || url.startsWith('about:')) {
+      return
+    }
+
+    this.onMarkUrlOpened({ url, title })
+  }
+
+  _onActivateTab(tabId, url, title) {
+    logVU("_onActivateTab", url)
+    this.cacheVisitedUrls.add(url, title)
+    this.cacheTabId.add(tabId, { url, title })
+  }
+  _onUpdateTab(tabId, oData) {
+    logVU("_onUpdateTab 11", tabId, oData)
+
+    const before = this.cacheTabId.get(tabId)
+    const after = {
+      ...before,
+      ...oData,
+    }
+    this.cacheTabId.add(tabId, after)
+  }
+  _onReplaceUrlInActiveTab({ tabId, oldUrl, newUrl, newTitle }) {
+    if (oldUrl == newUrl) {
+      return
+    }
+    logVU("_onReplaceUrlInTab 11/1", tabId, oldUrl)
+    logVU("_onReplaceUrlInTab 11/2", tabId, newUrl)
+
+    // mark oldUrl as visited
+    const title = this.cacheVisitedUrls.get(oldUrl)
+    logVU("_onReplaceUrlInTab 22", 'title', title)
+
+    if (title) {
+      this.markUrlVisited({ url: oldUrl, title })
+    }
+
+    // mark newUrl as activated
+    this.cacheVisitedUrls.add(newUrl, newTitle)
+  }
+  async _onCloseTab(tabId) {
+    logVU("_onCloseTab 11", tabId)
+    const { url, title: tabTitle } = this.cacheTabId.get(tabId)
+
+    const urlTitle = this.cacheVisitedUrls.get(url)
+
+    if (urlTitle) {
+      logVU("onCloseUrl 22", urlTitle)
+      this.markUrlVisited({ url, title: urlTitle })
+    } else {
+      let title = tabTitle
+
+      if (!title) {
+        const historyItemList = await browser.history.search({
+          text: url,
+          maxResults: 1,
+        })
+        if (0 < historyItemList.length) {
+          title = historyItemList[0].title
+        }
+      }
+
+      if (!title) {
+        title = url
+      }
+
+      this.markUrlOpened({ url, title })
+    }
+
+    this.cacheTabId.delete(tabId)
+  }
+
+  connect({ isOn, onMarkUrlVisited, onMarkUrlOpened }) {
+    if (isOn) {
+      this.onUpdateTab = this._onUpdateTab
+      this.onActivateTab = this._onActivateTab
+      this.onReplaceUrlInActiveTab = this._onReplaceUrlInActiveTab
+      this.onCloseTab = this._onCloseTab
+
+      this.onMarkUrlOpened = onMarkUrlOpened
+      this.onMarkUrlVisited = onMarkUrlVisited
+    } else {
+      this.onUpdateTab = () => { }
+      this.onActivateTab = () => { }
+      this.onReplaceUrlInTab = () => { }
+      this.onCloseTab = () => { }
+
+      this.onMarkUrlOpened = () => { }
+      this.onMarkUrlVisited = () => { }
+
+      this.cacheVisitedUrls.clear()
+      this.cacheTabId.clear()
+    }
+  }
+}
+
+const visitedUrls = new VisitedUrls()
 const logIX = makeLogFunction({ module: 'init-extension' })
 
 async function createContextMenu(settings) {
@@ -3499,110 +3604,6 @@ async function initExtension({ debugCaller='' }) {
   if (isInitRequired) {
     logIX('initExtension() end')
   }
-}
-const logPA = makeLogFunction({ module: 'page.api.js' })
-
-async function changeUrlInTab({ tabId, url }) {
-  logPA('changeUrlInTab () 00', tabId, url)
-  const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.CHANGE_URL,
-    url,
-  }
-  logPA('changeUrlInTab () sendMessage', tabId, msg)
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logPA('changeUrlInTab () IGNORE', err)
-    })
-}
-
-async function replaceUrlInTab({ tabId, url }) {
-  logPA('replaceUrlInTab () 00', tabId, url)
-
-  const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.REPLACE_URL,
-    url,
-  }
-  logPA('changeUrlInTab () sendMessage', tabId, msg)
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logPA('changeUrlInTab () IGNORE', err)
-    })
-}
-
-async function getSelectionInPage(tabId) {
-  logPA('getSelectionInPage () 00', tabId)
-  const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.GET_SELECTION,
-  }
-  logPA('getSelectionInPage () sendMessage', tabId)
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logPA('getSelectionInPage () IGNORE', err)
-    })
-}
-
-async function getUserInputInPage(tabId) {
-  logPA('getUserInputInPage () 00', tabId)
-  const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT,
-  }
-  logPA('getUserInputInPage () sendMessage', tabId)
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logPA('getUserInputInPage () IGNORE', err)
-    })
-}
-
-async function toggleYoutubeHeaderInPage(tabId) {
-  logPA('toggleYoutubeHeaderInPage () 00', tabId)
-  const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER,
-  }
-  logPA('toggleYoutubeHeaderInPage () sendMessage', tabId)
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logPA('toggleYoutubeHeaderInPage () IGNORE', err)
-    })
-}
-
-async function updateBookmarkInfoInPage({ tabId, data }) {
-  logPA('updateBookmarkInfo () 00', tabId)
-  const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO,
-    ...data,
-  }
-  logPA('updateBookmarkInfo () sendMessage', tabId)
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logPA('updateBookmarkInfo () IGNORE', err)
-    })
-}
-
-async function sendMeAuthor({ tabId, authorSelector }) {
-  if (!authorSelector) {
-    return
-  }
-
-  logPA('sendMeAuthor () 00', tabId)
-  const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.SEND_ME_AUTHOR,
-    authorSelector,
-  }
-  logPA('sendMeAuthor () sendMessage', tabId)
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logPA('sendMeAuthor () IGNORE', err)
-    })
-}
-
-const page = {
-  changeUrlInTab,
-  replaceUrlInTab,
-  getSelectionInPage,
-  getUserInputInPage,
-  toggleYoutubeHeaderInPage,
-  updateBookmarkInfoInPage,
-  sendMeAuthor,
 }
 const logGB = makeLogFunction({ module: 'get-bookmarks.api.js' })
 
@@ -4163,6 +4164,7 @@ async function onPageReady({ tabId, url }) {
 }
 
 const debouncedOnPageReady = debounce_leading(onPageReady, 100)
+// * from './browserStartTime.js'
 const logBQ = makeLogFunction({ module: 'bookmarkQueue.js' })
 
 let lastCreatedBkmId

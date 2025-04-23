@@ -7,7 +7,7 @@ import {
 } from '../constant/index.js'
 import {
   extensionSettings,
-} from '../api-low/index.js'
+} from '../api-mid/index.js'
 import {
   tagList,
 } from '../data-structures/index.js'

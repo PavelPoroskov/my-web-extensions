@@ -6,8 +6,8 @@ import {
 } from '../constant/index.js'
 import {
   extensionSettings,
-} from '../api-low/index.js'
-import { page } from './page.api.js'
+  page,
+} from '../api-mid/index.js'
 
 // TODO check settings only on init as for tagList. use null or functional method
 export async function clearUrlOnPageOpen({ tabId, url }) {

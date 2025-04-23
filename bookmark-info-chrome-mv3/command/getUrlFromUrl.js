@@ -1,4 +1,4 @@
-import { page } from '../api/page.api.js'
+import { page } from '../api-mid/index.js'
 import {
   makeLogFunction,
 } from '../api-low/index.js'
