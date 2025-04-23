@@ -20,16 +20,9 @@ createFileForFirefox(
     'api-low/log.api.js',
     'api-low/storage.api.js',
     'api-low/youtube.js',
+    'api-low/cache.js',
+    'api-low/extraMap.js',
     'api-low/index.js',
-
-    'api-mid/extensionSettings.js', // dependencies: storage.api.js, log.api.js
-    'api-mid/page.api.js',
-    'api-mid/index.js',
-
-    'data-structures/extraMap.js',
-    'data-structures/cache.js',
-    'data-structures/memo.js',
-    'data-structures/browserStartTime.js',
 
     'folder-api/folder-title.js',
     'folder-api/special-folder.js',
@@ -38,10 +31,14 @@ createFileForFirefox(
     'folder-api/folder-place.js',
     'folder-api/index.js',
 
-    'data-structures/tagList-getRecent.js',
-    'data-structures/tagList-highlight.js',
-    'data-structures/tagList.js',
-    'data-structures/index.js',
+    'api-mid/extensionSettings.js', // dependencies: storage.api.js, log.api.js
+    'api-mid/page.api.js',
+    'api-mid/memo.js',
+    'api-mid/browserStartTime.js',
+    'api-mid/tagList-getRecent.js',
+    'api-mid/tagList-highlight.js',
+    'api-mid/tagList.js',
+    'api-mid/index.js',
 
     'url-api/url-settings.js',
     'url-api/url-is.js',

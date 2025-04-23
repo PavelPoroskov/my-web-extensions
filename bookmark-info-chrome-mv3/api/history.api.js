@@ -4,12 +4,10 @@ import {
   USER_OPTION,
 } from '../constant/index.js';
 import {
-  browserStartTime,
-} from '../data-structures/index.js';
-import {
   startPartialUrlSearch,
 } from '../url-api/index.js'
 import {
+  browserStartTime,
   extensionSettings,
 } from '../api-mid/index.js'
 import {

@@ -1,9 +1,7 @@
 import {
+  ExtraMap,
   makeLogFunction,
 } from '../api-low/index.js'
-import {
-  ExtraMap,
-} from './extraMap.js'
 
 const logTH = makeLogFunction({ module: 'tagList-highlight.js' })
 

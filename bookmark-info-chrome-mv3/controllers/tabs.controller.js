@@ -1,14 +1,12 @@
 import {
   extensionSettings,
+  memo,
 } from '../api-mid/index.js'
 import {
+  CacheWithLimit,
   makeLogFunction,
   isYouTubeChannelWithoutSubdir,
 } from '../api-low/index.js'
-import {
-  CacheWithLimit,
-  memo,
-} from '../data-structures/index.js'
 import {
   debouncedOnPageReady,
   updateActiveTab,

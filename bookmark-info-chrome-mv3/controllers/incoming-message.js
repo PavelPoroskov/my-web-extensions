@@ -8,9 +8,6 @@ import {
   unfixTag,
 } from '../command/index.js'
 import {
-  tagList,
-} from '../data-structures/index.js'
-import {
   debouncedOnPageReady,
   showAuthorBookmarksStep2,
   updateActiveTab,
@@ -24,6 +21,7 @@ import {
 } from '../url-api/index.js'
 import {
   extensionSettings,
+  tagList,
 } from '../api-mid/index.js'
 import {
   makeLogFunction,

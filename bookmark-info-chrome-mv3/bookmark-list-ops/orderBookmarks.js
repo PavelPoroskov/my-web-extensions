@@ -10,7 +10,7 @@ import {
 } from '../bookmark-controller-api/index.js'
 import {
   tagList,
-} from '../data-structures/index.js'
+} from '../api-mid/index.js'
 import {
   moveFolders,
 } from './moveFolders.js'

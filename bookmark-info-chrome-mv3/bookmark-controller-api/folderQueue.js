@@ -1,14 +1,14 @@
 import {
+  memo,
+  tagList,
+} from '../api-mid/index.js'
+import {
   getOptions,
   makeLogFunction,
 } from '../api-low/index.js'
 import {
   USER_OPTION,
 } from '../constant/index.js'
-import {
-  memo,
-  tagList,
-} from '../data-structures/index.js'
 import {
   debouncedUpdateActiveTab,
 } from '../api/index.js'

@@ -5,11 +5,9 @@ import {
 } from '../constant/index.js'
 import {
   browserStartTime,
-  tagList,
-  memo,
-} from '../data-structures/index.js'
-import {
   extensionSettings,
+  memo,
+  tagList,
 } from '../api-mid/index.js'
 import {
   makeLogFunction,

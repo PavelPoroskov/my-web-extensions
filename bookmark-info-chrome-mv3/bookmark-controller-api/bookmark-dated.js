@@ -1,9 +1,9 @@
 import {
+  tagList,
+} from '../api-mid/index.js';
+import {
   makeLogFunction,
 } from '../api-low/index.js';
-import {
-  tagList,
-} from '../data-structures/index.js';
 import {
   isDatedTitleForTemplate,
 } from '../folder-api/index.js';

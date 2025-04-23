@@ -1,6 +1,6 @@
 import {
   ExtraMap,
-} from '../data-structures/index.js'
+} from '../api-low/index.js'
 import {
   removeBookmarkIgnoreInController,
 } from '../bookmark-controller-api/index.js'

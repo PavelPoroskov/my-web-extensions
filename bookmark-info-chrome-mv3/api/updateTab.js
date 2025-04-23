@@ -1,6 +1,8 @@
 import {
   extensionSettings,
-  page
+  memo,
+  page,
+  tagList,
 } from '../api-mid/index.js'
 import {
   debounce,
@@ -21,10 +23,6 @@ import {
   USER_OPTION,
   SHOW_VISITED_OPTIONS,
 } from '../constant/index.js'
-import {
-  memo,
-  tagList,
-} from '../data-structures/index.js'
 import {
   showAuthorBookmarks,
 } from './showAuthorBookmarks.js'

@@ -1,9 +1,7 @@
 import {
+  CacheWithLimit,
   makeLogFunction,
 } from '../api-low/index.js'
-import {
-  CacheWithLimit,
-} from '../data-structures/index.js'
 
 const logVU = makeLogFunction({ module: 'visited-urls.js' })
 

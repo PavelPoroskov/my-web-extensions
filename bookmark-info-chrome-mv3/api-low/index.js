@@ -1,4 +1,6 @@
+export * from './cache.js'
 export * from './common.js'
+export * from './extraMap.js'
 export * from './log.api.js'
 export * from './pluralize.js'
 export * from './storage.api.js'

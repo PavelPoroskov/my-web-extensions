@@ -1,5 +1,5 @@
-import { CacheWithLimit } from './cache.js'
 import {
+  CacheWithLimit,
   makeLogFunction,
 } from '../api-low/index.js'
 

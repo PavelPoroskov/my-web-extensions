@@ -1,6 +1,6 @@
 import {
   memo,
-} from '../data-structures/index.js'
+} from '../api-mid/index.js'
 import {
   debounce_leading,
   makeLogFunction,

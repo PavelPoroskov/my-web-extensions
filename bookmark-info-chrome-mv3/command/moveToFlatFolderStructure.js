@@ -7,10 +7,8 @@ import {
 } from '../constant/index.js'
 import {
   extensionSettings,
-} from '../api-mid/index.js'
-import {
   tagList,
-} from '../data-structures/index.js'
+} from '../api-mid/index.js'
 
 export async function moveToFlatFolderStructure() {
   const settings = await extensionSettings.get()
