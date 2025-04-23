@@ -1,7 +1,6 @@
 import {
   OTHER_BOOKMARKS_FOLDER_ID,
   BOOKMARKS_BAR_FOLDER_ID,
-  getDatedRootFolderId,
   getUnclassifiedFolderId,
   isDatedFolderTitle,
   isDescriptiveFolderTitle,
@@ -93,14 +92,13 @@ async function filterFolders(idList, isFlatStructure) {
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {
     const unclassifiedFolderId = await getUnclassifiedFolderId()
-    const datedRootFolderId = await getDatedRootFolderId()
 
     filteredFolderList = filteredFolderList
       .filter(
         ({ parentId }) => parentId === OTHER_BOOKMARKS_FOLDER_ID || parentId === BOOKMARKS_BAR_FOLDER_ID
       )
       .filter(
-        ({ id }) => id !== unclassifiedFolderId && id !== datedRootFolderId
+        ({ id }) => id !== unclassifiedFolderId
       )
   }
   logRA('filterFolders () 33', 'filteredFolderList', filteredFolderList.length, filteredFolderList)

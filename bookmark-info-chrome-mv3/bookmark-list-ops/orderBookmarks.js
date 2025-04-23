@@ -9,9 +9,6 @@ import {
   getOrCreateFolderByTitleInRoot,
 } from '../bookmark-controller-api/index.js'
 import {
-  tagList,
-} from '../api-mid/index.js'
-import {
   moveFolders,
 } from './moveFolders.js'
 import {
@@ -37,7 +34,6 @@ import {
 } from '../constant/index.js'
 
 export async function orderBookmarks() {
-  tagList.blockTagList(true)
 
   try {
     await getOrCreateFolderByTitleInRoot(UNCLASSIFIED_TITLE)
@@ -62,7 +58,7 @@ export async function orderBookmarks() {
 
     await removeDoubleBookmarks()
 
+  // eslint-disable-next-line no-empty
   } finally {
-    tagList.blockTagList(false)
   }
 }
