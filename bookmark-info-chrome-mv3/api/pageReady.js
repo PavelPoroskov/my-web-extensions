@@ -3,7 +3,6 @@ import {
   page,
 } from '../api-mid/index.js'
 import {
-  debounce_leading,
   makeLogFunction,
 } from '../api-low/index.js'
 import {
@@ -73,8 +72,6 @@ class PageReady {
       })
     }
   }
-
-  debouncedOnPageReady = debounce_leading(this.onPageReady, 100)
 }
 
 export const pageReady = new PageReady()

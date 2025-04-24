@@ -36,7 +36,7 @@ export async function onIncomingMessage (message, sender) {
 
     // IT IS ONLY when new tab load first url
     case EXTENSION_MSG_ID.TAB_IS_READY: {
-      pageReady.debouncedOnPageReady({
+      pageReady.onPageReady({
         tabId,
         url: message.url,
         updateActiveTab,

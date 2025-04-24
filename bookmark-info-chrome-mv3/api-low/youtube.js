@@ -20,6 +20,10 @@ function isYouTubeChannelPathWithoutSubdir(pathname) {
   const [part1, part2, part3] = pathname.split('/').filter(Boolean)
   let result = false
 
+  if (!part1) {
+    return false
+  }
+
   switch (true) {
     case part1.startsWith('@'):
       result = !part2

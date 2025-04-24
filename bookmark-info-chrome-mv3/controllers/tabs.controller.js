@@ -71,7 +71,7 @@ export const tabsController = {
 
     switch (changeInfo?.status) {
       case ('complete'): {
-        pageReady.debouncedOnPageReady({
+        pageReady.onPageReady({
           tabId,
           url: Tab.url,
           updateActiveTab,
