@@ -6,6 +6,7 @@ import {
 } from '../api-low/index.js';
 import {
   isDatedTitleForTemplate,
+  isVisitedDatedTemplate,
 } from '../folder-api/index.js';
 import {
   getDatedFolder,
@@ -82,7 +83,9 @@ export async function createBookmarkInDatedTemplate({
 
   const result = await createBookmarkInCommonFolder({ parentId: datedFolder.id, title, url })
 
-  await tagList.addRecentTagFromFolder({ id: parentId, title: parentTitle })
+  if (!isVisitedDatedTemplate(parentTitle)) {
+    await tagList.addRecentTagFromFolder({ id: parentId, title: parentTitle })
+  }
   removePreviousDatedBookmarks({ url, template: parentTitle })
 
   return result

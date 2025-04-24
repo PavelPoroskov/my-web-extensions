@@ -86,9 +86,13 @@ export function getDatedTemplate(title) {
   return `${fixedPartFromTitle} @D`
 }
 
-export function isServiceDatedTemplate(templateTitle) {
+export function isVisitedDatedTemplate(templateTitle) {
   return templateTitle == DATED_TEMPLATE_VISITED
     || templateTitle == DATED_TEMPLATE_OPENED
+}
+
+export function isServiceDatedTemplate(templateTitle) {
+  return isVisitedDatedTemplate(templateTitle)
     || templateTitle.toLowerCase().startsWith('done ')
 }
 
