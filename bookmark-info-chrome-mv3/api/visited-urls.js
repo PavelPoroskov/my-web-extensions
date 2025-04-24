@@ -111,7 +111,7 @@ class VisitedUrls {
     this.cacheTabId.delete(tabId)
   }
 
-  connect({ isOn }) {
+  useSettings({ isOn }) {
     if (isOn) {
       this.onUpdateTab = this._onUpdateTab
       this.onActivateTab = this._onActivateTab

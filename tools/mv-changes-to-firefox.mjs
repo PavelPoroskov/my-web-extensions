@@ -57,14 +57,13 @@ createFileForFirefox(
     'bookmark-controller-api/nodeTaskQueue.js',
 
     'api/visited-urls.js',
+    'api/pageReady.js',
     'api/init-extension.js',
 
     'api/get-bookmarks.api.js',
     'api/history.api.js',
     'api/showAuthorBookmarks.js',
     'api/updateTab.js',
-    'api/clearUrlOnPageOpen.js',
-    'api/onPageReady.js',
     'api/index.js',
 
     'bookmark-controller-api/bookmarkQueue.js',

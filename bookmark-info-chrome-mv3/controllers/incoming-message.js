@@ -8,7 +8,7 @@ import {
   unfixTag,
 } from '../command/index.js'
 import {
-  debouncedOnPageReady,
+  pageReady,
   showAuthorBookmarksStep2,
   updateActiveTab,
 } from '../api/index.js'
@@ -36,7 +36,12 @@ export async function onIncomingMessage (message, sender) {
 
     // IT IS ONLY when new tab load first url
     case EXTENSION_MSG_ID.TAB_IS_READY: {
-      debouncedOnPageReady({ tabId, url: message.url });
+      pageReady.debouncedOnPageReady({
+        tabId,
+        url: message.url,
+        updateActiveTab,
+        debugCaller: 'runtime.onMessage TAB_IS_READY',
+      });
 
       break
     }

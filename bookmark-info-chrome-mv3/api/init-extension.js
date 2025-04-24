@@ -15,6 +15,9 @@ import {
 import {
   visitedUrls,
 } from './visited-urls.js'
+import {
+  pageReady,
+} from './pageReady.js'
 
 const logIX = makeLogFunction({ module: 'init-extension' })
 
@@ -82,8 +85,11 @@ async function initFromUserOptions() {
   await Promise.all([
     createContextMenu(userSettings),
     tagList.readFromStorage(userSettings),
-    visitedUrls.connect({
+    visitedUrls.useSettings({
       isOn: userSettings[USER_OPTION.MARK_CLOSED_PAGE_AS_VISITED],
+    }),
+    pageReady.useSettings({
+      isDoCleanUrl: userSettings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN],
     }),
   ])
 }

@@ -8,7 +8,7 @@ import {
   isYouTubeChannelWithoutSubdir,
 } from '../api-low/index.js'
 import {
-  debouncedOnPageReady,
+  pageReady,
   updateActiveTab,
   visitedUrls,
 } from '../api/index.js'
@@ -71,7 +71,12 @@ export const tabsController = {
 
     switch (changeInfo?.status) {
       case ('complete'): {
-        debouncedOnPageReady({ tabId, url: Tab.url });
+        pageReady.debouncedOnPageReady({
+          tabId,
+          url: Tab.url,
+          updateActiveTab,
+          debugCaller: 'tabs.onUpdated complete',
+        });
 
         break;
       }
