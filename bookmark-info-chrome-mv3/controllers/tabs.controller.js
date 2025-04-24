@@ -112,7 +112,7 @@ export const tabsController = {
     logTC('tabs.onRemoved 00', tabId);
     // 1) manually close active tab
     // 2) manually close not active tab
-    // 3) close tab on close window
+    // 3) close tab on close window = 1)
 
     visitedUrls.onCloseTab(tabId)
   }

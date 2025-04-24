@@ -1,9 +1,18 @@
 import {
+  createBookmarkVisited,
+  createBookmarkOpened,
+} from '../bookmark-controller-api/bookmark-create.js'
+import {
   CacheWithLimit,
   makeLogFunction,
 } from '../api-low/index.js'
 
 const logVU = makeLogFunction({ module: 'visited-urls.js' })
+
+const URL_MARK_OPTIONS = {
+  OPENED: 'OPENED',
+  VISITED: 'VISITED',
+}
 
 class VisitedUrls {
   constructor () {
@@ -16,22 +25,25 @@ class VisitedUrls {
   onReplaceUrlInActiveTab = () => { }
   onCloseTab = () => { }
 
-  onMarkUrlVisited = () => { }
-  onMarkUrlOpened = () => { }
+  markUrl ({ url, title, mark }) {
+    // if (url == 'about:newtab') {
+    //   return
+    // }
 
-  markUrlVisited ({ url, title }) {
     if (url.startsWith('chrome:') || url.startsWith('about:')) {
       return
     }
 
-    this.onMarkUrlVisited({ url, title })
-  }
-  markUrlOpened ({ url, title }) {
-    if (url.startsWith('chrome:') || url.startsWith('about:')) {
-      return
+    switch (mark) {
+      case URL_MARK_OPTIONS.VISITED: {
+        createBookmarkVisited({ url, title })
+        break
+      }
+      case URL_MARK_OPTIONS.OPENED: {
+        createBookmarkOpened({ url, title })
+        break
+      }
     }
-
-    this.onMarkUrlOpened({ url, title })
   }
 
   _onActivateTab(tabId, url, title) {
@@ -61,7 +73,7 @@ class VisitedUrls {
     logVU("_onReplaceUrlInTab 22", 'title', title)
 
     if (title) {
-      this.markUrlVisited({ url: oldUrl, title })
+      this.markUr({ url: oldUrl, title, mark: URL_MARK_OPTIONS.VISITED })
     }
 
     // mark newUrl as activated
@@ -75,7 +87,7 @@ class VisitedUrls {
 
     if (urlTitle) {
       logVU("onCloseUrl 22", urlTitle)
-      this.markUrlVisited({ url, title: urlTitle })
+      this.markUrl({ url, title: urlTitle, mark: URL_MARK_OPTIONS.VISITED })
     } else {
       let title = tabTitle
 
@@ -93,29 +105,23 @@ class VisitedUrls {
         title = url
       }
 
-      this.markUrlOpened({ url, title })
+      this.markUrl({ url, title, mark: URL_MARK_OPTIONS.OPENED })
     }
 
     this.cacheTabId.delete(tabId)
   }
 
-  connect({ isOn, onMarkUrlVisited, onMarkUrlOpened }) {
+  connect({ isOn }) {
     if (isOn) {
       this.onUpdateTab = this._onUpdateTab
       this.onActivateTab = this._onActivateTab
       this.onReplaceUrlInActiveTab = this._onReplaceUrlInActiveTab
       this.onCloseTab = this._onCloseTab
-
-      this.onMarkUrlOpened = onMarkUrlOpened
-      this.onMarkUrlVisited = onMarkUrlVisited
     } else {
       this.onUpdateTab = () => { }
       this.onActivateTab = () => { }
       this.onReplaceUrlInTab = () => { }
       this.onCloseTab = () => { }
-
-      this.onMarkUrlOpened = () => { }
-      this.onMarkUrlVisited = () => { }
 
       this.cacheVisitedUrls.clear()
       this.cacheTabId.clear()

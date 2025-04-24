@@ -29,7 +29,7 @@ async function onPageReady({ tabId, url }) {
       logPR('onPageReady 22');
       const Tab = await chrome.tabs.get(tabId);
 
-      if (Tab && memo.activeTabUrl !== 'about:newtab') {
+      if (Tab) {
         visitedUrls.onReplaceUrlInActiveTab({
           tabId,
           oldUrl: memo.activeTabUrl,

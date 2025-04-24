@@ -13,10 +13,6 @@ import {
   makeLogFunction,
 } from '../api-low/index.js'
 import {
-  createBookmarkVisited,
-  createBookmarkOpened,
-} from '../bookmark-controller-api/bookmark-create.js'
-import {
   visitedUrls,
 } from './visited-urls.js'
 
@@ -88,8 +84,6 @@ async function initFromUserOptions() {
     tagList.readFromStorage(userSettings),
     visitedUrls.connect({
       isOn: userSettings[USER_OPTION.MARK_CLOSED_PAGE_AS_VISITED],
-      onMarkUrlVisited: createBookmarkVisited,
-      onMarkUrlOpened: createBookmarkOpened,
     }),
   ])
 }
