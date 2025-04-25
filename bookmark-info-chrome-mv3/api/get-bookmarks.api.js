@@ -2,13 +2,13 @@ import {
   memo,
 } from '../api-mid/index.js'
 import {
-  isSupportedProtocol,
   makeLogFunction,
 } from '../api-low/index.js'
 import {
   SOURCE,
 } from '../constant/index.js'
 import {
+  isSupportedProtocol,
   startPartialUrlSearch,
 } from '../url-api/index.js'
 

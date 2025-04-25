@@ -6,16 +6,18 @@ import {
 } from '../api-mid/index.js'
 import {
   debounce,
-  isSupportedProtocol,
   makeLogFunction,
 } from '../api-low/index.js'
+import {
+  isSupportedProtocol,
+} from '../url-api/index.js'
+import {
+  isVisitedDatedTitle
+} from '../folder-api/index.js'
 import {
   getBookmarkInfoUni,
   getPartialBookmarkList,
 } from './get-bookmarks.api.js'
-import {
-  isVisitedDatedTitle
-} from '../folder-api/index.js'
 import {
   getHistoryInfo,
 } from './history.api.js'

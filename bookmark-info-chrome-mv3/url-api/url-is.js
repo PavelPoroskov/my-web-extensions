@@ -1,18 +1,15 @@
-// return pathname.startsWith('/@')
-//   || pathname.startsWith('/c/')
-//   || pathname.startsWith('/channel/')
-//   || pathname.startsWith('/user/')
-// function isYouTubeChannel(pathname) {
-//   let result = true
+const supportedProtocols = ["https:", "http:"];
 
-//   switch (pathname) {
-//     case '/':
-//     case '/watch':
-//       result = false
-//   }
+export function isSupportedProtocol(urlString) {
+  try {
+    const url = new URL(urlString);
 
-//   return result
-// }
+    return supportedProtocols.includes(url.protocol);
+  // eslint-disable-next-line no-unused-vars
+  } catch (_er) {
+    return false;
+  }
+}
 
 const isYoutube = (hostname) => hostname.endsWith('youtube.com')
 

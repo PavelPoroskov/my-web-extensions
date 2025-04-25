@@ -44,7 +44,7 @@ createFileForFirefox(
     'url-api/url-search.js',
     'url-api/clear-url.js',
     'url-api/url-author.js',
-    'url-api/url-youtube.js',
+    'url-api/url-is.js',
     'url-api/index.js',
 
     'bookmark-controller-api/ignoreBkmControllerApiActionSet.js',
