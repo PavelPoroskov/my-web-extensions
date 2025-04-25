@@ -8,7 +8,7 @@ import {
 import {
   isPathnameMatchForPattern,
   makeIsSearchParamMatch,
-} from './url-is.js'
+} from './url-search-is.js'
 
 const logCUA = makeLogFunction({ module: 'clear-url.js' })
 

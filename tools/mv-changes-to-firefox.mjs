@@ -40,7 +40,7 @@ createFileForFirefox(
     'api-mid/index.js',
 
     'url-api/url-settings.js',
-    'url-api/url-is.js',
+    'url-api/url-search-is.js',
     'url-api/url-search.js',
     'url-api/clear-url.js',
     'url-api/url-author.js',

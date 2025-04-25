@@ -3,7 +3,7 @@ import {
 } from './url-settings.js'
 import {
   isUrlMath,
-} from './url-is.js'
+} from './url-search-is.js'
 
 export function getAuthorUrlFromPostUrl(url) {
   const oUrl = new URL(url)

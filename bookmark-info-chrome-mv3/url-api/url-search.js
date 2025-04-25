@@ -3,7 +3,7 @@ import {
 } from './url-settings.js'
 import {
   makeIsSearchParamMatch,
-} from './url-is.js'
+} from './url-search-is.js'
 import {
   isNotEmptyArray,
   makeLogFunction,
