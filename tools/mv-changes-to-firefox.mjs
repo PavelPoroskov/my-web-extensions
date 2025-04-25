@@ -19,7 +19,6 @@ createFileForFirefox(
     'api-low/pluralize.js',
     'api-low/log.api.js',
     'api-low/storage.api.js',
-    'api-low/youtube.js',
     'api-low/cache.js',
     'api-low/extraMap.js',
     'api-low/index.js',
@@ -45,6 +44,7 @@ createFileForFirefox(
     'url-api/url-search.js',
     'url-api/clear-url.js',
     'url-api/url-author.js',
+    'url-api/url-youtube.js',
     'url-api/index.js',
 
     'bookmark-controller-api/ignoreBkmControllerApiActionSet.js',

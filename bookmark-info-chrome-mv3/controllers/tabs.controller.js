@@ -1,20 +1,22 @@
 import {
+  pageReady,
+  updateActiveTab,
+  visitedUrls,
+} from '../api/index.js'
+import {
   extensionSettings,
   memo,
 } from '../api-mid/index.js'
 import {
   CacheWithLimit,
   makeLogFunction,
-  isYouTubeChannelWithoutSubdir,
 } from '../api-low/index.js'
-import {
-  pageReady,
-  updateActiveTab,
-  visitedUrls,
-} from '../api/index.js'
 import {
   USER_OPTION,
 } from '../constant/index.js'
+import {
+  isYouTubeChannelWithoutSubdir,
+} from '../url-api/index.js'
 
 const logTC = makeLogFunction({ module: 'tabs.controller' })
 const redirectedUrl = new CacheWithLimit({ name: 'redirectedUrl', size: 20 })
