@@ -24,7 +24,8 @@ async function getParentIdForDatedFolder(title) {
   let parentId = cacheForDatedTemplate[templateTitle]
 
   if (!parentId) {
-    parentId = await findOrCreateFolder(templateTitle)
+    const parentFolder = await findOrCreateFolder(templateTitle)
+    parentId = parentFolder.id
     cacheForDatedTemplate[templateTitle] = parentId
   }
 
