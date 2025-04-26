@@ -1158,9 +1158,8 @@ ${semanticTagsStyle}
 
     log('startToggleYoutubePageHeader() 22', options);
     const isYoutubePage = document.location.hostname.endsWith('youtube.com')
-    const isChannel = isYoutubePage
-    // && isYouTubeChannel(document.location.pathname)
-    && document.location.pathname.endsWith('/videos')
+    const lastPathPart = document.location.pathname.split('/').at(-1)
+    const isChannel = isYoutubePage && ['videos','shorts','streams'].includes(lastPathPart)
 
     if (!isChannel) {
       return

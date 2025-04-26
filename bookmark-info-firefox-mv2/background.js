@@ -213,15 +213,18 @@ const INTERNAL_VALUES = Object.fromEntries(
   // 'folderQueue.js',
   // 'find-create.js',
   // 'find-folder.js',
+  // 'folder-ignore.js',
   // 'get-bookmarks.api.js',
   // 'getUrlFromUrl',
   // 'history.api',
   // 'incoming-message',
   // 'init-extension',
   // 'memo',
+  // 'moveFolders.js',
   // 'moveOldDatedFolders.js',
-  // 'onPageReady.js',
+  // 'orderBookmarks.js',
   // 'page.api.js',
+  // 'pageReady.js',
   // 'runtime.controller',
   // 'showAuthorBookmarks.js',
   // 'storage.api.js',
@@ -447,20 +450,7 @@ const HOST_URL_SETTINGS_SHORT = Object.assign(
   urlSettingsEnt,
 )
 
-const supportedProtocols = ["https:", "http:"];
-
-function isSupportedProtocol(urlString) {
-  try {
-    const url = new URL(urlString);
-
-    return supportedProtocols.includes(url.protocol);
-  // eslint-disable-next-line no-unused-vars
-  } catch (_er) {
-    return false;
-  }
-}
-
-function debounce(func, timeout = 300){
+function debounce(func, timeout = 300){
   let timer;
 
   return (...args) => {
@@ -1027,219 +1017,6 @@ async function getOptions(keyList) {
     ...sessionObj,
   }
 }
-// return pathname.startsWith('/@')
-//   || pathname.startsWith('/c/')
-//   || pathname.startsWith('/channel/')
-//   || pathname.startsWith('/user/')
-// function isYouTubeChannel(pathname) {
-//   let result = true
-
-//   switch (pathname) {
-//     case '/':
-//     case '/watch':
-//       result = false
-//   }
-
-//   return result
-// }
-
-const isYoutube = (hostname) => hostname.endsWith('youtube.com')
-
-function isYouTubeChannelPathWithoutSubdir(pathname) {
-  const [part1, part2, part3] = pathname.split('/').filter(Boolean)
-  let result = false
-
-  switch (true) {
-    case part1.startsWith('@'):
-      result = !part2
-      break
-    case part1 == 'c':
-    case part1 == 'channel':
-    case part1 == 'user':
-      result = !part3
-      break
-    // case part1 == 'watch':
-    // case !part1:
-    //   result = false
-  }
-
-  return result
-}
-
-const isYouTubeChannelWithoutSubdir = (oUrl) => isYoutube(oUrl.hostname) && isYouTubeChannelPathWithoutSubdir(oUrl.pathname)
-
-const logES = makeLogFunction({ module: 'extensionSettings.js' })
-
-class ExtensionSettings {
-  _isActual = false
-  _settings = {}
-  promise
-  fnResolve
-  fnReject
-
-  isActual() {
-    return this._isActual
-  }
-  async get() {
-    await this.promise
-
-    return { ...this._settings }
-  }
-  invalidate () {
-    this._isActual = false
-  }
-  async restoreFromStorage() {
-    logES('readSavedSettings START')
-    this._isActual = true
-
-    this.promise = new Promise((fnResolve, fnReject) => {
-      this.fnResolve = fnResolve;
-      this.fnReject = fnReject;
-    });
-
-    await getOptions(USER_OPTION_KEY_LIST)
-      .then((result) => {
-        this._settings = result
-        this.fnResolve()
-      })
-      .catch(this.fnReject);
-
-    logES('readSavedSettings')
-    logES(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)
-  }
-
-  async update(updateObj) {
-    Object.entries(updateObj).forEach(([ket, value]) => {
-      this._settings[ket] = value
-    })
-
-    await setOptions(updateObj)
-  }
-}
-
-const extensionSettings = new ExtensionSettings()
-const logPA = makeLogFunction({ module: 'page.api.js' })
-
-async function changeUrlInTab({ tabId, url }) {
-  logPA('changeUrlInTab () 00', tabId, url)
-  const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.CHANGE_URL,
-    url,
-  }
-  logPA('changeUrlInTab () sendMessage', tabId, msg)
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logPA('changeUrlInTab () IGNORE', err)
-    })
-}
-
-async function replaceUrlInTab({ tabId, url }) {
-  logPA('replaceUrlInTab () 00', tabId, url)
-
-  const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.REPLACE_URL,
-    url,
-  }
-  logPA('changeUrlInTab () sendMessage', tabId, msg)
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logPA('changeUrlInTab () IGNORE', err)
-    })
-}
-
-async function getSelectionInPage(tabId) {
-  logPA('getSelectionInPage () 00', tabId)
-  const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.GET_SELECTION,
-  }
-  logPA('getSelectionInPage () sendMessage', tabId)
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logPA('getSelectionInPage () IGNORE', err)
-    })
-}
-
-async function getUserInputInPage(tabId) {
-  logPA('getUserInputInPage () 00', tabId)
-  const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT,
-  }
-  logPA('getUserInputInPage () sendMessage', tabId)
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logPA('getUserInputInPage () IGNORE', err)
-    })
-}
-
-async function toggleYoutubeHeaderInPage(tabId) {
-  logPA('toggleYoutubeHeaderInPage () 00', tabId)
-  const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER,
-  }
-  logPA('toggleYoutubeHeaderInPage () sendMessage', tabId)
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logPA('toggleYoutubeHeaderInPage () IGNORE', err)
-    })
-}
-
-async function updateBookmarkInfoInPage({ tabId, data }) {
-  logPA('updateBookmarkInfo () 00', tabId)
-  const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO,
-    ...data,
-  }
-  logPA('updateBookmarkInfo () sendMessage', tabId)
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logPA('updateBookmarkInfo () IGNORE', err)
-    })
-}
-
-async function sendMeAuthor({ tabId, authorSelector }) {
-  if (!authorSelector) {
-    return
-  }
-
-  logPA('sendMeAuthor () 00', tabId)
-  const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.SEND_ME_AUTHOR,
-    authorSelector,
-  }
-  logPA('sendMeAuthor () sendMessage', tabId)
-  await browser.tabs.sendMessage(tabId, msg)
-    .catch((err) => {
-      logPA('sendMeAuthor () IGNORE', err)
-    })
-}
-
-const page = {
-  changeUrlInTab,
-  replaceUrlInTab,
-  getSelectionInPage,
-  getUserInputInPage,
-  toggleYoutubeHeaderInPage,
-  updateBookmarkInfoInPage,
-  sendMeAuthor,
-}
-
-class ExtraMap extends Map {
-  sum(key, addValue) {
-    super.set(key, (super.get(key) || 0) + addValue)
-  }
-  update(key, updateObj) {
-    super.set(key, {
-      ...super.get(key),
-      ...updateObj,
-    })
-  }
-  concat(key, inItem) {
-    const item = inItem === undefined ? [] : inItem
-    // item -- single item or array
-    const ar = super.get(key) || []
-    super.set(key, ar.concat(item))
-  }
-}
 const logC = makeLogFunction({ module: 'cache' })
 
 class CacheWithLimit {
@@ -1300,78 +1077,24 @@ class CacheWithLimit {
     logC(this.cache);
   }
 }
-const logM = makeLogFunction({ module: 'memo' })
-
-const memo = {
-  previousTabId: '',
-  activeTabId: '',
-  activeTabUrl: '',
-
-  cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 500 }),
-  // cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
-  bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 1000 }),
-}
-
-logM('IMPORT END', 'memo.js', new Date().toISOString())
-const logBST = makeLogFunction({ module: 'browserStartTime' })
-
-class BrowserStartTime {
-  _isActual = false
-  startTime
-  promise
-  fnResolve
-  fnReject
-
-  isActual() {
-    return this._isActual
+class ExtraMap extends Map {
+  sum(key, addValue) {
+    super.set(key, (super.get(key) || 0) + addValue)
   }
-  async getStartTime() {
-    const storedSession = await getOptions(INTERNAL_VALUES.BROWSER_START_TIME)
-    logBST('storedSession', storedSession)
-
-    let result
-
-    if (storedSession[INTERNAL_VALUES.BROWSER_START_TIME]) {
-      result = storedSession[INTERNAL_VALUES.BROWSER_START_TIME]
-    } else {
-      // I get start for service-worker now.
-      //    It is correct if this web-extension was installed in the previous browser session
-      // It is better get for window // min(window.startTime(performance.timeOrigin)) OR min(tab(performance.timeOrigin))
-      //  tab with minimal tabId
-      result = performance.timeOrigin
-      await setOptions({
-        [INTERNAL_VALUES.BROWSER_START_TIME]: this._profileStartTimeMS
-      })
-    }
-
-    return result
+  update(key, updateObj) {
+    super.set(key, {
+      ...super.get(key),
+      ...updateObj,
+    })
   }
-  async init() {
-    this._isActual = true
-
-    this.promise = new Promise((fnResolve, fnReject) => {
-      this.fnResolve = fnResolve;
-      this.fnReject = fnReject;
-    });
-
-    await this.getStartTime()
-      .then((result) => {
-        this.startTime = result
-
-        this.fnResolve()
-      })
-      .catch(this.fnReject)
-
-      logBST('profileStartTimeMS', new Date(this.startTime).toISOString())
-  }
-  async get() {
-    await this.promise
-
-    return this.startTime
+  concat(key, inItem) {
+    const item = inItem === undefined ? [] : inItem
+    // item -- single item or array
+    const ar = super.get(key) || []
+    super.set(key, ar.concat(item))
   }
 }
 
-const browserStartTime = new BrowserStartTime()
 const isDescriptiveFolderTitle = (title) => !!title
   && !(
     title.startsWith('New folder')
@@ -1438,7 +1161,6 @@ const UNCLASSIFIED_TITLE = 'zz-bookmark-info--unclassified'
 const DATED_TITLE = 'zz-bookmark-info--dated'
 
 const getUnclassifiedFolderId = memoize(async () => getFolderByTitleInRoot(UNCLASSIFIED_TITLE))
-const getDatedRootFolderId = memoize(async () => getFolderByTitleInRoot(DATED_TITLE))
 const logFF = makeLogFunction({ module: 'find-folder.js' })
 
 function findFolderFrom({ normalizedTitle, startFolder }) {
@@ -1779,9 +1501,13 @@ function getDatedTemplate(title) {
   return `${fixedPartFromTitle} @D`
 }
 
-function isServiceDatedTemplate(templateTitle) {
+function isVisitedDatedTemplate(templateTitle) {
   return templateTitle == DATED_TEMPLATE_VISITED
     || templateTitle == DATED_TEMPLATE_OPENED
+}
+
+function isServiceDatedTemplate(templateTitle) {
+  return isVisitedDatedTemplate(templateTitle)
     || templateTitle.toLowerCase().startsWith('done ')
 }
 
@@ -1795,6 +1521,7 @@ function isVisitedDatedTitle(title) {
   const name = folderName.trim().toLowerCase()
 
   return name.startsWith('todo')
+    || name.startsWith('source') || name.endsWith('source')
     || name.startsWith('list') || name.endsWith('list')
     || name.endsWith('#top')
 }
@@ -1821,6 +1548,232 @@ function getNewFolderRootIdForDated(templateTitle, templateId) {
   return BOOKMARKS_MENU_FOLDER_ID || BOOKMARKS_BAR_FOLDER_ID
 }
 
+const logES = makeLogFunction({ module: 'extensionSettings.js' })
+
+class ExtensionSettings {
+  _isActual = false
+  _settings = {}
+  promise
+  fnResolve
+  fnReject
+
+  isActual() {
+    return this._isActual
+  }
+  async get() {
+    await this.promise
+
+    return { ...this._settings }
+  }
+  invalidate () {
+    this._isActual = false
+  }
+  async restoreFromStorage() {
+    logES('readSavedSettings START')
+    this._isActual = true
+
+    this.promise = new Promise((fnResolve, fnReject) => {
+      this.fnResolve = fnResolve;
+      this.fnReject = fnReject;
+    });
+
+    await getOptions(USER_OPTION_KEY_LIST)
+      .then((result) => {
+        this._settings = result
+        this.fnResolve()
+      })
+      .catch(this.fnReject);
+
+    logES('readSavedSettings')
+    logES(`actual settings: ${Object.entries(this._settings).map(([k,v]) => `${k}: ${v}`).join(', ')}`)
+  }
+
+  async update(updateObj) {
+    Object.entries(updateObj).forEach(([ket, value]) => {
+      this._settings[ket] = value
+    })
+
+    await setOptions(updateObj)
+  }
+}
+
+const extensionSettings = new ExtensionSettings()
+const logPA = makeLogFunction({ module: 'page.api.js' })
+
+async function changeUrlInTab({ tabId, url }) {
+  logPA('changeUrlInTab () 00', tabId, url)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.CHANGE_URL,
+    url,
+  }
+  logPA('changeUrlInTab () sendMessage', tabId, msg)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logPA('changeUrlInTab () IGNORE', err)
+    })
+}
+
+async function replaceUrlInTab({ tabId, url }) {
+  logPA('replaceUrlInTab () 00', tabId, url)
+
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.REPLACE_URL,
+    url,
+  }
+  logPA('changeUrlInTab () sendMessage', tabId, msg)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logPA('changeUrlInTab () IGNORE', err)
+    })
+}
+
+async function getSelectionInPage(tabId) {
+  logPA('getSelectionInPage () 00', tabId)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.GET_SELECTION,
+  }
+  logPA('getSelectionInPage () sendMessage', tabId)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logPA('getSelectionInPage () IGNORE', err)
+    })
+}
+
+async function getUserInputInPage(tabId) {
+  logPA('getUserInputInPage () 00', tabId)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT,
+  }
+  logPA('getUserInputInPage () sendMessage', tabId)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logPA('getUserInputInPage () IGNORE', err)
+    })
+}
+
+async function toggleYoutubeHeaderInPage(tabId) {
+  logPA('toggleYoutubeHeaderInPage () 00', tabId)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER,
+  }
+  logPA('toggleYoutubeHeaderInPage () sendMessage', tabId)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logPA('toggleYoutubeHeaderInPage () IGNORE', err)
+    })
+}
+
+async function updateBookmarkInfoInPage({ tabId, data }) {
+  logPA('updateBookmarkInfo () 00', tabId)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.BOOKMARK_INFO,
+    ...data,
+  }
+  logPA('updateBookmarkInfo () sendMessage', tabId)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logPA('updateBookmarkInfo () IGNORE', err)
+    })
+}
+
+async function sendMeAuthor({ tabId, authorSelector }) {
+  if (!authorSelector) {
+    return
+  }
+
+  logPA('sendMeAuthor () 00', tabId)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.SEND_ME_AUTHOR,
+    authorSelector,
+  }
+  logPA('sendMeAuthor () sendMessage', tabId)
+  await browser.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logPA('sendMeAuthor () IGNORE', err)
+    })
+}
+
+const page = {
+  changeUrlInTab,
+  replaceUrlInTab,
+  getSelectionInPage,
+  getUserInputInPage,
+  toggleYoutubeHeaderInPage,
+  updateBookmarkInfoInPage,
+  sendMeAuthor,
+}
+const logM = makeLogFunction({ module: 'memo' })
+
+const memo = {
+  previousTabId: '',
+  activeTabId: '',
+  activeTabUrl: '',
+
+  cacheUrlToInfo: new CacheWithLimit({ name: 'cacheUrlToInfo', size: 500 }),
+  // cacheUrlToVisitList: new CacheWithLimit({ name: 'cacheUrlToVisitList', size: 150 }),
+  bkmFolderById: new CacheWithLimit({ name: 'bkmFolderById', size: 1000 }),
+}
+
+logM('IMPORT END', 'memo.js', new Date().toISOString())
+const logBST = makeLogFunction({ module: 'browserStartTime' })
+
+class BrowserStartTime {
+  _isActual = false
+  startTime
+  promise
+  fnResolve
+  fnReject
+
+  isActual() {
+    return this._isActual
+  }
+  async getStartTime() {
+    const storedSession = await getOptions(INTERNAL_VALUES.BROWSER_START_TIME)
+    logBST('storedSession', storedSession)
+
+    let result
+
+    if (storedSession[INTERNAL_VALUES.BROWSER_START_TIME]) {
+      result = storedSession[INTERNAL_VALUES.BROWSER_START_TIME]
+    } else {
+      // I get start for service-worker now.
+      //    It is correct if this web-extension was installed in the previous browser session
+      // It is better get for window // min(window.startTime(performance.timeOrigin)) OR min(tab(performance.timeOrigin))
+      //  tab with minimal tabId
+      result = performance.timeOrigin
+      await setOptions({
+        [INTERNAL_VALUES.BROWSER_START_TIME]: this._profileStartTimeMS
+      })
+    }
+
+    return result
+  }
+  async init() {
+    this._isActual = true
+
+    this.promise = new Promise((fnResolve, fnReject) => {
+      this.fnResolve = fnResolve;
+      this.fnReject = fnReject;
+    });
+
+    await this.getStartTime()
+      .then((result) => {
+        this.startTime = result
+
+        this.fnResolve()
+      })
+      .catch(this.fnReject)
+
+      logBST('profileStartTimeMS', new Date(this.startTime).toISOString())
+  }
+  async get() {
+    await this.promise
+
+    return this.startTime
+  }
+}
+
+const browserStartTime = new BrowserStartTime()
 const logRA = makeLogFunction({ module: 'tagList-getRecent.js' })
 
 async function getRecentList(nItems) {
@@ -1904,14 +1857,13 @@ async function filterFolders(idList, isFlatStructure) {
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {
     const unclassifiedFolderId = await getUnclassifiedFolderId()
-    const datedRootFolderId = await getDatedRootFolderId()
 
     filteredFolderList = filteredFolderList
       .filter(
         ({ parentId }) => parentId === OTHER_BOOKMARKS_FOLDER_ID || parentId === BOOKMARKS_BAR_FOLDER_ID
       )
       .filter(
-        ({ id }) => id !== unclassifiedFolderId && id !== datedRootFolderId
+        ({ id }) => id !== unclassifiedFolderId
       )
   }
   logRA('filterFolders () 33', 'filteredFolderList', filteredFolderList.length, filteredFolderList)
@@ -2941,6 +2893,47 @@ function getMatchedGetAuthor(url) {
 
   return matchedGetAuthor
 }
+const supportedProtocols = ["https:", "http:"];
+
+function isSupportedProtocol(urlString) {
+  try {
+    const url = new URL(urlString);
+
+    return supportedProtocols.includes(url.protocol);
+  // eslint-disable-next-line no-unused-vars
+  } catch (_er) {
+    return false;
+  }
+}
+
+const isYoutube = (hostname) => hostname.endsWith('youtube.com')
+
+function isYouTubeChannelPathWithoutSubdir(pathname) {
+  const [part1, part2, part3] = pathname.split('/').filter(Boolean)
+  let result = false
+
+  if (!part1) {
+    return false
+  }
+
+  switch (true) {
+    case part1.startsWith('@'):
+      result = !part2
+      break
+    case part1 == 'c':
+    case part1 == 'channel':
+    case part1 == 'user':
+      result = !part3
+      break
+    // case part1 == 'watch':
+    // case !part1:
+    //   result = false
+  }
+
+  return result
+}
+
+const isYouTubeChannelWithoutSubdir = (oUrl) => isYoutube(oUrl.hostname) && isYouTubeChannelPathWithoutSubdir(oUrl.pathname)
 
 // ignore create from api to detect create from user
 class IgnoreBkmControllerApiActionSet {
@@ -2997,7 +2990,9 @@ class IgnoreBkmControllerApiActionSet {
 }
 
 const ignoreBkmControllerApiActionSet = new IgnoreBkmControllerApiActionSet()
-async function createFolderIgnoreInController({
+const logFI = makeLogFunction({ module: 'folder-ignore.js' })
+
+async function createFolderIgnoreInController({
   title,
   parentId,
   index,
@@ -3035,6 +3030,7 @@ async function moveNodeIgnoreInController({ id, parentId, index }) {
 }
 
 async function moveFolderIgnoreInController({ id, parentId, index }) {
+  logFI('moveFolderIgnoreInController 00')
   return await moveNodeIgnoreInController({ id, parentId, index })
 }
 
@@ -3266,7 +3262,9 @@ async function createBookmarkInDatedTemplate({
 
   const result = await createBookmarkInCommonFolder({ parentId: datedFolder.id, title, url })
 
-  await tagList.addRecentTagFromFolder({ id: parentId, title: parentTitle })
+  if (!isVisitedDatedTemplate(parentTitle)) {
+    await tagList.addRecentTagFromFolder({ id: parentId, title: parentTitle })
+  }
   removePreviousDatedBookmarks({ url, template: parentTitle })
 
   return result
@@ -3396,6 +3394,11 @@ class NodeTaskQueue {
 }
 const logVU = makeLogFunction({ module: 'visited-urls.js' })
 
+const URL_MARK_OPTIONS = {
+  OPENED: 'OPENED',
+  VISITED: 'VISITED',
+}
+
 class VisitedUrls {
   constructor () {
     this.cacheVisitedUrls = new CacheWithLimit({ name: 'cacheVisitedUrls', size: 500 });
@@ -3407,22 +3410,25 @@ class VisitedUrls {
   onReplaceUrlInActiveTab = () => { }
   onCloseTab = () => { }
 
-  onMarkUrlVisited = () => { }
-  onMarkUrlOpened = () => { }
+  markUrl({ url, title, mark }) {
+    // if (url == 'about:newtab') {
+    //   return
+    // }
 
-  markUrlVisited ({ url, title }) {
     if (url.startsWith('chrome:') || url.startsWith('about:')) {
       return
     }
 
-    this.onMarkUrlVisited({ url, title })
-  }
-  markUrlOpened ({ url, title }) {
-    if (url.startsWith('chrome:') || url.startsWith('about:')) {
-      return
+    switch (mark) {
+      case URL_MARK_OPTIONS.VISITED: {
+        createBookmarkVisited({ url, title })
+        break
+      }
+      case URL_MARK_OPTIONS.OPENED: {
+        createBookmarkOpened({ url, title })
+        break
+      }
     }
-
-    this.onMarkUrlOpened({ url, title })
   }
 
   _onActivateTab(tabId, url, title) {
@@ -3452,7 +3458,7 @@ class VisitedUrls {
     logVU("_onReplaceUrlInTab 22", 'title', title)
 
     if (title) {
-      this.markUrlVisited({ url: oldUrl, title })
+      this.markUrl({ url: oldUrl, title, mark: URL_MARK_OPTIONS.VISITED })
     }
 
     // mark newUrl as activated
@@ -3466,7 +3472,7 @@ class VisitedUrls {
 
     if (urlTitle) {
       logVU("onCloseUrl 22", urlTitle)
-      this.markUrlVisited({ url, title: urlTitle })
+      this.markUrl({ url, title: urlTitle, mark: URL_MARK_OPTIONS.VISITED })
     } else {
       let title = tabTitle
 
@@ -3484,29 +3490,23 @@ class VisitedUrls {
         title = url
       }
 
-      this.markUrlOpened({ url, title })
+      this.markUrl({ url, title, mark: URL_MARK_OPTIONS.OPENED })
     }
 
     this.cacheTabId.delete(tabId)
   }
 
-  connect({ isOn, onMarkUrlVisited, onMarkUrlOpened }) {
+  useSettings({ isOn }) {
     if (isOn) {
       this.onUpdateTab = this._onUpdateTab
       this.onActivateTab = this._onActivateTab
       this.onReplaceUrlInActiveTab = this._onReplaceUrlInActiveTab
       this.onCloseTab = this._onCloseTab
-
-      this.onMarkUrlOpened = onMarkUrlOpened
-      this.onMarkUrlVisited = onMarkUrlVisited
     } else {
       this.onUpdateTab = () => { }
       this.onActivateTab = () => { }
       this.onReplaceUrlInTab = () => { }
       this.onCloseTab = () => { }
-
-      this.onMarkUrlOpened = () => { }
-      this.onMarkUrlVisited = () => { }
 
       this.cacheVisitedUrls.clear()
       this.cacheTabId.clear()
@@ -3515,6 +3515,69 @@ class VisitedUrls {
 }
 
 const visitedUrls = new VisitedUrls()
+// import {
+//   updateActiveTab,
+// } from './updateTab.js'
+const logPR = makeLogFunction({ module: 'pageReady.js' })
+
+class PageReady {
+  constructor () {
+  }
+
+  clearUrlOnPageOpen = ({ url }) => url
+
+  async _clearUrlOnPageOpen({ tabId, url }) {
+    let cleanUrl = removeQueryParamsIfTarget(url);
+
+    if (url !== cleanUrl) {
+      await page.changeUrlInTab({ tabId, url: cleanUrl })
+    }
+
+    return cleanUrl || url
+  }
+
+  useSettings({ isDoCleanUrl }) {
+    if (isDoCleanUrl) {
+      this.clearUrlOnPageOpen = this._clearUrlOnPageOpen
+    } else {
+      this.clearUrlOnPageOpen = ({ url }) => url
+    }
+  }
+
+  async onPageReady({ tabId, url, updateActiveTab, debugCaller='' }) {
+    logPR('onPageReady 00', tabId, url);
+
+    if (tabId === memo.activeTabId) {
+      logPR('onPageReady 11');
+
+      const cleanUrl = await this.clearUrlOnPageOpen({ tabId, url })
+
+      if (url !== memo.activeTabUrl) {
+        logPR('onPageReady 22');
+        const Tab = await browser.tabs.get(tabId);
+
+        if (Tab) {
+          visitedUrls.onReplaceUrlInActiveTab({
+            tabId,
+            oldUrl: memo.activeTabUrl,
+            newUrl: cleanUrl,
+            newTitle: Tab.title,
+          });
+        }
+      }
+
+      memo.activeTabUrl = cleanUrl
+
+      updateActiveTab({
+        tabId,
+        url: cleanUrl,
+        debugCaller: `onPageReady() <-${debugCaller}`,
+      })
+    }
+  }
+}
+
+const pageReady = new PageReady()
 const logIX = makeLogFunction({ module: 'init-extension' })
 
 async function createContextMenu(settings) {
@@ -3581,10 +3644,11 @@ async function initFromUserOptions() {
   await Promise.all([
     createContextMenu(userSettings),
     tagList.readFromStorage(userSettings),
-    visitedUrls.connect({
+    visitedUrls.useSettings({
       isOn: userSettings[USER_OPTION.MARK_CLOSED_PAGE_AS_VISITED],
-      onMarkUrlVisited: createBookmarkVisited,
-      onMarkUrlOpened: createBookmarkOpened,
+    }),
+    pageReady.useSettings({
+      isDoCleanUrl: userSettings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN],
     }),
   ])
 }
@@ -4114,57 +4178,7 @@ async function updateActiveTab({ tabId, url, useCache, debugCaller } = {}) {
     debugCaller: `updateActiveTab () <- ${debugCaller}`,
   })
 }
-// TODO check settings only on init as for tagList. use null or functional method
-async function clearUrlOnPageOpen({ tabId, url }) {
-  let cleanUrl
-  const settings = await extensionSettings.get()
 
-  if (settings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN]) {
-    cleanUrl = removeQueryParamsIfTarget(url);
-
-    if (url !== cleanUrl) {
-      await page.changeUrlInTab({ tabId, url: cleanUrl })
-    }
-  }
-
-  return cleanUrl || url
-}
-const logPR = makeLogFunction({ module: 'onPageReady.js' })
-
-async function onPageReady({ tabId, url }) {
-  logPR('onPageReady 00', tabId, url);
-
-  if (tabId === memo.activeTabId) {
-    logPR('onPageReady 11');
-
-    const cleanUrl = await clearUrlOnPageOpen({ tabId, url })
-
-    if (url !== memo.activeTabUrl) {
-      logPR('onPageReady 22');
-      const Tab = await browser.tabs.get(tabId);
-
-      if (Tab && memo.activeTabUrl !== 'about:newtab') {
-        visitedUrls.onReplaceUrlInActiveTab({
-          tabId,
-          oldUrl: memo.activeTabUrl,
-          newUrl: cleanUrl,
-          newTitle: Tab.title,
-        });
-      }
-    }
-
-    memo.activeTabUrl = cleanUrl
-
-    updateActiveTab({
-      tabId,
-      url: cleanUrl,
-      debugCaller: 'onPageReady',
-    })
-  }
-}
-
-const debouncedOnPageReady = debounce_leading(onPageReady, 100)
-// * from './browserStartTime.js'
 const logBQ = makeLogFunction({ module: 'bookmarkQueue.js' })
 
 let lastCreatedBkmId
@@ -4769,7 +4783,9 @@ async function moveRootBookmarksToUnclassified() {
   // await moveRootBookmarks({ fromId: BOOKMARKS_MENU_FOLDER_ID, unclassifiedId })
   await moveRootBookmarks({ fromId: OTHER_BOOKMARKS_FOLDER_ID, unclassifiedId })
 }
-const cacheForDatedTemplate = {}
+const logMF = makeLogFunction({ module: 'moveFolders.js' })
+
+const cacheForDatedTemplate = {}
 
 async function getParentIdForDatedFolder(title) {
   const templateTitle = getDatedTemplate(title)
@@ -4777,7 +4793,8 @@ async function getParentIdForDatedFolder(title) {
   let parentId = cacheForDatedTemplate[templateTitle]
 
   if (!parentId) {
-    parentId = await findOrCreateFolder(templateTitle)
+    const parentFolder = await findOrCreateFolder(templateTitle)
+    parentId = parentFolder.id
     cacheForDatedTemplate[templateTitle] = parentId
   }
 
@@ -4853,10 +4870,14 @@ async function orderChildren(parentId) {
 }
 
 async function moveFolders() {
+  logMF('moveFolders() 00')
 
   const moveList1 = await orderChildren(BOOKMARKS_BAR_FOLDER_ID)
+  logMF('moveFolders() 11')
   const moveList2 = await orderChildren(BOOKMARKS_MENU_FOLDER_ID)
+  logMF('moveFolders() 22')
   const moveList3 = await orderChildren(OTHER_BOOKMARKS_FOLDER_ID)
+  logMF('moveFolders() 33')
 
   const totalMoveList = [
     moveList1,
@@ -4866,12 +4887,17 @@ async function moveFolders() {
     .flat()
     .sort((a,b) => -(a.level - b.level))
 
+  logMF('moveFolders() 44')
+  logMF(totalMoveList)
+
   await totalMoveList.reduce(
     (promiseChain, { id, parentId }) => promiseChain.then(
       () => moveFolderIgnoreInController({ id, parentId })
     ),
     Promise.resolve(),
   );
+
+  logMF('moveFolders() 99')
 }
 const logMOD = makeLogFunction({ module: 'moveOldDatedFolders.js' })
 
@@ -5026,35 +5052,40 @@ async function removeDoubleBookmarks() {
 
   // console.log('Sorted',  sortedNodeList.map(({ title }) => title))
 }
-async function orderBookmarks() {
-  tagList.blockTagList(true)
+const logOD = makeLogFunction({ module: 'orderBookmarks.js' })
 
-  try {
-    await getOrCreateFolderByTitleInRoot(UNCLASSIFIED_TITLE)
-    await getOrCreateFolderByTitleInRoot(DATED_TITLE)
+async function orderBookmarks() {
+  logOD('orderBookmarks() 00')
 
-    await moveFolders()
-    await moveOldDatedFolders(BOOKMARKS_BAR_FOLDER_ID)
-    if (IS_BROWSER_FIREFOX) {
-      await moveOldDatedFolders(BOOKMARKS_MENU_FOLDER_ID)
-    }
+  await getOrCreateFolderByTitleInRoot(UNCLASSIFIED_TITLE)
+  await getOrCreateFolderByTitleInRoot(DATED_TITLE)
 
-    await moveRootBookmarksToUnclassified()
-    await moveNotDescriptiveFoldersToUnclassified()
-
-    await mergeFolders()
-
-    await sortFolders(BOOKMARKS_BAR_FOLDER_ID)
-    if (IS_BROWSER_FIREFOX) {
-      await sortFolders(BOOKMARKS_MENU_FOLDER_ID)
-    }
-    await sortFolders(OTHER_BOOKMARKS_FOLDER_ID)
-
-    await removeDoubleBookmarks()
-
-  } finally {
-    tagList.blockTagList(false)
+  logOD('orderBookmarks() 11')
+  await moveFolders()
+  logOD('orderBookmarks() 11.2')
+  await moveOldDatedFolders(BOOKMARKS_BAR_FOLDER_ID)
+  if (IS_BROWSER_FIREFOX) {
+    await moveOldDatedFolders(BOOKMARKS_MENU_FOLDER_ID)
   }
+
+  logOD('orderBookmarks() 22')
+  await moveRootBookmarksToUnclassified()
+  await moveNotDescriptiveFoldersToUnclassified()
+
+  logOD('orderBookmarks() 33')
+  await mergeFolders()
+
+  logOD('orderBookmarks() 44')
+  await sortFolders(BOOKMARKS_BAR_FOLDER_ID)
+  if (IS_BROWSER_FIREFOX) {
+    await sortFolders(BOOKMARKS_MENU_FOLDER_ID)
+  }
+  await sortFolders(OTHER_BOOKMARKS_FOLDER_ID)
+
+  logOD('orderBookmarks() 55')
+  await removeDoubleBookmarks()
+
+  logOD('orderBookmarks() 99')
 }
 
 async function addBookmarkFromRecentTag({ url, title, parentId }) {
@@ -5476,7 +5507,12 @@ async function onIncomingMessage (message, sender) {
 
     // IT IS ONLY when new tab load first url
     case EXTENSION_MSG_ID.TAB_IS_READY: {
-      debouncedOnPageReady({ tabId, url: message.url });
+      pageReady.onPageReady({
+        tabId,
+        url: message.url,
+        updateActiveTab,
+        debugCaller: 'runtime.onMessage TAB_IS_READY',
+      });
 
       break
     }
@@ -5740,7 +5776,12 @@ const tabsController = {
 
     switch (changeInfo?.status) {
       case ('complete'): {
-        debouncedOnPageReady({ tabId, url: Tab.url });
+        pageReady.onPageReady({
+          tabId,
+          url: Tab.url,
+          updateActiveTab,
+          debugCaller: 'tabs.onUpdated complete',
+        });
 
         break;
       }
@@ -5781,7 +5822,7 @@ const tabsController = {
     logTC('tabs.onRemoved 00', tabId);
     // 1) manually close active tab
     // 2) manually close not active tab
-    // 3) close tab on close window
+    // 3) close tab on close window = 1)
 
     visitedUrls.onCloseTab(tabId)
   }
