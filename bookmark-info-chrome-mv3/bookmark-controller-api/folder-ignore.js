@@ -1,6 +1,11 @@
 import {
   ignoreBkmControllerApiActionSet,
 } from './ignoreBkmControllerApiActionSet.js'
+import {
+  makeLogFunction,
+} from '../api-low/index.js'
+
+const logFI = makeLogFunction({ module: 'folder-ignore.js' })
 
 export async function createFolderIgnoreInController({
   title,
@@ -40,6 +45,7 @@ export async function moveNodeIgnoreInController({ id, parentId, index }) {
 }
 
 export async function moveFolderIgnoreInController({ id, parentId, index }) {
+  logFI('moveFolderIgnoreInController 00')
   return await moveNodeIgnoreInController({ id, parentId, index })
 }
 

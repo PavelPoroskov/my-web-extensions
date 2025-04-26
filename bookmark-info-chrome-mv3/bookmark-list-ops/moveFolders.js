@@ -10,6 +10,11 @@ import {
   moveFolderIgnoreInController,
   findOrCreateFolder,
 } from '../bookmark-controller-api/index.js';
+import {
+  makeLogFunction,
+} from '../api-low/index.js';
+
+const logMF = makeLogFunction({ module: 'moveFolders.js' })
 
 const cacheForDatedTemplate = {}
 
@@ -95,10 +100,14 @@ async function orderChildren(parentId) {
 }
 
 export async function moveFolders() {
+  logMF('moveFolders() 00')
 
   const moveList1 = await orderChildren(BOOKMARKS_BAR_FOLDER_ID)
+  logMF('moveFolders() 11')
   const moveList2 = await orderChildren(BOOKMARKS_MENU_FOLDER_ID)
+  logMF('moveFolders() 22')
   const moveList3 = await orderChildren(OTHER_BOOKMARKS_FOLDER_ID)
+  logMF('moveFolders() 33')
 
   const totalMoveList = [
     moveList1,
@@ -108,10 +117,15 @@ export async function moveFolders() {
     .flat()
     .sort((a,b) => -(a.level - b.level))
 
+  logMF('moveFolders() 44')
+  logMF(totalMoveList)
+
   await totalMoveList.reduce(
     (promiseChain, { id, parentId }) => promiseChain.then(
       () => moveFolderIgnoreInController({ id, parentId })
     ),
     Promise.resolve(),
   );
+
+  logMF('moveFolders() 99')
 }

@@ -32,33 +32,42 @@ import {
 import {
   IS_BROWSER_FIREFOX,
 } from '../constant/index.js'
+import {
+  makeLogFunction,
+} from '../api-low/index.js';
+
+const logOD = makeLogFunction({ module: 'orderBookmarks.js' })
 
 export async function orderBookmarks() {
+  logOD('orderBookmarks() 00')
 
-  try {
-    await getOrCreateFolderByTitleInRoot(UNCLASSIFIED_TITLE)
-    await getOrCreateFolderByTitleInRoot(DATED_TITLE)
+  await getOrCreateFolderByTitleInRoot(UNCLASSIFIED_TITLE)
+  await getOrCreateFolderByTitleInRoot(DATED_TITLE)
 
-    await moveFolders()
-    await moveOldDatedFolders(BOOKMARKS_BAR_FOLDER_ID)
-    if (IS_BROWSER_FIREFOX) {
-      await moveOldDatedFolders(BOOKMARKS_MENU_FOLDER_ID)
-    }
-
-    await moveRootBookmarksToUnclassified()
-    await moveNotDescriptiveFoldersToUnclassified()
-
-    await mergeFolders()
-
-    await sortFolders(BOOKMARKS_BAR_FOLDER_ID)
-    if (IS_BROWSER_FIREFOX) {
-      await sortFolders(BOOKMARKS_MENU_FOLDER_ID)
-    }
-    await sortFolders(OTHER_BOOKMARKS_FOLDER_ID)
-
-    await removeDoubleBookmarks()
-
-  // eslint-disable-next-line no-empty
-  } finally {
+  logOD('orderBookmarks() 11')
+  await moveFolders()
+  logOD('orderBookmarks() 11.2')
+  await moveOldDatedFolders(BOOKMARKS_BAR_FOLDER_ID)
+  if (IS_BROWSER_FIREFOX) {
+    await moveOldDatedFolders(BOOKMARKS_MENU_FOLDER_ID)
   }
+
+  logOD('orderBookmarks() 22')
+  await moveRootBookmarksToUnclassified()
+  await moveNotDescriptiveFoldersToUnclassified()
+
+  logOD('orderBookmarks() 33')
+  await mergeFolders()
+
+  logOD('orderBookmarks() 44')
+  await sortFolders(BOOKMARKS_BAR_FOLDER_ID)
+  if (IS_BROWSER_FIREFOX) {
+    await sortFolders(BOOKMARKS_MENU_FOLDER_ID)
+  }
+  await sortFolders(OTHER_BOOKMARKS_FOLDER_ID)
+
+  logOD('orderBookmarks() 55')
+  await removeDoubleBookmarks()
+
+  logOD('orderBookmarks() 99')
 }
