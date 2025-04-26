@@ -25,7 +25,7 @@ class VisitedUrls {
   onReplaceUrlInActiveTab = () => { }
   onCloseTab = () => { }
 
-  markUrl ({ url, title, mark }) {
+  markUrl({ url, title, mark }) {
     // if (url == 'about:newtab') {
     //   return
     // }
@@ -73,7 +73,7 @@ class VisitedUrls {
     logVU("_onReplaceUrlInTab 22", 'title', title)
 
     if (title) {
-      this.markUr({ url: oldUrl, title, mark: URL_MARK_OPTIONS.VISITED })
+      this.markUrl({ url: oldUrl, title, mark: URL_MARK_OPTIONS.VISITED })
     }
 
     // mark newUrl as activated
