@@ -1,8 +1,9 @@
+npm i -g eslint
+npm install --global web-ext
+
 node tools/mv-changes-to-firefox.mjs
 
 ./deploy.sh
-
-npm install --global web-ext
 
 node tools/mv-changes-to-firefox.mjs
 cd bookmark-info-firefox-mv2
