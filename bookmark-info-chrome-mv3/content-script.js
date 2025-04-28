@@ -12,7 +12,7 @@
   // TODO-DOUBLE remove duplication in EXTENSION_MSG_ID: message-id.js and content-scripts.js
   const EXTENSION_MSG_ID = {
     DELETE_BOOKMARK: 'DELETE_BOOKMARK',
-    ADD_BOOKMARK: 'ADD_BOOKMARK',
+    ADD_BOOKMARK_FOLDER_BY_ID: 'ADD_BOOKMARK_FOLDER_BY_ID',
     ADD_BOOKMARK_FOLDER_BY_NAME: 'ADD_BOOKMARK_FOLDER_BY_NAME',
     FIX_TAG: 'FIX_TAG',
     UNFIX_TAG: 'UNFIX_TAG',
@@ -436,7 +436,7 @@ ${semanticTagsStyle}
           stateContainer.update(update)
         }
         await chrome.runtime.sendMessage({
-          command: EXTENSION_MSG_ID.ADD_BOOKMARK,
+          command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_ID,
           parentId,
           url: document.location.href,
           title: document.title,

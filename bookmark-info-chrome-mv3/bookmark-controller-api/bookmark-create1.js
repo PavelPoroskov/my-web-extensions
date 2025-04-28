@@ -19,7 +19,7 @@ export async function createBookmarkInCommonFolder({
   lastCreatedBkmParentId = parentId
   lastCreatedBkmUrl = url
 
-  return await createBookmarkIgnoreInController({
+  await createBookmarkIgnoreInController({
     index: 0,
     parentId,
     title,

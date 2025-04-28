@@ -24,19 +24,16 @@ export async function createBookmarkFolderById({ parentId, title, url }) {
   const [folderNode] = await chrome.bookmarks.get(parentId)
   const isDatedTemplate = isDatedFolderTemplate(folderNode.title)
 
-  let result
   if (isDatedTemplate) {
-    result = await createBookmarkInDatedTemplate({
+    await createBookmarkInDatedTemplate({
       parentId,
       parentTitle: folderNode.title,
       title,
       url,
     })
   } else {
-    result = await createBookmarkInCommonFolder({ parentId, title, url })
+    await createBookmarkInCommonFolder({ parentId, title, url })
   }
-
-  return result
 }
 
 export async function createBookmarkFolderByName({ url, title, folderNameList }) {

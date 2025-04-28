@@ -1,6 +1,8 @@
 import {
-  addBookmarkFromRecentTag,
-  addBookmarkFolderByName,
+  createBookmarkFolderById,
+  createBookmarkFolderByName,
+} from '../bookmark-controller-api/index.js'
+import {
   addRecentTagFromView,
   deleteBookmark,
   fixTag,
@@ -45,38 +47,42 @@ export async function onIncomingMessage (message, sender) {
 
       break
     }
-    case EXTENSION_MSG_ID.ADD_BOOKMARK: {
-      logIM('runtime.onMessage addBookmark');
-      await addBookmarkFromRecentTag({
-        url: message.url,
-        title: message.title,
+    case EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_ID: {
+      logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_ID');
+      await createBookmarkFolderById({
         parentId: message.parentId,
+        title: message.title,
+        url: message.url,
       })
       updateActiveTab({
         tabId,
-        debugCaller: 'runtime.onMessage ADD_BOOKMARK',
+        debugCaller: 'runtime.onMessage ADD_BOOKMARK_FOLDER_BY_ID',
       })
 
       break
     }
     case EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME: {
       logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', message.folderNameList);
-      if (!message.folderNameList) {
-        break
-      }
 
       const folderNameList = message.folderNameList
-        .map((s) => s.trim())
-        .filter(Boolean)
 
-      if (folderNameList.length == 0) {
+      if (!folderNameList) {
         break
       }
 
-      await addBookmarkFolderByName({
+      const filteredList = folderNameList
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .filter((name) => !(50 < name.length))
+
+      if (filteredList.length == 0) {
+        break
+      }
+
+      await createBookmarkFolderByName({
         url: message.url,
         title: message.title,
-        folderNameList,
+        folderNameList: filteredList,
       })
 
       updateActiveTab({
