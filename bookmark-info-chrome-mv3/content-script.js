@@ -11,14 +11,13 @@
 
   // TODO-DOUBLE remove duplication in EXTENSION_MSG_ID: message-id.js and content-scripts.js
   const EXTENSION_MSG_ID = {
-    DELETE_BOOKMARK: 'DELETE_BOOKMARK',
     ADD_BOOKMARK_FOLDER_BY_ID: 'ADD_BOOKMARK_FOLDER_BY_ID',
     ADD_BOOKMARK_FOLDER_BY_NAME: 'ADD_BOOKMARK_FOLDER_BY_NAME',
+    DELETE_BOOKMARK: 'DELETE_BOOKMARK',
     FIX_TAG: 'FIX_TAG',
     UNFIX_TAG: 'UNFIX_TAG',
     TAB_IS_READY: 'TAB_IS_READY',
     SHOW_TAG_LIST: 'SHOW_TAG_LIST',
-    ADD_RECENT_TAG: 'ADD_RECENT_TAG',
     UPDATE_AVAILABLE_ROWS: 'UPDATE_AVAILABLE_ROWS',
     RESULT_AUTHOR: 'RESULT_AUTHOR',
   }
@@ -347,15 +346,6 @@ ${semanticTagsStyle}
       // onBookmarkLabelClick
       case 'pb':
       case 'b': {
-        const bookmarkId = id
-
-        if (bookmarkId) {
-          await chrome.runtime.sendMessage({
-            command: EXTENSION_MSG_ID.ADD_RECENT_TAG,
-            bookmarkId,
-          });
-        }
-
         hideBookmarks()
         break
       }

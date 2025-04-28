@@ -3,11 +3,7 @@ import {
   createBookmarkFolderByName,
 } from '../bookmark-controller-api/index.js'
 import {
-  addRecentTagFromView,
-  deleteBookmark,
-  fixTag,
   moveToFlatFolderStructure,
-  unfixTag,
 } from '../command/index.js'
 import {
   pageReady,
@@ -31,176 +27,136 @@ import {
 
 const logIM = makeLogFunction({ module: 'incoming-message' })
 
+const HandlersWithUpdateTab = {
+  [EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_ID]: async ({ parentId, url, title }) => {
+    logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_ID');
+    await createBookmarkFolderById({
+      parentId,
+      title,
+      url,
+    })
+  },
+  [EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME]: async ({ folderNameList, url, title }) => {
+    logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', folderNameList);
+
+    if (!folderNameList) {
+      return
+    }
+
+    const filteredList = folderNameList
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .filter((name) => !(50 < name.length))
+
+    if (filteredList.length == 0) {
+      return
+    }
+
+    await createBookmarkFolderByName({
+      url,
+      title,
+      folderNameList: filteredList,
+    })
+  },
+
+
+  [EXTENSION_MSG_ID.FIX_TAG]: async ({ parentId, title }) => {
+    logIM('runtime.onMessage FIX_TAG');
+    await tagList.addFixedTag({ parentId, title })
+  },
+  [EXTENSION_MSG_ID.UNFIX_TAG]: async ({ parentId }) => {
+    logIM('runtime.onMessage UNFIX_TAG');
+    await tagList.removeFixedTag(parentId)
+  },
+  [EXTENSION_MSG_ID.UPDATE_AVAILABLE_ROWS]: async ({ value }) => {
+    logIM('runtime.onMessage UPDATE_AVAILABLE_ROWS', value);
+    await tagList.updateAvailableRows(value)
+  },
+}
+
+const OtherHandlers = {
+  [EXTENSION_MSG_ID.TAB_IS_READY]: async ({ tabId, url }) => {
+    // IT IS ONLY when new tab load first url
+    pageReady.onPageReady({
+      tabId,
+      url,
+      updateActiveTab,
+      debugCaller: 'runtime.onMessage TAB_IS_READY',
+    });
+  },
+  [EXTENSION_MSG_ID.DELETE_BOOKMARK]: async ({ bookmarkId }) => {
+    logIM('runtime.onMessage DELETE_BOOKMARK', bookmarkId);
+    await chrome.bookmarks.remove(bookmarkId);
+  },
+
+  [EXTENSION_MSG_ID.SHOW_TAG_LIST]: async ({ value }) => {
+    logIM('runtime.onMessage SHOW_TAG_LIST', value);
+    await tagList.openTagList(value)
+  },
+
+  [EXTENSION_MSG_ID.OPTIONS_ASKS_DATA]: async () => {
+    logIM('runtime.onMessage OPTIONS_ASKS_DATA');
+
+    const settings = await extensionSettings.get();
+    chrome.runtime.sendMessage({
+      command: EXTENSION_MSG_ID.DATA_FOR_OPTIONS,
+      HOST_LIST_FOR_PAGE_OPTIONS,
+      USER_OPTION,
+      settings,
+    });
+  },
+  [EXTENSION_MSG_ID.OPTIONS_ASKS_SAVE]: async ({ updateObj }) => {
+    logIM('runtime.onMessage OPTIONS_ASKS_SAVE');
+    await extensionSettings.update(updateObj)
+  },
+  [EXTENSION_MSG_ID.OPTIONS_ASKS_FLAT_BOOKMARKS]: async () => {
+    logIM('runtime.onMessage OPTIONS_ASKS_FLAT_BOOKMARKS');
+
+    let success
+    try {
+      await moveToFlatFolderStructure()
+      success = true
+    } catch (e) {
+      logIM('IGNORE Error on flatting bookmarks', e);
+    }
+
+    await chrome.runtime.sendMessage({
+      command: EXTENSION_MSG_ID.FLAT_BOOKMARKS_RESULT,
+      success,
+    });
+  },
+
+  [EXTENSION_MSG_ID.RESULT_AUTHOR]: async ({ tabId, url, authorUrl }) => {
+    logIM('runtime.onMessage RESULT_AUTHOR', authorUrl);
+    showAuthorBookmarksStep2({
+      tabId,
+      url,
+      authorUrl,
+    })
+  },
+}
+
+const allHandlers = {
+  ...HandlersWithUpdateTab,
+  ...OtherHandlers,
+}
+
 export async function onIncomingMessage (message, sender) {
   const tabId = sender?.tab?.id;
+  const { command, ...restMessage } = message
 
-  switch (message?.command) {
+  // ExtensionMessageHandlers[command]?()
+  const handler = allHandlers[command]
 
-    // IT IS ONLY when new tab load first url
-    case EXTENSION_MSG_ID.TAB_IS_READY: {
-      pageReady.onPageReady({
-        tabId,
-        url: message.url,
-        updateActiveTab,
-        debugCaller: 'runtime.onMessage TAB_IS_READY',
-      });
+  if (handler) {
+    await handler({ ...restMessage, tabId })
 
-      break
-    }
-    case EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_ID: {
-      logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_ID');
-      await createBookmarkFolderById({
-        parentId: message.parentId,
-        title: message.title,
-        url: message.url,
-      })
+    if (HandlersWithUpdateTab[command]) {
       updateActiveTab({
         tabId,
-        debugCaller: 'runtime.onMessage ADD_BOOKMARK_FOLDER_BY_ID',
-      })
-
-      break
-    }
-    case EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME: {
-      logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', message.folderNameList);
-
-      const folderNameList = message.folderNameList
-
-      if (!folderNameList) {
-        break
-      }
-
-      const filteredList = folderNameList
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .filter((name) => !(50 < name.length))
-
-      if (filteredList.length == 0) {
-        break
-      }
-
-      await createBookmarkFolderByName({
-        url: message.url,
-        title: message.title,
-        folderNameList: filteredList,
-      })
-
-      updateActiveTab({
-        tabId,
-        debugCaller: 'runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME',
-      })
-      break
-    }
-    case EXTENSION_MSG_ID.DELETE_BOOKMARK: {
-      logIM('runtime.onMessage deleteBookmark');
-
-      deleteBookmark(message.bookmarkId);
-      break
-    }
-
-    case EXTENSION_MSG_ID.SHOW_TAG_LIST: {
-      logIM('runtime.onMessage SHOW_RECENT_LIST');
-      await tagList.openTagList(message.value)
-
-      break
-    }
-    case EXTENSION_MSG_ID.UPDATE_AVAILABLE_ROWS: {
-      logIM('runtime.onMessage UPDATE_AVAILABLE_ROWS', message.value);
-      await tagList.updateAvailableRows(message.value)
-
-      updateActiveTab({
-        tabId,
-        debugCaller: 'runtime.onMessage UPDATE_AVAILABLE_ROWS',
+        debugCaller: `runtime.onMessage ${command}`,
         useCache: true,
       })
-
-      break
-    }
-    case EXTENSION_MSG_ID.FIX_TAG: {
-      logIM('runtime.onMessage fixTag');
-      await fixTag({
-        parentId: message.parentId,
-        title: message.title,
-      })
-
-      updateActiveTab({
-        tabId,
-        debugCaller: 'runtime.onMessage fixTag',
-        useCache: true,
-      })
-
-      break
-    }
-    case EXTENSION_MSG_ID.UNFIX_TAG: {
-      logIM('runtime.onMessage unfixTag');
-      await unfixTag(message.parentId)
-
-      updateActiveTab({
-        tabId,
-        debugCaller: 'runtime.onMessage unfixTag',
-        useCache: true,
-      })
-
-      break
-    }
-    case EXTENSION_MSG_ID.ADD_RECENT_TAG: {
-      logIM('runtime.onMessage ADD_RECENT_TAG');
-      await addRecentTagFromView(message.bookmarkId)
-
-      //   updateActiveTab({
-      //     tabId,
-      //     debugCaller: 'runtime.onMessage ADD_RECENT_TAG',
-      //     useCache: true,
-      //   })
-
-      break
-    }
-    case EXTENSION_MSG_ID.OPTIONS_ASKS_DATA: {
-      logIM('runtime.onMessage OPTIONS_ASKS_DATA');
-
-      const settings = await extensionSettings.get();
-      chrome.runtime.sendMessage({
-        command: EXTENSION_MSG_ID.DATA_FOR_OPTIONS,
-        HOST_LIST_FOR_PAGE_OPTIONS,
-        USER_OPTION,
-        settings,
-      });
-
-      break
-    }
-    case EXTENSION_MSG_ID.OPTIONS_ASKS_SAVE: {
-      logIM('runtime.onMessage OPTIONS_ASKS_SAVE');
-      await extensionSettings.update(message.updateObj)
-
-      break
-    }
-    case EXTENSION_MSG_ID.OPTIONS_ASKS_FLAT_BOOKMARKS: {
-      logIM('runtime.onMessage OPTIONS_ASKS_FLAT_BOOKMARKS');
-
-      let success
-
-      try {
-        await moveToFlatFolderStructure()
-        success = true
-      } catch (e) {
-        logIM('IGNORE Error on flatting bookmarks', e);
-      }
-
-      chrome.runtime.sendMessage({
-        command: EXTENSION_MSG_ID.FLAT_BOOKMARKS_RESULT,
-        success,
-      });
-
-      break
-    }
-    case EXTENSION_MSG_ID.RESULT_AUTHOR: {
-      logIM('runtime.onMessage RESULT_AUTHOR', message.authorUrl);
-      showAuthorBookmarksStep2({
-        tabId,
-        url: message.url,
-        authorUrl: message.authorUrl,
-      })
-      break
     }
   }
 }
