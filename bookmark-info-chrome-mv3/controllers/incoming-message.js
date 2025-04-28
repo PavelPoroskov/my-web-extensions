@@ -19,6 +19,7 @@ import {
 } from '../url-api/index.js'
 import {
   extensionSettings,
+  memo,
   tagList,
 } from '../api-mid/index.js'
 import {
@@ -77,12 +78,18 @@ const HandlersWithUpdateTab = {
 const OtherHandlers = {
   [EXTENSION_MSG_ID.TAB_IS_READY]: async ({ tabId, url }) => {
     // IT IS ONLY when new tab load first url
-    pageReady.onPageReady({
-      tabId,
-      url,
-      updateActiveTab,
-      debugCaller: 'runtime.onMessage TAB_IS_READY',
-    });
+    if (tabId === memo.activeTabId) {
+      await pageReady.onPageReady({
+        tabId,
+        url,
+      });
+
+      updateActiveTab({
+        tabId,
+        url,
+        debugCaller: `runtime.onMessage TAB_IS_READY`,
+      })
+    }
   },
   [EXTENSION_MSG_ID.DELETE_BOOKMARK]: async ({ bookmarkId }) => {
     logIM('runtime.onMessage DELETE_BOOKMARK', bookmarkId);

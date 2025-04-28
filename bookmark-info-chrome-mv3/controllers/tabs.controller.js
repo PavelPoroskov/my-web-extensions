@@ -71,18 +71,20 @@ export const tabsController = {
       visitedUrls.onUpdateTab(tabId, { title: changeInfo.title });
     }
 
-    switch (changeInfo?.status) {
-      case ('complete'): {
-        pageReady.onPageReady({
-          tabId,
-          url: Tab.url,
-          updateActiveTab,
-          debugCaller: 'tabs.onUpdated complete',
-        });
+    if (changeInfo?.status == 'complete') {
+        if (tabId === memo.activeTabId) {
+          await pageReady.onPageReady({
+            tabId,
+            url: Tab.url,
+          });
 
-        break;
-      }
-    }
+          updateActiveTab({
+            tabId,
+            url: Tab.url,
+            debugCaller: `tabs.onUpdated complete`,
+          })
+        }
+     }
   },
   async onActivated({ tabId }) {
     logTC('tabs.onActivated 00', 'memo[\'activeTabId\'] <=', tabId);

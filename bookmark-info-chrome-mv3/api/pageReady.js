@@ -8,9 +8,6 @@ import {
 import {
   removeQueryParamsIfTarget,
 } from '../url-api/index.js'
-// import {
-//   updateActiveTab,
-// } from './updateTab.js'
 import {
   visitedUrls,
 } from './visited-urls.js'
@@ -41,35 +38,25 @@ class PageReady {
     }
   }
 
-  async onPageReady({ tabId, url, updateActiveTab, debugCaller='' }) {
+  async onPageReady({ tabId, url }) {
     logPR('onPageReady 00', tabId, url);
 
-    if (tabId === memo.activeTabId) {
+    const cleanUrl = await this.clearUrlOnPageOpen({ tabId, url })
+
+    if (url !== memo.activeTabUrl) {
       logPR('onPageReady 11');
+      const Tab = await chrome.tabs.get(tabId);
 
-      const cleanUrl = await this.clearUrlOnPageOpen({ tabId, url })
-
-      if (url !== memo.activeTabUrl) {
-        logPR('onPageReady 22');
-        const Tab = await chrome.tabs.get(tabId);
-
-        if (Tab) {
-          visitedUrls.onReplaceUrlInActiveTab({
-            tabId,
-            oldUrl: memo.activeTabUrl,
-            newUrl: cleanUrl,
-            newTitle: Tab.title,
-          });
-        }
+      if (Tab) {
+        visitedUrls.onReplaceUrlInActiveTab({
+          tabId,
+          oldUrl: memo.activeTabUrl,
+          newUrl: cleanUrl,
+          newTitle: Tab.title,
+        });
       }
 
-      memo.activeTabUrl = cleanUrl
-
-      updateActiveTab({
-        tabId,
-        url: cleanUrl,
-        debugCaller: `onPageReady() <-${debugCaller}`,
-      })
+      memo.activeTabUrl = url
     }
   }
 }
