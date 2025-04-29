@@ -8,23 +8,26 @@ let lastCreatedBkmUrl
 export async function createBookmarkInCommonFolder({
   parentId,
   title,
-  url
+  url,
+  ignore = false,
 }) {
-  const bookmarkList = await chrome.bookmarks.search({ url });
-  const isExist = bookmarkList.some((bkm) => bkm.parentId == parentId)
-  if (isExist) {
-    return
-  }
-
   lastCreatedBkmParentId = parentId
   lastCreatedBkmUrl = url
 
-  await createBookmarkIgnoreInController({
+  const bookmarkData = {
     index: 0,
     parentId,
     title,
     url
-  })
+  }
+
+  if (ignore) {
+    // dated folder, to not add to tag list
+    await createBookmarkIgnoreInController(bookmarkData)
+  } else {
+    // not dated folder, to add to tag list
+    await chrome.bookmarks.create(bookmarkData)
+  }
 }
 
 export function isBookmarkCreatedWithApi({ parentId, url }) {

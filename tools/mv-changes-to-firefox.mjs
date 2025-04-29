@@ -82,15 +82,11 @@ createFileForFirefox(
     'bookmark-list-ops/index.js',
 
     'command/addBookmark.js',
-    'command/addRecentTagFromView.js',
     'command/clearUrlInActiveTab.js',
     'command/closeBookmarkedTabs.js',
     'command/closeDuplicateTabs.js',
-    'command/deleteBookmark.js',
-    'command/fixTag.js',
     'command/getUrlFromUrl.js',
     'command/moveToFlatFolderStructure.js',
-    'command/unfixTag.js',
     'command/toggleYoutubeHeader.js',
     'command/index.js',
 

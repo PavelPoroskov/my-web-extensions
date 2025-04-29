@@ -81,7 +81,7 @@ export async function createBookmarkInDatedTemplate({
   const datedFolder = await getDatedFolder(parentTitle, parentId)
   logBDT('createBookmarkInDatedTemplate () 11', 'datedFolder', datedFolder)
 
-  await createBookmarkInCommonFolder({ parentId: datedFolder.id, title, url })
+  await createBookmarkInCommonFolder({ parentId: datedFolder.id, title, url, ignore: true })
 
   if (!isVisitedDatedTemplate(parentTitle)) {
     await tagList.addRecentTagFromFolder({ id: parentId, title: parentTitle })
