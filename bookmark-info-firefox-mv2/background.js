@@ -21,13 +21,12 @@ const BROWSER_SPECIFIC = Object.fromEntries(
 const EXTENSION_MSG_ID = {
   // TODO remove duplication in EXTENSION_MSG_ID: message-id.js and content-scripts.js
   DELETE_BOOKMARK: 'DELETE_BOOKMARK',
-  ADD_BOOKMARK: 'ADD_BOOKMARK',
+  ADD_BOOKMARK_FOLDER_BY_ID: 'ADD_BOOKMARK_FOLDER_BY_ID',
   ADD_BOOKMARK_FOLDER_BY_NAME: 'ADD_BOOKMARK_FOLDER_BY_NAME',
   FIX_TAG: 'FIX_TAG',
   UNFIX_TAG: 'UNFIX_TAG',
   TAB_IS_READY: 'TAB_IS_READY',
   SHOW_TAG_LIST: 'SHOW_TAG_LIST',
-  ADD_RECENT_TAG: 'ADD_RECENT_TAG',
   // TODO remove duplication in EXTENSION_MSG_ID: message-id.js and options.js
   OPTIONS_ASKS_DATA: 'OPTIONS_ASKS_DATA',
   DATA_FOR_OPTIONS: 'DATA_FOR_OPTIONS',
@@ -458,24 +457,6 @@ const HOST_URL_SETTINGS_SHORT = Object.assign(
     timer = setTimeout(
       () => {
         func.apply(this, args);
-      },
-      timeout,
-    );
-  };
-}
-
-function debounce_leading(func, timeout = 300){
-  let timer;
-
-  return (...args) => {
-    if (!timer) {
-      func.apply(this, args);
-    }
-
-    clearTimeout(timer);
-    timer = setTimeout(
-      () => {
-        timer = undefined;
       },
       timeout,
     );
@@ -3175,23 +3156,26 @@ let lastCreatedBkmUrl
 async function createBookmarkInCommonFolder({
   parentId,
   title,
-  url
+  url,
+  ignore = false,
 }) {
-  const bookmarkList = await browser.bookmarks.search({ url });
-  const isExist = bookmarkList.some((bkm) => bkm.parentId == parentId)
-  if (isExist) {
-    return
-  }
-
   lastCreatedBkmParentId = parentId
   lastCreatedBkmUrl = url
 
-  return await createBookmarkIgnoreInController({
+  const bookmarkData = {
     index: 0,
     parentId,
     title,
     url
-  })
+  }
+
+  if (ignore) {
+    // dated folder, to not add to tag list
+    await createBookmarkIgnoreInController(bookmarkData)
+  } else {
+    // not dated folder, to add to tag list
+    await browser.bookmarks.create(bookmarkData)
+  }
 }
 
 function isBookmarkCreatedWithApi({ parentId, url }) {
@@ -3260,14 +3244,12 @@ async function createBookmarkInDatedTemplate({
   const datedFolder = await getDatedFolder(parentTitle, parentId)
   logBDT('createBookmarkInDatedTemplate () 11', 'datedFolder', datedFolder)
 
-  const result = await createBookmarkInCommonFolder({ parentId: datedFolder.id, title, url })
+  await createBookmarkInCommonFolder({ parentId: datedFolder.id, title, url, ignore: true })
 
   if (!isVisitedDatedTemplate(parentTitle)) {
     await tagList.addRecentTagFromFolder({ id: parentId, title: parentTitle })
   }
   removePreviousDatedBookmarks({ url, template: parentTitle })
-
-  return result
 }
 
 async function moveBookmarkInDatedTemplate({
@@ -3296,19 +3278,16 @@ async function createBookmarkFolderById({ parentId, title, url }) {
   const [folderNode] = await browser.bookmarks.get(parentId)
   const isDatedTemplate = isDatedFolderTemplate(folderNode.title)
 
-  let result
   if (isDatedTemplate) {
-    result = await createBookmarkInDatedTemplate({
+    await createBookmarkInDatedTemplate({
       parentId,
       parentTitle: folderNode.title,
       title,
       url,
     })
   } else {
-    result = await createBookmarkInCommonFolder({ parentId, title, url })
+    await createBookmarkInCommonFolder({ parentId, title, url })
   }
-
-  return result
 }
 
 async function createBookmarkFolderByName({ url, title, folderNameList }) {
@@ -3515,10 +3494,7 @@ class VisitedUrls {
 }
 
 const visitedUrls = new VisitedUrls()
-// import {
-//   updateActiveTab,
-// } from './updateTab.js'
-const logPR = makeLogFunction({ module: 'pageReady.js' })
+const logPR = makeLogFunction({ module: 'pageReady.js' })
 
 class PageReady {
   constructor () {
@@ -3544,35 +3520,25 @@ class PageReady {
     }
   }
 
-  async onPageReady({ tabId, url, updateActiveTab, debugCaller='' }) {
+  async onPageReady({ tabId, url }) {
     logPR('onPageReady 00', tabId, url);
 
-    if (tabId === memo.activeTabId) {
+    const cleanUrl = await this.clearUrlOnPageOpen({ tabId, url })
+
+    if (url !== memo.activeTabUrl) {
       logPR('onPageReady 11');
+      const Tab = await browser.tabs.get(tabId);
 
-      const cleanUrl = await this.clearUrlOnPageOpen({ tabId, url })
-
-      if (url !== memo.activeTabUrl) {
-        logPR('onPageReady 22');
-        const Tab = await browser.tabs.get(tabId);
-
-        if (Tab) {
-          visitedUrls.onReplaceUrlInActiveTab({
-            tabId,
-            oldUrl: memo.activeTabUrl,
-            newUrl: cleanUrl,
-            newTitle: Tab.title,
-          });
-        }
+      if (Tab) {
+        visitedUrls.onReplaceUrlInActiveTab({
+          tabId,
+          oldUrl: memo.activeTabUrl,
+          newUrl: cleanUrl,
+          newTitle: Tab.title,
+        });
       }
 
-      memo.activeTabUrl = cleanUrl
-
-      updateActiveTab({
-        tabId,
-        url: cleanUrl,
-        debugCaller: `onPageReady() <-${debugCaller}`,
-      })
+      memo.activeTabUrl = url
     }
   }
 }
@@ -5088,15 +5054,7 @@ async function orderBookmarks() {
   logOD('orderBookmarks() 99')
 }
 
-async function addBookmarkFromRecentTag({ url, title, parentId }) {
-  await createBookmarkFolderById({
-    parentId,
-    title,
-    url,
-  })
-}
-
-async function startAddBookmarkFromSelection() {
+async function startAddBookmarkFromSelection() {
   const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
   const [activeTab] = tabs;
 
@@ -5112,24 +5070,6 @@ async function startAddBookmarkFromInput() {
   if (activeTab?.id) {
     await page.getUserInputInPage(activeTab.id)
   }
-}
-
-async function addBookmarkFolderByName({ url, title, folderNameList }) {
-  const list = folderNameList.filter((name) => !(40 < name.length))
-
-  if (list.length == 0) {
-    return false
-  }
-
-  await createBookmarkFolderByName({ url, title, folderNameList: list })
-}
-async function addRecentTagFromView(bookmarkId) {
-  if (!bookmarkId) {
-    return
-  }
-
-  const [bkmNode] = await browser.bookmarks.get(bookmarkId)
-  await tagList.addRecentTagFromBkm(bkmNode)
 }
 const logCU = makeLogFunction({ module: 'clearUrlInActiveTab.js' })
 
@@ -5301,15 +5241,6 @@ async function closeDuplicateTabs() {
     duplicateTabIdList.length > 0 && browser.tabs.remove(duplicateTabIdList),
   ])
 }
-async function deleteBookmark(bkmId) {
-  await browser.bookmarks.remove(bkmId);
-}
-async function fixTag({ parentId, title }) {
-  await tagList.addFixedTag({
-    parentId,
-    title,
-  })
-}
 const logUU = makeLogFunction({ module: 'getUrlFromUrl' })
 
 async function getUrlFromUrl() {
@@ -5379,9 +5310,6 @@ async function getUrlFromUrl() {
 
   await orderBookmarks()
   await tagList.filterTagListForFlatFolderStructure()
-}
-async function unfixTag(parentId) {
-  await tagList.removeFixedTag(parentId)
 }
 async function toggleYoutubeHeader() {
   const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
@@ -5500,172 +5428,142 @@ const contextMenusController = {
 }
 const logIM = makeLogFunction({ module: 'incoming-message' })
 
+const HandlersWithUpdateTab = {
+  [EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_ID]: async ({ parentId, url, title }) => {
+    logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_ID');
+    await createBookmarkFolderById({
+      parentId,
+      title,
+      url,
+    })
+  },
+  [EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME]: async ({ folderNameList, url, title }) => {
+    logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', folderNameList);
+
+    if (!folderNameList) {
+      return
+    }
+
+    const filteredList = folderNameList
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .filter((name) => !(50 < name.length))
+
+    if (filteredList.length == 0) {
+      return
+    }
+
+    await createBookmarkFolderByName({
+      url,
+      title,
+      folderNameList: filteredList,
+    })
+  },
+
+
+  [EXTENSION_MSG_ID.FIX_TAG]: async ({ parentId, title }) => {
+    logIM('runtime.onMessage FIX_TAG');
+    await tagList.addFixedTag({ parentId, title })
+  },
+  [EXTENSION_MSG_ID.UNFIX_TAG]: async ({ parentId }) => {
+    logIM('runtime.onMessage UNFIX_TAG');
+    await tagList.removeFixedTag(parentId)
+  },
+  [EXTENSION_MSG_ID.UPDATE_AVAILABLE_ROWS]: async ({ value }) => {
+    logIM('runtime.onMessage UPDATE_AVAILABLE_ROWS', value);
+    await tagList.updateAvailableRows(value)
+  },
+}
+
+const OtherHandlers = {
+  [EXTENSION_MSG_ID.TAB_IS_READY]: async ({ tabId, url }) => {
+    // IT IS ONLY when new tab load first url
+    if (tabId === memo.activeTabId) {
+      await pageReady.onPageReady({
+        tabId,
+        url,
+      });
+
+      updateActiveTab({
+        tabId,
+        url,
+        debugCaller: `runtime.onMessage TAB_IS_READY`,
+      })
+    }
+  },
+  [EXTENSION_MSG_ID.DELETE_BOOKMARK]: async ({ bookmarkId }) => {
+    logIM('runtime.onMessage DELETE_BOOKMARK', bookmarkId);
+    await browser.bookmarks.remove(bookmarkId);
+  },
+
+  [EXTENSION_MSG_ID.SHOW_TAG_LIST]: async ({ value }) => {
+    logIM('runtime.onMessage SHOW_TAG_LIST', value);
+    await tagList.openTagList(value)
+  },
+
+  [EXTENSION_MSG_ID.OPTIONS_ASKS_DATA]: async () => {
+    logIM('runtime.onMessage OPTIONS_ASKS_DATA');
+
+    const settings = await extensionSettings.get();
+    browser.runtime.sendMessage({
+      command: EXTENSION_MSG_ID.DATA_FOR_OPTIONS,
+      HOST_LIST_FOR_PAGE_OPTIONS,
+      USER_OPTION,
+      settings,
+    });
+  },
+  [EXTENSION_MSG_ID.OPTIONS_ASKS_SAVE]: async ({ updateObj }) => {
+    logIM('runtime.onMessage OPTIONS_ASKS_SAVE');
+    await extensionSettings.update(updateObj)
+  },
+  [EXTENSION_MSG_ID.OPTIONS_ASKS_FLAT_BOOKMARKS]: async () => {
+    logIM('runtime.onMessage OPTIONS_ASKS_FLAT_BOOKMARKS');
+
+    let success
+    try {
+      await moveToFlatFolderStructure()
+      success = true
+    } catch (e) {
+      logIM('IGNORE Error on flatting bookmarks', e);
+    }
+
+    await browser.runtime.sendMessage({
+      command: EXTENSION_MSG_ID.FLAT_BOOKMARKS_RESULT,
+      success,
+    });
+  },
+
+  [EXTENSION_MSG_ID.RESULT_AUTHOR]: async ({ tabId, url, authorUrl }) => {
+    logIM('runtime.onMessage RESULT_AUTHOR', authorUrl);
+    showAuthorBookmarksStep2({
+      tabId,
+      url,
+      authorUrl,
+    })
+  },
+}
+
+const allHandlers = {
+  ...HandlersWithUpdateTab,
+  ...OtherHandlers,
+}
+
 async function onIncomingMessage (message, sender) {
   const tabId = sender?.tab?.id;
+  const { command, ...restMessage } = message
 
-  switch (message?.command) {
+  // ExtensionMessageHandlers[command]?()
+  const handler = allHandlers[command]
 
-    // IT IS ONLY when new tab load first url
-    case EXTENSION_MSG_ID.TAB_IS_READY: {
-      pageReady.onPageReady({
-        tabId,
-        url: message.url,
-        updateActiveTab,
-        debugCaller: 'runtime.onMessage TAB_IS_READY',
-      });
+  if (handler) {
+    await handler({ ...restMessage, tabId })
 
-      break
-    }
-    case EXTENSION_MSG_ID.ADD_BOOKMARK: {
-      logIM('runtime.onMessage addBookmark');
-      await addBookmarkFromRecentTag({
-        url: message.url,
-        title: message.title,
-        parentId: message.parentId,
-      })
+    if (HandlersWithUpdateTab[command]) {
       updateActiveTab({
         tabId,
-        debugCaller: 'runtime.onMessage ADD_BOOKMARK',
-      })
-
-      break
-    }
-    case EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME: {
-      logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', message.folderNameList);
-      if (!message.folderNameList) {
-        break
-      }
-
-      const folderNameList = message.folderNameList
-        .map((s) => s.trim())
-        .filter(Boolean)
-
-      if (folderNameList.length == 0) {
-        break
-      }
-
-      await addBookmarkFolderByName({
-        url: message.url,
-        title: message.title,
-        folderNameList,
-      })
-
-      updateActiveTab({
-        tabId,
-        debugCaller: 'runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME',
-      })
-      break
-    }
-    case EXTENSION_MSG_ID.DELETE_BOOKMARK: {
-      logIM('runtime.onMessage deleteBookmark');
-
-      deleteBookmark(message.bookmarkId);
-      break
-    }
-
-    case EXTENSION_MSG_ID.SHOW_TAG_LIST: {
-      logIM('runtime.onMessage SHOW_RECENT_LIST');
-      await tagList.openTagList(message.value)
-
-      break
-    }
-    case EXTENSION_MSG_ID.UPDATE_AVAILABLE_ROWS: {
-      logIM('runtime.onMessage UPDATE_AVAILABLE_ROWS', message.value);
-      await tagList.updateAvailableRows(message.value)
-
-      updateActiveTab({
-        tabId,
-        debugCaller: 'runtime.onMessage UPDATE_AVAILABLE_ROWS',
+        debugCaller: `runtime.onMessage ${command}`,
         useCache: true,
       })
-
-      break
-    }
-    case EXTENSION_MSG_ID.FIX_TAG: {
-      logIM('runtime.onMessage fixTag');
-      await fixTag({
-        parentId: message.parentId,
-        title: message.title,
-      })
-
-      updateActiveTab({
-        tabId,
-        debugCaller: 'runtime.onMessage fixTag',
-        useCache: true,
-      })
-
-      break
-    }
-    case EXTENSION_MSG_ID.UNFIX_TAG: {
-      logIM('runtime.onMessage unfixTag');
-      await unfixTag(message.parentId)
-
-      updateActiveTab({
-        tabId,
-        debugCaller: 'runtime.onMessage unfixTag',
-        useCache: true,
-      })
-
-      break
-    }
-    case EXTENSION_MSG_ID.ADD_RECENT_TAG: {
-      logIM('runtime.onMessage ADD_RECENT_TAG');
-      await addRecentTagFromView(message.bookmarkId)
-
-      //   updateActiveTab({
-      //     tabId,
-      //     debugCaller: 'runtime.onMessage ADD_RECENT_TAG',
-      //     useCache: true,
-      //   })
-
-      break
-    }
-    case EXTENSION_MSG_ID.OPTIONS_ASKS_DATA: {
-      logIM('runtime.onMessage OPTIONS_ASKS_DATA');
-
-      const settings = await extensionSettings.get();
-      browser.runtime.sendMessage({
-        command: EXTENSION_MSG_ID.DATA_FOR_OPTIONS,
-        HOST_LIST_FOR_PAGE_OPTIONS,
-        USER_OPTION,
-        settings,
-      });
-
-      break
-    }
-    case EXTENSION_MSG_ID.OPTIONS_ASKS_SAVE: {
-      logIM('runtime.onMessage OPTIONS_ASKS_SAVE');
-      await extensionSettings.update(message.updateObj)
-
-      break
-    }
-    case EXTENSION_MSG_ID.OPTIONS_ASKS_FLAT_BOOKMARKS: {
-      logIM('runtime.onMessage OPTIONS_ASKS_FLAT_BOOKMARKS');
-
-      let success
-
-      try {
-        await moveToFlatFolderStructure()
-        success = true
-      } catch (e) {
-        logIM('IGNORE Error on flatting bookmarks', e);
-      }
-
-      browser.runtime.sendMessage({
-        command: EXTENSION_MSG_ID.FLAT_BOOKMARKS_RESULT,
-        success,
-      });
-
-      break
-    }
-    case EXTENSION_MSG_ID.RESULT_AUTHOR: {
-      logIM('runtime.onMessage RESULT_AUTHOR', message.authorUrl);
-      showAuthorBookmarksStep2({
-        tabId,
-        url: message.url,
-        authorUrl: message.authorUrl,
-      })
-      break
     }
   }
 }
@@ -5774,18 +5672,20 @@ const tabsController = {
       visitedUrls.onUpdateTab(tabId, { title: changeInfo.title });
     }
 
-    switch (changeInfo?.status) {
-      case ('complete'): {
-        pageReady.onPageReady({
-          tabId,
-          url: Tab.url,
-          updateActiveTab,
-          debugCaller: 'tabs.onUpdated complete',
-        });
+    if (changeInfo?.status == 'complete') {
+        if (tabId === memo.activeTabId) {
+          await pageReady.onPageReady({
+            tabId,
+            url: Tab.url,
+          });
 
-        break;
-      }
-    }
+          updateActiveTab({
+            tabId,
+            url: Tab.url,
+            debugCaller: `tabs.onUpdated complete`,
+          })
+        }
+     }
   },
   async onActivated({ tabId }) {
     logTC('tabs.onActivated 00', 'memo[\'activeTabId\'] <=', tabId);
