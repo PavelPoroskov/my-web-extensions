@@ -200,7 +200,9 @@ const INTERNAL_VALUES = Object.fromEntries(
   Object.keys(INTERNAL_VALUES_META).map((key) => [key, key])
 )
 const logModuleList = [
+  // 'bookmarks.controller.js',
   // 'bookmark-create.js',
+  // 'bookmark-ignore.js',
   // 'bookmarkQueue.js',
   // 'browserStartTime',
   // 'cache',
@@ -216,7 +218,7 @@ const INTERNAL_VALUES = Object.fromEntries(
   // 'get-bookmarks.api.js',
   // 'getUrlFromUrl',
   // 'history.api',
-  // 'incoming-message',
+  // 'incoming-message.js',
   // 'init-extension',
   // 'memo',
   // 'moveFolders.js',
@@ -2058,7 +2060,6 @@ class TagList {
   changeProcessedCount = -1
 
   addRecentTagFromFolder = () => { }
-  addRecentTagFromBkm = () => { }
   removeTag = () => { }
 
   get list() {
@@ -2091,11 +2092,9 @@ class TagList {
     logTL('_enableTagList 00', isEnabled)
     if (isEnabled) {
       this.addRecentTagFromFolder = this._addRecentTagFromFolder
-      this.addRecentTagFromBkm = this._addRecentTagFromBkm
       this.removeTag = this._removeTag
     } else {
       this.addRecentTagFromFolder = () => { }
-      this.addRecentTagFromBkm = () => { }
       this.removeTag = () => { }
     }
   }
@@ -2315,14 +2314,14 @@ class TagList {
       ...fixedTagUpdate,
     })
   }
-  async _addRecentTagFromBkm(bkmNode) {
-    const parentId = bkmNode?.parentId
+  // async _addRecentTagFromBkm(bkmNode) {
+  //   const parentId = bkmNode?.parentId
 
-    if (parentId) {
-      const [folderNode] = await browser.bookmarks.get(parentId)
-      await this.addRecentTagFromFolder(folderNode)
-    }
-  }
+  //   if (parentId) {
+  //     const [folderNode] = await browser.bookmarks.get(parentId)
+  //     await this.addRecentTagFromFolder(folderNode)
+  //   }
+  // }
   async _removeTag(id) {
     const isInFixedList = id in this._fixedTagObj
     let fixedTagUpdate
@@ -2963,11 +2962,11 @@ class IgnoreBkmControllerApiActionSet {
   addIgnoreMove = this.makeAddIgnoreAction('move')
   hasIgnoreMove = this.makeHasIgnoreAction('move')
 
-  addIgnoreRemove = this.makeAddIgnoreAction('remove')
-  hasIgnoreRemove = this.makeHasIgnoreAction('remove')
+  // addIgnoreRemove = this.makeAddIgnoreAction('remove')
+  // hasIgnoreRemove = this.makeHasIgnoreAction('remove')
 
-  addIgnoreUpdate = this.makeAddIgnoreAction('update')
-  hasIgnoreUpdate = this.makeHasIgnoreAction('update')
+  // addIgnoreUpdate = this.makeAddIgnoreAction('update')
+  // hasIgnoreUpdate = this.makeHasIgnoreAction('update')
 }
 
 const ignoreBkmControllerApiActionSet = new IgnoreBkmControllerApiActionSet()
@@ -2986,11 +2985,6 @@ async function createFolderIgnoreInController({
   ignoreBkmControllerApiActionSet.addIgnoreCreate(options)
 
   return await browser.bookmarks.create(options)
-}
-
-async function updateFolderIgnoreInController({ id, title }) {
-  ignoreBkmControllerApiActionSet.addIgnoreUpdate(id)
-  await browser.bookmarks.update(id, { title })
 }
 
 async function moveNodeIgnoreInController({ id, parentId, index }) {
@@ -3015,8 +3009,11 @@ async function moveFolderIgnoreInController({ id, parentId, index }) {
   return await moveNodeIgnoreInController({ id, parentId, index })
 }
 
-async function removeFolderIgnoreInController(bkmId) {
-  ignoreBkmControllerApiActionSet.addIgnoreRemove(bkmId)
+async function updateFolder({ id, title }) {
+  await browser.bookmarks.update(id, { title })
+}
+
+async function removeFolder(bkmId) {
   await browser.bookmarks.remove(bkmId)
 }
 const logFCR = makeLogFunction({ module: 'folder-create.js' })
@@ -3039,7 +3036,7 @@ async function findOrCreateFolder(title) {
       folderParams.index = findIndex.index
     }
 
-    folder = await browser.bookmarks.create(folderParams)
+    folder = await createFolderIgnoreInController(folderParams)
   } else {
     const oldBigLetterN = folder.title.replace(/[^A-Z]+/g, "").length
     const newBigLetterN = title.replace(/[^A-Z]+/g, "").length
@@ -3047,15 +3044,13 @@ async function findOrCreateFolder(title) {
     logFCR('findOrCreateFolder () 22', oldBigLetterN, newBigLetterN)
 
     if (oldBigLetterN < newBigLetterN) {
-      // await updateFolderIgnoreInController({ id: folder.id, title })
-      await browser.bookmarks.update(folder.id, { title })
+      await updateFolder({ id: folder.id, title })
     }
 
     const oldDashN = folder.title.replace(/[^-]+/g,"").length
     const newDashN = title.replace(/[^-]+/g,"").length
     if (newDashN < oldDashN) {
-      // await updateFolderIgnoreInController({ id: folder.id, title })
-      await browser.bookmarks.update(folder.id, { title })
+      await updateFolder({ id: folder.id, title })
     }
   }
 
@@ -3063,14 +3058,14 @@ async function findOrCreateFolder(title) {
 }
 
 // folderTitle = 'DONE @D' 'selected @D' 'BEST @D'
-async function getDatedFolder(templateTitle, templateId) {
+async function findOrCreateDatedFolder({ templateTitle, templateId }) {
   if (!isDatedFolderTemplate(templateTitle)) {
     return
   }
-  logFCR('getDatedFolder () 00', templateTitle)
+  logFCR('findOrCreateDatedFolder () 00', templateTitle)
 
   const datedTitle = getDatedTitle(templateTitle)
-  logFCR('getDatedFolder () 11', 'datedTitle', datedTitle)
+  logFCR('findOrCreateDatedFolder () 11', 'datedTitle', datedTitle)
   const rootId = getNewFolderRootIdForDated(templateTitle, templateId)
   let foundFolder = await findFolderWithExactTitle({ title: datedTitle, rootId })
 
@@ -3093,7 +3088,7 @@ async function getDatedFolder(templateTitle, templateId) {
   return foundFolder
 }
 
-async function getOrCreateFolderByTitleInRoot(title) {
+async function findOrCreateFolderByTitleInRoot(title) {
   const nodeList = await browser.bookmarks.search({ title });
   const foundItem = nodeList.find((node) => !node.url && node.parentId == OTHER_BOOKMARKS_FOLDER_ID)
 
@@ -3109,16 +3104,15 @@ async function getOrCreateFolderByTitleInRoot(title) {
 
   return newNode.id
 }
+const logBI = makeLogFunction({ module: 'bookmark-ignore.js' })
 
-async function removeFolder(bkmId) {
-  await browser.bookmarks.remove(bkmId)
-}
-async function createBookmarkIgnoreInController({
+async function createBookmarkIgnoreInController({
   title,
   url,
   parentId,
   index,
 }) {
+  logBI('createBookmarkIgnoreInController 00', url)
   const options = { url, parentId, title }
   if (index != undefined) {
     options.index = index
@@ -3126,7 +3120,8 @@ async function removeFolder(bkmId) {
 
   ignoreBkmControllerApiActionSet.addIgnoreCreate(options)
 
-  return await browser.bookmarks.create(options)
+  await browser.bookmarks.create(options)
+  logBI('createBookmarkIgnoreInController 99')
 }
 
 async function moveBookmarkIgnoreInController({ id, parentId, index }) {
@@ -3143,43 +3138,15 @@ async function moveBookmarkIgnoreInController({ id, parentId, index }) {
 
   ignoreBkmControllerApiActionSet.addIgnoreMove(id)
 
-  return await browser.bookmarks.move(id, options)
+  await browser.bookmarks.move(id, options)
 }
 
-async function removeBookmarkIgnoreInController(bkmId) {
-  ignoreBkmControllerApiActionSet.addIgnoreRemove(bkmId)
+async function moveBookmark({ id, parentId, index }) {
+  await browser.bookmarks.move(id, { parentId, index })
+}
+
+async function removeBookmark(bkmId) {
   await browser.bookmarks.remove(bkmId)
-}
-let lastCreatedBkmParentId
-let lastCreatedBkmUrl
-
-async function createBookmarkInCommonFolder({
-  parentId,
-  title,
-  url,
-  ignore = false,
-}) {
-  lastCreatedBkmParentId = parentId
-  lastCreatedBkmUrl = url
-
-  const bookmarkData = {
-    index: 0,
-    parentId,
-    title,
-    url
-  }
-
-  if (ignore) {
-    // dated folder, to not add to tag list
-    await createBookmarkIgnoreInController(bookmarkData)
-  } else {
-    // not dated folder, to add to tag list
-    await browser.bookmarks.create(bookmarkData)
-  }
-}
-
-function isBookmarkCreatedWithApi({ parentId, url }) {
-  return parentId == lastCreatedBkmParentId && url == lastCreatedBkmUrl
 }
 const logBDT = makeLogFunction({ module: 'bookmark-dated.js' })
 
@@ -3220,7 +3187,7 @@ async function removePreviousDatedBookmarks({ url, template }) {
 
   await Promise.all(
     removeFolderList.map(
-      ({ id }) => browser.bookmarks.remove(id)
+      ({ id }) => removeBookmark(id)
     )
   )
 }
@@ -3230,97 +3197,120 @@ async function removeDatedBookmarksForTemplate({ url, template }) {
 
   await Promise.all(
     removeFolderList.map(
-      ({ id }) => browser.bookmarks.remove(id)
+      ({ id }) => removeBookmark(id)
     )
   )
 }
+// import {
+//   makeLogFunction,
+// } from '../api-low/index.js'
 
-async function createBookmarkInDatedTemplate({
-  parentId,
-  parentTitle,
-  title,
-  url
-}) {
-  const datedFolder = await getDatedFolder(parentTitle, parentId)
-  logBDT('createBookmarkInDatedTemplate () 11', 'datedFolder', datedFolder)
+// const logCBK = makeLogFunction({ module: 'bookmark-create.js' })
 
-  await createBookmarkInCommonFolder({ parentId: datedFolder.id, title, url, ignore: true })
 
-  if (!isVisitedDatedTemplate(parentTitle)) {
-    await tagList.addRecentTagFromFolder({ id: parentId, title: parentTitle })
-  }
-  removePreviousDatedBookmarks({ url, template: parentTitle })
+let lastCreatedBkmParentId
+let lastCreatedBkmUrl
+
+function isBookmarkCreatedWithApi({ parentId, url }) {
+  return parentId == lastCreatedBkmParentId && url == lastCreatedBkmUrl
 }
 
-async function moveBookmarkInDatedTemplate({
+async function createBookmarkWithApi({
   parentId,
-  parentTitle,
-  bookmarkId,
   url,
-  isSingle,
+  title,
 }) {
-  const datedFolder = await getDatedFolder(parentTitle, parentId)
-  logBDT('moveBookmarkInDatedTemplate () 11', 'datedFolder', datedFolder)
+  lastCreatedBkmParentId = parentId
+  lastCreatedBkmUrl = url
 
-  // await browser.bookmarks.move(bookmarkId, { parentId: datedFolder.id, index: 0 })
-  await moveBookmarkIgnoreInController({
-    id: bookmarkId,
-    parentId: datedFolder.id,
-    index: isSingle? 0 : undefined,
+  await createBookmarkIgnoreInController({
+    parentId,
+    index: 0,
+    url,
+    title,
   })
-
-  await tagList.addRecentTagFromFolder({ id: parentId, title: parentTitle })
-  removePreviousDatedBookmarks({ url, template: parentTitle })
 }
-const logCBK = makeLogFunction({ module: 'bookmark-create.js' })
 
-async function createBookmarkFolderById({ parentId, title, url }) {
-  const [folderNode] = await browser.bookmarks.get(parentId)
-  const isDatedTemplate = isDatedFolderTemplate(folderNode.title)
+async function createBookmarkWithParentId({ parentId, url, title }) {
+  const [parentNode] = await browser.bookmarks.get(parentId)
+  const parentName = parentNode.title
+
+  const isDatedTemplate = isDatedFolderTemplate(parentName)
 
   if (isDatedTemplate) {
-    await createBookmarkInDatedTemplate({
-      parentId,
-      parentTitle: folderNode.title,
-      title,
-      url,
-    })
+    const datedFolder = await findOrCreateDatedFolder({ templateTitle: parentName, templateId: parentId })
+    await createBookmarkWithApi({ parentId: datedFolder.id, url, title })
+    await removePreviousDatedBookmarks({ url, template: parentName })
+
+    if (!isVisitedDatedTemplate(parentName)) {
+      await tagList.addRecentTagFromFolder({ id: parentId, title: parentName })
+    }
   } else {
-    await createBookmarkInCommonFolder({ parentId, title, url })
+    await createBookmarkWithApi({ parentId, url, title })
+    await tagList.addRecentTagFromFolder({ id: parentId, title: parentName })
   }
 }
 
-async function createBookmarkFolderByName({ url, title, folderNameList }) {
-  const createFolderListResult = await Promise.allSettled(folderNameList.map(
-    (folderName) => findOrCreateFolder(folderName)
-  ))
-  const folderNodeList = createFolderListResult.map((result) => result.value).filter(Boolean)
+async function afterUserCreatedBookmarkInGUI({ node, isSingle }) {
+  const { parentId, id, url } = node
+  const [parentNode] = await browser.bookmarks.get(parentId)
+  const parentName = parentNode.title
 
-  await Promise.allSettled(folderNodeList.map(
-    (folder) => createBookmarkFolderById({
-      parentId: folder.id,
-      title,
-      url,
+  const isDatedTemplate = isDatedFolderTemplate(parentName)
+
+  if (isDatedTemplate) {
+    const datedFolder = await findOrCreateDatedFolder({ templateTitle: parentName, templateId: parentId })
+    await moveBookmarkIgnoreInController({
+      id,
+      parentId: datedFolder.id,
+      index: isSingle? 0 : undefined,
     })
-  ))
+
+    await removePreviousDatedBookmarks({ url, template: parentName })
+
+    if (!isVisitedDatedTemplate(parentName)) {
+      await tagList.addRecentTagFromFolder({ id: parentId, title: parentName })
+    }
+  } else {
+    if (node.index !== 0 && isSingle) {
+      await moveBookmarkIgnoreInController({ id, index: 0 })
+    }
+
+    await tagList.addRecentTagFromFolder({ id: parentId, title: parentName })
+  }
 }
 
-async function createBookmarkVisited({ url, title }) {
-  logCBK('createBookmarkVisited 00', url)
-  await createBookmarkFolderByName({ url, title, folderNameList: [DATED_TEMPLATE_VISITED] })
+async function createBookmark({ parentId, parentName, url, title }) {
 
-  // visited replaces opened
-  await removeDatedBookmarksForTemplate({ url, template: DATED_TEMPLATE_OPENED })
+  if (parentId) {
+    await createBookmarkWithParentId({ parentId, url, title })
+  } else if (parentName) {
+    const folderNode = await findOrCreateFolder(parentName)
+
+    await createBookmarkWithParentId({
+      parentId: folderNode.id,
+      url,
+      title,
+    })
+  } else {
+    throw new Error('createBookmark() must use parentId or parentName')
+  }
 }
-
-async function createBookmarkOpened({ url, title }) {
+async function createBookmarkOpened({ url, title }) {
   const list = await getDatedBookmarks({ url, template: DATED_TEMPLATE_VISITED })
 
   if (0 < list.length) {
     return
   }
 
-  await createBookmarkFolderByName({ url, title, folderNameList: [DATED_TEMPLATE_OPENED] })
+  await createBookmark({ url, title, parentName: DATED_TEMPLATE_OPENED })
+}
+
+async function createBookmarkVisited({ url, title }) {
+  await createBookmark({ url, title, parentName: DATED_TEMPLATE_VISITED })
+
+  // visited replaces opened
+  await removeDatedBookmarksForTemplate({ url, template: DATED_TEMPLATE_OPENED })
 }
 const NODE_ACTION = {
   CREATE: `CREATE`,
@@ -4145,6 +4135,38 @@ async function updateActiveTab({ tabId, url, useCache, debugCaller } = {}) {
   })
 }
 
+async function afterUserCreatedFolderInGUI({ id, parentId, title }) {
+  let correctParentId
+
+  const settings = await extensionSettings.get()
+
+  if (settings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
+    correctParentId = getNewFolderRootId(title)
+  }
+
+  const rootArray = [BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID].filter(Boolean)
+
+  const actualParentId = correctParentId || parentId
+  if (rootArray.includes(actualParentId)) {
+    const firstLevelNodeList = await browser.bookmarks.getChildren(actualParentId)
+    const findIndex = firstLevelNodeList.find((item) => title.localeCompare(item.title) < 0)
+
+    const moveArgs = {}
+    if (correctParentId && parentId != correctParentId) {
+      moveArgs.parentId = correctParentId
+    }
+    if (findIndex) {
+      moveArgs.index = findIndex.index
+    }
+
+    if (Object.keys(moveArgs).length > 0) {
+      moveFolderIgnoreInController({
+        id,
+        ...moveArgs,
+      })
+    }
+  }
+}
 const logBQ = makeLogFunction({ module: 'bookmarkQueue.js' })
 
 let lastCreatedBkmId
@@ -4179,29 +4201,8 @@ async function onCreateBookmark(task) {
   lastCreatedBkmId = bookmarkId
   lastCreatedBkmTabId = memo.activeTabId
 
-  const [parentNode] = await browser.bookmarks.get(parentId)
   const isSingle = isSingleBookmarkCreation(parentId)
-
-  if (isDatedFolderTemplate(parentNode.title)) {
-    await moveBookmarkInDatedTemplate({
-      parentId,
-      parentTitle: parentNode.title,
-      bookmarkId,
-      url,
-      isSingle,
-    })
-  } else {
-    if (node.index !== 0 && isSingle) {
-      await moveBookmarkIgnoreInController({ id: bookmarkId, index: 0 })
-    }
-
-    await tagList.addRecentTagFromBkm(node)
-  }
-
-  // changes in active tab
-  debouncedUpdateActiveTab({
-    debugCaller: 'onCreateBookmark'
-  });
+  await afterUserCreatedBookmarkInGUI({ node, isSingle })
 }
 
 async function onMoveBookmark(task) {
@@ -4209,116 +4210,77 @@ async function onMoveBookmark(task) {
   const { oldIndex, index, oldParentId, parentId } = moveInfo
   const { url, title } = node
 
-  if (parentId !== oldParentId) {
-    const [parentNode] = await browser.bookmarks.get(parentId)
-    const isDatedTemplate = isDatedFolderTemplate(parentNode.title)
+  const isBookmarkWasCreatedManually = (
+    bookmarkId == lastCreatedBkmId
+    && memo.activeTabId == lastCreatedBkmTabId
+    && !isBookmarkCreatedWithApi({ parentId: oldParentId, url: node.url })
+  )
 
-    if (!isDatedTemplate) {
-      await tagList.addRecentTagFromBkm(node);
+  const bookmarkList = await browser.bookmarks.search({ url: node.url });
+  const isFirstBookmark = bookmarkList.length == 1
+  const isMoveOnly = isBookmarkWasCreatedManually && isFirstBookmark && lastMovedBkmId != bookmarkId
+
+  if (isMoveOnly) {
+    await afterUserCreatedBookmarkInGUI({ node, isSingle: true })
+  } else {
+    let isReplaceMoveToCreate = false
+
+    if (IS_BROWSER_CHROME) {
+      const isChromeBookmarkManagerTabActive = !!memo.activeTabUrl && memo.activeTabUrl.startsWith('chrome://bookmarks');
+      isReplaceMoveToCreate = !isChromeBookmarkManagerTabActive
+    } else if (IS_BROWSER_FIREFOX) {
+      const childrenList = await browser.bookmarks.getChildren(parentId)
+      const lastIndex = childrenList.length - 1
+        // isReplaceMoveToCreate = index == lastIndex && settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN]
+      isReplaceMoveToCreate = index == lastIndex && url == memo.activeTabUrl
     }
 
-    const isBookmarkWasCreatedManually = (
-      bookmarkId == lastCreatedBkmId
-      && memo.activeTabId == lastCreatedBkmTabId
-      && !isBookmarkCreatedWithApi({ parentId: oldParentId, url: node.url })
-    )
+    const unclassifiedFolderId = await getUnclassifiedFolderId()
+    isReplaceMoveToCreate = isReplaceMoveToCreate && parentId !== unclassifiedFolderId
 
-    const bookmarkList = await browser.bookmarks.search({ url: node.url });
-    const isFirstBookmark = bookmarkList.length == 1
-    const isMoveOnly = isBookmarkWasCreatedManually && isFirstBookmark && lastMovedBkmId != bookmarkId
-
-    if (isMoveOnly) {
-      if (isDatedTemplate) {
-        await moveBookmarkInDatedTemplate({
-          parentId,
-          parentTitle: parentNode.title,
-          bookmarkId,
-          url,
-        })
-      } else {
-        if (index !== 0) {
-          await moveBookmarkIgnoreInController({ id: bookmarkId, index: 0 })
-        }
-      }
-    } else {
-      let isReplaceMoveToCreate = false
-
-      if (IS_BROWSER_CHROME) {
-        const isChromeBookmarkManagerTabActive = !!memo.activeTabUrl && memo.activeTabUrl.startsWith('chrome://bookmarks');
-        isReplaceMoveToCreate = !isChromeBookmarkManagerTabActive
-      } else if (IS_BROWSER_FIREFOX) {
-        const childrenList = await browser.bookmarks.getChildren(parentId)
-        const lastIndex = childrenList.length - 1
-          // isReplaceMoveToCreate = index == lastIndex && settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN]
-        isReplaceMoveToCreate = index == lastIndex && url == memo.activeTabUrl
-      }
-
-      const unclassifiedFolderId = await getUnclassifiedFolderId()
-      isReplaceMoveToCreate = isReplaceMoveToCreate && parentId !== unclassifiedFolderId
-
-      if (isReplaceMoveToCreate) {
-        await moveBookmarkIgnoreInController({ id: bookmarkId, parentId: oldParentId, index: oldIndex })
-
-        if (isDatedTemplate) {
-          await createBookmarkInDatedTemplate({
-            parentId,
-            parentTitle: parentNode.title,
-            title,
-            url,
-          })
-        } else {
-          const newBkm = {
-            parentId,
-            title,
-            url,
-            index: 0,
-          }
-          await createBookmarkIgnoreInController(newBkm)
-        }
-      }
+    if (isReplaceMoveToCreate) {
+      await moveBookmarkIgnoreInController({ id: bookmarkId, parentId: oldParentId, index: oldIndex })
+      await createBookmark({ parentId, url, title })
     }
-
-    lastMovedBkmId = bookmarkId
-    debouncedUpdateActiveTab({
-      debugCaller: 'onMoveBookmark'
-    });
   }
-}
 
-// eslint-disable-next-line no-unused-vars
-async function onChangeBookmark(task) {
-  // changes in active tab
-  debouncedUpdateActiveTab({
-    debugCaller: 'onChangeBookmark'
-  });
-}
-
-// eslint-disable-next-line no-unused-vars
-async function onDeleteBookmark(task) {
-  // changes in active tab
-  debouncedUpdateActiveTab({
-    debugCaller: 'onDeleteBookmark'
-  });
+  lastMovedBkmId = bookmarkId
 }
 
 async function bookmarkQueueRunner(task) {
+  let isCallUpdateActiveTab = false
+
   switch (task.action) {
     case NODE_ACTION.CREATE: {
       await onCreateBookmark(task)
+      isCallUpdateActiveTab = true
       break
     }
     case NODE_ACTION.MOVE: {
-      await onMoveBookmark(task)
+      const { moveInfo } = task
+      const { oldParentId, parentId } = moveInfo
+
+      if (parentId !== oldParentId) {
+        await onMoveBookmark(task)
+        isCallUpdateActiveTab = true
+      }
+
       break
     }
     case NODE_ACTION.CHANGE: {
-      await onChangeBookmark(task)
+      isCallUpdateActiveTab = true
       break
     }
     case NODE_ACTION.DELETE: {
-      await onDeleteBookmark(task)
+      isCallUpdateActiveTab = true
       break
     }
+  }
+
+  if (isCallUpdateActiveTab) {
+    debouncedUpdateActiveTab({
+      debugCaller: `bookmarks.on ${task.action}`
+    });
   }
 }
 
@@ -4327,47 +4289,10 @@ const bookmarkQueue = new NodeTaskQueue(bookmarkQueueRunner)
 
 async function onCreateFolder(task) {
   const { node } = task
-  const { id, parentId, title } = node
-  logFQ('onCreateFolder () 00', title)
-
-  let correctParentId
-  const savedObj = await getOptions([
-    USER_OPTION.USE_FLAT_FOLDER_STRUCTURE,
-  ]);
-
-  if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
-    correctParentId = getNewFolderRootId(title)
-  }
+  logFQ('onCreateFolder () 00', node.title)
 
   await tagList.addRecentTagFromFolder(node)
-
-  const rootArray = [BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID].filter(Boolean)
-
-  const actualParentId = correctParentId || parentId
-  if (rootArray.includes(actualParentId)) {
-    const firstLevelNodeList = await browser.bookmarks.getChildren(actualParentId)
-    const findIndex = firstLevelNodeList.find((item) => title.localeCompare(item.title) < 0)
-
-    const moveArgs = {}
-    if (correctParentId && parentId != correctParentId) {
-      moveArgs.parentId = correctParentId
-    }
-    if (findIndex) {
-      moveArgs.index = findIndex.index
-    }
-
-    if (Object.keys(moveArgs).length > 0) {
-      moveFolderIgnoreInController({
-        id,
-        ...moveArgs,
-      })
-    }
-  }
-
-  // changes in active tab
-  debouncedUpdateActiveTab({
-    debugCaller: 'onCreateFolder'
-  });
+  await afterUserCreatedFolderInGUI(node)
 }
 
 async function onMoveFolder(task) {
@@ -4380,11 +4305,6 @@ async function onChangeFolder(task) {
 
   memo.bkmFolderById.delete(bookmarkId);
   await tagList.addRecentTagFromFolder(node)
-
-  // changes in active tab
-  debouncedUpdateActiveTab({
-    debugCaller: 'onChangeFolder'
-  });
 }
 
 async function onDeleteFolder(task) {
@@ -4392,17 +4312,15 @@ async function onDeleteFolder(task) {
 
   memo.bkmFolderById.delete(bookmarkId);
   await tagList.removeTag(bookmarkId)
-
-  // changes in active tab
-  debouncedUpdateActiveTab({
-    debugCaller: 'onDeleteFolder'
-  });
 }
 
 async function folderQueueRunner(task) {
+  let isCallUpdateActiveTab = false
+
   switch (task.action) {
     case NODE_ACTION.CREATE: {
       await onCreateFolder(task)
+      isCallUpdateActiveTab = true
       break
     }
     case NODE_ACTION.MOVE: {
@@ -4411,12 +4329,20 @@ async function folderQueueRunner(task) {
     }
     case NODE_ACTION.CHANGE: {
       await onChangeFolder(task)
+      isCallUpdateActiveTab = true
       break
     }
     case NODE_ACTION.DELETE: {
       await onDeleteFolder(task)
+      isCallUpdateActiveTab = true
       break
     }
+  }
+
+  if (isCallUpdateActiveTab) {
+    debouncedUpdateActiveTab({
+      debugCaller: `bookmarks(folders).on ${task.action}`
+    });
   }
 }
 
@@ -4528,7 +4454,7 @@ async function flatChildren({ parentId, freeSuffix, datedRootId }) {
   })
   await updateTaskList.reduce(
     (promiseChain, { id, title }) => promiseChain.then(
-      () => updateFolderIgnoreInController({ id, title })
+      () => updateFolder({ id, title })
     ),
     Promise.resolve(),
   );
@@ -4555,7 +4481,7 @@ async function flatChildren({ parentId, freeSuffix, datedRootId }) {
             const newTitle = `${folderNode.title} ${freeSuffix}`
             freeSuffix += 1
 
-            await updateFolderIgnoreInController({
+            await updateFolder({
               id: folderNode.id,
               title: newTitle,
             })
@@ -4565,7 +4491,7 @@ async function flatChildren({ parentId, freeSuffix, datedRootId }) {
           }
         }
       } else {
-        await removeFolderIgnoreInController(folderNode.id)
+        await removeFolder(folderNode.id)
       }
     }
 
@@ -4665,7 +4591,7 @@ async function trimTitleInSubFolder(parentId) {
 
   await renameTaskList.reduce(
     (promiseChain, { id, title }) => promiseChain.then(
-      () => updateFolderIgnoreInController({ id,  title })
+      () => updateFolder({ id,  title })
     ),
     Promise.resolve(),
   );
@@ -4711,7 +4637,7 @@ async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
 
   await folderList.reduce(
     (promiseChain, folderNode) => promiseChain.then(
-      () => removeFolderIgnoreInController(folderNode.id)
+      () => removeFolder(folderNode.id)
     ),
     Promise.resolve(),
   );
@@ -4736,7 +4662,7 @@ async function moveNotDescriptiveFoldersToUnclassified() {
 
   await bkmList.reduce(
     (promiseChain, bkm) => promiseChain.then(
-      () => moveBookmarkIgnoreInController({ id: bkm.id, parentId: unclassifiedId })
+      () => moveBookmark({ id: bkm.id, parentId: unclassifiedId })
     ),
     Promise.resolve(),
   );
@@ -4962,7 +4888,7 @@ async function removeDoubleBookmarks() {
 
   await doubleList.reduce(
     (promiseChain, bkmId) => promiseChain.then(
-      () => removeBookmarkIgnoreInController(bkmId)
+      () => removeBookmark(bkmId)
     ),
     Promise.resolve(),
   );
@@ -5023,8 +4949,8 @@ async function removeDoubleBookmarks() {
 async function orderBookmarks() {
   logOD('orderBookmarks() 00')
 
-  await getOrCreateFolderByTitleInRoot(UNCLASSIFIED_TITLE)
-  await getOrCreateFolderByTitleInRoot(DATED_TITLE)
+  await findOrCreateFolderByTitleInRoot(UNCLASSIFIED_TITLE)
+  await findOrCreateFolderByTitleInRoot(DATED_TITLE)
 
   logOD('orderBookmarks() 11')
   await moveFolders()
@@ -5320,11 +5246,15 @@ async function getUrlFromUrl() {
   }
 }
 
-const bookmarksController = {
+const logBCT = makeLogFunction({ module: 'bookmarks.controller.js' })
+
+const bookmarksController = {
   async onCreated(bookmarkId, node) {
+    logBCT('onCreated 00', node)
     if (ignoreBkmControllerApiActionSet.hasIgnoreCreate(node)) {
       return
     }
+    logBCT('onCreated 11')
 
     if (node.url) {
       bookmarkQueue.enqueueCreate({ bookmarkId, node })
@@ -5345,9 +5275,9 @@ async function getUrlFromUrl() {
     }
   },
   async onChanged(bookmarkId, changeInfo) {
-    if (ignoreBkmControllerApiActionSet.hasIgnoreUpdate(bookmarkId)) {
-      return
-    }
+    // if (ignoreBkmControllerApiActionSet.hasIgnoreUpdate(bookmarkId)) {
+    //   return
+    // }
 
     const [node] = await browser.bookmarks.get(bookmarkId)
 
@@ -5358,9 +5288,9 @@ async function getUrlFromUrl() {
     }
   },
   async onRemoved(bookmarkId, { node }) {
-    if (ignoreBkmControllerApiActionSet.hasIgnoreRemove(bookmarkId)) {
-      return
-    }
+    // if (ignoreBkmControllerApiActionSet.hasIgnoreRemove(bookmarkId)) {
+    //   return
+    // }
 
     if (node.url) {
       bookmarkQueue.enqueueDelete({ bookmarkId, node })
@@ -5426,38 +5356,31 @@ const contextMenusController = {
     }
   }
 }
-const logIM = makeLogFunction({ module: 'incoming-message' })
+const logIM = makeLogFunction({ module: 'incoming-message.js' })
 
 const HandlersWithUpdateTab = {
   [EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_ID]: async ({ parentId, url, title }) => {
     logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_ID');
-    await createBookmarkFolderById({
+    await createBookmark({
       parentId,
       title,
       url,
     })
   },
-  [EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME]: async ({ folderNameList, url, title }) => {
-    logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', folderNameList);
+  [EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME]: async ({ parentNameList, url, title }) => {
+    logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', parentNameList);
 
-    if (!folderNameList) {
-      return
-    }
-
-    const filteredList = folderNameList
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .filter((name) => !(50 < name.length))
-
-    if (filteredList.length == 0) {
-      return
-    }
-
-    await createBookmarkFolderByName({
-      url,
-      title,
-      folderNameList: filteredList,
-    })
+    await Promise.allSettled(parentNameList.map(
+      (parentName) => createBookmark({
+        parentName,
+        url,
+        title,
+      })
+    ))
+  },
+  [EXTENSION_MSG_ID.DELETE_BOOKMARK]: async ({ bookmarkId }) => {
+    logIM('runtime.onMessage DELETE_BOOKMARK', bookmarkId);
+    await removeBookmark(bookmarkId);
   },
 
 
@@ -5490,10 +5413,6 @@ const OtherHandlers = {
         debugCaller: `runtime.onMessage TAB_IS_READY`,
       })
     }
-  },
-  [EXTENSION_MSG_ID.DELETE_BOOKMARK]: async ({ bookmarkId }) => {
-    logIM('runtime.onMessage DELETE_BOOKMARK', bookmarkId);
-    await browser.bookmarks.remove(bookmarkId);
   },
 
   [EXTENSION_MSG_ID.SHOW_TAG_LIST]: async ({ value }) => {
@@ -5551,18 +5470,21 @@ const allHandlers = {
 async function onIncomingMessage (message, sender) {
   const tabId = sender?.tab?.id;
   const { command, ...restMessage } = message
+  logIM('onIncomingMessage 00', command);
 
   // ExtensionMessageHandlers[command]?()
   const handler = allHandlers[command]
 
   if (handler) {
+    logIM('onIncomingMessage 11');
     await handler({ ...restMessage, tabId })
+    logIM('onIncomingMessage 22');
 
     if (HandlersWithUpdateTab[command]) {
+      logIM('onIncomingMessage 33');
       updateActiveTab({
         tabId,
         debugCaller: `runtime.onMessage ${command}`,
-        useCache: true,
       })
     }
   }
@@ -5679,7 +5601,7 @@ const tabsController = {
             url: Tab.url,
           });
 
-          updateActiveTab({
+          debouncedUpdateActiveTab({
             tabId,
             url: Tab.url,
             debugCaller: `tabs.onUpdated complete`,
@@ -5697,7 +5619,7 @@ const tabsController = {
     // }
     memo.activeTabId = tabId;
 
-    updateActiveTab({
+    debouncedUpdateActiveTab({
       tabId,
       debugCaller: 'tabs.onActivated'
     });
