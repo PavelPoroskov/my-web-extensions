@@ -138,9 +138,9 @@ const allHandlers = {
 }
 
 export async function onIncomingMessage (message, sender) {
-  logIM('onIncomingMessage 00');
   const tabId = sender?.tab?.id;
   const { command, ...restMessage } = message
+  logIM('onIncomingMessage 00', command);
 
   // ExtensionMessageHandlers[command]?()
   const handler = allHandlers[command]

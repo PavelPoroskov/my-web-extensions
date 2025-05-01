@@ -53,6 +53,7 @@ createFileForFirefox(
     'bookmark-controller-api/bookmark-ignore.js',
     'bookmark-controller-api/bookmark-dated.js',
     'bookmark-controller-api/bookmark-create.js',
+    'bookmark-controller-api/bookmark-visited.js',
     'bookmark-controller-api/nodeTaskQueue.js',
 
     'api/visited-urls.js',
@@ -68,7 +69,6 @@ createFileForFirefox(
     'bookmark-controller-api/folder-gui.js',
     'bookmark-controller-api/bookmarkQueue.js',
     'bookmark-controller-api/folderQueue.js',
-    'bookmark-controller-api/bookmark-visited.js',
     'bookmark-controller-api/index.js',
 
     'bookmark-list-ops/flatFolders.js',

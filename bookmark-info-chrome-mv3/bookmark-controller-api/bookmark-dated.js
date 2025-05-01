@@ -24,11 +24,12 @@ export async function getDatedBookmarks({ url, template }) {
 
   const parentMap = Object.fromEntries(
     parentFolderList
-      .map(({ id, title }) => [id, isDatedTitleForTemplate({ title, template })])
+      .map(({ id, title}) => [id, title])
   )
 
   const selectedList = bookmarkList
-    .filter(({ parentId }) => parentMap[parentId] == true)
+    .map(({ id, parentId }) => ({ id, parentTitle: parentMap[parentId] }))
+    .filter(({ parentTitle }) => isDatedTitleForTemplate({ title: parentTitle, template }))
 
   return selectedList
 }

@@ -1,7 +1,7 @@
 import {
   createBookmarkVisited,
   createBookmarkOpened,
-} from '../bookmark-controller-api/bookmark-create.js'
+} from '../bookmark-controller-api/bookmark-visited.js'
 import {
   CacheWithLimit,
   makeLogFunction,
