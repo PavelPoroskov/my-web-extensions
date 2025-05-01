@@ -1,5 +1,6 @@
 import {
   createBookmark,
+  removeBookmarkIgnoreInController,
 } from '../bookmark-controller-api/index.js'
 import {
   moveToFlatFolderStructure,
@@ -47,6 +48,10 @@ const HandlersWithUpdateTab = {
       })
     ))
   },
+  [EXTENSION_MSG_ID.DELETE_BOOKMARK]: async ({ bookmarkId }) => {
+    logIM('runtime.onMessage DELETE_BOOKMARK', bookmarkId);
+    await removeBookmarkIgnoreInController(bookmarkId);
+  },
 
 
   [EXTENSION_MSG_ID.FIX_TAG]: async ({ parentId, title }) => {
@@ -78,10 +83,6 @@ const OtherHandlers = {
         debugCaller: `runtime.onMessage TAB_IS_READY`,
       })
     }
-  },
-  [EXTENSION_MSG_ID.DELETE_BOOKMARK]: async ({ bookmarkId }) => {
-    logIM('runtime.onMessage DELETE_BOOKMARK', bookmarkId);
-    await chrome.bookmarks.remove(bookmarkId);
   },
 
   [EXTENSION_MSG_ID.SHOW_TAG_LIST]: async ({ value }) => {
