@@ -49,8 +49,6 @@ export async function moveFolderIgnoreInController({ id, parentId, index }) {
   return await moveNodeIgnoreInController({ id, parentId, index })
 }
 
-export async function removeFolderIgnoreInController(bkmId) {
-  ignoreBkmControllerApiActionSet.addIgnoreRemove(bkmId)
+export async function removeFolder(bkmId) {
   await chrome.bookmarks.remove(bkmId)
 }
-

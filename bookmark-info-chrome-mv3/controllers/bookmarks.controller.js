@@ -44,9 +44,9 @@ export const bookmarksController = {
     }
   },
   async onRemoved(bookmarkId, { node }) {
-    if (ignoreBkmControllerApiActionSet.hasIgnoreRemove(bookmarkId)) {
-      return
-    }
+    // if (ignoreBkmControllerApiActionSet.hasIgnoreRemove(bookmarkId)) {
+    //   return
+    // }
 
     if (node.url) {
       bookmarkQueue.enqueueDelete({ bookmarkId, node })

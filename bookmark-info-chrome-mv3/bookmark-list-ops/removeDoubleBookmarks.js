@@ -2,7 +2,7 @@ import {
   ExtraMap,
 } from '../api-low/index.js'
 import {
-  removeBookmarkIgnoreInController,
+  removeBookmark,
 } from '../bookmark-controller-api/index.js'
 
 async function getDoubles() {
@@ -55,7 +55,7 @@ export async function removeDoubleBookmarks() {
 
   await doubleList.reduce(
     (promiseChain, bkmId) => promiseChain.then(
-      () => removeBookmarkIgnoreInController(bkmId)
+      () => removeBookmark(bkmId)
     ),
     Promise.resolve(),
   );

@@ -4,7 +4,7 @@ import {
 } from '../folder-api/index.js';
 import {
   moveFolderIgnoreInController,
-  removeFolderIgnoreInController,
+  removeFolder,
   updateFolderIgnoreInController,
 } from '../bookmark-controller-api/index.js';
 
@@ -149,7 +149,7 @@ async function flatChildren({ parentId, freeSuffix, datedRootId }) {
           }
         }
       } else {
-        await removeFolderIgnoreInController(folderNode.id)
+        await removeFolder(folderNode.id)
       }
     }
 

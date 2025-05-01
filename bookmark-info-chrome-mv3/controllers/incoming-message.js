@@ -1,6 +1,6 @@
 import {
   createBookmark,
-  removeBookmarkIgnoreInController,
+  removeBookmark,
 } from '../bookmark-controller-api/index.js'
 import {
   moveToFlatFolderStructure,
@@ -50,7 +50,7 @@ const HandlersWithUpdateTab = {
   },
   [EXTENSION_MSG_ID.DELETE_BOOKMARK]: async ({ bookmarkId }) => {
     logIM('runtime.onMessage DELETE_BOOKMARK', bookmarkId);
-    await removeBookmarkIgnoreInController(bookmarkId);
+    await removeBookmark(bookmarkId);
   },
 
 

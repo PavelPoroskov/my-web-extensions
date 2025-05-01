@@ -6,7 +6,7 @@ import {
 } from '../folder-api/index.js'
 import {
   moveNodeIgnoreInController,
-  removeFolderIgnoreInController,
+  removeFolder,
 } from '../bookmark-controller-api/index.js'
 
 async function moveContentToStart(fromFolderId, toFolderId) {
@@ -36,7 +36,7 @@ async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
 
   await folderList.reduce(
     (promiseChain, folderNode) => promiseChain.then(
-      () => removeFolderIgnoreInController(folderNode.id)
+      () => removeFolder(folderNode.id)
     ),
     Promise.resolve(),
   );

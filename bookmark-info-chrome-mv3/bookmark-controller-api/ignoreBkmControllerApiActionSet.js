@@ -45,8 +45,8 @@ class IgnoreBkmControllerApiActionSet {
   addIgnoreMove = this.makeAddIgnoreAction('move')
   hasIgnoreMove = this.makeHasIgnoreAction('move')
 
-  addIgnoreRemove = this.makeAddIgnoreAction('remove')
-  hasIgnoreRemove = this.makeHasIgnoreAction('remove')
+  // addIgnoreRemove = this.makeAddIgnoreAction('remove')
+  // hasIgnoreRemove = this.makeHasIgnoreAction('remove')
 
   addIgnoreUpdate = this.makeAddIgnoreAction('update')
   hasIgnoreUpdate = this.makeHasIgnoreAction('update')

@@ -12,6 +12,7 @@ import {
 } from './folder-create.js';
 import {
   moveBookmarkIgnoreInController,
+  removeBookmark,
 } from './bookmark-ignore.js';
 
 const logBDT = makeLogFunction({ module: 'bookmark-dated.js' })
@@ -30,12 +31,11 @@ export async function getDatedBookmarks({ url, template }) {
 
   const parentMap = Object.fromEntries(
     parentFolderList
-      .map(({ id, title}) => [id, title])
+      .map(({ id, title }) => [id, isDatedTitleForTemplate({ title, template })])
   )
 
   const selectedList = bookmarkList
-    .map(({ id, parentId }) => ({ id, parentTitle: parentMap[parentId] }))
-    .filter(({ parentTitle }) => isDatedTitleForTemplate({ title: parentTitle, template }))
+    .filter(({ parentId }) => parentMap[parentId] == true)
 
   return selectedList
 }
@@ -53,7 +53,7 @@ export async function removePreviousDatedBookmarks({ url, template }) {
 
   await Promise.all(
     removeFolderList.map(
-      ({ id }) => chrome.bookmarks.remove(id)
+      ({ id }) => removeBookmark(id)
     )
   )
 }
@@ -63,7 +63,7 @@ export async function removeDatedBookmarksForTemplate({ url, template }) {
 
   await Promise.all(
     removeFolderList.map(
-      ({ id }) => chrome.bookmarks.remove(id)
+      ({ id }) => removeBookmark(id)
     )
   )
 }

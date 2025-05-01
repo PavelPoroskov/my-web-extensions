@@ -104,7 +104,3 @@ export async function getOrCreateFolderByTitleInRoot(title) {
 
   return newNode.id
 }
-
-export async function removeFolder(bkmId) {
-  await chrome.bookmarks.remove(bkmId)
-}
