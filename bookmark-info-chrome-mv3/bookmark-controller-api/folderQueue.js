@@ -66,11 +66,6 @@ async function onCreateFolder(task) {
       })
     }
   }
-
-  // changes in active tab
-  debouncedUpdateActiveTab({
-    debugCaller: 'onCreateFolder'
-  });
 }
 
 async function onMoveFolder(task) {
@@ -83,11 +78,6 @@ async function onChangeFolder(task) {
 
   memo.bkmFolderById.delete(bookmarkId);
   await tagList.addRecentTagFromFolder(node)
-
-  // changes in active tab
-  debouncedUpdateActiveTab({
-    debugCaller: 'onChangeFolder'
-  });
 }
 
 async function onDeleteFolder(task) {
@@ -95,17 +85,15 @@ async function onDeleteFolder(task) {
 
   memo.bkmFolderById.delete(bookmarkId);
   await tagList.removeTag(bookmarkId)
-
-  // changes in active tab
-  debouncedUpdateActiveTab({
-    debugCaller: 'onDeleteFolder'
-  });
 }
 
 async function folderQueueRunner(task) {
+  let isCallUpdateActiveTab = false
+
   switch (task.action) {
     case NODE_ACTION.CREATE: {
       await onCreateFolder(task)
+      isCallUpdateActiveTab = true
       break
     }
     case NODE_ACTION.MOVE: {
@@ -114,12 +102,20 @@ async function folderQueueRunner(task) {
     }
     case NODE_ACTION.CHANGE: {
       await onChangeFolder(task)
+      isCallUpdateActiveTab = true
       break
     }
     case NODE_ACTION.DELETE: {
       await onDeleteFolder(task)
+      isCallUpdateActiveTab = true
       break
     }
+  }
+
+  if (isCallUpdateActiveTab) {
+    debouncedUpdateActiveTab({
+      debugCaller: `bookmarks(folders).on ${task.action}`
+    });
   }
 }
 
