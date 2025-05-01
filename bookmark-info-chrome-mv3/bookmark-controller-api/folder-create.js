@@ -12,7 +12,6 @@ import {
 } from '../folder-api/index.js';
 import {
   createFolderIgnoreInController,
-  createFolder,
   updateFolder,
 } from './folder-ignore.js'
 
@@ -36,7 +35,7 @@ export async function findOrCreateFolder(title) {
       folderParams.index = findIndex.index
     }
 
-    folder = await createFolder(folderParams)
+    folder = await createFolderIgnoreInController(folderParams)
   } else {
     const oldBigLetterN = folder.title.replace(/[^A-Z]+/g, "").length
     const newBigLetterN = title.replace(/[^A-Z]+/g, "").length

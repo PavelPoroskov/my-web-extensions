@@ -7,7 +7,7 @@ import {
 } from '../folder-api/index.js'
 import {
   removeFolder,
-  updateFolderIgnoreInController,
+  updateFolder,
   moveNodeIgnoreInController,
 } from '../bookmark-controller-api/index.js'
 
@@ -89,7 +89,7 @@ async function trimTitleInSubFolder(parentId) {
 
   await renameTaskList.reduce(
     (promiseChain, { id, title }) => promiseChain.then(
-      () => updateFolderIgnoreInController({ id,  title })
+      () => updateFolder({ id,  title })
     ),
     Promise.resolve(),
   );

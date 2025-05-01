@@ -5,7 +5,7 @@ import {
 import {
   moveFolderIgnoreInController,
   removeFolder,
-  updateFolderIgnoreInController,
+  updateFolder,
 } from '../bookmark-controller-api/index.js';
 
 async function getMaxUsedSuffix() {
@@ -112,7 +112,7 @@ async function flatChildren({ parentId, freeSuffix, datedRootId }) {
   })
   await updateTaskList.reduce(
     (promiseChain, { id, title }) => promiseChain.then(
-      () => updateFolderIgnoreInController({ id, title })
+      () => updateFolder({ id, title })
     ),
     Promise.resolve(),
   );
@@ -139,7 +139,7 @@ async function flatChildren({ parentId, freeSuffix, datedRootId }) {
             const newTitle = `${folderNode.title} ${freeSuffix}`
             freeSuffix += 1
 
-            await updateFolderIgnoreInController({
+            await updateFolder({
               id: folderNode.id,
               title: newTitle,
             })

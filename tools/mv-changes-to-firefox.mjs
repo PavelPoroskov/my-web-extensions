@@ -67,6 +67,7 @@ createFileForFirefox(
 
     'bookmark-controller-api/bookmarkQueue.js',
     'bookmark-controller-api/folderQueue.js',
+    'bookmark-controller-api/bookmark-visited.js',
     'bookmark-controller-api/index.js',
 
     'bookmark-list-ops/flatFolders.js',

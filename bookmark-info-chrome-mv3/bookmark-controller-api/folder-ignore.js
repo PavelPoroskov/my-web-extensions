@@ -22,11 +22,6 @@ export async function createFolderIgnoreInController({
   return await chrome.bookmarks.create(options)
 }
 
-export async function updateFolderIgnoreInController({ id, title }) {
-  ignoreBkmControllerApiActionSet.addIgnoreUpdate(id)
-  await chrome.bookmarks.update(id, { title })
-}
-
 export async function moveNodeIgnoreInController({ id, parentId, index }) {
   const options = {}
   if (parentId != undefined) {
@@ -47,10 +42,6 @@ export async function moveNodeIgnoreInController({ id, parentId, index }) {
 export async function moveFolderIgnoreInController({ id, parentId, index }) {
   logFI('moveFolderIgnoreInController 00')
   return await moveNodeIgnoreInController({ id, parentId, index })
-}
-
-export async function createFolder(folderParams) {
-  await chrome.bookmarks.create(folderParams)
 }
 
 export async function updateFolder({ id, title }) {
