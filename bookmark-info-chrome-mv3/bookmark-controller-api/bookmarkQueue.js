@@ -1,13 +1,11 @@
 import {
   memo,
-  tagList,
 } from '../api-mid/index.js'
 import {
   makeLogFunction,
 } from '../api-low/index.js'
 import {
   getUnclassifiedFolderId,
-  isDatedFolderTemplate,
 } from '../folder-api/index.js'
 import {
   debouncedUpdateActiveTab,
@@ -16,12 +14,10 @@ import {
   moveBookmarkIgnoreInController,
 } from './bookmark-ignore.js'
 import {
+  afterUserCreatedBookmarkInGUI,
   createBookmark,
   isBookmarkCreatedWithApi,
 } from './bookmark-create.js'
-import {
-  moveBookmarkInDatedTemplate,
-} from './bookmark-dated.js'
 import {
   IS_BROWSER_CHROME,
   IS_BROWSER_FIREFOX,
@@ -65,37 +61,14 @@ async function onCreateBookmark(task) {
   lastCreatedBkmId = bookmarkId
   lastCreatedBkmTabId = memo.activeTabId
 
-  const [parentNode] = await chrome.bookmarks.get(parentId)
   const isSingle = isSingleBookmarkCreation(parentId)
-
-  if (isDatedFolderTemplate(parentNode.title)) {
-    await moveBookmarkInDatedTemplate({
-      parentId,
-      parentTitle: parentNode.title,
-      bookmarkId,
-      url,
-      isSingle,
-    })
-  } else {
-    if (node.index !== 0 && isSingle) {
-      await moveBookmarkIgnoreInController({ id: bookmarkId, index: 0 })
-    }
-
-    await tagList.addRecentTagFromBkm(node)
-  }
+  await afterUserCreatedBookmarkInGUI({ node, isSingle })
 }
 
 async function onMoveBookmark(task) {
   const { bookmarkId, node, moveInfo } = task
   const { oldIndex, index, oldParentId, parentId } = moveInfo
   const { url, title } = node
-
-  const [parentNode] = await chrome.bookmarks.get(parentId)
-  const isDatedTemplate = isDatedFolderTemplate(parentNode.title)
-
-  if (!isDatedTemplate) {
-    await tagList.addRecentTagFromBkm(node);
-  }
 
   const isBookmarkWasCreatedManually = (
     bookmarkId == lastCreatedBkmId
@@ -108,18 +81,7 @@ async function onMoveBookmark(task) {
   const isMoveOnly = isBookmarkWasCreatedManually && isFirstBookmark && lastMovedBkmId != bookmarkId
 
   if (isMoveOnly) {
-    if (isDatedTemplate) {
-      await moveBookmarkInDatedTemplate({
-        parentId,
-        parentTitle: parentNode.title,
-        bookmarkId,
-        url,
-      })
-    } else {
-      if (index !== 0) {
-        await moveBookmarkIgnoreInController({ id: bookmarkId, index: 0 })
-      }
-    }
+    await afterUserCreatedBookmarkInGUI({ node, isSingle: true })
   } else {
     let isReplaceMoveToCreate = false
 

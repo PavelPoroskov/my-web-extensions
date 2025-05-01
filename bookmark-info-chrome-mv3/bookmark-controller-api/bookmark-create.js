@@ -14,6 +14,7 @@ import {
 } from './bookmark-dated.js';
 import {
   createBookmarkIgnoreInController,
+  moveBookmarkIgnoreInController,
 } from './bookmark-ignore.js'
 
 // import {
@@ -32,8 +33,8 @@ export function isBookmarkCreatedWithApi({ parentId, url }) {
 
 async function createBookmarkWithApi({
   parentId,
-  title,
   url,
+  title,
 }) {
   lastCreatedBkmParentId = parentId
   lastCreatedBkmUrl = url
@@ -46,7 +47,7 @@ async function createBookmarkWithApi({
   })
 }
 
-async function createBookmarkWithParentId({ parentId, title, url }) {
+async function createBookmarkWithParentId({ parentId, url, title }) {
   const [parentNode] = await chrome.bookmarks.get(parentId)
   const parentName = parentNode.title
 
@@ -66,22 +67,47 @@ async function createBookmarkWithParentId({ parentId, title, url }) {
   }
 }
 
-async function createBookmarkWithParentName({ parentName, url, title }) {
-  const folderNode = await findOrCreateFolder(parentName)
+export async function afterUserCreatedBookmarkInGUI({ node, isSingle }) {
+  const { parentId, id, url } = node
+  const [parentNode] = await chrome.bookmarks.get(parentId)
+  const parentName = parentNode.title
 
-  await createBookmarkWithParentId({
-    parentId: folderNode.id,
-    title,
-    url,
-  })
+  const isDatedTemplate = isDatedFolderTemplate(parentName)
+
+  if (isDatedTemplate) {
+    const datedFolder = await findOrCreateDatedFolder({ templateTitle: parentName, templateId: parentId })
+    await moveBookmarkIgnoreInController({
+      id,
+      parentId: datedFolder.id,
+      index: isSingle? 0 : undefined,
+    })
+
+    await removePreviousDatedBookmarks({ url, template: parentName })
+
+    if (!isVisitedDatedTemplate(parentName)) {
+      await tagList.addRecentTagFromFolder({ id: parentId, title: parentName })
+    }
+  } else {
+    if (node.index !== 0 && isSingle) {
+      await moveBookmarkIgnoreInController({ id, index: 0 })
+    }
+
+    await tagList.addRecentTagFromFolder({ id: parentId, title: parentName })
+  }
 }
 
-export async function createBookmark({ parentId, parentName, title, url }) {
+export async function createBookmark({ parentId, parentName, url, title }) {
 
   if (parentId) {
-    await createBookmarkWithParentId({ parentId, title, url })
+    await createBookmarkWithParentId({ parentId, url, title })
   } else if (parentName) {
-    await createBookmarkWithParentName({ parentName, title, url })
+    const folderNode = await findOrCreateFolder(parentName)
+
+    await createBookmarkWithParentId({
+      parentId: folderNode.id,
+      url,
+      title,
+    })
   } else {
     throw new Error('createBookmark() must use parentId or parentName')
   }
