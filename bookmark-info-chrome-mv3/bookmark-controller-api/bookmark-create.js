@@ -1,70 +1,88 @@
 import {
+  tagList,
+} from '../api-mid/index.js';
+import {
   isDatedFolderTemplate,
-  DATED_TEMPLATE_OPENED,
-  DATED_TEMPLATE_VISITED,
+  isVisitedDatedTemplate,
 } from '../folder-api/index.js';
 import {
-  createBookmarkInCommonFolder,
-} from './bookmark-create1.js';
-import {
-  createBookmarkInDatedTemplate,
-  getDatedBookmarks,
-  removeDatedBookmarksForTemplate,
-} from './bookmark-dated.js';
-import {
+  findOrCreateDatedFolder,
   findOrCreateFolder,
 } from './folder-create.js';
 import {
-  makeLogFunction,
-} from '../api-low/index.js'
+  removePreviousDatedBookmarks,
+} from './bookmark-dated.js';
+import {
+  createBookmarkIgnoreInController,
+} from './bookmark-ignore.js'
 
-const logCBK = makeLogFunction({ module: 'bookmark-create.js' })
+// import {
+//   makeLogFunction,
+// } from '../api-low/index.js'
 
-export async function createBookmarkFolderById({ parentId, title, url }) {
-  const [folderNode] = await chrome.bookmarks.get(parentId)
-  const isDatedTemplate = isDatedFolderTemplate(folderNode.title)
+// const logCBK = makeLogFunction({ module: 'bookmark-create.js' })
+
+
+let lastCreatedBkmParentId
+let lastCreatedBkmUrl
+
+export function isBookmarkCreatedWithApi({ parentId, url }) {
+  return parentId == lastCreatedBkmParentId && url == lastCreatedBkmUrl
+}
+
+async function createBookmarkWithApi({
+  parentId,
+  title,
+  url,
+}) {
+  lastCreatedBkmParentId = parentId
+  lastCreatedBkmUrl = url
+
+  await createBookmarkIgnoreInController({
+    parentId,
+    index: 0,
+    url,
+    title,
+  })
+}
+
+async function createBookmarkWithParentId({ parentId, title, url }) {
+  const [parentNode] = await chrome.bookmarks.get(parentId)
+  const parentName = parentNode.title
+
+  const isDatedTemplate = isDatedFolderTemplate(parentName)
 
   if (isDatedTemplate) {
-    await createBookmarkInDatedTemplate({
-      parentId,
-      parentTitle: folderNode.title,
-      title,
-      url,
-    })
+    const datedFolder = await findOrCreateDatedFolder({ templateTitle: parentName, templateId: parentId })
+    await createBookmarkWithApi({ parentId: datedFolder.id, url, title })
+    await removePreviousDatedBookmarks({ url, template: parentName })
+
+    if (!isVisitedDatedTemplate(parentName)) {
+      await tagList.addRecentTagFromFolder({ id: parentId, title: parentName })
+    }
   } else {
-    await createBookmarkInCommonFolder({ parentId, title, url })
+    await createBookmarkWithApi({ parentId, url, title })
+    await tagList.addRecentTagFromFolder({ id: parentId, title: parentName })
   }
 }
 
-export async function createBookmarkFolderByName({ url, title, folderNameList }) {
-  const createFolderListResult = await Promise.allSettled(folderNameList.map(
-    (folderName) => findOrCreateFolder(folderName)
-  ))
-  const folderNodeList = createFolderListResult.map((result) => result.value).filter(Boolean)
+async function createBookmarkWithParentName({ parentName, url, title }) {
+  const folderNode = await findOrCreateFolder(parentName)
 
-  await Promise.allSettled(folderNodeList.map(
-    (folder) => createBookmarkFolderById({
-      parentId: folder.id,
-      title,
-      url,
-    })
-  ))
+  await createBookmarkWithParentId({
+    parentId: folderNode.id,
+    title,
+    url,
+  })
 }
 
-export async function createBookmarkVisited({ url, title }) {
-  logCBK('createBookmarkVisited 00', url)
-  await createBookmarkFolderByName({ url, title, folderNameList: [DATED_TEMPLATE_VISITED] })
+export async function createBookmark({ parentId, parentName, title, url }) {
 
-  // visited replaces opened
-  await removeDatedBookmarksForTemplate({ url, template: DATED_TEMPLATE_OPENED })
-}
-
-export async function createBookmarkOpened({ url, title }) {
-  const list = await getDatedBookmarks({ url, template: DATED_TEMPLATE_VISITED })
-
-  if (0 < list.length) {
-    return
+  if (parentId) {
+    await createBookmarkWithParentId({ parentId, title, url })
+  } else if (parentName) {
+    await createBookmarkWithParentName({ parentName, title, url })
+  } else {
+    throw new Error('createBookmark() must use parentId or parentName')
   }
-
-  await createBookmarkFolderByName({ url, title, folderNameList: [DATED_TEMPLATE_OPENED] })
 }

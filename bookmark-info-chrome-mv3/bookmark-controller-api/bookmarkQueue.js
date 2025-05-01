@@ -13,14 +13,13 @@ import {
   debouncedUpdateActiveTab,
 } from '../api/index.js'
 import {
-  createBookmarkIgnoreInController,
   moveBookmarkIgnoreInController,
 } from './bookmark-ignore.js'
 import {
+  createBookmark,
   isBookmarkCreatedWithApi,
-} from './bookmark-create1.js'
+} from './bookmark-create.js'
 import {
-  createBookmarkInDatedTemplate,
   moveBookmarkInDatedTemplate,
 } from './bookmark-dated.js'
 import {
@@ -84,11 +83,6 @@ async function onCreateBookmark(task) {
 
     await tagList.addRecentTagFromBkm(node)
   }
-
-  // changes in active tab
-  debouncedUpdateActiveTab({
-    debugCaller: 'onCreateBookmark'
-  });
 }
 
 async function onMoveBookmark(task) {
@@ -96,116 +90,95 @@ async function onMoveBookmark(task) {
   const { oldIndex, index, oldParentId, parentId } = moveInfo
   const { url, title } = node
 
-  if (parentId !== oldParentId) {
-    const [parentNode] = await chrome.bookmarks.get(parentId)
-    const isDatedTemplate = isDatedFolderTemplate(parentNode.title)
+  const [parentNode] = await chrome.bookmarks.get(parentId)
+  const isDatedTemplate = isDatedFolderTemplate(parentNode.title)
 
-    if (!isDatedTemplate) {
-      await tagList.addRecentTagFromBkm(node);
-    }
-
-    const isBookmarkWasCreatedManually = (
-      bookmarkId == lastCreatedBkmId
-      && memo.activeTabId == lastCreatedBkmTabId
-      && !isBookmarkCreatedWithApi({ parentId: oldParentId, url: node.url })
-    )
-
-    const bookmarkList = await chrome.bookmarks.search({ url: node.url });
-    const isFirstBookmark = bookmarkList.length == 1
-    const isMoveOnly = isBookmarkWasCreatedManually && isFirstBookmark && lastMovedBkmId != bookmarkId
-
-    if (isMoveOnly) {
-      if (isDatedTemplate) {
-        await moveBookmarkInDatedTemplate({
-          parentId,
-          parentTitle: parentNode.title,
-          bookmarkId,
-          url,
-        })
-      } else {
-        if (index !== 0) {
-          await moveBookmarkIgnoreInController({ id: bookmarkId, index: 0 })
-        }
-      }
-    } else {
-      let isReplaceMoveToCreate = false
-
-      if (IS_BROWSER_CHROME) {
-        const isChromeBookmarkManagerTabActive = !!memo.activeTabUrl && memo.activeTabUrl.startsWith('chrome://bookmarks');
-        isReplaceMoveToCreate = !isChromeBookmarkManagerTabActive
-      } else if (IS_BROWSER_FIREFOX) {
-        const childrenList = await chrome.bookmarks.getChildren(parentId)
-        const lastIndex = childrenList.length - 1
-          // isReplaceMoveToCreate = index == lastIndex && settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN]
-        isReplaceMoveToCreate = index == lastIndex && url == memo.activeTabUrl
-      }
-
-      const unclassifiedFolderId = await getUnclassifiedFolderId()
-      isReplaceMoveToCreate = isReplaceMoveToCreate && parentId !== unclassifiedFolderId
-
-      if (isReplaceMoveToCreate) {
-        await moveBookmarkIgnoreInController({ id: bookmarkId, parentId: oldParentId, index: oldIndex })
-
-        if (isDatedTemplate) {
-          await createBookmarkInDatedTemplate({
-            parentId,
-            parentTitle: parentNode.title,
-            title,
-            url,
-          })
-        } else {
-          const newBkm = {
-            parentId,
-            title,
-            url,
-            index: 0,
-          }
-          await createBookmarkIgnoreInController(newBkm)
-        }
-      }
-    }
-
-    lastMovedBkmId = bookmarkId
-    debouncedUpdateActiveTab({
-      debugCaller: 'onMoveBookmark'
-    });
+  if (!isDatedTemplate) {
+    await tagList.addRecentTagFromBkm(node);
   }
-}
 
-// eslint-disable-next-line no-unused-vars
-async function onChangeBookmark(task) {
-  // changes in active tab
-  debouncedUpdateActiveTab({
-    debugCaller: 'onChangeBookmark'
-  });
-}
+  const isBookmarkWasCreatedManually = (
+    bookmarkId == lastCreatedBkmId
+    && memo.activeTabId == lastCreatedBkmTabId
+    && !isBookmarkCreatedWithApi({ parentId: oldParentId, url: node.url })
+  )
 
-// eslint-disable-next-line no-unused-vars
-async function onDeleteBookmark(task) {
-  // changes in active tab
-  debouncedUpdateActiveTab({
-    debugCaller: 'onDeleteBookmark'
-  });
+  const bookmarkList = await chrome.bookmarks.search({ url: node.url });
+  const isFirstBookmark = bookmarkList.length == 1
+  const isMoveOnly = isBookmarkWasCreatedManually && isFirstBookmark && lastMovedBkmId != bookmarkId
+
+  if (isMoveOnly) {
+    if (isDatedTemplate) {
+      await moveBookmarkInDatedTemplate({
+        parentId,
+        parentTitle: parentNode.title,
+        bookmarkId,
+        url,
+      })
+    } else {
+      if (index !== 0) {
+        await moveBookmarkIgnoreInController({ id: bookmarkId, index: 0 })
+      }
+    }
+  } else {
+    let isReplaceMoveToCreate = false
+
+    if (IS_BROWSER_CHROME) {
+      const isChromeBookmarkManagerTabActive = !!memo.activeTabUrl && memo.activeTabUrl.startsWith('chrome://bookmarks');
+      isReplaceMoveToCreate = !isChromeBookmarkManagerTabActive
+    } else if (IS_BROWSER_FIREFOX) {
+      const childrenList = await chrome.bookmarks.getChildren(parentId)
+      const lastIndex = childrenList.length - 1
+        // isReplaceMoveToCreate = index == lastIndex && settings[INTERNAL_VALUES.TAG_LIST_IS_OPEN]
+      isReplaceMoveToCreate = index == lastIndex && url == memo.activeTabUrl
+    }
+
+    const unclassifiedFolderId = await getUnclassifiedFolderId()
+    isReplaceMoveToCreate = isReplaceMoveToCreate && parentId !== unclassifiedFolderId
+
+    if (isReplaceMoveToCreate) {
+      await moveBookmarkIgnoreInController({ id: bookmarkId, parentId: oldParentId, index: oldIndex })
+      await createBookmark({ parentId, url, title })
+    }
+  }
+
+  lastMovedBkmId = bookmarkId
 }
 
 async function bookmarkQueueRunner(task) {
+  let isCallUpdateActiveTab = false
+
   switch (task.action) {
     case NODE_ACTION.CREATE: {
       await onCreateBookmark(task)
+      isCallUpdateActiveTab = true
       break
     }
     case NODE_ACTION.MOVE: {
-      await onMoveBookmark(task)
+      const { moveInfo } = task
+      const { oldParentId, parentId } = moveInfo
+
+      if (parentId !== oldParentId) {
+        await onMoveBookmark(task)
+        isCallUpdateActiveTab = true
+      }
+
       break
     }
     case NODE_ACTION.CHANGE: {
-      await onChangeBookmark(task)
+      isCallUpdateActiveTab = true
       break
     }
     case NODE_ACTION.DELETE: {
-      await onDeleteBookmark(task)
+      isCallUpdateActiveTab = true
       break
     }
+  }
+
+  if (isCallUpdateActiveTab) {
+    debouncedUpdateActiveTab({
+      debugCaller: `bookmarks.on ${task.action}`
+    });
   }
 }
 

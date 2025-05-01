@@ -51,7 +51,6 @@ createFileForFirefox(
     'bookmark-controller-api/folder-ignore.js',
     'bookmark-controller-api/folder-create.js',
     'bookmark-controller-api/bookmark-ignore.js',
-    'bookmark-controller-api/bookmark-create1.js',
     'bookmark-controller-api/bookmark-dated.js',
     'bookmark-controller-api/bookmark-create.js',
     'bookmark-controller-api/nodeTaskQueue.js',

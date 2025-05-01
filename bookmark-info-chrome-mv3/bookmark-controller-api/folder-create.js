@@ -58,14 +58,14 @@ export async function findOrCreateFolder(title) {
 }
 
 // folderTitle = 'DONE @D' 'selected @D' 'BEST @D'
-export async function getDatedFolder(templateTitle, templateId) {
+export async function findOrCreateDatedFolder({ templateTitle, templateId }) {
   if (!isDatedFolderTemplate(templateTitle)) {
     return
   }
-  logFCR('getDatedFolder () 00', templateTitle)
+  logFCR('findOrCreateDatedFolder () 00', templateTitle)
 
   const datedTitle = getDatedTitle(templateTitle)
-  logFCR('getDatedFolder () 11', 'datedTitle', datedTitle)
+  logFCR('findOrCreateDatedFolder () 11', 'datedTitle', datedTitle)
   const rootId = getNewFolderRootIdForDated(templateTitle, templateId)
   let foundFolder = await findFolderWithExactTitle({ title: datedTitle, rootId })
 

@@ -1160,18 +1160,18 @@ ${semanticTagsStyle}
   }
 
   async function addBookmarkByFolderNameList(inFolderNameList) {
-    const folderNameList = inFolderNameList
+    const parentNameList = inFolderNameList
       .map((s) => s.trim())
       .filter(Boolean)
 
-    if (folderNameList.length == 0) {
+    if (parentNameList.length == 0) {
       return
     }
 
     const fullState = stateContainer.getState()
     const bookmarkList = fullState.bookmarkList || []
     const newBookmarkList = bookmarkList.concat(
-      folderNameList.map((folderName) => ({
+      parentNameList.map((folderName) => ({
         id: '',
         title: document.title,
         folder: folderName,
@@ -1186,8 +1186,7 @@ ${semanticTagsStyle}
       command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
       url: document.location.href,
       title: document.title,
-      // folderName: trimmedFolderName,
-      folderNameList,
+      parentNameList,
     });
   }
 

@@ -6,14 +6,10 @@ import {
 } from '../api-low/index.js';
 import {
   isDatedTitleForTemplate,
-  isVisitedDatedTemplate,
 } from '../folder-api/index.js';
 import {
-  getDatedFolder,
+  findOrCreateDatedFolder,
 } from './folder-create.js';
-import {
-  createBookmarkInCommonFolder,
-} from './bookmark-create1.js';
 import {
   moveBookmarkIgnoreInController,
 } from './bookmark-ignore.js';
@@ -44,7 +40,7 @@ export async function getDatedBookmarks({ url, template }) {
   return selectedList
 }
 
-async function removePreviousDatedBookmarks({ url, template }) {
+export async function removePreviousDatedBookmarks({ url, template }) {
   const bookmarkList = await getDatedBookmarks({ url, template })
 
   const removeFolderList = bookmarkList
@@ -72,23 +68,6 @@ export async function removeDatedBookmarksForTemplate({ url, template }) {
   )
 }
 
-export async function createBookmarkInDatedTemplate({
-  parentId,
-  parentTitle,
-  title,
-  url
-}) {
-  const datedFolder = await getDatedFolder(parentTitle, parentId)
-  logBDT('createBookmarkInDatedTemplate () 11', 'datedFolder', datedFolder)
-
-  await createBookmarkInCommonFolder({ parentId: datedFolder.id, title, url, ignore: true })
-
-  if (!isVisitedDatedTemplate(parentTitle)) {
-    await tagList.addRecentTagFromFolder({ id: parentId, title: parentTitle })
-  }
-  removePreviousDatedBookmarks({ url, template: parentTitle })
-}
-
 export async function moveBookmarkInDatedTemplate({
   parentId,
   parentTitle,
@@ -96,7 +75,7 @@ export async function moveBookmarkInDatedTemplate({
   url,
   isSingle,
 }) {
-  const datedFolder = await getDatedFolder(parentTitle, parentId)
+  const datedFolder = await findOrCreateDatedFolder({ templateTitle: parentTitle, templateId: parentId })
   logBDT('moveBookmarkInDatedTemplate () 11', 'datedFolder', datedFolder)
 
   // await chrome.bookmarks.move(bookmarkId, { parentId: datedFolder.id, index: 0 })

@@ -1,6 +1,5 @@
 import {
-  createBookmarkFolderById,
-  createBookmarkFolderByName,
+  createBookmark,
 } from '../bookmark-controller-api/index.js'
 import {
   moveToFlatFolderStructure,
@@ -31,33 +30,22 @@ const logIM = makeLogFunction({ module: 'incoming-message' })
 const HandlersWithUpdateTab = {
   [EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_ID]: async ({ parentId, url, title }) => {
     logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_ID');
-    await createBookmarkFolderById({
+    await createBookmark({
       parentId,
       title,
       url,
     })
   },
-  [EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME]: async ({ folderNameList, url, title }) => {
-    logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', folderNameList);
+  [EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME]: async ({ parentNameList, url, title }) => {
+    logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', parentNameList);
 
-    if (!folderNameList) {
-      return
-    }
-
-    const filteredList = folderNameList
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .filter((name) => !(50 < name.length))
-
-    if (filteredList.length == 0) {
-      return
-    }
-
-    await createBookmarkFolderByName({
-      url,
-      title,
-      folderNameList: filteredList,
-    })
+    await Promise.allSettled(parentNameList.map(
+      (parentName) => createBookmark({
+        parentName,
+        url,
+        title,
+      })
+    ))
   },
 
 

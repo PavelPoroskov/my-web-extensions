@@ -10,3 +10,5 @@ export * from './bookmark-create.js'
 export * from './bookmarkQueue.js'
 export * from './folderQueue.js'
 export * from './ignoreBkmControllerApiActionSet.js'
+
+export * from './bookmark-visited.js'
