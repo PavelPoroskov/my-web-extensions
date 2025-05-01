@@ -1,6 +1,11 @@
 import {
   ignoreBkmControllerApiActionSet,
 } from './ignoreBkmControllerApiActionSet.js'
+import {
+  makeLogFunction,
+} from '../api-low/index.js'
+
+const logBI = makeLogFunction({ module: 'bookmark-ignore.js' })
 
 export async function createBookmarkIgnoreInController({
   title,
@@ -8,6 +13,7 @@ export async function createBookmarkIgnoreInController({
   parentId,
   index,
 }) {
+  logBI('createBookmarkIgnoreInController 00', url)
   const options = { url, parentId, title }
   if (index != undefined) {
     options.index = index
@@ -15,7 +21,8 @@ export async function createBookmarkIgnoreInController({
 
   ignoreBkmControllerApiActionSet.addIgnoreCreate(options)
 
-  return await chrome.bookmarks.create(options)
+  await chrome.bookmarks.create(options)
+  logBI('createBookmarkIgnoreInController 99')
 }
 
 export async function moveBookmarkIgnoreInController({ id, parentId, index }) {

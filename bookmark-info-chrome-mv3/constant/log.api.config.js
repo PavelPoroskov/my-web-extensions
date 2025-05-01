@@ -1,5 +1,7 @@
 const logModuleList = [
+  // 'bookmarks.controller.js',
   // 'bookmark-create.js',
+  // 'bookmark-ignore.js',
   // 'bookmarkQueue.js',
   // 'browserStartTime',
   // 'cache',
@@ -15,7 +17,7 @@ const logModuleList = [
   // 'get-bookmarks.api.js',
   // 'getUrlFromUrl',
   // 'history.api',
-  // 'incoming-message',
+  // 'incoming-message.js',
   // 'init-extension',
   // 'memo',
   // 'moveFolders.js',

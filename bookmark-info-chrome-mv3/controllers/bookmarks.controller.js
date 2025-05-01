@@ -5,12 +5,19 @@ import {
   bookmarkQueue,
   folderQueue,
 } from '../bookmark-controller-api/index.js'
+import {
+  makeLogFunction,
+} from '../api-low/index.js'
+
+const logBCT = makeLogFunction({ module: 'bookmarks.controller.js' })
 
 export const bookmarksController = {
   async onCreated(bookmarkId, node) {
+    logBCT('onCreated 00', node)
     if (ignoreBkmControllerApiActionSet.hasIgnoreCreate(node)) {
       return
     }
+    logBCT('onCreated 11')
 
     if (node.url) {
       bookmarkQueue.enqueueCreate({ bookmarkId, node })

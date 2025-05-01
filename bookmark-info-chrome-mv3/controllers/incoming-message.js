@@ -26,7 +26,7 @@ import {
   makeLogFunction,
 } from '../api-low/index.js'
 
-const logIM = makeLogFunction({ module: 'incoming-message' })
+const logIM = makeLogFunction({ module: 'incoming-message.js' })
 
 const HandlersWithUpdateTab = {
   [EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_ID]: async ({ parentId, url, title }) => {
@@ -138,6 +138,7 @@ const allHandlers = {
 }
 
 export async function onIncomingMessage (message, sender) {
+  logIM('onIncomingMessage 00');
   const tabId = sender?.tab?.id;
   const { command, ...restMessage } = message
 
@@ -145,13 +146,15 @@ export async function onIncomingMessage (message, sender) {
   const handler = allHandlers[command]
 
   if (handler) {
+    logIM('onIncomingMessage 11');
     await handler({ ...restMessage, tabId })
+    logIM('onIncomingMessage 22');
 
     if (HandlersWithUpdateTab[command]) {
+      logIM('onIncomingMessage 33');
       updateActiveTab({
         tabId,
         debugCaller: `runtime.onMessage ${command}`,
-        useCache: true,
       })
     }
   }
