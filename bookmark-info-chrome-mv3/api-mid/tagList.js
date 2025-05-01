@@ -44,7 +44,6 @@ class TagList {
   changeProcessedCount = -1
 
   addRecentTagFromFolder = () => { }
-  addRecentTagFromBkm = () => { }
   removeTag = () => { }
 
   get list() {
@@ -77,11 +76,9 @@ class TagList {
     logTL('_enableTagList 00', isEnabled)
     if (isEnabled) {
       this.addRecentTagFromFolder = this._addRecentTagFromFolder
-      this.addRecentTagFromBkm = this._addRecentTagFromBkm
       this.removeTag = this._removeTag
     } else {
       this.addRecentTagFromFolder = () => { }
-      this.addRecentTagFromBkm = () => { }
       this.removeTag = () => { }
     }
   }
@@ -301,14 +298,14 @@ class TagList {
       ...fixedTagUpdate,
     })
   }
-  async _addRecentTagFromBkm(bkmNode) {
-    const parentId = bkmNode?.parentId
+  // async _addRecentTagFromBkm(bkmNode) {
+  //   const parentId = bkmNode?.parentId
 
-    if (parentId) {
-      const [folderNode] = await chrome.bookmarks.get(parentId)
-      await this.addRecentTagFromFolder(folderNode)
-    }
-  }
+  //   if (parentId) {
+  //     const [folderNode] = await chrome.bookmarks.get(parentId)
+  //     await this.addRecentTagFromFolder(folderNode)
+  //   }
+  // }
   async _removeTag(id) {
     const isInFixedList = id in this._fixedTagObj
     let fixedTagUpdate

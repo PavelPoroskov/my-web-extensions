@@ -31,9 +31,9 @@ export const bookmarksController = {
     }
   },
   async onChanged(bookmarkId, changeInfo) {
-    if (ignoreBkmControllerApiActionSet.hasIgnoreUpdate(bookmarkId)) {
-      return
-    }
+    // if (ignoreBkmControllerApiActionSet.hasIgnoreUpdate(bookmarkId)) {
+    //   return
+    // }
 
     const [node] = await chrome.bookmarks.get(bookmarkId)
 

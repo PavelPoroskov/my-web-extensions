@@ -65,6 +65,7 @@ createFileForFirefox(
     'api/updateTab.js',
     'api/index.js',
 
+    'bookmark-controller-api/folder-gui.js',
     'bookmark-controller-api/bookmarkQueue.js',
     'bookmark-controller-api/folderQueue.js',
     'bookmark-controller-api/bookmark-visited.js',
