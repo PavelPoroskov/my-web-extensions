@@ -3,7 +3,7 @@ import {
   OTHER_BOOKMARKS_FOLDER_ID,
 } from '../folder-api/index.js';
 import {
-  moveBookmarkIgnoreInController,
+  moveBookmark,
 } from '../bookmark-controller-api/index.js'
 
 async function moveRootBookmarks({ fromId, unclassifiedId }) {
@@ -19,7 +19,7 @@ async function moveRootBookmarks({ fromId, unclassifiedId }) {
 
   await bkmList.reduce(
     (promiseChain, bkm) => promiseChain.then(
-      () => moveBookmarkIgnoreInController({ id: bkm.id, parentId: unclassifiedId })
+      () => moveBookmark({ id: bkm.id, parentId: unclassifiedId })
     ),
     Promise.resolve(),
   );

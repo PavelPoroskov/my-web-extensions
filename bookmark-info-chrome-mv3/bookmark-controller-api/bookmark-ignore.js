@@ -32,7 +32,11 @@ export async function moveBookmarkIgnoreInController({ id, parentId, index }) {
 
   ignoreBkmControllerApiActionSet.addIgnoreMove(id)
 
-  return await chrome.bookmarks.move(id, options)
+  await chrome.bookmarks.move(id, options)
+}
+
+export async function moveBookmark({ id, parentId, index }) {
+  await chrome.bookmarks.move(id, { parentId, index })
 }
 
 export async function removeBookmark(bkmId) {

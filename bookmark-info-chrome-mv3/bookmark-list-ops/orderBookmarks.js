@@ -6,7 +6,7 @@ import {
   DATED_TITLE,
 } from '../folder-api/index.js'
 import {
-  getOrCreateFolderByTitleInRoot,
+  findOrCreateFolderByTitleInRoot,
 } from '../bookmark-controller-api/index.js'
 import {
   moveFolders,
@@ -41,8 +41,8 @@ const logOD = makeLogFunction({ module: 'orderBookmarks.js' })
 export async function orderBookmarks() {
   logOD('orderBookmarks() 00')
 
-  await getOrCreateFolderByTitleInRoot(UNCLASSIFIED_TITLE)
-  await getOrCreateFolderByTitleInRoot(DATED_TITLE)
+  await findOrCreateFolderByTitleInRoot(UNCLASSIFIED_TITLE)
+  await findOrCreateFolderByTitleInRoot(DATED_TITLE)
 
   logOD('orderBookmarks() 11')
   await moveFolders()

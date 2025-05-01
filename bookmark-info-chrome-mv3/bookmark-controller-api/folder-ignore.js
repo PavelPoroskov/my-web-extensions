@@ -49,6 +49,14 @@ export async function moveFolderIgnoreInController({ id, parentId, index }) {
   return await moveNodeIgnoreInController({ id, parentId, index })
 }
 
+export async function createFolder(folderParams) {
+  await chrome.bookmarks.create(folderParams)
+}
+
+export async function updateFolder({ id, title }) {
+  await chrome.bookmarks.update(id, { title })
+}
+
 export async function removeFolder(bkmId) {
   await chrome.bookmarks.remove(bkmId)
 }

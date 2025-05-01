@@ -12,6 +12,8 @@ import {
 } from '../folder-api/index.js';
 import {
   createFolderIgnoreInController,
+  createFolder,
+  updateFolder,
 } from './folder-ignore.js'
 
 const logFCR = makeLogFunction({ module: 'folder-create.js' })
@@ -34,7 +36,7 @@ export async function findOrCreateFolder(title) {
       folderParams.index = findIndex.index
     }
 
-    folder = await chrome.bookmarks.create(folderParams)
+    folder = await createFolder(folderParams)
   } else {
     const oldBigLetterN = folder.title.replace(/[^A-Z]+/g, "").length
     const newBigLetterN = title.replace(/[^A-Z]+/g, "").length
@@ -42,15 +44,13 @@ export async function findOrCreateFolder(title) {
     logFCR('findOrCreateFolder () 22', oldBigLetterN, newBigLetterN)
 
     if (oldBigLetterN < newBigLetterN) {
-      // await updateFolderIgnoreInController({ id: folder.id, title })
-      await chrome.bookmarks.update(folder.id, { title })
+      await updateFolder({ id: folder.id, title })
     }
 
     const oldDashN = folder.title.replace(/[^-]+/g,"").length
     const newDashN = title.replace(/[^-]+/g,"").length
     if (newDashN < oldDashN) {
-      // await updateFolderIgnoreInController({ id: folder.id, title })
-      await chrome.bookmarks.update(folder.id, { title })
+      await updateFolder({ id: folder.id, title })
     }
   }
 
@@ -88,7 +88,7 @@ export async function findOrCreateDatedFolder({ templateTitle, templateId }) {
   return foundFolder
 }
 
-export async function getOrCreateFolderByTitleInRoot(title) {
+export async function findOrCreateFolderByTitleInRoot(title) {
   const nodeList = await chrome.bookmarks.search({ title });
   const foundItem = nodeList.find((node) => !node.url && node.parentId == OTHER_BOOKMARKS_FOLDER_ID)
 
