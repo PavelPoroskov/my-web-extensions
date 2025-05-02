@@ -16,6 +16,10 @@ const logMOD = makeLogFunction({ module: 'moveOldDatedFolders.js' })
 const KEEP_DATED_FOLDERS = 7
 
 export async function moveOldDatedFolders(fromId) {
+  if (fromId) {
+    return
+  }
+
   logMOD('moveOldDatedFolders 00')
   const childrenList = await chrome.bookmarks.getChildren(fromId)
 

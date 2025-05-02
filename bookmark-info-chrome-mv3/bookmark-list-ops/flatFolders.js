@@ -73,7 +73,7 @@ async function getMaxUsedSuffix() {
   return maxUsedSuffix
 }
 
-async function flatChildren({ parentId, freeSuffix, datedRootId }) {
+async function flatChildren({ parentId, freeSuffix }) {
   const notFlatFolderList = []
   const flatFolderList = []
 
@@ -81,9 +81,6 @@ async function flatChildren({ parentId, freeSuffix, datedRootId }) {
 
   for (const node of otherBookmarks.children) {
     if (!node.url) {
-      if (node.id == datedRootId) {
-        continue
-      }
 
       const childrenFolderList = node.children.filter(({ url }) => !url)
 

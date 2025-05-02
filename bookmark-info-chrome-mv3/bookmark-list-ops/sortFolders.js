@@ -1,5 +1,4 @@
 import {
-  OTHER_BOOKMARKS_FOLDER_ID,
   isDatedFolderTemplate,
 } from '../folder-api/index.js';
 import {
@@ -7,6 +6,10 @@ import {
 } from '../bookmark-controller-api/index.js'
 
 export async function sortFolders(parentId) {
+  if (parentId) {
+    return
+  }
+
   // console.log('sortChildFoldersOp',  parentId)
   const nodeList = await chrome.bookmarks.getChildren(parentId)
 
@@ -39,17 +42,14 @@ export async function sortFolders(parentId) {
     Promise.resolve(),
   );
 
-  if (parentId == OTHER_BOOKMARKS_FOLDER_ID) {
-    const subfolderList = sortedNodeList
-      .filter(({ title }) => isDatedFolderTemplate(title))
 
-    await subfolderList.reduce(
-      (promiseChain, node) => promiseChain.then(
-        () => sortFolders(node.id)
-      ),
-      Promise.resolve(),
-    );
-  }
+  const subfolderList = sortedNodeList
+    .filter(({ title }) => isDatedFolderTemplate(title))
 
-  // console.log('Sorted',  sortedNodeList.map(({ title }) => title))
+  await subfolderList.reduce(
+    (promiseChain, node) => promiseChain.then(
+      () => sortFolders(node.id)
+    ),
+    Promise.resolve(),
+  );
 }

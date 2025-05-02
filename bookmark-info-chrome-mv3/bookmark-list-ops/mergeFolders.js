@@ -1,7 +1,4 @@
 import {
-  BOOKMARKS_BAR_FOLDER_ID,
-  BOOKMARKS_MENU_FOLDER_ID,
-  OTHER_BOOKMARKS_FOLDER_ID,
   normalizeTitle,
   trimTitle,
 } from '../folder-api/index.js'
@@ -23,7 +20,11 @@ async function moveContent(fromFolderId, toFolderId) {
   );
 }
 
-async function mergeSubFolder(parentId) {
+async function mergeSubFoldersLevelOne(parentId) {
+  if (parentId) {
+    return
+  }
+
   // console.log('### mergeSubFolder 00,', parentId)
   const nodeList = await chrome.bookmarks.getChildren(parentId)
   const folderNodeList = nodeList.filter(({ url }) => !url)
@@ -71,7 +72,40 @@ async function mergeSubFolder(parentId) {
   );
 }
 
-async function trimTitleInSubFolder(parentId) {
+export async function mergeSubFoldersLevelOneAndTwo(parentId) {
+  if (parentId) {
+    return
+  }
+
+  await mergeSubFoldersLevelOne(parentId)
+
+
+  const mergeLevelTwoList = []
+  const [rootNode] = await chrome.bookmarks.getSubTree(parentId)
+
+  for (const node of rootNode.children) {
+    if (!node.url) {
+      const childrenFolderList = node.children.filter(({ url }) => !url)
+
+      if (2 <= childrenFolderList.length) {
+        mergeLevelTwoList.push(node.id)
+      }
+    }
+  }
+
+  await mergeLevelTwoList.reduce(
+    (promiseChain, folderLevelOneId) => promiseChain.then(
+      () => mergeSubFoldersLevelOne(folderLevelOneId)
+    ),
+    Promise.resolve(),
+  );
+}
+
+export async function trimTitleInSubFolders(parentId) {
+  if (parentId) {
+    return
+  }
+
   const nodeList = await chrome.bookmarks.getChildren(parentId)
   const folderNodeList = nodeList.filter(({ url }) => !url)
 
@@ -93,18 +127,4 @@ async function trimTitleInSubFolder(parentId) {
     ),
     Promise.resolve(),
   );
-}
-
-export async function mergeFolders() {
-  await mergeSubFolder(BOOKMARKS_BAR_FOLDER_ID)
-  if (BOOKMARKS_MENU_FOLDER_ID) {
-    await mergeSubFolder(BOOKMARKS_MENU_FOLDER_ID)
-  }
-  await mergeSubFolder(OTHER_BOOKMARKS_FOLDER_ID)
-
-  await trimTitleInSubFolder(BOOKMARKS_BAR_FOLDER_ID)
-  if (BOOKMARKS_MENU_FOLDER_ID) {
-    await trimTitleInSubFolder(BOOKMARKS_MENU_FOLDER_ID)
-  }
-  await trimTitleInSubFolder(OTHER_BOOKMARKS_FOLDER_ID)
 }

@@ -31,6 +31,5 @@ function memoize(fnGetValue) {
 }
 
 export const UNCLASSIFIED_TITLE = 'zz-bookmark-info--unclassified'
-export const DATED_TITLE = 'zz-bookmark-info--dated'
 
 export const getUnclassifiedFolderId = memoize(async () => getFolderByTitleInRoot(UNCLASSIFIED_TITLE))
