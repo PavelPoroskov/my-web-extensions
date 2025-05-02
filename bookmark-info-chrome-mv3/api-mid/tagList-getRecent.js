@@ -4,6 +4,7 @@ import {
   getUnclassifiedFolderId,
   isDatedFolderTitle,
   isDescriptiveFolderTitle,
+  isVisitedDatedTemplate,
 } from '../folder-api/index.js'
 import {
   makeLogFunction,
@@ -88,6 +89,7 @@ async function filterFolders(idList, isFlatStructure) {
     .filter(({ title }) => !!title)
     .filter(({ title }) => isDescriptiveFolderTitle(title))
     .filter(({ title }) => !isDatedFolderTitle(title))
+    .filter(({ title }) => !isVisitedDatedTemplate(title))
 
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {
