@@ -28,7 +28,7 @@ async function getMaxUsedSuffix() {
     }
 
     const [rootFolder] = await chrome.bookmarks.getTree();
-    traverseFolderRecursively({ folder: rootFolder, onFolder })
+    await traverseFolderRecursively({ folder: rootFolder, onFolder })
 
     return {
       folderById,

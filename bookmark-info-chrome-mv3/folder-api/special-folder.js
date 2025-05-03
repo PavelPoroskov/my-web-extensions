@@ -2,6 +2,7 @@ import {
   IS_BROWSER_FIREFOX,
 } from '../constant/index.js';
 
+export const ROOT_FOLDER_ID = IS_BROWSER_FIREFOX ? 'root________' : '0'
 export const BOOKMARKS_BAR_FOLDER_ID = IS_BROWSER_FIREFOX ? 'toolbar_____' : '1'
 export const BOOKMARKS_MENU_FOLDER_ID = IS_BROWSER_FIREFOX ? 'menu________' : undefined
 export const OTHER_BOOKMARKS_FOLDER_ID = IS_BROWSER_FIREFOX ? 'unfiled_____' : '2'

@@ -1,6 +1,6 @@
 
-export function traverseFolderRecursively({ folder: rootFolder, onFolder, startLevel=0 }) {
-  function traverseFolder({ folder, level }) {
+export async function traverseFolderRecursively({ folder: rootFolder, onFolder, startLevel=0 }) {
+  async function traverseFolder({ folder, level }) {
     const childBookmarkList = []
     const childFolderList = []
 
@@ -14,13 +14,16 @@ export function traverseFolderRecursively({ folder: rootFolder, onFolder, startL
       }
     }
 
-    onFolder({ folder, bookmarkList: childBookmarkList, level })
+    await onFolder({ folder, bookmarkList: childBookmarkList, level })
 
     const nextLevel = level + 1
-    for (const childFolder of childFolderList) {
-      traverseFolder({ folder: childFolder, level: nextLevel })
-    }
+    await childFolderList.reduce(
+      (promiseChain, childFolder) => promiseChain.then(
+        () => traverseFolder({ folder: childFolder, level: nextLevel })
+      ),
+      Promise.resolve(),
+    );
   }
 
-  traverseFolder({ folder: rootFolder, level: startLevel })
+  await traverseFolder({ folder: rootFolder, level: startLevel })
 }

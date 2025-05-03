@@ -13,6 +13,9 @@ import {
 import {
   makeLogFunction,
 } from '../api-low/index.js';
+import {
+  traverseFolderRecursively,
+} from './traverseFolder.js'
 
 const logMF = makeLogFunction({ module: 'moveFolders.js' })
 
@@ -32,7 +35,7 @@ async function getParentIdForDatedFolder(title) {
   return parentId;
 }
 
-async function getFolderCorrectParentId(title) {
+async function getFolderCorrectParentIdByTitle(title) {
   let parentId = OTHER_BOOKMARKS_FOLDER_ID
   let secondParentId
 
@@ -51,6 +54,18 @@ async function getFolderCorrectParentId(title) {
   }
 }
 
+const mapIdToParentId = {
+  BOOKMARKS_BAR_FOLDER_ID: { parentId: ROOT_FOLDER_ID },
+  OTHER_BOOKMARKS_FOLDER_ID: { parentId: ROOT_FOLDER_ID },
+}
+if (BOOKMARKS_MENU_FOLDER_ID) {
+  mapIdToParentId[BOOKMARKS_MENU_FOLDER_ID] = { parentId: ROOT_FOLDER_ID }
+}
+
+async function getFolderCorrectParentId(folder) {
+  return mapIdToParentId[folder.id] || (await getFolderCorrectParentIdByTitle(folder.title))
+}
+
 async function orderChildren(parentId) {
   if (!parentId) {
     return []
@@ -58,44 +73,26 @@ async function orderChildren(parentId) {
 
   const moveList = []
 
-  async function traverseSubFolder(folderNode, folderLevel) {
-
-    const correct = await getFolderCorrectParentId(folderNode.title)
+  async function onFolder({ folder, level }) {
+    const correct = await getFolderCorrectParentId(folder)
 
     let correctParentId = correct.parentId
-    let isCorrect = folderNode.parentId == correctParentId
+    let isCorrect = folder.parentId == correctParentId
     if (!isCorrect && correct.secondParentId) {
       correctParentId = correct.secondParentId
-      isCorrect = folderNode.parentId == correctParentId
+      isCorrect = folder.parentId == correctParentId
     }
     if (!isCorrect) {
       moveList.push({
-        id: folderNode.id,
+        id: folder.id,
         parentId: correctParentId,
-        level: folderLevel,
+        level,
       })
     }
-
-    const folderList = folderNode.children
-      .filter(({ url }) => !url)
-
-    await folderList.reduce(
-      (promiseChain, node) => promiseChain.then(
-        () => traverseSubFolder(node, folderLevel + 1)
-      ),
-      Promise.resolve(),
-    );
   }
 
   const [rootFolder] = await chrome.bookmarks.getSubTree(parentId)
-  const folderList = rootFolder.children.filter(({ url }) => !url)
-
-  await folderList.reduce(
-    (promiseChain, node) => promiseChain.then(
-      () => traverseSubFolder(node, 1)
-    ),
-    Promise.resolve(),
-  );
+  await traverseFolderRecursively({ folder: rootFolder, onFolder })
 
   return moveList;
 }
