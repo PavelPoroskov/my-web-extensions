@@ -64,89 +64,55 @@ async function getMaxUsedSuffix() {
 }
 
 async function flatChildren({ parentId, freeSuffix }) {
-  const notFlatFolderList = []
-  const flatFolderList = []
-
-  const [otherBookmarks] = await chrome.bookmarks.getSubTree(parentId)
-
-  for (const node of otherBookmarks.children) {
-    if (!node.url) {
-
-      const childrenFolderList = node.children.filter(({ url }) => !url)
-
-      if (childrenFolderList.length > 0) {
-        notFlatFolderList.push(node)
-      } else {
-        // flatFolderNameSet.add(node.title)
-        flatFolderList.push(node)
-      }
-    }
+  if (!parentId) {
+    return []
   }
 
+  const moveList = []
   const flatFolderNameSet = new Set()
 
-  const updateTaskList = []
-  flatFolderList.forEach((folderNode) => {
-    if (flatFolderNameSet.has(folderNode.title)) {
-      const newTitle = `${folderNode.title} ${freeSuffix}`
+  function onFolder({ folder, bookmarkList, level }) {
+    const oData = {
+      id: folder.id,
+      bookmarkListLength: bookmarkList.length,
+      level,
+    }
+
+    if (flatFolderNameSet.has(folder.title)) {
+      oData.newTitle = `${folder.title} ${freeSuffix}`
       freeSuffix += 1
 
-      updateTaskList.push({
-        id: folderNode.id,
-        title: newTitle,
-      })
-    }
-  })
-  await updateTaskList.reduce(
-    (promiseChain, { id, title }) => promiseChain.then(
-      () => updateFolder({ id, title })
-    ),
-    Promise.resolve(),
-  );
-
-  async function flatFolder(rootFolder) {
-    async function traverseSubFolder(folderNode, folderLevel) {
-      const folderList = folderNode.children
-        .filter(({ url }) => !url)
-      const bookmarkList = folderNode.children
-        .filter(({ url }) => !!url)
-
-      await folderList.reduce(
-        (promiseChain, node) => promiseChain.then(
-          () => traverseSubFolder(node, folderLevel + 1)
-        ),
-        Promise.resolve(),
-      );
-
-      if (bookmarkList.length > 0) {
-        if (folderLevel > 0) {
-          await moveFolderIgnoreInController({ id: folderNode.id, parentId })
-
-          if (flatFolderNameSet.has(folderNode.title)) {
-            const newTitle = `${folderNode.title} ${freeSuffix}`
-            freeSuffix += 1
-
-            await updateFolder({
-              id: folderNode.id,
-              title: newTitle,
-            })
-            flatFolderNameSet.add(newTitle)
-          } else {
-            flatFolderNameSet.add(folderNode.title)
-          }
-        }
-      } else {
-        await removeFolder(folderNode.id)
-      }
+      flatFolderNameSet.add(oData.newTitle)
+    } else {
+      flatFolderNameSet.add(folder.title)
     }
 
-    await traverseSubFolder(rootFolder, 0)
+    moveList.push(oData)
   }
 
-  // flat
-  await notFlatFolderList.reduce(
-    (promiseChain, node) => promiseChain.then(
-      () => flatFolder(node)
+  const [rootFolder] = await chrome.bookmarks.getSubTree(parentId)
+  await traverseFolderRecursively({ folder: rootFolder, onFolder, startLevel: 0 })
+
+
+  const sortedMoveList = moveList
+    .sort((a,b) => -(a.level - b.level))
+
+  await sortedMoveList.reduce(
+    (promiseChain, { id, bookmarkListLength, level, newTitle }) => promiseChain.then(
+      async () => {
+        if (0 < bookmarkListLength) {
+          if (1 < level) {
+            await moveFolderIgnoreInController({ id, parentId })
+          }
+          if (newTitle && 0 < level) {
+            await updateFolder({ id, title: newTitle })
+          }
+        } else {
+          if (0 < level) {
+            await removeFolder(id)
+          }
+        }
+      }
     ),
     Promise.resolve(),
   );
