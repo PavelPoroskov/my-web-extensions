@@ -67,8 +67,7 @@ async function createBookmarkWithParentId({ parentId, url, title }) {
   }
 }
 
-export async function afterUserCreatedBookmarkInGUI({ node, isSingle }) {
-  const { parentId, id, url } = node
+export async function afterUserCreatedBookmarkInGUI({ parentId, id, url, index }) {
   const [parentNode] = await chrome.bookmarks.get(parentId)
   const parentName = parentNode.title
 
@@ -79,7 +78,7 @@ export async function afterUserCreatedBookmarkInGUI({ node, isSingle }) {
     await moveBookmarkIgnoreInController({
       id,
       parentId: datedFolder.id,
-      index: isSingle? 0 : undefined,
+      index: 0,
     })
 
     await removePreviousDatedBookmarks({ url, template: parentName })
@@ -88,7 +87,7 @@ export async function afterUserCreatedBookmarkInGUI({ node, isSingle }) {
       await tagList.addRecentTagFromFolder({ id: parentId, title: parentName })
     }
   } else {
-    if (node.index !== 0 && isSingle) {
+    if (index !== 0) {
       await moveBookmarkIgnoreInController({ id, index: 0 })
     }
 

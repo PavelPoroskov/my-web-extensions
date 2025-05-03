@@ -33,36 +33,15 @@ let lastCreatedBkmId
 let lastCreatedBkmTabId
 let lastMovedBkmId
 
-var lastCreatedTime
-var lastCreatedParentId
-const MS_DIFF_FOR_SINGLE_BKM = 80
-
-function isSingleBookmarkCreation(inParentId) {
-  let result
-  let now = Date.now()
-
-  if (lastCreatedTime) {
-    result = (MS_DIFF_FOR_SINGLE_BKM < now - lastCreatedTime) || inParentId != lastCreatedParentId
-  } else {
-    result = true
-  }
-
-  lastCreatedTime = now
-  lastCreatedParentId = inParentId
-
-  return result
-}
 
 async function onCreateBookmark(task) {
   const { bookmarkId, node } = task
-  const { parentId, url } = node
-  logBQ('onCreateBookmark () 00', url)
+  logBQ('onCreateBookmark () 00', node)
 
   lastCreatedBkmId = bookmarkId
   lastCreatedBkmTabId = memo.activeTabId
 
-  const isSingle = isSingleBookmarkCreation(parentId)
-  await afterUserCreatedBookmarkInGUI({ node, isSingle })
+  await afterUserCreatedBookmarkInGUI(node)
 }
 
 async function onMoveBookmark(task) {
@@ -81,7 +60,7 @@ async function onMoveBookmark(task) {
   const isMoveOnly = isBookmarkWasCreatedManually && isFirstBookmark && lastMovedBkmId != bookmarkId
 
   if (isMoveOnly) {
-    await afterUserCreatedBookmarkInGUI({ node, isSingle: true })
+    await afterUserCreatedBookmarkInGUI(node)
   } else {
     let isReplaceMoveToCreate = false
 
