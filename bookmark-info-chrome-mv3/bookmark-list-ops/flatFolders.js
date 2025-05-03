@@ -9,35 +9,40 @@ import {
 } from '../bookmark-controller-api/index.js';
 
 async function getMaxUsedSuffix() {
-  function getFoldersFromTree(tree) {
+  async function getFolders() {
     const folderById = {};
     let nTotalBookmark = 0
     let nTotalFolder = 0
 
-    function getFoldersFromNodeArray(nodeArray) {
+    function traverseFolder(folderNode) {
+      const childFolderList = []
       let nBookmark = 0
-      let nFolder = 0
 
-      nodeArray.forEach((node) => {
-        if (node.url) {
-          nBookmark += 1
-        } else {
-          nFolder += 1
-
-          folderById[node.id] = {
-            id: node.id,
-            title: node.title,
+      if (folderNode.children) {
+        for (const child of folderNode.children) {
+          if (child.url) {
+            nBookmark += 1
+          } else {
+            childFolderList.push(child)
           }
-
-          getFoldersFromNodeArray(node.children)
         }
-      });
+      }
+
+      folderById[folderNode.id] = {
+        id: folderNode.id,
+        title: folderNode.title,
+      }
 
       nTotalBookmark += nBookmark
-      nTotalFolder += nFolder
+      nTotalFolder += childFolderList.length
+
+      for (const childFolder of childFolderList) {
+        traverseFolder(childFolder)
+      }
     }
 
-    getFoldersFromNodeArray(tree);
+    const [rootNode] = await chrome.bookmarks.getTree();
+    traverseFolder(rootNode);
 
     return {
       folderById,
@@ -46,8 +51,7 @@ async function getMaxUsedSuffix() {
     };
   }
 
-  const bookmarkTree = await chrome.bookmarks.getTree();
-  const { folderById } = getFoldersFromTree(bookmarkTree);
+  const { folderById } = await getFolders();
 
   let maxUsedSuffix
   const allowedFirstChar = '123456789'

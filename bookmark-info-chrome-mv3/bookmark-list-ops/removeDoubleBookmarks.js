@@ -8,16 +8,23 @@ import {
 async function getDoubles() {
   const doubleList = []
 
-  async function traverseNodeList(nodeList) {
+  function traverseFolder(folderNode) {
+    const childFolderList = []
     const urlToIdMap = new ExtraMap()
-    nodeList
-      .filter(({ url }) => !!url)
-      .forEach(({ id, url, title }) => {
-        urlToIdMap.concat(url, { id, title })
-      })
 
-    for (const idList of urlToIdMap.values()) {
-      if (idList.length > 1) {
+    if (folderNode.children) {
+      for (const child of folderNode.children) {
+        if (child.url) {
+          const { url, id, title } = child
+          urlToIdMap.concat(url, { id, title })
+        } else {
+          childFolderList.push(child)
+        }
+      }
+    }
+
+   for (const idList of urlToIdMap.values()) {
+      if (1 < idList.length) {
         const titleToIdMap = new ExtraMap()
 
         idList.forEach(({ id, title }) => {
@@ -25,7 +32,7 @@ async function getDoubles() {
         })
 
         for (const idList of titleToIdMap.values()) {
-          if (idList.length > 1) {
+          if (1 < idList.length) {
             idList
               .slice(1)
               .forEach(
@@ -36,15 +43,13 @@ async function getDoubles() {
       }
     }
 
-    nodeList
-      .filter(({ url }) => !url)
-      .map(
-        (node) => traverseNodeList(node.children)
-      )
+    for (const childFolder of childFolderList) {
+      traverseFolder(childFolder)
+    }
   }
 
-  const nodeList = await chrome.bookmarks.getTree()
-  traverseNodeList(nodeList)
+  const [rootFolder] = await chrome.bookmarks.getTree()
+  traverseFolder(rootFolder)
 
   return doubleList
 }
