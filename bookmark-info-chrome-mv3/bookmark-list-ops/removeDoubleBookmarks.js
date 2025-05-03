@@ -4,26 +4,21 @@ import {
 import {
   removeBookmark,
 } from '../bookmark-controller-api/index.js'
+import {
+  traverseFolderRecursively,
+} from './traverseFolder.js'
 
 async function getDoubles() {
   const doubleList = []
 
-  function traverseFolder(folderNode) {
-    const childFolderList = []
+  function onFolder({ bookmarkList }) {
     const urlToIdMap = new ExtraMap()
 
-    if (folderNode.children) {
-      for (const child of folderNode.children) {
-        if (child.url) {
-          const { url, id, title } = child
-          urlToIdMap.concat(url, { id, title })
-        } else {
-          childFolderList.push(child)
-        }
-      }
-    }
+    bookmarkList.forEach(({ url, id, title }) => {
+      urlToIdMap.concat(url, { id, title })
+    })
 
-   for (const idList of urlToIdMap.values()) {
+    for (const idList of urlToIdMap.values()) {
       if (1 < idList.length) {
         const titleToIdMap = new ExtraMap()
 
@@ -42,14 +37,10 @@ async function getDoubles() {
         }
       }
     }
-
-    for (const childFolder of childFolderList) {
-      traverseFolder(childFolder)
-    }
   }
 
   const [rootFolder] = await chrome.bookmarks.getTree()
-  traverseFolder(rootFolder)
+  traverseFolderRecursively({ folder: rootFolder, onFolder })
 
   return doubleList
 }

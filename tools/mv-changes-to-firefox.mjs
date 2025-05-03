@@ -71,6 +71,7 @@ createFileForFirefox(
     'bookmark-controller-api/folderQueue.js',
     'bookmark-controller-api/index.js',
 
+    'bookmark-list-ops/traverseFolder.js',
     'bookmark-list-ops/flatFolders.js',
     'bookmark-list-ops/mergeFolders.js',
     'bookmark-list-ops/moveNotDescriptiveFolders.js',

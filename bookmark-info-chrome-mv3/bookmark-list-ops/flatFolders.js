@@ -7,6 +7,9 @@ import {
   removeFolder,
   updateFolder,
 } from '../bookmark-controller-api/index.js';
+import {
+  traverseFolderRecursively,
+} from './traverseFolder.js'
 
 async function getMaxUsedSuffix() {
   async function getFolders() {
@@ -14,35 +17,18 @@ async function getMaxUsedSuffix() {
     let nTotalBookmark = 0
     let nTotalFolder = 0
 
-    function traverseFolder(folderNode) {
-      const childFolderList = []
-      let nBookmark = 0
-
-      if (folderNode.children) {
-        for (const child of folderNode.children) {
-          if (child.url) {
-            nBookmark += 1
-          } else {
-            childFolderList.push(child)
-          }
-        }
+    function onFolder({ folder, bookmarkList }) {
+      folderById[folder.id] = {
+        id: folder.id,
+        title: folder.title,
       }
 
-      folderById[folderNode.id] = {
-        id: folderNode.id,
-        title: folderNode.title,
-      }
-
-      nTotalBookmark += nBookmark
-      nTotalFolder += childFolderList.length
-
-      for (const childFolder of childFolderList) {
-        traverseFolder(childFolder)
-      }
+      nTotalBookmark += bookmarkList.length
+      nTotalFolder += 1
     }
 
-    const [rootNode] = await chrome.bookmarks.getTree();
-    traverseFolder(rootNode);
+    const [rootFolder] = await chrome.bookmarks.getTree();
+    traverseFolderRecursively({ folder: rootFolder, onFolder })
 
     return {
       folderById,
