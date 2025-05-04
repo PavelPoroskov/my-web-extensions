@@ -42,10 +42,6 @@ export async function moveBookmarkIgnoreInController({ id, parentId, index }) {
   await chrome.bookmarks.move(id, options)
 }
 
-export async function moveBookmark({ id, parentId, index }) {
-  await chrome.bookmarks.move(id, { parentId, index })
-}
-
 export async function removeBookmark(bkmId) {
   await chrome.bookmarks.remove(bkmId)
 }

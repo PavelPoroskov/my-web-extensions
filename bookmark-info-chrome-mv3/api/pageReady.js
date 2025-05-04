@@ -42,8 +42,9 @@ class PageReady {
     logPR('onPageReady 00', tabId, url);
 
     const cleanUrl = await this.clearUrlOnPageOpen({ tabId, url })
+    const cleanedActiveTabUrl = removeQueryParamsIfTarget(memo.activeTabUrl);
 
-    if (url !== memo.activeTabUrl) {
+    if (cleanUrl !== cleanedActiveTabUrl) {
       logPR('onPageReady 11');
       const Tab = await chrome.tabs.get(tabId);
 

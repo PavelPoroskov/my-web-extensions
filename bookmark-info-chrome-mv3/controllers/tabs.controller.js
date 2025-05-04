@@ -111,6 +111,7 @@ export const tabsController = {
         memo.activeTabUrl = Tab.url
 
         // QUESTION: on open windows with stored tabs. every tab is activated?
+        // firefox: only one active tab
         visitedUrls.onActivateTab(tabId, Tab.url, Tab.title)
       }
     } catch (er) {

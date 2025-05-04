@@ -1,11 +1,19 @@
 import {
   createBookmarkVisited,
   createBookmarkOpened,
+  findOrCreateFolderByTitleInRoot,
 } from '../bookmark-controller-api/bookmark-visited.js'
 import {
   CacheWithLimit,
   makeLogFunction,
 } from '../api-low/index.js'
+import {
+  DATED_TEMPLATE_VISITED,
+  DATED_TEMPLATE_OPENED,
+} from '../folder-api/index.js'
+import {
+  removeQueryParamsIfTarget,
+} from '../url-api/index.js'
 
 const logVU = makeLogFunction({ module: 'visited-urls.js' })
 
@@ -26,9 +34,9 @@ class VisitedUrls {
   onCloseTab = () => { }
 
   markUrl({ url, title, mark }) {
-    // if (url == 'about:newtab') {
-    //   return
-    // }
+    if (!url) {
+      return
+    }
 
     if (url.startsWith('chrome:') || url.startsWith('about:')) {
       return
@@ -47,9 +55,12 @@ class VisitedUrls {
   }
 
   _onActivateTab(tabId, url, title) {
-    logVU("_onActivateTab", url)
-    this.cacheVisitedUrls.add(url, title)
-    this.cacheTabId.add(tabId, { url, title })
+    logVU("_onActivateTab 00 ", url)
+    const cleanedUrl = removeQueryParamsIfTarget(url);
+    logVU("_onActivateTab 11 ", cleanedUrl)
+
+    this.cacheVisitedUrls.add(cleanedUrl, title)
+    this.cacheTabId.add(tabId, { url: cleanedUrl, title })
   }
   _onUpdateTab(tabId, oData) {
     logVU("_onUpdateTab 11", tabId, oData)
@@ -81,15 +92,23 @@ class VisitedUrls {
   }
   async _onCloseTab(tabId) {
     logVU("_onCloseTab 11", tabId)
-    const { url, title: tabTitle } = this.cacheTabId.get(tabId)
+    const cachedTabData = this.cacheTabId.get(tabId)
+    logVU("_onCloseTab 22 cachedTabData", cachedTabData)
+
+    if (!cachedTabData) {
+      return
+    }
+    const { url, title: tabTitle } = cachedTabData
+    logVU("_onCloseTab 33", url)
 
     const urlTitle = this.cacheVisitedUrls.get(url)
 
     if (urlTitle) {
-      logVU("onCloseUrl 22", urlTitle)
+      logVU("_onCloseUrl 44", urlTitle)
       this.markUrl({ url, title: urlTitle, mark: URL_MARK_OPTIONS.VISITED })
     } else {
       let title = tabTitle
+      logVU("_onCloseUrl 55", tabTitle)
 
       if (!title) {
         const historyItemList = await chrome.history.search({
@@ -109,6 +128,7 @@ class VisitedUrls {
     }
 
     this.cacheTabId.delete(tabId)
+    logVU("_onCloseUrl 99", tabId)
   }
 
   useSettings({ isOn }) {
@@ -117,6 +137,10 @@ class VisitedUrls {
       this.onActivateTab = this._onActivateTab
       this.onReplaceUrlInActiveTab = this._onReplaceUrlInActiveTab
       this.onCloseTab = this._onCloseTab
+
+      findOrCreateFolderByTitleInRoot(DATED_TEMPLATE_VISITED)
+      findOrCreateFolderByTitleInRoot(DATED_TEMPLATE_OPENED)
+
     } else {
       this.onUpdateTab = () => { }
       this.onActivateTab = () => { }

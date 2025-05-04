@@ -14,12 +14,14 @@ export const windowsController = {
   async onFocusChanged(windowId) {
     logWC('windows.onFocusChanged', windowId);
 
-    if (0 < windowId) {
-      logWC('windows.onFocusChanged', windowId);
-      await setFirstActiveTab({ debugCaller: 'windows.onFocusChanged' })
-      debouncedUpdateActiveTab({
-        debugCaller: 'windows.onFocusChanged'
-      });
+    if (!(0 < windowId)) {
+      return
     }
+
+    logWC('windows.onFocusChanged', windowId);
+    await setFirstActiveTab({ debugCaller: 'windows.onFocusChanged' })
+    debouncedUpdateActiveTab({
+      debugCaller: 'windows.onFocusChanged'
+    });
   },
 };
