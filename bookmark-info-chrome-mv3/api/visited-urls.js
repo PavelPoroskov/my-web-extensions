@@ -1,8 +1,10 @@
 import {
   createBookmarkVisited,
   createBookmarkOpened,
-  findOrCreateFolderByTitleInRoot,
 } from '../bookmark-controller-api/bookmark-visited.js'
+import {
+  findOrCreateFolderByTitleInRoot,
+} from '../bookmark-controller-api/folder-create.js'
 import {
   CacheWithLimit,
   makeLogFunction,
