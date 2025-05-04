@@ -56,8 +56,8 @@ async function getFolderCorrectParentIdByTitle(title) {
 }
 
 const mapIdToParentId = {
-  BOOKMARKS_BAR_FOLDER_ID: { parentId: ROOT_FOLDER_ID },
-  OTHER_BOOKMARKS_FOLDER_ID: { parentId: ROOT_FOLDER_ID },
+  [BOOKMARKS_BAR_FOLDER_ID]: { parentId: ROOT_FOLDER_ID },
+  [OTHER_BOOKMARKS_FOLDER_ID]: { parentId: ROOT_FOLDER_ID },
 }
 if (BOOKMARKS_MENU_FOLDER_ID) {
   mapIdToParentId[BOOKMARKS_MENU_FOLDER_ID] = { parentId: ROOT_FOLDER_ID }
@@ -75,6 +75,8 @@ async function orderChildren(parentId) {
   const moveList = []
 
   async function onFolder({ folder, level }) {
+    // logMF('orderChildren() 11 folder')
+    // logMF(folder)
     const correct = await getFolderCorrectParentId(folder)
 
     let correctParentId = correct.parentId
@@ -84,6 +86,8 @@ async function orderChildren(parentId) {
       isCorrect = folder.parentId == correctParentId
     }
     if (!isCorrect) {
+      logMF('orderChildren() 22 correct')
+      logMF(correct)
       moveList.push({
         id: folder.id,
         parentId: correctParentId,

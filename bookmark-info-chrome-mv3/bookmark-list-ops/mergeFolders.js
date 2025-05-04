@@ -21,7 +21,7 @@ async function moveContent(fromFolderId, toFolderId) {
 }
 
 async function mergeSubFoldersLevelOne(parentId) {
-  if (parentId) {
+  if (!parentId) {
     return
   }
 
@@ -73,12 +73,11 @@ async function mergeSubFoldersLevelOne(parentId) {
 }
 
 export async function mergeSubFoldersLevelOneAndTwo(parentId) {
-  if (parentId) {
+  if (!parentId) {
     return
   }
 
   await mergeSubFoldersLevelOne(parentId)
-
 
   const mergeLevelTwoList = []
   const [rootNode] = await chrome.bookmarks.getSubTree(parentId)
@@ -102,7 +101,7 @@ export async function mergeSubFoldersLevelOneAndTwo(parentId) {
 }
 
 export async function trimTitleInSubFolders(parentId) {
-  if (parentId) {
+  if (!parentId) {
     return
   }
 

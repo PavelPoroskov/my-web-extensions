@@ -16,7 +16,7 @@ const logMOD = makeLogFunction({ module: 'moveOldDatedFolders.js' })
 const KEEP_DATED_FOLDERS = 7
 
 export async function moveOldDatedFolders(fromId) {
-  if (fromId) {
+  if (!fromId) {
     return
   }
 

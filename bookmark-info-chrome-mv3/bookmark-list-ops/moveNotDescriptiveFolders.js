@@ -22,6 +22,10 @@ async function moveContentToStart(fromFolderId, toFolderId) {
 }
 
 async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
+  if (!fromId) {
+    return
+  }
+
   const nodeList = await chrome.bookmarks.getChildren(fromId)
   const folderList = nodeList
     .filter(({ url }) => !url)

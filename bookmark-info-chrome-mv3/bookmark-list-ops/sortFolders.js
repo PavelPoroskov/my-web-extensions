@@ -6,7 +6,7 @@ import {
 } from '../bookmark-controller-api/index.js'
 
 export async function sortFolders(parentId) {
-  if (parentId) {
+  if (!parentId) {
     return
   }
 

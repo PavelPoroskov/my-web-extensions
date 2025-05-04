@@ -7,6 +7,9 @@ import {
 } from '../bookmark-controller-api/index.js'
 
 async function moveRootBookmarks({ fromId, unclassifiedId }) {
+  if (!fromId) {
+    return
+  }
   // console.log('### moveRootBookmarks 00,', fromId)
 
   // url.startsWith('place:')
