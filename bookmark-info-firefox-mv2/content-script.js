@@ -61,48 +61,31 @@
   }
 
   const bkmInfoRootId = 'bkm-info--root';
-  const bkmInfoMutableStyleId = 'bkm-info--mutable-style';
-  const bkmInfoFixedStyleId = 'bkm-info--fixed-style';
+  const bkmInfoStyleId = 'bkm-info--style';
 
-  function getMutableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting }) {
-    let semanticTagsStyle = ''
-
-    if (isHideSemanticHtmlTagsOnPrinting) {
-      semanticTagsStyle = (
-`@media print {
-  header, footer, aside, nav {
-      display: none;
-  }
-  .blockSpoiler, .blockSpoiler-content {
-    display: none;
-  }
-}`
-      )
-    }
-
-    const fontSizeLetter = Math.floor(10/14*(+fontSize))
+  function getStyleText({ fontSize, fontSizeLetter, tagLength, onPrint }) {
 
     return (
-`#${bkmInfoRootId} {
-  font-size: ${fontSize}px;
-  width: ${tagLength}ch;
+`
+#bkm-info--root {
+  --bkm-info-font-size: ${fontSize}px;
+  --bkm-info-font-letter: ${fontSizeLetter}px;
+  --bkm-info-tag-length: ${tagLength}ch;
+  --bkm-info-label-rpad: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
+  --bkm-info-del-rpad: ${BROWSER_SPECIFIC.DEL_BTN_RIGHT_PADDING};
+  --bkm-info-onprint: ${onPrint};
+
+  font-size: var(--bkm-info-font-size);
+  width: var(--bkm-info-tag-length);
 }
 .bkm-info--tag {
-  min-width: ${tagLength}ch;
-  max-width: ${tagLength}ch;
+  min-width: var(--bkm-info-tag-length);
+  max-width: var(--bkm-info-tag-length);
 }
 .bkm-info--btn-letter {
-  font-size: ${fontSizeLetter}px;
+  font-size: var(--bkm-info-font-letter);
 }
-${semanticTagsStyle}
-`
-    )
-  }
-
-  function getFixedStyleText() {
-    return (
-`
-#${bkmInfoRootId} {
+#bkm-info--root {
   position: fixed;
   right: 0;
   top: 0;
@@ -118,11 +101,11 @@ ${semanticTagsStyle}
   letter-spacing: normal;
   margin: 0;
 }
-#${bkmInfoRootId} * {
+#bkm-info--root * {
   box-sizing: border-box;
 }
 @media print {
-  #${bkmInfoRootId} {
+  #bkm-info--root {
       display: none;
   }
 }
@@ -148,7 +131,7 @@ ${semanticTagsStyle}
   border-bottom-left-radius: 0.5lh 50%;
   position: relative;
   color: black;
-  padding-right: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
+  padding-right: var(--bkm-info-label-rpad);
   line-height: inherit;
   font-family: inherit !important;
   margin: inherit;
@@ -189,7 +172,7 @@ ${semanticTagsStyle}
   background-color: bisque;
 }
 .bkm-info--btn-del {
-  padding-right: ${BROWSER_SPECIFIC.DEL_BTN_RIGHT_PADDING};
+  padding-right: --bkm-info-del-rpad:
   position: absolute;
   top: 0;
   right: 0;
@@ -254,7 +237,7 @@ ${semanticTagsStyle}
   padding-left: 0.7ch;
   position: relative;
   color: black;
-  padding-right: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
+  padding-right: var(--bkm-info-label-rpad);
   text-wrap: nowrap;
   line-height: inherit;
   font-family: inherit !important;
@@ -311,6 +294,14 @@ ${semanticTagsStyle}
 }
 .bkm-info--tag:hover .bkm-info--fix-mark {
   border-bottom: 0.5em solid darkgray;
+}
+@media print {
+  header, footer, aside, nav {
+      display: var(--bkm-info-onprint);
+  }
+  .blockSpoiler, .blockSpoiler-content {
+    display: var(--bkm-info-onprint);
+  }
 }
 `
     )
@@ -568,43 +559,43 @@ ${semanticTagsStyle}
     const isTagListOpen = tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL
       ? (input.isTagListOpenGlobal || false)
       : (input.isTagListOpenLocal || false)
-    const fontSize = input.fontSize
-    const tagLength = input.tagLength
-    const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting
+
     const optimisticDelFromTagList = input.optimisticDelFromTagList
     const optimisticAddFromTagList = input.optimisticAddFromTagList
 
-    let rootStyleMutable = document.getElementById(bkmInfoMutableStyleId);
+    const fontSize = input.fontSize
+    const tagLength = input.tagLength
+    const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting
+    const fontSizeLetter = Math.floor(10/14*(+fontSize))
+    const onPrint = isHideSemanticHtmlTagsOnPrinting ? 'none' : 'unset'
+
+    let rootStyle = document.getElementById(bkmInfoStyleId);
     let rootDiv = document.getElementById(bkmInfoRootId);
-    if (!rootStyleMutable) {
-      rootStyleMutable = document.createElement('style');
-      rootStyleMutable.setAttribute('id', bkmInfoMutableStyleId);
-      const textNodeStyle1 = document.createTextNode(
-        getMutableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting })
+    if (!rootStyle) {
+      const rootStyle = document.createElement('style');
+      rootStyle.setAttribute('id', bkmInfoStyleId);
+      const textNodeStyle = document.createTextNode(
+        getStyleText({ fontSize, fontSizeLetter, tagLength, onPrint })
       );
-      rootStyleMutable.appendChild(textNodeStyle1);
+      rootStyle.appendChild(textNodeStyle);
 
-      const rootStyleFixed = document.createElement('style');
-      rootStyleFixed.setAttribute('id', bkmInfoFixedStyleId);
-      const textNodeStyle2 = document.createTextNode(
-        getFixedStyleText()
-      );
-      rootStyleFixed.appendChild(textNodeStyle2);
-
-      document.body.insertAdjacentElement('afterbegin', rootStyleMutable);
-      rootStyleMutable.insertAdjacentElement('afterend', rootStyleFixed);
+      document.body.insertAdjacentElement('afterbegin', rootStyle);
 
       rootDiv = document.createElement('div');
       rootDiv.setAttribute('id', bkmInfoRootId);
       rootDiv.addEventListener('click', rootListener, { capture: true });
-      rootStyleFixed.insertAdjacentElement('afterend', rootDiv);
+      rootStyle.insertAdjacentElement('afterend', rootDiv);
     }
 
-    if (!(fontSize == prevState.fontSize && tagLength == prevState.tagLength
-      && isHideSemanticHtmlTagsOnPrinting == prevState.isHideSemanticHtmlTagsOnPrinting)) {
-      rootStyleMutable.firstChild.replaceWith(
-        getMutableStyleText({ fontSize, tagLength, isHideSemanticHtmlTagsOnPrinting })
-      )
+    if (fontSize != prevState.fontSize) {
+      rootDiv.style.setProperty("--bkm-info-font-size", fontSize);
+      rootDiv.style.setProperty("--bkm-info-font-letter", fontSizeLetter);
+    }
+    if (tagLength != prevState.tagLength) {
+      rootDiv.style.setProperty("--bkm-info-tag-length", tagLength);
+    }
+    if (isHideSemanticHtmlTagsOnPrinting != prevState.isHideSemanticHtmlTagsOnPrinting) {
+      rootDiv.style.setProperty("--bkm-info-onprint", onPrint);
     }
 
     const usedParentIdSet = new Set(bookmarkList.map(({ parentId }) => parentId))

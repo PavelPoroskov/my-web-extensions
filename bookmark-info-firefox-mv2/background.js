@@ -465,6 +465,37 @@ const HOST_URL_SETTINGS_SHORT = Object.assign(
   };
 }
 
+const MS_DIFF_FOR_SINGLE_BKM = 80
+
+function ignoreBatch(func, timeout = MS_DIFF_FOR_SINGLE_BKM){
+  let lastCallTime
+  let timer;
+  let isBatch
+
+  return (...args) => {
+    const now = Date.now()
+
+    if (lastCallTime) {
+      isBatch = now - lastCallTime < MS_DIFF_FOR_SINGLE_BKM
+    } else {
+      isBatch = false
+    }
+
+    lastCallTime = now
+
+    clearTimeout(timer);
+
+    timer = setTimeout(
+      () => {
+        if (!isBatch) {
+          func.apply(this, args);
+        }
+      },
+      timeout,
+    );
+  };
+}
+
 const isNotEmptyArray = (ar) => Array.isArray(ar) && ar.length > 0
 const pluralRules = [];
 const singularRules = [];
@@ -1112,7 +1143,8 @@ const trimLowSingular = (title) => {
 }
 
 const normalizeTitle = (title) => trimLowSingular(title.replaceAll('-', ''))
-const BOOKMARKS_BAR_FOLDER_ID = IS_BROWSER_FIREFOX ? 'toolbar_____' : '1'
+const ROOT_FOLDER_ID = IS_BROWSER_FIREFOX ? 'root________' : '0'
+const BOOKMARKS_BAR_FOLDER_ID = IS_BROWSER_FIREFOX ? 'toolbar_____' : '1'
 const BOOKMARKS_MENU_FOLDER_ID = IS_BROWSER_FIREFOX ? 'menu________' : undefined
 const OTHER_BOOKMARKS_FOLDER_ID = IS_BROWSER_FIREFOX ? 'unfiled_____' : '2'
 
@@ -1141,7 +1173,6 @@ function memoize(fnGetValue) {
 }
 
 const UNCLASSIFIED_TITLE = 'zz-bookmark-info--unclassified'
-const DATED_TITLE = 'zz-bookmark-info--dated'
 
 const getUnclassifiedFolderId = memoize(async () => getFolderByTitleInRoot(UNCLASSIFIED_TITLE))
 const logFF = makeLogFunction({ module: 'find-folder.js' })
@@ -1836,6 +1867,7 @@ async function filterFolders(idList, isFlatStructure) {
     .filter(({ title }) => !!title)
     .filter(({ title }) => isDescriptiveFolderTitle(title))
     .filter(({ title }) => !isDatedFolderTitle(title))
+    .filter(({ title }) => !isVisitedDatedTemplate(title))
 
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {
@@ -3141,10 +3173,6 @@ async function moveBookmarkIgnoreInController({ id, parentId, index }) {
   await browser.bookmarks.move(id, options)
 }
 
-async function moveBookmark({ id, parentId, index }) {
-  await browser.bookmarks.move(id, { parentId, index })
-}
-
 async function removeBookmark(bkmId) {
   await browser.bookmarks.remove(bkmId)
 }
@@ -3251,8 +3279,7 @@ async function createBookmarkWithParentId({ parentId, url, title }) {
   }
 }
 
-async function afterUserCreatedBookmarkInGUI({ node, isSingle }) {
-  const { parentId, id, url } = node
+async function afterUserCreatedBookmarkInGUI({ parentId, id, url, index }) {
   const [parentNode] = await browser.bookmarks.get(parentId)
   const parentName = parentNode.title
 
@@ -3263,7 +3290,7 @@ async function afterUserCreatedBookmarkInGUI({ node, isSingle }) {
     await moveBookmarkIgnoreInController({
       id,
       parentId: datedFolder.id,
-      index: isSingle? 0 : undefined,
+      index: 0,
     })
 
     await removePreviousDatedBookmarks({ url, template: parentName })
@@ -3272,7 +3299,7 @@ async function afterUserCreatedBookmarkInGUI({ node, isSingle }) {
       await tagList.addRecentTagFromFolder({ id: parentId, title: parentName })
     }
   } else {
-    if (node.index !== 0 && isSingle) {
+    if (index !== 0) {
       await moveBookmarkIgnoreInController({ id, index: 0 })
     }
 
@@ -3380,9 +3407,9 @@ class VisitedUrls {
   onCloseTab = () => { }
 
   markUrl({ url, title, mark }) {
-    // if (url == 'about:newtab') {
-    //   return
-    // }
+    if (!url) {
+      return
+    }
 
     if (url.startsWith('chrome:') || url.startsWith('about:')) {
       return
@@ -3401,9 +3428,12 @@ class VisitedUrls {
   }
 
   _onActivateTab(tabId, url, title) {
-    logVU("_onActivateTab", url)
-    this.cacheVisitedUrls.add(url, title)
-    this.cacheTabId.add(tabId, { url, title })
+    logVU("_onActivateTab 00 ", url)
+    const cleanedUrl = removeQueryParamsIfTarget(url);
+    logVU("_onActivateTab 11 ", cleanedUrl)
+
+    this.cacheVisitedUrls.add(cleanedUrl, title)
+    this.cacheTabId.add(tabId, { url: cleanedUrl, title })
   }
   _onUpdateTab(tabId, oData) {
     logVU("_onUpdateTab 11", tabId, oData)
@@ -3435,15 +3465,23 @@ class VisitedUrls {
   }
   async _onCloseTab(tabId) {
     logVU("_onCloseTab 11", tabId)
-    const { url, title: tabTitle } = this.cacheTabId.get(tabId)
+    const cachedTabData = this.cacheTabId.get(tabId)
+    logVU("_onCloseTab 22 cachedTabData", cachedTabData)
+
+    if (!cachedTabData) {
+      return
+    }
+    const { url, title: tabTitle } = cachedTabData
+    logVU("_onCloseTab 33", url)
 
     const urlTitle = this.cacheVisitedUrls.get(url)
 
     if (urlTitle) {
-      logVU("onCloseUrl 22", urlTitle)
+      logVU("_onCloseUrl 44", urlTitle)
       this.markUrl({ url, title: urlTitle, mark: URL_MARK_OPTIONS.VISITED })
     } else {
       let title = tabTitle
+      logVU("_onCloseUrl 55", tabTitle)
 
       if (!title) {
         const historyItemList = await browser.history.search({
@@ -3463,6 +3501,7 @@ class VisitedUrls {
     }
 
     this.cacheTabId.delete(tabId)
+    logVU("_onCloseUrl 99", tabId)
   }
 
   useSettings({ isOn }) {
@@ -3471,6 +3510,10 @@ class VisitedUrls {
       this.onActivateTab = this._onActivateTab
       this.onReplaceUrlInActiveTab = this._onReplaceUrlInActiveTab
       this.onCloseTab = this._onCloseTab
+
+      findOrCreateFolderByTitleInRoot(DATED_TEMPLATE_VISITED)
+      findOrCreateFolderByTitleInRoot(DATED_TEMPLATE_OPENED)
+
     } else {
       this.onUpdateTab = () => { }
       this.onActivateTab = () => { }
@@ -3514,8 +3557,9 @@ class PageReady {
     logPR('onPageReady 00', tabId, url);
 
     const cleanUrl = await this.clearUrlOnPageOpen({ tabId, url })
+    const cleanedActiveTabUrl = removeQueryParamsIfTarget(memo.activeTabUrl);
 
-    if (url !== memo.activeTabUrl) {
+    if (cleanUrl !== cleanedActiveTabUrl) {
       logPR('onPageReady 11');
       const Tab = await browser.tabs.get(tabId);
 
@@ -4173,36 +4217,15 @@ let lastCreatedBkmId
 let lastCreatedBkmTabId
 let lastMovedBkmId
 
-var lastCreatedTime
-var lastCreatedParentId
-const MS_DIFF_FOR_SINGLE_BKM = 80
-
-function isSingleBookmarkCreation(inParentId) {
-  let result
-  let now = Date.now()
-
-  if (lastCreatedTime) {
-    result = (MS_DIFF_FOR_SINGLE_BKM < now - lastCreatedTime) || inParentId != lastCreatedParentId
-  } else {
-    result = true
-  }
-
-  lastCreatedTime = now
-  lastCreatedParentId = inParentId
-
-  return result
-}
 
 async function onCreateBookmark(task) {
   const { bookmarkId, node } = task
-  const { parentId, url } = node
-  logBQ('onCreateBookmark () 00', url)
+  logBQ('onCreateBookmark () 00', node)
 
   lastCreatedBkmId = bookmarkId
   lastCreatedBkmTabId = memo.activeTabId
 
-  const isSingle = isSingleBookmarkCreation(parentId)
-  await afterUserCreatedBookmarkInGUI({ node, isSingle })
+  await afterUserCreatedBookmarkInGUI(node)
 }
 
 async function onMoveBookmark(task) {
@@ -4221,7 +4244,7 @@ async function onMoveBookmark(task) {
   const isMoveOnly = isBookmarkWasCreatedManually && isFirstBookmark && lastMovedBkmId != bookmarkId
 
   if (isMoveOnly) {
-    await afterUserCreatedBookmarkInGUI({ node, isSingle: true })
+    await afterUserCreatedBookmarkInGUI(node)
   } else {
     let isReplaceMoveToCreate = false
 
@@ -4350,36 +4373,52 @@ const folderQueue = new NodeTaskQueue(folderQueueRunner)
 // is used in bookmark-list-ops/
 // is used in command/addBookmark.js
 // is used in controllers/bookmarks.controller.js
+async function traverseFolderRecursively({ folder: rootFolder, onFolder, startLevel=0 }) {
+  async function traverseFolder({ folder, level }) {
+    const childBookmarkList = []
+    const childFolderList = []
+
+    if (folder.children) {
+      for (const child of folder.children) {
+        if (child.url) {
+          childBookmarkList.push(child)
+        } else {
+          childFolderList.push(child)
+        }
+      }
+    }
+
+    await onFolder({ folder, bookmarkList: childBookmarkList, level })
+
+    const nextLevel = level + 1
+    await childFolderList.reduce(
+      (promiseChain, childFolder) => promiseChain.then(
+        () => traverseFolder({ folder: childFolder, level: nextLevel })
+      ),
+      Promise.resolve(),
+    );
+  }
+
+  await traverseFolder({ folder: rootFolder, level: startLevel })
+}
 async function getMaxUsedSuffix() {
-  function getFoldersFromTree(tree) {
+  async function getFolders() {
     const folderById = {};
     let nTotalBookmark = 0
     let nTotalFolder = 0
 
-    function getFoldersFromNodeArray(nodeArray) {
-      let nBookmark = 0
-      let nFolder = 0
+    function onFolder({ folder, bookmarkList }) {
+      folderById[folder.id] = {
+        id: folder.id,
+        title: folder.title,
+      }
 
-      nodeArray.forEach((node) => {
-        if (node.url) {
-          nBookmark += 1
-        } else {
-          nFolder += 1
-
-          folderById[node.id] = {
-            id: node.id,
-            title: node.title,
-          }
-
-          getFoldersFromNodeArray(node.children)
-        }
-      });
-
-      nTotalBookmark += nBookmark
-      nTotalFolder += nFolder
+      nTotalBookmark += bookmarkList.length
+      nTotalFolder += 1
     }
 
-    getFoldersFromNodeArray(tree);
+    const [rootFolder] = await browser.bookmarks.getTree();
+    await traverseFolderRecursively({ folder: rootFolder, onFolder })
 
     return {
       folderById,
@@ -4388,8 +4427,7 @@ const folderQueue = new NodeTaskQueue(folderQueueRunner)
     };
   }
 
-  const bookmarkTree = await browser.bookmarks.getTree();
-  const { folderById } = getFoldersFromTree(bookmarkTree);
+  const { folderById } = await getFolders();
 
   let maxUsedSuffix
   const allowedFirstChar = '123456789'
@@ -4415,93 +4453,56 @@ const folderQueue = new NodeTaskQueue(folderQueueRunner)
   return maxUsedSuffix
 }
 
-async function flatChildren({ parentId, freeSuffix, datedRootId }) {
-  const notFlatFolderList = []
-  const flatFolderList = []
-
-  const [otherBookmarks] = await browser.bookmarks.getSubTree(parentId)
-
-  for (const node of otherBookmarks.children) {
-    if (!node.url) {
-      if (node.id == datedRootId) {
-        continue
-      }
-
-      const childrenFolderList = node.children.filter(({ url }) => !url)
-
-      if (childrenFolderList.length > 0) {
-        notFlatFolderList.push(node)
-      } else {
-        // flatFolderNameSet.add(node.title)
-        flatFolderList.push(node)
-      }
-    }
+async function flatChildren({ parentId, freeSuffix }) {
+  if (!parentId) {
+    return []
   }
 
+  const moveList = []
   const flatFolderNameSet = new Set()
 
-  const updateTaskList = []
-  flatFolderList.forEach((folderNode) => {
-    if (flatFolderNameSet.has(folderNode.title)) {
-      const newTitle = `${folderNode.title} ${freeSuffix}`
+  function onFolder({ folder, bookmarkList, level }) {
+    const oData = {
+      id: folder.id,
+      bookmarkListLength: bookmarkList.length,
+      level,
+    }
+
+    if (flatFolderNameSet.has(folder.title)) {
+      oData.newTitle = `${folder.title} ${freeSuffix}`
       freeSuffix += 1
 
-      updateTaskList.push({
-        id: folderNode.id,
-        title: newTitle,
-      })
-    }
-  })
-  await updateTaskList.reduce(
-    (promiseChain, { id, title }) => promiseChain.then(
-      () => updateFolder({ id, title })
-    ),
-    Promise.resolve(),
-  );
-
-  async function flatFolder(rootFolder) {
-    async function traverseSubFolder(folderNode, folderLevel) {
-      const folderList = folderNode.children
-        .filter(({ url }) => !url)
-      const bookmarkList = folderNode.children
-        .filter(({ url }) => !!url)
-
-      await folderList.reduce(
-        (promiseChain, node) => promiseChain.then(
-          () => traverseSubFolder(node, folderLevel + 1)
-        ),
-        Promise.resolve(),
-      );
-
-      if (bookmarkList.length > 0) {
-        if (folderLevel > 0) {
-          await moveFolderIgnoreInController({ id: folderNode.id, parentId })
-
-          if (flatFolderNameSet.has(folderNode.title)) {
-            const newTitle = `${folderNode.title} ${freeSuffix}`
-            freeSuffix += 1
-
-            await updateFolder({
-              id: folderNode.id,
-              title: newTitle,
-            })
-            flatFolderNameSet.add(newTitle)
-          } else {
-            flatFolderNameSet.add(folderNode.title)
-          }
-        }
-      } else {
-        await removeFolder(folderNode.id)
-      }
+      flatFolderNameSet.add(oData.newTitle)
+    } else {
+      flatFolderNameSet.add(folder.title)
     }
 
-    await traverseSubFolder(rootFolder, 0)
+    moveList.push(oData)
   }
 
-  // flat
-  await notFlatFolderList.reduce(
-    (promiseChain, node) => promiseChain.then(
-      () => flatFolder(node)
+  const [rootFolder] = await browser.bookmarks.getSubTree(parentId)
+  await traverseFolderRecursively({ folder: rootFolder, onFolder, startLevel: 0 })
+
+
+  const sortedMoveList = moveList
+    .sort((a,b) => -(a.level - b.level))
+
+  await sortedMoveList.reduce(
+    (promiseChain, { id, bookmarkListLength, level, newTitle }) => promiseChain.then(
+      async () => {
+        if (0 < bookmarkListLength) {
+          if (1 < level) {
+            await moveFolderIgnoreInController({ id, parentId })
+          }
+          if (newTitle && 0 < level) {
+            await updateFolder({ id, title: newTitle })
+          }
+        } else {
+          if (0 < level) {
+            await removeFolder(id)
+          }
+        }
+      }
     ),
     Promise.resolve(),
   );
@@ -4525,7 +4526,11 @@ async function flatFolders() {
   );
 }
 
-async function mergeSubFolder(parentId) {
+async function mergeSubFoldersLevelOne(parentId) {
+  if (!parentId) {
+    return
+  }
+
   // console.log('### mergeSubFolder 00,', parentId)
   const nodeList = await browser.bookmarks.getChildren(parentId)
   const folderNodeList = nodeList.filter(({ url }) => !url)
@@ -4573,7 +4578,39 @@ async function mergeSubFolder(parentId) {
   );
 }
 
-async function trimTitleInSubFolder(parentId) {
+async function mergeSubFoldersLevelOneAndTwo(parentId) {
+  if (!parentId) {
+    return
+  }
+
+  await mergeSubFoldersLevelOne(parentId)
+
+  const mergeLevelTwoList = []
+  const [rootNode] = await browser.bookmarks.getSubTree(parentId)
+
+  for (const node of rootNode.children) {
+    if (!node.url) {
+      const childrenFolderList = node.children.filter(({ url }) => !url)
+
+      if (2 <= childrenFolderList.length) {
+        mergeLevelTwoList.push(node.id)
+      }
+    }
+  }
+
+  await mergeLevelTwoList.reduce(
+    (promiseChain, folderLevelOneId) => promiseChain.then(
+      () => mergeSubFoldersLevelOne(folderLevelOneId)
+    ),
+    Promise.resolve(),
+  );
+}
+
+async function trimTitleInSubFolders(parentId) {
+  if (!parentId) {
+    return
+  }
+
   const nodeList = await browser.bookmarks.getChildren(parentId)
   const folderNodeList = nodeList.filter(({ url }) => !url)
 
@@ -4596,20 +4633,6 @@ async function trimTitleInSubFolder(parentId) {
     Promise.resolve(),
   );
 }
-
-async function mergeFolders() {
-  await mergeSubFolder(BOOKMARKS_BAR_FOLDER_ID)
-  if (BOOKMARKS_MENU_FOLDER_ID) {
-    await mergeSubFolder(BOOKMARKS_MENU_FOLDER_ID)
-  }
-  await mergeSubFolder(OTHER_BOOKMARKS_FOLDER_ID)
-
-  await trimTitleInSubFolder(BOOKMARKS_BAR_FOLDER_ID)
-  if (BOOKMARKS_MENU_FOLDER_ID) {
-    await trimTitleInSubFolder(BOOKMARKS_MENU_FOLDER_ID)
-  }
-  await trimTitleInSubFolder(OTHER_BOOKMARKS_FOLDER_ID)
-}
 async function moveContentToStart(fromFolderId, toFolderId) {
   const nodeList = await browser.bookmarks.getChildren(fromFolderId)
   const reversedNodeList = nodeList.toReversed()
@@ -4623,6 +4646,10 @@ async function mergeFolders() {
 }
 
 async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
+  if (!fromId) {
+    return
+  }
+
   const nodeList = await browser.bookmarks.getChildren(fromId)
   const folderList = nodeList
     .filter(({ url }) => !url)
@@ -4650,6 +4677,9 @@ async function moveNotDescriptiveFoldersToUnclassified() {
   await moveNotDescriptiveFolders({ fromId: OTHER_BOOKMARKS_FOLDER_ID, unclassifiedId })
 }
 async function moveRootBookmarks({ fromId, unclassifiedId }) {
+  if (!fromId) {
+    return
+  }
   // console.log('### moveRootBookmarks 00,', fromId)
 
   // url.startsWith('place:')
@@ -4662,7 +4692,7 @@ async function moveNotDescriptiveFoldersToUnclassified() {
 
   await bkmList.reduce(
     (promiseChain, bkm) => promiseChain.then(
-      () => moveBookmark({ id: bkm.id, parentId: unclassifiedId })
+      () => moveBookmarkIgnoreInController({ id: bkm.id, parentId: unclassifiedId })
     ),
     Promise.resolve(),
   );
@@ -4693,7 +4723,7 @@ async function getParentIdForDatedFolder(title) {
   return parentId;
 }
 
-async function getFolderCorrectParentId(title) {
+async function getFolderCorrectParentIdByTitle(title) {
   let parentId = OTHER_BOOKMARKS_FOLDER_ID
   let secondParentId
 
@@ -4712,6 +4742,18 @@ async function getFolderCorrectParentId(title) {
   }
 }
 
+const mapIdToParentId = {
+  [BOOKMARKS_BAR_FOLDER_ID]: { parentId: ROOT_FOLDER_ID },
+  [OTHER_BOOKMARKS_FOLDER_ID]: { parentId: ROOT_FOLDER_ID },
+}
+if (BOOKMARKS_MENU_FOLDER_ID) {
+  mapIdToParentId[BOOKMARKS_MENU_FOLDER_ID] = { parentId: ROOT_FOLDER_ID }
+}
+
+async function getFolderCorrectParentId(folder) {
+  return mapIdToParentId[folder.id] || (await getFolderCorrectParentIdByTitle(folder.title))
+}
+
 async function orderChildren(parentId) {
   if (!parentId) {
     return []
@@ -4719,44 +4761,30 @@ async function orderChildren(parentId) {
 
   const moveList = []
 
-  async function traverseSubFolder(folderNode, folderLevel) {
-
-    const correct = await getFolderCorrectParentId(folderNode.title)
+  async function onFolder({ folder, level }) {
+    // logMF('orderChildren() 11 folder')
+    // logMF(folder)
+    const correct = await getFolderCorrectParentId(folder)
 
     let correctParentId = correct.parentId
-    let isCorrect = folderNode.parentId == correctParentId
+    let isCorrect = folder.parentId == correctParentId
     if (!isCorrect && correct.secondParentId) {
       correctParentId = correct.secondParentId
-      isCorrect = folderNode.parentId == correctParentId
+      isCorrect = folder.parentId == correctParentId
     }
     if (!isCorrect) {
+      logMF('orderChildren() 22 correct')
+      logMF(correct)
       moveList.push({
-        id: folderNode.id,
+        id: folder.id,
         parentId: correctParentId,
-        level: folderLevel,
+        level,
       })
     }
-
-    const folderList = folderNode.children
-      .filter(({ url }) => !url)
-
-    await folderList.reduce(
-      (promiseChain, node) => promiseChain.then(
-        () => traverseSubFolder(node, folderLevel + 1)
-      ),
-      Promise.resolve(),
-    );
   }
 
   const [rootFolder] = await browser.bookmarks.getSubTree(parentId)
-  const folderList = rootFolder.children.filter(({ url }) => !url)
-
-  await folderList.reduce(
-    (promiseChain, node) => promiseChain.then(
-      () => traverseSubFolder(node, 1)
-    ),
-    Promise.resolve(),
-  );
+  await traverseFolderRecursively({ folder: rootFolder, onFolder })
 
   return moveList;
 }
@@ -4796,6 +4824,10 @@ async function moveFolders() {
 const KEEP_DATED_FOLDERS = 7
 
 async function moveOldDatedFolders(fromId) {
+  if (!fromId) {
+    return
+  }
+
   logMOD('moveOldDatedFolders 00')
   const childrenList = await browser.bookmarks.getChildren(fromId)
 
@@ -4841,16 +4873,15 @@ async function moveOldDatedFolders(fromId) {
 async function getDoubles() {
   const doubleList = []
 
-  async function traverseNodeList(nodeList) {
+  function onFolder({ bookmarkList }) {
     const urlToIdMap = new ExtraMap()
-    nodeList
-      .filter(({ url }) => !!url)
-      .forEach(({ id, url, title }) => {
-        urlToIdMap.concat(url, { id, title })
-      })
+
+    bookmarkList.forEach(({ url, id, title }) => {
+      urlToIdMap.concat(url, { id, title })
+    })
 
     for (const idList of urlToIdMap.values()) {
-      if (idList.length > 1) {
+      if (1 < idList.length) {
         const titleToIdMap = new ExtraMap()
 
         idList.forEach(({ id, title }) => {
@@ -4858,7 +4889,7 @@ async function moveOldDatedFolders(fromId) {
         })
 
         for (const idList of titleToIdMap.values()) {
-          if (idList.length > 1) {
+          if (1 < idList.length) {
             idList
               .slice(1)
               .forEach(
@@ -4868,16 +4899,10 @@ async function moveOldDatedFolders(fromId) {
         }
       }
     }
-
-    nodeList
-      .filter(({ url }) => !url)
-      .map(
-        (node) => traverseNodeList(node.children)
-      )
   }
 
-  const nodeList = await browser.bookmarks.getTree()
-  traverseNodeList(nodeList)
+  const [rootFolder] = await browser.bookmarks.getTree()
+  await traverseFolderRecursively({ folder: rootFolder, onFolder })
 
   return doubleList
 }
@@ -4898,6 +4923,10 @@ async function removeDoubleBookmarks() {
   }
 }
 async function sortFolders(parentId) {
+  if (!parentId) {
+    return
+  }
+
   // console.log('sortChildFoldersOp',  parentId)
   const nodeList = await browser.bookmarks.getChildren(parentId)
 
@@ -4930,19 +4959,16 @@ async function removeDoubleBookmarks() {
     Promise.resolve(),
   );
 
-  if (parentId == OTHER_BOOKMARKS_FOLDER_ID) {
-    const subfolderList = sortedNodeList
-      .filter(({ title }) => isDatedFolderTemplate(title))
 
-    await subfolderList.reduce(
-      (promiseChain, node) => promiseChain.then(
-        () => sortFolders(node.id)
-      ),
-      Promise.resolve(),
-    );
-  }
+  const subfolderList = sortedNodeList
+    .filter(({ title }) => isDatedFolderTemplate(title))
 
-  // console.log('Sorted',  sortedNodeList.map(({ title }) => title))
+  await subfolderList.reduce(
+    (promiseChain, node) => promiseChain.then(
+      () => sortFolders(node.id)
+    ),
+    Promise.resolve(),
+  );
 }
 const logOD = makeLogFunction({ module: 'orderBookmarks.js' })
 
@@ -4950,28 +4976,29 @@ async function orderBookmarks() {
   logOD('orderBookmarks() 00')
 
   await findOrCreateFolderByTitleInRoot(UNCLASSIFIED_TITLE)
-  await findOrCreateFolderByTitleInRoot(DATED_TITLE)
 
   logOD('orderBookmarks() 11')
   await moveFolders()
   logOD('orderBookmarks() 11.2')
   await moveOldDatedFolders(BOOKMARKS_BAR_FOLDER_ID)
-  if (IS_BROWSER_FIREFOX) {
-    await moveOldDatedFolders(BOOKMARKS_MENU_FOLDER_ID)
-  }
+  await moveOldDatedFolders(BOOKMARKS_MENU_FOLDER_ID)
 
   logOD('orderBookmarks() 22')
   await moveRootBookmarksToUnclassified()
   await moveNotDescriptiveFoldersToUnclassified()
 
   logOD('orderBookmarks() 33')
-  await mergeFolders()
+  await mergeSubFoldersLevelOneAndTwo(BOOKMARKS_BAR_FOLDER_ID)
+  await mergeSubFoldersLevelOneAndTwo(BOOKMARKS_MENU_FOLDER_ID)
+  await mergeSubFoldersLevelOneAndTwo(OTHER_BOOKMARKS_FOLDER_ID)
+
+  await trimTitleInSubFolders(BOOKMARKS_BAR_FOLDER_ID)
+  await trimTitleInSubFolders(BOOKMARKS_MENU_FOLDER_ID)
+  await trimTitleInSubFolders(OTHER_BOOKMARKS_FOLDER_ID)
 
   logOD('orderBookmarks() 44')
   await sortFolders(BOOKMARKS_BAR_FOLDER_ID)
-  if (IS_BROWSER_FIREFOX) {
-    await sortFolders(BOOKMARKS_MENU_FOLDER_ID)
-  }
+  await sortFolders(BOOKMARKS_MENU_FOLDER_ID)
   await sortFolders(OTHER_BOOKMARKS_FOLDER_ID)
 
   logOD('orderBookmarks() 55')
@@ -5248,32 +5275,36 @@ async function getUrlFromUrl() {
 
 const logBCT = makeLogFunction({ module: 'bookmarks.controller.js' })
 
+function onCreated(bookmarkId, node) {
+  logBCT('onCreated 00', node)
+  if (ignoreBkmControllerApiActionSet.hasIgnoreCreate(node)) {
+    return
+  }
+  logBCT('onCreated 11')
+
+  if (node.url) {
+    bookmarkQueue.enqueueCreate({ bookmarkId, node })
+  } else {
+    folderQueue.enqueueCreate({ bookmarkId, node })
+  }
+}
+
+async function onMoved(bookmarkId, moveInfo) {
+  if (ignoreBkmControllerApiActionSet.hasIgnoreMove(bookmarkId)) {
+    return
+  }
+
+  const [node] = await browser.bookmarks.get(bookmarkId)
+  if (node.url) {
+    bookmarkQueue.enqueueMove({ bookmarkId, node, moveInfo })
+  } else {
+    folderQueue.enqueueMove({ bookmarkId, node, moveInfo })
+  }
+}
+
 const bookmarksController = {
-  async onCreated(bookmarkId, node) {
-    logBCT('onCreated 00', node)
-    if (ignoreBkmControllerApiActionSet.hasIgnoreCreate(node)) {
-      return
-    }
-    logBCT('onCreated 11')
-
-    if (node.url) {
-      bookmarkQueue.enqueueCreate({ bookmarkId, node })
-    } else {
-      folderQueue.enqueueCreate({ bookmarkId, node })
-    }
-  },
-  async onMoved(bookmarkId, moveInfo) {
-    if (ignoreBkmControllerApiActionSet.hasIgnoreMove(bookmarkId)) {
-      return
-    }
-
-    const [node] = await browser.bookmarks.get(bookmarkId)
-    if (node.url) {
-      bookmarkQueue.enqueueMove({ bookmarkId, node, moveInfo })
-    } else {
-      folderQueue.enqueueMove({ bookmarkId, node, moveInfo })
-    }
-  },
+  onCreated: ignoreBatch(onCreated),
+  onMoved: ignoreBatch(onMoved),
   async onChanged(bookmarkId, changeInfo) {
     // if (ignoreBkmControllerApiActionSet.hasIgnoreUpdate(bookmarkId)) {
     //   return
@@ -5634,6 +5665,7 @@ const tabsController = {
         memo.activeTabUrl = Tab.url
 
         // QUESTION: on open windows with stored tabs. every tab is activated?
+        // firefox: only one active tab
         visitedUrls.onActivateTab(tabId, Tab.url, Tab.title)
       }
     } catch (er) {
@@ -5655,13 +5687,15 @@ const windowsController = {
   async onFocusChanged(windowId) {
     logWC('windows.onFocusChanged', windowId);
 
-    if (0 < windowId) {
-      logWC('windows.onFocusChanged', windowId);
-      await setFirstActiveTab({ debugCaller: 'windows.onFocusChanged' })
-      debouncedUpdateActiveTab({
-        debugCaller: 'windows.onFocusChanged'
-      });
+    if (!(0 < windowId)) {
+      return
     }
+
+    logWC('windows.onFocusChanged', windowId);
+    await setFirstActiveTab({ debugCaller: 'windows.onFocusChanged' })
+    debouncedUpdateActiveTab({
+      debugCaller: 'windows.onFocusChanged'
+    });
   },
 };
 browser.storage.onChanged.addListener(storageController.onChanged);
