@@ -84,7 +84,10 @@ async function initFromUserOptions() {
 
   await Promise.all([
     createContextMenu(userSettings),
-    tagList.readFromStorage(userSettings),
+    tagList.useSettings({
+      isOn: userSettings[USER_OPTION.USE_TAG_LIST],
+      userSettings,
+    }),
     visitedUrls.useSettings({
       isOn: userSettings[USER_OPTION.MARK_CLOSED_PAGE_AS_VISITED],
     }),

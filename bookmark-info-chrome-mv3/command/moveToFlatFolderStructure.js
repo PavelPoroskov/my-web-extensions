@@ -7,7 +7,6 @@ import {
 } from '../constant/index.js'
 import {
   extensionSettings,
-  tagList,
 } from '../api-mid/index.js'
 
 export async function moveToFlatFolderStructure() {
@@ -22,5 +21,4 @@ export async function moveToFlatFolderStructure() {
   }
 
   await orderBookmarks()
-  await tagList.filterTagListForFlatFolderStructure()
 }

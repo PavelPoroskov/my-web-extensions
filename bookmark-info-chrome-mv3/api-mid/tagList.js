@@ -26,25 +26,33 @@ import {
 const logTL = makeLogFunction({ module: 'tagList.js' })
 
 class TagList {
+  isOn = false
+  isFlatStructure = false
+
   _recentTagObj = {}
   _fixedTagObj = {}
+  _nFixedTags = 0
   _tagList = []
 
-  USE_TAG_LIST = false
-  USE_FLAT_FOLDER_STRUCTURE
-  HIGHLIGHT_LAST
-  HIGHLIGHT_ALPHABET
-
-  isOpenGlobal
-  AVAILABLE_ROWS
-  MAX_AVAILABLE_ROWS
-  _nFixedTags = 0
-
   changeCount = 0
-  changeProcessedCount = -1
+  changeProcessedCount = 0
+
+
+  isOpenGlobal = false
+  AVAILABLE_ROWS = 0
+  MAX_AVAILABLE_ROWS = 0
+  HIGHLIGHT_LAST = false
+  HIGHLIGHT_ALPHABET = false
+  PINNED_TAGS_POSITION = undefined
 
   addRecentTagFromFolder = () => { }
   removeTag = () => { }
+
+  addFixedTag = () => { }
+  removeFixedTag = () => { }
+
+  openTagList = () => { }
+  updateAvailableRows = () => { }
 
   get list() {
     if (this.changeProcessedCount !== this.changeCount) {
@@ -72,29 +80,8 @@ class TagList {
     this.changeCount += 1
   }
 
-  _enableTagList(isEnabled) {
-    logTL('_enableTagList 00', isEnabled)
-    if (isEnabled) {
-      this.addRecentTagFromFolder = this._addRecentTagFromFolder
-      this.removeTag = this._removeTag
-    } else {
-      this.addRecentTagFromFolder = () => { }
-      this.removeTag = () => { }
-    }
-  }
-  blockTagList(isBlocking) {
-    if (this.USE_TAG_LIST) {
-      this._enableTagList(!isBlocking)
-    }
-  }
-  async readFromStorage(userSettings) {
-    this.USE_TAG_LIST = userSettings[USER_OPTION.USE_TAG_LIST]
-    this._enableTagList(this.USE_TAG_LIST)
-    if (!this.USE_TAG_LIST) {
-      return
-    }
-
-    this.USE_FLAT_FOLDER_STRUCTURE = userSettings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]
+  async readFromStorage({ userSettings }) {
+    this.isFlatStructure = userSettings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]
     this.HIGHLIGHT_LAST = userSettings[USER_OPTION.TAG_LIST_HIGHLIGHT_LAST]
     this.HIGHLIGHT_ALPHABET = userSettings[USER_OPTION.TAG_LIST_HIGHLIGHT_ALPHABET]
     this.PINNED_TAGS_POSITION = userSettings[USER_OPTION.TAG_LIST_PINNED_TAGS_POSITION]
@@ -121,20 +108,17 @@ class TagList {
     }
     this._fixedTagObj = savedObj[INTERNAL_VALUES.TAG_LIST_FIXED_MAP]
 
-    if (!savedObj[INTERNAL_VALUES.TAG_LIST_SESSION_STARTED]) {
-      const isFlatStructure = this.USE_FLAT_FOLDER_STRUCTURE
-      this._recentTagObj = await filterRecentTagObj(this._recentTagObj, isFlatStructure)
-      this._fixedTagObj = await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
-      await setOptions({
-        [INTERNAL_VALUES.TAG_LIST_SESSION_STARTED]: true,
-        [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj,
-        [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj,
-      })
-    }
+    this._recentTagObj = await filterRecentTagObj(this._recentTagObj, this.isFlatStructure)
+    this._fixedTagObj = await filterFixedTagObj(this._fixedTagObj, this.isFlatStructure)
+    await setOptions({
+      [INTERNAL_VALUES.TAG_LIST_SESSION_STARTED]: true,
+      [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj,
+      [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj,
+    })
 
     this.markUpdates()
   }
-  async updateAvailableRows(availableRows) {
+  async _updateAvailableRows(availableRows) {
     logTL('updateAvailableRows () 00', availableRows)
     const beforeAvailableRows = this.AVAILABLE_ROWS
     this.AVAILABLE_ROWS = availableRows
@@ -150,8 +134,7 @@ class TagList {
         ...this._recentTagObj,
         ...actualRecentTagObj,
       }
-      const isFlatStructure = this.USE_FLAT_FOLDER_STRUCTURE
-      this._recentTagObj = await filterRecentTagObj(this._recentTagObj, isFlatStructure)
+      this._recentTagObj = await filterRecentTagObj(this._recentTagObj, this.isFlatStructure)
       Object.assign(updateObj, {
         [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj,
       })
@@ -160,30 +143,10 @@ class TagList {
     await setOptions(updateObj)
     this.markUpdates()
   }
-  async openTagList(isOpen) {
+  async _openTagList(isOpen) {
     this.isOpenGlobal = isOpen
     await setOptions({
       [INTERNAL_VALUES.TAG_LIST_IS_OPEN]: isOpen
-    })
-  }
-  async filterTagListForFlatFolderStructure() {
-    const savedObj = await getOptions([
-      INTERNAL_VALUES.TAG_LIST_RECENT_MAP,
-      INTERNAL_VALUES.TAG_LIST_FIXED_MAP,
-    ]);
-    this._recentTagObj = savedObj[INTERNAL_VALUES.TAG_LIST_RECENT_MAP]
-    this._fixedTagObj = savedObj[INTERNAL_VALUES.TAG_LIST_FIXED_MAP]
-
-    const isFlatStructure = true
-    // console.log('filterTagListForFlatFolderStructure ', this._fixedTagObj)
-    this._recentTagObj = await filterRecentTagObj(this._recentTagObj, isFlatStructure)
-    this._fixedTagObj = await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
-    // console.log('filterTagListForFlatFolderStructure, after filter', this._fixedTagObj)
-    this.markUpdates()
-
-    await setOptions({
-      [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj,
-      [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj,
     })
   }
   refillList() {
@@ -248,7 +211,7 @@ class TagList {
   async _addRecentTagFromFolder(folderNode) {
     logTL('_addRecentTagFromFolder 00', folderNode)
     // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
-    if (this.USE_FLAT_FOLDER_STRUCTURE) {
+    if (this.isFlatStructure) {
       // if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
       //   return
       // }
@@ -335,7 +298,7 @@ class TagList {
       })
     }
   }
-  async addFixedTag({ parentId, title }) {
+  async _addFixedTag({ parentId, title }) {
     if (!title || !parentId) {
       return
     }
@@ -349,13 +312,68 @@ class TagList {
       })
     }
   }
-  async removeFixedTag(id) {
+  async _removeFixedTag(id) {
     delete this._fixedTagObj[id]
 
     this.markUpdates()
     await setOptions({
       [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
     })
+  }
+
+  useSettings({ isOn, userSettings }) {
+    this.isOn = isOn
+
+    if (isOn) {
+      this.addRecentTagFromFolder = this._addRecentTagFromFolder
+      this.removeTag = this._removeTag
+
+      this.addFixedTag = this._addFixedTag
+      this.removeFixedTag = this._removeFixedTag
+
+      this.openTagList = this._openTagList
+      this.updateAvailableRows = this._updateAvailableRows
+
+      // tagList.list
+      // tagList.isOpenGlobal
+      // tagList.nAvailableRows
+      // tagList.nFixedTags
+    } else {
+      this.addRecentTagFromFolder = () => { }
+      this.removeTag = () => { }
+
+      this.addFixedTag = () => { }
+      this.removeFixedTag = () => { }
+
+      this.openTagList = () => { }
+      this.updateAvailableRows = () => { }
+    }
+
+
+    if (isOn) {
+      this.changeCount = 0
+      this.changeProcessedCount = 0
+
+      this.readFromStorage({ userSettings })
+    } else {
+
+      this.isFlatStructure = false
+
+      this._recentTagObj = {}
+      this._fixedTagObj = {}
+      this._nFixedTags = 0
+      this._tagList = []
+
+      this.changeCount = 0
+      this.changeProcessedCount = 0
+
+      this.isOpenGlobal = false
+      this.AVAILABLE_ROWS = 0
+      this.MAX_AVAILABLE_ROWS = 0
+      this.HIGHLIGHT_LAST = false
+      this.HIGHLIGHT_ALPHABET = false
+      this.PINNED_TAGS_POSITION = undefined
+    }
   }
 }
 

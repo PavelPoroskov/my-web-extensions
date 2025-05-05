@@ -554,6 +554,7 @@
 
     const visitString = input.visitString || ''
     const isShowTitle = input.isShowTitle || false
+    const isTagListAvailable = input.isTagListAvailable || false
     const tagList = input.tagList || []
     const tagListOpenMode = input.tagListOpenMode
     const isTagListOpen = tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL
@@ -630,7 +631,7 @@
       drawList.push({ type: 'author-bookmark', value })
     })
 
-    if (tagList.length > 0) {
+    if (isTagListAvailable) {
     //if (tagList.length > 0 && isTagListOpen) {
       const emptySlotsForDel = Math.max(0, optimisticDelFromTagList - optimisticAddFromTagList)
       const emptySlotsForAdd = Math.max(0, 2 - bookmarkList.length - partialBookmarkList.length - authorBookmarkList.length - emptySlotsForDel)
@@ -645,7 +646,7 @@
       drawList.push({ type: 'history', value: visitString })
     }
 
-    if (tagList.length > 0) {
+    if (isTagListAvailable) {
       drawList.push({ type: 'separator' })
 
       if (isTagListOpen) {
