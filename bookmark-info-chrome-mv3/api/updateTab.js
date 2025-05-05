@@ -110,7 +110,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     isShowTitle: settings[USER_OPTION.SHOW_BOOKMARK_TITLE],
 
     isTagListAvailable: tagList.isOn,
-    tagList: tagList.list,
+    tagList: tagList.getListWithBookmarks(bookmarkList),
     tagListOpenMode: settings[USER_OPTION.TAG_LIST_OPEN_MODE],
     isTagListOpenGlobal: tagList.isOpenGlobal,
     tagLength: settings[USER_OPTION.TAG_LIST_TAG_LENGTH],

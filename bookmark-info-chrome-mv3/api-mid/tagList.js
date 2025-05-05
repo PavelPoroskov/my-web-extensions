@@ -31,8 +31,12 @@ class TagList {
 
   _recentTagObj = {}
   _fixedTagObj = {}
-  _nFixedTags = 0
-  _tagList = []
+
+  recentListDesc = []
+  recentListLimit = []
+  tagList = []
+  tagListFormat = []
+  tagIdSet = new Set()
 
   changeCount = 0
   changeProcessedCount = 0
@@ -54,25 +58,6 @@ class TagList {
   openTagList = () => { }
   updateAvailableRows = () => { }
 
-  get list() {
-    if (this.changeProcessedCount !== this.changeCount) {
-      this.changeProcessedCount = this.changeCount
-      this._tagList = this.refillList()
-      this._nFixedTags = Object.keys(this._fixedTagObj).length
-    }
-
-    return this._tagList
-  }
-  get nFixedTags() {
-    if (this.changeProcessedCount !== this.changeCount) {
-      this.changeProcessedCount = this.changeCount
-      this._tagList = this.refillList()
-      this._nFixedTags = Object.keys(this._fixedTagObj).length
-    }
-    logTL('get nFixedTags() 00', this._nFixedTags)
-
-    return this._nFixedTags
-  }
   get nAvailableRows() {
     return this.AVAILABLE_ROWS
   }
@@ -149,45 +134,18 @@ class TagList {
       [INTERNAL_VALUES.TAG_LIST_IS_OPEN]: isOpen
     })
   }
-  refillList() {
-    const recentTagLimit = Math.max(
-      this.AVAILABLE_ROWS - Object.keys(this._fixedTagObj).length,
-      0
-    )
-
-    const recentTagList = Object.entries(this._recentTagObj)
-      .filter(([parentId]) => !(parentId in this._fixedTagObj))
-      .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-      .sort((a, b) => -(a.dateAdded - b.dateAdded))
-      .slice(0, recentTagLimit)
-
-    const lastTagList = Object.entries(this._recentTagObj)
-      .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-      .sort((a, b) => -(a.dateAdded - b.dateAdded))
+  formatList(list) {
+    const inList = list.filter(({ title }) => !!title)
+    const lastTagList = this.recentListDesc
       .slice(0, this.HIGHLIGHT_LAST)
+
     const lastTagSet = new Set(
       lastTagList.map(({ parentId }) => parentId)
     )
 
-    const fullList = [].concat(
-      recentTagList
-        .map(({ parentId, title }, index) => ({ parentId, title, isFixed: false, ageIndex: index })),
-      Object.entries(this._fixedTagObj)
-        .map(([parentId, title]) => ({
-          parentId,
-          title,
-          isFixed: true,
-        }))
-    )
-      .filter(({ title }) => !!title)
-      .map((item) => ({
-        ...item,
-        isLast: lastTagSet.has(item.parentId),
-      }))
-
     let resultList
     if (this.PINNED_TAGS_POSITION == TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.TOP) {
-      resultList = fullList.sort((a, b) => -(+a.isFixed - b.isFixed) || a.title.localeCompare(b.title))
+      resultList = inList.sort((a, b) => -(+a.isFixed - b.isFixed) || a.title.localeCompare(b.title))
 
       if (this.HIGHLIGHT_ALPHABET) {
         resultList = highlightAlphabet({
@@ -196,7 +154,7 @@ class TagList {
         })
       }
     } else {
-      resultList = fullList.sort((a, b) => a.title.localeCompare(b.title))
+      resultList = inList.sort((a, b) => a.title.localeCompare(b.title))
 
       if (this.HIGHLIGHT_ALPHABET) {
         resultList = highlightAlphabet({
@@ -206,7 +164,88 @@ class TagList {
       }
     }
 
-    return resultList
+    return resultList.map((item) => ({
+      ...item,
+      isLast: lastTagSet.has(item.parentId),
+    }))
+  }
+  getListWithBookmarks(bookmarkList = []) {
+    if (this.changeProcessedCount !== this.changeCount) {
+      this.changeProcessedCount = this.changeCount
+
+      this.recentListDesc = Object.entries(this._recentTagObj)
+        .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+        .sort((a, b) => -(a.dateAdded - b.dateAdded))
+
+      const recentTagLimit = Math.max(
+        this.AVAILABLE_ROWS - Object.keys(this._fixedTagObj).length,
+        0
+      )
+
+      this.recentListLimit = this.descRecentTagList
+        .filter(({ parentId }) => !(parentId in this._fixedTagObj))
+        .slice(0, recentTagLimit)
+
+      this.tagList  = [].concat(
+        Object.entries(this._fixedTagObj)
+          .map(([parentId, title]) => ({
+            parentId,
+            title,
+            isFixed: true,
+          })),
+        this.recentListLimit
+          .map(({ parentId, title }, index) => ({ parentId, title, isFixed: false, ageIndex: index })),
+      )
+
+
+      this.tagIdSet = new Set(this.tagList.map(({ parentId }) => parentId))
+
+      this.tagListFormat = this.formatList(this.tagList)
+    }
+
+    const addTagList = bookmarkList
+      .filter(({ parentId }) => !this.tagIdSet.has(parentId))
+      .map(({ parentId, folder }) => ({ parentId, title: folder }))
+
+    const requiredSlots = addTagList.length
+
+    if (requiredSlots === 0) {
+      return this.tagListFormat
+    }
+
+    const bookmarkSet = new Set(bookmarkList.map(({ parentId }) => parentId))
+
+    const availableSlots = Math.Math(0, this.AVAILABLE_ROWS - this.tagList.length)
+    const replaceSlots = Math.max(0, requiredSlots - availableSlots)
+    const replaceList = addTagList.slice(0, replaceSlots)
+    const connectList = addTagList.slice(replaceSlots)
+
+    let resultList = this.tagList.slice()
+
+    if (0 < replaceList.length) {
+
+      let iTo = resultList.length - 1
+      let iFrom = replaceList.length - 1
+
+      while (-1 < iFrom && -1 < iTo) {
+        const item = resultList[iTo]
+
+        if (!item.isFixed && !bookmarkSet.has(item.parentId)) {
+          resultList[iTo].parentId = replaceList[iFrom].parentId
+          resultList[iTo].title = replaceList[iFrom].title
+          iFrom = iFrom - 1
+        }
+        iTo = iTo - 1
+      }
+    }
+    if (0 < connectList.length) {
+      const ageIndex = this.recentListLimit.length
+      resultList = resultList.concat(
+        connectList.map(({ parentId, title }) => ({ parentId, title, isFixed: false, ageIndex }))
+      )
+    }
+
+    return this.formatList(resultList)
   }
   async _addRecentTagFromFolder(folderNode) {
     logTL('_addRecentTagFromFolder 00', folderNode)
@@ -349,11 +388,11 @@ class TagList {
       this.updateAvailableRows = () => { }
     }
 
+    this.changeCount = 0
+    this.changeProcessedCount = 0
+    this.tagIdSet = new Set()
 
     if (isOn) {
-      this.changeCount = 0
-      this.changeProcessedCount = 0
-
       this.readFromStorage({ userSettings })
     } else {
 
@@ -361,11 +400,12 @@ class TagList {
 
       this._recentTagObj = {}
       this._fixedTagObj = {}
-      this._nFixedTags = 0
-      this._tagList = []
 
-      this.changeCount = 0
-      this.changeProcessedCount = 0
+      this.recentListDesc = []
+      this.recentListLimit = []
+      this.tagList = []
+      this.tagListFormat = []
+      this.tagIdSet = new Set()
 
       this.isOpenGlobal = false
       this.AVAILABLE_ROWS = 0

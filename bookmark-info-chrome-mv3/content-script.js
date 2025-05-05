@@ -491,7 +491,7 @@
     }
   }
 
-  function filterTagList({ tagList, nAvailableRows, nUsedRows, nFixedTags }) {
+  function filterTagList({ tagList, nAvailableRows, nUsedRows }) {
     log('filterTagList ', tagList)
     if (!nAvailableRows) {
       return tagList
@@ -506,6 +506,7 @@
       return tagList
     }
 
+    const nFixedTags = tagList.filter(({ isFixed }) => isFixed).length
     const nAvailableRecentTags = nAvailableTags - nFixedTags
 
     const resultList = []
@@ -654,7 +655,6 @@
           tagList,
           nAvailableRows: nTagListAvailableRows,
           nUsedRows: drawList.length,
-          nFixedTags: input.nFixedTags,
         })
 
         filteredTagList.forEach((tag) => {
