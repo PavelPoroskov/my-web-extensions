@@ -50,7 +50,7 @@ async function getRecentList(nItems) {
   }
 
   return Object.entries(folderByIdMap)
-    .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+    .map(([parentId, { title, dateAdded }]) => ({ parentId, parentTitle: title, dateAdded }))
     .sort((a,b) => -(a.dateAdded - b.dateAdded))
 }
 
@@ -66,7 +66,7 @@ export async function getRecentTagObj(nItems) {
   return Object.fromEntries(
     list
       .slice(0, nItems)
-      .map(({ parentId, title, dateAdded }) => [parentId, { title, dateAdded }])
+      .map(({ parentId, parentTitle, dateAdded }) => [parentId, { parentTitle, dateAdded }])
   )
 }
 
@@ -116,7 +116,7 @@ export async function filterRecentTagObj(obj = {}, isFlatStructure) {
     filteredFolderList.map(({ id, title }) => [
       id,
       {
-        title,
+        parentTitle: title,
         dateAdded: obj[id].dateAdded,
       }
     ])

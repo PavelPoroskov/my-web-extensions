@@ -133,7 +133,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     }
   }
 
-  const tagFromBookmarkList = bookmarkListToTagList(bookmarkInfo.bookmarkList)
+  const tagFromBookmarkList = await bookmarkListToTagList(bookmarkInfo.bookmarkList)
   const tagListList = tagList.getListWithBookmarks(tagFromBookmarkList)
 
   const data = {

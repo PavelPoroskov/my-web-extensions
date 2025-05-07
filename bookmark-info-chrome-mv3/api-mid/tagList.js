@@ -87,8 +87,18 @@ class TagList {
       actualRecentTagObj = await getRecentTagObj(this.AVAILABLE_ROWS)
     }
 
+    const savedRecentObj = savedObj[INTERNAL_VALUES.TAG_LIST_RECENT_MAP] || {}
+    const savedRecentObj2 = Object.fromEntries(
+      Object.entries(savedRecentObj).map(([parentId, item]) => [
+        parentId,
+        {
+          parentTitle: item.parentTitle || item.title,
+          dateAdded: item.dateAdded,
+        }
+      ])
+    )
     this._recentTagObj = {
-      ...savedObj[INTERNAL_VALUES.TAG_LIST_RECENT_MAP],
+      ...savedRecentObj2,
       ...actualRecentTagObj,
     }
     this._fixedTagObj = savedObj[INTERNAL_VALUES.TAG_LIST_FIXED_MAP]
@@ -135,6 +145,8 @@ class TagList {
     })
   }
   formatList(list) {
+    logTL('formatList () 00', list)
+
     const inList = list.filter(({ parentTitle }) => !!parentTitle)
     const lastTagList = this.recentListDesc
       .slice(0, this.HIGHLIGHT_LAST)
@@ -170,7 +182,10 @@ class TagList {
     }))
   }
   getListWithBookmarks(addTagList = []) {
+    logTL('getListWithBookmarks () 00', addTagList)
+
     if (this.changeProcessedCount !== this.changeCount) {
+      logTL('getListWithBookmarks () 11')
       this.changeProcessedCount = this.changeCount
 
       this.recentListDesc = Object.entries(this._recentTagObj)
@@ -182,9 +197,11 @@ class TagList {
         0
       )
 
-      this.recentListLimit = this.descRecentTagList
+      this.recentListLimit = this.recentListDesc
         .filter(({ parentId }) => !(parentId in this._fixedTagObj))
         .slice(0, recentTagLimit)
+
+      logTL('getListWithBookmarks () 11 this._fixedTagObj', this._fixedTagObj)
 
       this.tagList  = [].concat(
         Object.entries(this._fixedTagObj)
@@ -204,15 +221,18 @@ class TagList {
     }
 
 
+    logTL('getListWithBookmarks () 22')
     const finalAddTagList = addTagList
       .filter(({ parentId }) => !this.tagIdSet.has(parentId))
 
     const requiredSlots = finalAddTagList.length
 
     if (requiredSlots === 0) {
+      logTL('getListWithBookmarks () 33', this.tagListFormat)
       return this.tagListFormat
     }
 
+    logTL('getListWithBookmarks () 44 finalAddTagList', finalAddTagList)
     const addSet = new Set(addTagList.map(({ parentId }) => parentId))
 
     const availableSlots = Math.Math(0, this.AVAILABLE_ROWS - this.tagList.length)
