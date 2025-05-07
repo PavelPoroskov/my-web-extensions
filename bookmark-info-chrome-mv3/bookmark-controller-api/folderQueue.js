@@ -22,7 +22,7 @@ async function onCreateFolder(task) {
   const { node } = task
   logFQ('onCreateFolder () 00', node.title)
 
-  await tagList.addRecentTagFromFolder(node)
+  await tagList.addTag({ parentId: node.id, parentTitle: node.title })
   await afterUserCreatedFolderInGUI(node)
 }
 
@@ -35,7 +35,7 @@ async function onChangeFolder(task) {
   const { bookmarkId, node } = task
 
   memo.bkmFolderById.delete(bookmarkId);
-  await tagList.addRecentTagFromFolder(node)
+  await tagList.addTag({ parentId: node.id, parentTitle: node.title })
 }
 
 async function onDeleteFolder(task) {

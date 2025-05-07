@@ -49,11 +49,11 @@ class TagList {
   HIGHLIGHT_ALPHABET = false
   PINNED_TAGS_POSITION = undefined
 
-  addRecentTagFromFolder = () => { }
+  addTag = () => { }
   removeTag = () => { }
 
-  addFixedTag = () => { }
-  removeFixedTag = () => { }
+  fixTag = () => { }
+  unfixTag = () => { }
 
   openTagList = () => { }
   updateAvailableRows = () => { }
@@ -135,7 +135,7 @@ class TagList {
     })
   }
   formatList(list) {
-    const inList = list.filter(({ title }) => !!title)
+    const inList = list.filter(({ parentTitle }) => !!parentTitle)
     const lastTagList = this.recentListDesc
       .slice(0, this.HIGHLIGHT_LAST)
 
@@ -145,21 +145,21 @@ class TagList {
 
     let resultList
     if (this.PINNED_TAGS_POSITION == TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.TOP) {
-      resultList = inList.sort((a, b) => -(+a.isFixed - b.isFixed) || a.title.localeCompare(b.title))
+      resultList = inList.sort((a, b) => -(+a.isFixed - b.isFixed) || a.parentTitle.localeCompare(b.parentTitle))
 
       if (this.HIGHLIGHT_ALPHABET) {
         resultList = highlightAlphabet({
           list: resultList,
-          fnGetFirstLetter: ({ isFixed, title }) => `${isFixed ? 'F': 'R'}#${getFirstLetter(title)}`
+          fnGetFirstLetter: ({ isFixed, parentTitle }) => `${isFixed ? 'F': 'R'}#${getFirstLetter(parentTitle)}`
         })
       }
     } else {
-      resultList = inList.sort((a, b) => a.title.localeCompare(b.title))
+      resultList = inList.sort((a, b) => a.parentTitle.localeCompare(b.parentTitle))
 
       if (this.HIGHLIGHT_ALPHABET) {
         resultList = highlightAlphabet({
           list: resultList,
-          fnGetFirstLetter: ({ title }) => getFirstLetter(title),
+          fnGetFirstLetter: ({ parentTitle }) => getFirstLetter(parentTitle),
         })
       }
     }
@@ -169,12 +169,12 @@ class TagList {
       isLast: lastTagSet.has(item.parentId),
     }))
   }
-  getListWithBookmarks(bookmarkList = []) {
+  getListWithBookmarks(addTagList = []) {
     if (this.changeProcessedCount !== this.changeCount) {
       this.changeProcessedCount = this.changeCount
 
       this.recentListDesc = Object.entries(this._recentTagObj)
-        .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+        .map(([parentId, { parentTitle, dateAdded }]) => ({ parentId, parentTitle, dateAdded }))
         .sort((a, b) => -(a.dateAdded - b.dateAdded))
 
       const recentTagLimit = Math.max(
@@ -188,13 +188,13 @@ class TagList {
 
       this.tagList  = [].concat(
         Object.entries(this._fixedTagObj)
-          .map(([parentId, title]) => ({
+          .map(([parentId, parentTitle]) => ({
             parentId,
-            title,
+            parentTitle,
             isFixed: true,
           })),
         this.recentListLimit
-          .map(({ parentId, title }, index) => ({ parentId, title, isFixed: false, ageIndex: index })),
+          .map(({ parentId, parentTitle }, index) => ({ parentId, parentTitle, isFixed: false, ageIndex: index })),
       )
 
 
@@ -203,22 +203,22 @@ class TagList {
       this.tagListFormat = this.formatList(this.tagList)
     }
 
-    const addTagList = bookmarkList
-      .filter(({ parentId }) => !this.tagIdSet.has(parentId))
-      .map(({ parentId, folder }) => ({ parentId, title: folder }))
 
-    const requiredSlots = addTagList.length
+    const finalAddTagList = addTagList
+      .filter(({ parentId }) => !this.tagIdSet.has(parentId))
+
+    const requiredSlots = finalAddTagList.length
 
     if (requiredSlots === 0) {
       return this.tagListFormat
     }
 
-    const bookmarkSet = new Set(bookmarkList.map(({ parentId }) => parentId))
+    const addSet = new Set(addTagList.map(({ parentId }) => parentId))
 
     const availableSlots = Math.Math(0, this.AVAILABLE_ROWS - this.tagList.length)
     const replaceSlots = Math.max(0, requiredSlots - availableSlots)
-    const replaceList = addTagList.slice(0, replaceSlots)
-    const connectList = addTagList.slice(replaceSlots)
+    const replaceList = finalAddTagList.slice(0, replaceSlots)
+    const connectList = finalAddTagList.slice(replaceSlots)
 
     let resultList = this.tagList.slice()
 
@@ -230,9 +230,9 @@ class TagList {
       while (-1 < iFrom && -1 < iTo) {
         const item = resultList[iTo]
 
-        if (!item.isFixed && !bookmarkSet.has(item.parentId)) {
+        if (!item.isFixed && !addSet.has(item.parentId)) {
           resultList[iTo].parentId = replaceList[iFrom].parentId
-          resultList[iTo].title = replaceList[iFrom].title
+          resultList[iTo].parentTitle = replaceList[iFrom].parentTitle
           iFrom = iFrom - 1
         }
         iTo = iTo - 1
@@ -241,14 +241,14 @@ class TagList {
     if (0 < connectList.length) {
       const ageIndex = this.recentListLimit.length
       resultList = resultList.concat(
-        connectList.map(({ parentId, title }) => ({ parentId, title, isFixed: false, ageIndex }))
+        connectList.map(({ parentId, parentTitle }) => ({ parentId, parentTitle, isFixed: false, ageIndex }))
       )
     }
 
     return this.formatList(resultList)
   }
-  async _addRecentTagFromFolder(folderNode) {
-    logTL('_addRecentTagFromFolder 00', folderNode)
+  async _addTag({ parentId, parentTitle }) {
+    logTL('_addRecentTagFromFolder 00', parentId, parentTitle)
     // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
     if (this.isFlatStructure) {
       // if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
@@ -256,27 +256,27 @@ class TagList {
       // }
 
       const unclassifiedFolderId = await getUnclassifiedFolderId()
-      if (unclassifiedFolderId && folderNode.id === unclassifiedFolderId) {
+      if (unclassifiedFolderId && parentId === unclassifiedFolderId) {
         return
       }
     }
 
-    if (!isDescriptiveFolderTitle(folderNode.title)) {
+    if (!isDescriptiveFolderTitle(parentTitle)) {
       return
     }
 
-    if (isDatedFolderTitle(folderNode.title)) {
+    if (isDatedFolderTitle(parentTitle)) {
       return
     }
 
-    this._recentTagObj[folderNode.id] = {
+    this._recentTagObj[parentId] = {
       dateAdded: Date.now(),
-      title: folderNode.title
+      parentTitle,
     }
 
     let fixedTagUpdate
-    if (folderNode.id in this._fixedTagObj) {
-      this._fixedTagObj[folderNode.id] = folderNode.title
+    if (parentId in this._fixedTagObj) {
+      this._fixedTagObj[parentId] = parentTitle
       fixedTagUpdate = {
         [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
       }
@@ -284,7 +284,7 @@ class TagList {
 
     if (this.MAX_AVAILABLE_ROWS + 20 < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
-        .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+        .map(([parentId, { parentTitle, dateAdded }]) => ({ parentId, parentTitle, dateAdded }))
         .sort((a, b) => -(a.dateAdded - b.dateAdded))
         .slice(this.MAX_AVAILABLE_ROWS)
         .map(({ parentId }) => parentId)
@@ -300,14 +300,6 @@ class TagList {
       ...fixedTagUpdate,
     })
   }
-  // async _addRecentTagFromBkm(bkmNode) {
-  //   const parentId = bkmNode?.parentId
-
-  //   if (parentId) {
-  //     const [folderNode] = await chrome.bookmarks.get(parentId)
-  //     await this.addRecentTagFromFolder(folderNode)
-  //   }
-  // }
   async _removeTag(id) {
     const isInFixedList = id in this._fixedTagObj
     let fixedTagUpdate
@@ -337,13 +329,13 @@ class TagList {
       })
     }
   }
-  async _addFixedTag({ parentId, title }) {
-    if (!title || !parentId) {
+  async _fixTag({ parentId, parentTitle }) {
+    if (!parentTitle || !parentId) {
       return
     }
 
     if (!(parentId in this._fixedTagObj)) {
-      this._fixedTagObj[parentId] = title
+      this._fixedTagObj[parentId] = parentTitle
 
       this.markUpdates()
       await setOptions({
@@ -351,8 +343,8 @@ class TagList {
       })
     }
   }
-  async _removeFixedTag(id) {
-    delete this._fixedTagObj[id]
+  async _unfixTag(parentId) {
+    delete this._fixedTagObj[parentId]
 
     this.markUpdates()
     await setOptions({
@@ -364,11 +356,11 @@ class TagList {
     this.isOn = isOn
 
     if (isOn) {
-      this.addRecentTagFromFolder = this._addRecentTagFromFolder
+      this.addTag = this._addTag
       this.removeTag = this._removeTag
 
-      this.addFixedTag = this._addFixedTag
-      this.removeFixedTag = this._removeFixedTag
+      this.fixTag = this._fixTag
+      this.unfixTag = this._unfixTag
 
       this.openTagList = this._openTagList
       this.updateAvailableRows = this._updateAvailableRows
@@ -378,11 +370,11 @@ class TagList {
       // tagList.nAvailableRows
       // tagList.nFixedTags
     } else {
-      this.addRecentTagFromFolder = () => { }
+      this.addTag = () => { }
       this.removeTag = () => { }
 
-      this.addFixedTag = () => { }
-      this.removeFixedTag = () => { }
+      this.fixTag = () => { }
+      this.unfixTag = () => { }
 
       this.openTagList = () => { }
       this.updateAvailableRows = () => { }

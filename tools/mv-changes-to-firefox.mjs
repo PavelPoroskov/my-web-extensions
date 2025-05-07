@@ -63,6 +63,7 @@ createFileForFirefox(
     'api/get-bookmarks.api.js',
     'api/history.api.js',
     'api/showAuthorBookmarks.js',
+    'api/datedTemplate.js',
     'api/updateTab.js',
     'api/index.js',
 

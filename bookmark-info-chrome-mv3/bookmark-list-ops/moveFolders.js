@@ -3,38 +3,23 @@ import {
   BOOKMARKS_BAR_FOLDER_ID,
   BOOKMARKS_MENU_FOLDER_ID,
   OTHER_BOOKMARKS_FOLDER_ID,
-  getDatedTemplate,
   isTopFolder,
   isDatedFolderTitle,
 } from '../folder-api/index.js';
 import {
   moveFolderIgnoreInController,
-  findOrCreateFolder,
 } from '../bookmark-controller-api/index.js';
 import {
   makeLogFunction,
 } from '../api-low/index.js';
 import {
+  datedTemplate,
+} from '../api/index.js';
+import {
   traverseFolderRecursively,
 } from './traverseFolder.js'
 
 const logMF = makeLogFunction({ module: 'moveFolders.js' })
-
-const cacheForDatedTemplate = {}
-
-async function getParentIdForDatedFolder(title) {
-  const templateTitle = getDatedTemplate(title)
-
-  let parentId = cacheForDatedTemplate[templateTitle]
-
-  if (!parentId) {
-    const parentFolder = await findOrCreateFolder(templateTitle)
-    parentId = parentFolder.id
-    cacheForDatedTemplate[templateTitle] = parentId
-  }
-
-  return parentId;
-}
 
 async function getFolderCorrectParentIdByTitle(title) {
   let parentId = OTHER_BOOKMARKS_FOLDER_ID
@@ -46,7 +31,8 @@ async function getFolderCorrectParentIdByTitle(title) {
 
   if (isDatedFolderTitle(title)) {
     parentId = BOOKMARKS_MENU_FOLDER_ID || BOOKMARKS_BAR_FOLDER_ID
-    secondParentId = await getParentIdForDatedFolder(title)
+
+    secondParentId = await datedTemplate.getTagIdForDated(title)
   }
 
   return {

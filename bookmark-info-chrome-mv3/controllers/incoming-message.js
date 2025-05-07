@@ -37,12 +37,12 @@ const HandlersWithUpdateTab = {
       url,
     })
   },
-  [EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME]: async ({ parentNameList, url, title }) => {
-    logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', parentNameList);
+  [EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME]: async ({ parentTitleList, url, title }) => {
+    logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', parentTitleList);
 
-    await Promise.allSettled(parentNameList.map(
-      (parentName) => createBookmark({
-        parentName,
+    await Promise.allSettled(parentTitleList.map(
+      (parentTitle) => createBookmark({
+        parentTitle,
         url,
         title,
       })
@@ -54,13 +54,13 @@ const HandlersWithUpdateTab = {
   },
 
 
-  [EXTENSION_MSG_ID.FIX_TAG]: async ({ parentId, title }) => {
+  [EXTENSION_MSG_ID.FIX_TAG]: async ({ parentId, parentTitle }) => {
     logIM('runtime.onMessage FIX_TAG');
-    await tagList.addFixedTag({ parentId, title })
+    await tagList.fixTag({ parentId, parentTitle })
   },
   [EXTENSION_MSG_ID.UNFIX_TAG]: async ({ parentId }) => {
     logIM('runtime.onMessage UNFIX_TAG');
-    await tagList.removeFixedTag(parentId)
+    await tagList.unfixTag(parentId)
   },
   [EXTENSION_MSG_ID.UPDATE_AVAILABLE_ROWS]: async ({ value }) => {
     logIM('runtime.onMessage UPDATE_AVAILABLE_ROWS', value);

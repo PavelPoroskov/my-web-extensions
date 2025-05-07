@@ -99,12 +99,12 @@ async function getBookmarkInfo({ url, isShowTitle, isShowUrl }) {
 
       return {
         id: bookmarkItem.id,
-        folder: fullPathList.at(-1),
-        path: fullPathList.slice(0, -1).concat('').join('/ '),
-        parentId: bookmarkItem.parentId,
-        source: bookmarkItem.source,
         ...(isShowUrl ? { url: bookmarkItem.url } : {}),
-        ...(isShowTitle ? { title: bookmarkItem.title } : {})
+        ...(isShowTitle ? { title: bookmarkItem.title } : {}),
+        parentId: bookmarkItem.parentId,
+        parentTitle: fullPathList.at(-1),
+        path: fullPathList.slice(0, -1).concat('').join('/ '),
+        source: bookmarkItem.source,
       }
     });
 }
@@ -178,9 +178,9 @@ export async function getPartialBookmarkList({ url, exactBkmIdList = [] }) {
 
       return {
         id: bookmarkItem.id,
-        folder: folder?.title,
-        parentId: bookmarkItem.parentId,
         url: bookmarkItem.url,
+        parentId: bookmarkItem.parentId,
+        parentTitle: folder?.title,
       }
     });
 }

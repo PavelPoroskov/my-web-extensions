@@ -12,7 +12,9 @@ import {
   isSupportedProtocol,
 } from '../url-api/index.js'
 import {
-  isVisitedDatedTitle
+  getDatedTemplate,
+  isDatedFolderTitle,
+  isVisitedDatedTitle,
 } from '../folder-api/index.js'
 import {
   getBookmarkInfoUni,
@@ -28,6 +30,9 @@ import {
 import {
   showAuthorBookmarks,
 } from './showAuthorBookmarks.js'
+import {
+  datedTemplate,
+} from './datedTemplate.js';
 import { initExtension } from './init-extension.js'
 
 const logUTB = makeLogFunction({ module: 'updateTab.js' })
@@ -70,6 +75,30 @@ async function showExtra({ tabId, url, settings, exactBkmIdList }) {
   }
 }
 
+async function bookmarkListToTagList(bookmarkList) {
+  const resultList = []
+  const templateTitleList = []
+
+  bookmarkList.forEach(({ parentId, parentTitle }) => {
+    if (isDatedFolderTitle(parentTitle)) {
+      if (!isVisitedDatedTitle(parentTitle)) {
+        //secondParentId = await datedTemplate.getTagIdForDated(title)
+        const templateTitle = getDatedTemplate(parentTitle)
+        templateTitleList.push(templateTitle)
+      }
+    } else {
+      resultList.push({ parentId, parentTitle })
+    }
+  })
+
+  const templateTagList = await Promise.all(templateTitleList.map(
+    (templateTitle) => datedTemplate.getTagIdForTemplate(templateTitle)
+      .then((templateId) => ({ parentId: templateId, parentTitle: templateTitle }))
+  ))
+
+  return resultList.concat(templateTagList)
+}
+
 async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
   logUTB(`UPDATE-TAB () 00 <- ${debugCaller}`, tabId);
   let url = inUrl
@@ -97,12 +126,15 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
 
   let bookmarkList = bookmarkInfo.bookmarkList
   if (settings[USER_OPTION.SHOW_VISITED] === SHOW_VISITED_OPTIONS.IF_NO_OTHER) {
-    bookmarkList = bookmarkList.filter(({ folder }) => !isVisitedDatedTitle(folder))
+    bookmarkList = bookmarkList.filter(({ parentTitle }) => !isVisitedDatedTitle(parentTitle))
 
     if (bookmarkList.length == 0) {
       bookmarkList = bookmarkInfo.bookmarkList
     }
   }
+
+  const tagFromBookmarkList = bookmarkListToTagList(bookmarkInfo.bookmarkList)
+  const tagListList = tagList.getListWithBookmarks(tagFromBookmarkList)
 
   const data = {
     bookmarkList,
@@ -110,7 +142,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
     isShowTitle: settings[USER_OPTION.SHOW_BOOKMARK_TITLE],
 
     isTagListAvailable: tagList.isOn,
-    tagList: tagList.getListWithBookmarks(bookmarkList),
+    tagList: tagListList,
     tagListOpenMode: settings[USER_OPTION.TAG_LIST_OPEN_MODE],
     isTagListOpenGlobal: tagList.isOpenGlobal,
     tagLength: settings[USER_OPTION.TAG_LIST_TAG_LENGTH],

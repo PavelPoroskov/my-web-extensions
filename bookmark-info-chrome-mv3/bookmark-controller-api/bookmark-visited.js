@@ -17,11 +17,11 @@ export async function createBookmarkOpened({ url, title }) {
     return
   }
 
-  await createBookmark({ url, title, parentName: DATED_TEMPLATE_OPENED })
+  await createBookmark({ url, title, parentTitle: DATED_TEMPLATE_OPENED })
 }
 
 export async function createBookmarkVisited({ url, title }) {
-  await createBookmark({ url, title, parentName: DATED_TEMPLATE_VISITED })
+  await createBookmark({ url, title, parentTitle: DATED_TEMPLATE_VISITED })
 
   // visited replaces opened
   await removeDatedBookmarksForTemplate({ url, template: DATED_TEMPLATE_OPENED })

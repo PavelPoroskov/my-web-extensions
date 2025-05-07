@@ -49,58 +49,58 @@ async function createBookmarkWithApi({
 
 async function createBookmarkWithParentId({ parentId, url, title }) {
   const [parentNode] = await chrome.bookmarks.get(parentId)
-  const parentName = parentNode.title
+  const parentTitle = parentNode.title
 
-  const isDatedTemplate = isDatedFolderTemplate(parentName)
+  const isDatedTemplate = isDatedFolderTemplate(parentTitle)
 
   if (isDatedTemplate) {
-    const datedFolder = await findOrCreateDatedFolder({ templateTitle: parentName, templateId: parentId })
+    const datedFolder = await findOrCreateDatedFolder({ templateTitle: parentTitle, templateId: parentId })
     await createBookmarkWithApi({ parentId: datedFolder.id, url, title })
-    await removePreviousDatedBookmarks({ url, template: parentName })
+    await removePreviousDatedBookmarks({ url, template: parentTitle })
 
-    if (!isVisitedDatedTemplate(parentName)) {
-      await tagList.addRecentTagFromFolder({ id: parentId, title: parentName })
+    if (!isVisitedDatedTemplate(parentTitle)) {
+      await tagList.addTag({ parentId, parentTitle })
     }
   } else {
     await createBookmarkWithApi({ parentId, url, title })
-    await tagList.addRecentTagFromFolder({ id: parentId, title: parentName })
+    await tagList.addTag({ parentId, parentTitle })
   }
 }
 
 export async function afterUserCreatedBookmarkInGUI({ parentId, id, url, index }) {
   const [parentNode] = await chrome.bookmarks.get(parentId)
-  const parentName = parentNode.title
+  const parentTitle = parentNode.title
 
-  const isDatedTemplate = isDatedFolderTemplate(parentName)
+  const isDatedTemplate = isDatedFolderTemplate(parentTitle)
 
   if (isDatedTemplate) {
-    const datedFolder = await findOrCreateDatedFolder({ templateTitle: parentName, templateId: parentId })
+    const datedFolder = await findOrCreateDatedFolder({ templateTitle: parentTitle, templateId: parentId })
     await moveBookmarkIgnoreInController({
       id,
       parentId: datedFolder.id,
       index: 0,
     })
 
-    await removePreviousDatedBookmarks({ url, template: parentName })
+    await removePreviousDatedBookmarks({ url, template: parentTitle })
 
-    if (!isVisitedDatedTemplate(parentName)) {
-      await tagList.addRecentTagFromFolder({ id: parentId, title: parentName })
+    if (!isVisitedDatedTemplate(parentTitle)) {
+      await tagList.addTag({ parentId, parentTitle })
     }
   } else {
     if (index !== 0) {
       await moveBookmarkIgnoreInController({ id, index: 0 })
     }
 
-    await tagList.addRecentTagFromFolder({ id: parentId, title: parentName })
+    await tagList.addTag({ parentId, parentTitle })
   }
 }
 
-export async function createBookmark({ parentId, parentName, url, title }) {
+export async function createBookmark({ parentId, parentTitle, url, title }) {
 
   if (parentId) {
     await createBookmarkWithParentId({ parentId, url, title })
-  } else if (parentName) {
-    const folderNode = await findOrCreateFolder(parentName)
+  } else if (parentTitle) {
+    const folderNode = await findOrCreateFolder(parentTitle)
 
     await createBookmarkWithParentId({
       parentId: folderNode.id,
@@ -108,6 +108,6 @@ export async function createBookmark({ parentId, parentName, url, title }) {
       title,
     })
   } else {
-    throw new Error('createBookmark() must use parentId or parentName')
+    throw new Error('createBookmark() must use parentId or parentTitle')
   }
 }

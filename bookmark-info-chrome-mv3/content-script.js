@@ -395,7 +395,7 @@
           const newBookmarkList = bookmarkList.concat({
             id: '',
             title: document.title,
-            folder: tag.title,
+            parentTitle: tag.parentTitle,
             path: '',
             parentId,
             optimisticAdd: true,
@@ -465,7 +465,7 @@
         await chrome.runtime.sendMessage({
           command: EXTENSION_MSG_ID.FIX_TAG,
           parentId,
-          title: tag?.title,
+          parentTitle: tag?.parentTitle,
         });
         break
       }
@@ -516,13 +516,13 @@
     while (nVisible < nAvailableTags && iWhile < tagList.length) {
       const item = tagList[iWhile]
       iWhile += 1
-      const { isHighlight, title } = item
+      const { isHighlight, parentTitle } = item
       // ageIndex: 0..m, 0 - the most recent
       const isVisible = item.isFixed || item.ageIndex < nAvailableRecentTags
 
       if (!isVisible) {
         if (isHighlight) {
-          lostHighlight = new Intl.Segmenter().segment(title).containing(0).segment.toUpperCase()
+          lostHighlight = new Intl.Segmenter().segment(parentTitle).containing(0).segment.toUpperCase()
         }
         continue
       }
@@ -530,7 +530,7 @@
       nVisible += 1
       let isMoveHighlight = false
       if (lostHighlight) {
-        const currentLetter = new Intl.Segmenter().segment(title).containing(0).segment.toUpperCase()
+        const currentLetter = new Intl.Segmenter().segment(parentTitle).containing(0).segment.toUpperCase()
         isMoveHighlight = currentLetter == lostHighlight
         lostHighlight = undefined
       }
@@ -677,11 +677,11 @@
 
       switch (type) {
         case 'bookmark': {
-          const { id, path, folder } = value
+          const { id, path, parentTitle } = value
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
-          const textNode = document.createTextNode(folder);
+          const textNode = document.createTextNode(parentTitle);
           divLabel.appendChild(textNode);
           divLabel.setAttribute('data-restpath', path);
 
@@ -719,12 +719,12 @@
         }
         case 'partial-bookmark': {
           // TODO? go to original bookmark
-          const { id, folder, url } = value
+          const { id, parentTitle, url } = value
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
 
-          const textNode = document.createTextNode(`url*: ${folder}`);
+          const textNode = document.createTextNode(`url*: ${parentTitle}`);
           divLabel.appendChild(textNode);
           divLabel.setAttribute('data-restpath', `url*: ${url}`);
           divLabel.setAttribute('data-id', `pb#${id}`);
@@ -740,12 +740,12 @@
           break
         }
         case 'author-bookmark': {
-          const { id, folder, url } = value
+          const { id, parentTitle, url } = value
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', 'bkm-info--author');
 
-          const textNode = document.createTextNode(`author: ${folder}`);
+          const textNode = document.createTextNode(`author: ${parentTitle}`);
           divLabel.appendChild(textNode);
           divLabel.setAttribute('data-restpath', url);
           divLabel.setAttribute('data-id', `h#${id}`);
@@ -814,7 +814,7 @@
           break
         }
         case 'tag': {
-          const { parentId, title, isUsed, isLast, isFixed, isHighlight } = value
+          const { parentId, parentTitle, isUsed, isLast, isFixed, isHighlight } = value
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag');
 
@@ -835,7 +835,7 @@
 
           if (isHighlight) {
             const Segmenter = new Intl.Segmenter();
-            const arLetters = Array.from(Segmenter.segment(title));
+            const arLetters = Array.from(Segmenter.segment(parentTitle));
             const firstLetter = arLetters[0].segment
             const restLetters = arLetters.slice(1).map(({ segment }) => segment).join('')
 
@@ -848,7 +848,7 @@
             const textNodeLabel = document.createTextNode(restLetters);
             divLabel.appendChild(textNodeLabel);
           } else {
-            const textNodeLabel = document.createTextNode(`${title}`);
+            const textNodeLabel = document.createTextNode(`${parentTitle}`);
             divLabel.appendChild(textNodeLabel);
           }
 
@@ -1151,22 +1151,22 @@
     toggleYoutubePageHeader({ nTry: 30 })
   }
 
-  async function addBookmarkByFolderNameList(inFolderNameList) {
-    const parentNameList = inFolderNameList
+  async function addBookmarkByFolderNameList(inParentTitleList) {
+    const parentTitleList = inParentTitleList
       .map((s) => s.trim())
       .filter(Boolean)
 
-    if (parentNameList.length == 0) {
+    if (parentTitleList.length == 0) {
       return
     }
 
     const fullState = stateContainer.getState()
     const bookmarkList = fullState.bookmarkList || []
     const newBookmarkList = bookmarkList.concat(
-      parentNameList.map((folderName) => ({
+      parentTitleList.map((parentTitle) => ({
         id: '',
         title: document.title,
-        folder: folderName,
+        parentTitle,
         path: '',
         parentId: '',
         optimisticAdd: true,
@@ -1178,7 +1178,7 @@
       command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
       url: document.location.href,
       title: document.title,
-      parentNameList,
+      parentTitleList,
     });
   }
 
