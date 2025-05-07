@@ -172,7 +172,7 @@
   background-color: bisque;
 }
 .bkm-info--btn-del {
-  padding-right: --bkm-info-del-rpad:
+  padding-right: var(--bkm-info-del-rpad);
   position: absolute;
   top: 0;
   right: 0;
@@ -607,8 +607,9 @@
       // const rowHeight = rootDiv.firstChild.clientHeight
       const rowHeight = rootDiv.firstChild.getBoundingClientRect().height
 
-      nTagListAvailableRows = Math.floor(viewportHeight / rowHeight)
-      // log('viewportHeight 11', viewportHeight, 'rowHeight', rowHeight, 'nTagListAvailableRows', nTagListAvailableRows)
+      if (rowHeight) {
+        nTagListAvailableRows = Math.floor(viewportHeight / rowHeight)
+      }
     }
 
     const drawList = []
@@ -926,11 +927,13 @@
     if (rootDiv.firstChild) {
       const viewportHeight = window.visualViewport.height || window.innerHeight
       const rowHeight = rootDiv.firstChild.getBoundingClientRect().height
-      const availableRows = Math.floor(viewportHeight / rowHeight)
-      // log('viewportHeight 22', viewportHeight, 'rowHeight', rowHeight, 'nTagListAvailableRows', nTagListAvailableRows)
 
-      if (availableRows != input.nTagListAvailableRows) {
-        updateAvailableRowsInExtension(availableRows)
+      if (rowHeight) {
+        const availableRows = Math.floor(viewportHeight / rowHeight)
+
+        if (availableRows != input.nTagListAvailableRows) {
+          updateAvailableRowsInExtension(availableRows)
+        }
       }
     }
   }

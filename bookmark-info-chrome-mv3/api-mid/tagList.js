@@ -66,6 +66,8 @@ class TagList {
   }
 
   async readFromStorage({ userSettings }) {
+    logTL('readFromStorage () 00')
+
     this.isFlatStructure = userSettings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]
     this.HIGHLIGHT_LAST = userSettings[USER_OPTION.TAG_LIST_HIGHLIGHT_LAST]
     this.HIGHLIGHT_ALPHABET = userSettings[USER_OPTION.TAG_LIST_HIGHLIGHT_ALPHABET]
@@ -78,6 +80,8 @@ class TagList {
       INTERNAL_VALUES.TAG_LIST_IS_OPEN,
       INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS,
     ]);
+    logTL('readFromStorage () 11 savedObj')
+    logTL(savedObj)
     this.isOpenGlobal = savedObj[INTERNAL_VALUES.TAG_LIST_IS_OPEN]
     this.AVAILABLE_ROWS = savedObj[INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS]
     this.MAX_AVAILABLE_ROWS = this.AVAILABLE_ROWS
@@ -114,6 +118,10 @@ class TagList {
     this.markUpdates()
   }
   async _updateAvailableRows(availableRows) {
+    if (!availableRows) {
+      return
+    }
+
     logTL('updateAvailableRows () 00', availableRows)
     const beforeAvailableRows = this.AVAILABLE_ROWS
     this.AVAILABLE_ROWS = availableRows
@@ -235,7 +243,7 @@ class TagList {
     logTL('getListWithBookmarks () 44 finalAddTagList', finalAddTagList)
     const addSet = new Set(addTagList.map(({ parentId }) => parentId))
 
-    const availableSlots = Math.Math(0, this.AVAILABLE_ROWS - this.tagList.length)
+    const availableSlots = Math.max(0, this.AVAILABLE_ROWS - this.tagList.length)
     const replaceSlots = Math.max(0, requiredSlots - availableSlots)
     const replaceList = finalAddTagList.slice(0, replaceSlots)
     const connectList = finalAddTagList.slice(replaceSlots)
