@@ -5,10 +5,12 @@ import {
   OTHER_BOOKMARKS_FOLDER_ID,
   isTopFolder,
   isDatedFolderTitle,
+  trimTitle,
 } from '../folder-api/index.js';
 import {
   moveFolderIgnoreInController,
   removeFolder,
+  updateFolder,
 } from '../bookmark-controller-api/index.js';
 import {
   makeLogFunction,
@@ -44,8 +46,9 @@ async function getFolderCorrectParentIdByTitle(title) {
 
 async function getFolderMovements() {
 
-  const moveList = []
   const removeList = []
+  const moveList = []
+  const renameList = []
 
   async function onFolder({ folder, level, bookmarkList, folderListLength }) {
     // // level 0: ROOT_FOLDER_ID
@@ -82,6 +85,16 @@ async function getFolderMovements() {
         level,
       })
     }
+
+
+    const trimmedTitle = trimTitle(folder.title)
+
+    if (folder.title !== trimmedTitle) {
+      renameList.push({
+        id: folder.id,
+        title: trimmedTitle,
+      })
+    }
   }
 
   const [rootFolder] = await chrome.bookmarks.getTree()
@@ -90,6 +103,7 @@ async function getFolderMovements() {
   return {
     removeList,
     moveList,
+    renameList,
   };
 }
 
@@ -99,6 +113,7 @@ export async function moveFolders() {
   const {
     removeList,
     moveList,
+    renameList,
   } = await getFolderMovements()
 
   const sortedMoveList = moveList
@@ -107,6 +122,13 @@ export async function moveFolders() {
   logMF('moveFolders() 44')
   logMF(sortedMoveList)
 
+  await removeList.reduce(
+    (promiseChain, folderId) => promiseChain.then(
+      () => removeFolder(folderId)
+    ),
+    Promise.resolve(),
+  );
+
   await sortedMoveList.reduce(
     (promiseChain, { id, parentId }) => promiseChain.then(
       () => moveFolderIgnoreInController({ id, parentId })
@@ -114,9 +136,9 @@ export async function moveFolders() {
     Promise.resolve(),
   );
 
-  await removeList.reduce(
-    (promiseChain, folderId) => promiseChain.then(
-      () => removeFolder(folderId)
+  await renameList.reduce(
+    (promiseChain, { id, title }) => promiseChain.then(
+      () => updateFolder({ id,  title })
     ),
     Promise.resolve(),
   );

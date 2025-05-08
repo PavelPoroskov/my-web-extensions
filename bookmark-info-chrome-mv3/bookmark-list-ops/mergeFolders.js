@@ -1,10 +1,8 @@
 import {
   normalizeTitle,
-  trimTitle,
 } from '../folder-api/index.js'
 import {
   removeFolder,
-  updateFolder,
   moveNodeIgnoreInController,
 } from '../bookmark-controller-api/index.js'
 
@@ -95,34 +93,6 @@ export async function mergeSubFoldersLevelOneAndTwo(parentId) {
   await mergeLevelTwoList.reduce(
     (promiseChain, folderLevelOneId) => promiseChain.then(
       () => mergeSubFoldersLevelOne(folderLevelOneId)
-    ),
-    Promise.resolve(),
-  );
-}
-
-export async function trimTitleInSubFolders(parentId) {
-  if (!parentId) {
-    return
-  }
-
-  const nodeList = await chrome.bookmarks.getChildren(parentId)
-  const folderNodeList = nodeList.filter(({ url }) => !url)
-
-  const renameTaskList = []
-  for (const folderNode of folderNodeList) {
-
-    const trimmedTitle = trimTitle(folderNode.title)
-    if (folderNode.title !== trimmedTitle) {
-      renameTaskList.push({
-        id: folderNode.id,
-        title: trimmedTitle,
-      })
-    }
-  }
-
-  await renameTaskList.reduce(
-    (promiseChain, { id, title }) => promiseChain.then(
-      () => updateFolder({ id,  title })
     ),
     Promise.resolve(),
   );
