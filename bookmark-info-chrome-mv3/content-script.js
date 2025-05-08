@@ -1364,6 +1364,7 @@
       await chrome.runtime.sendMessage({
         command: EXTENSION_MSG_ID.TAB_IS_READY,
         url: document.location.href,
+        title: document.title,
       });
       log('after send contentScriptReady');
     } catch (er) {

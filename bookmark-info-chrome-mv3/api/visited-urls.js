@@ -78,6 +78,7 @@ class VisitedUrls {
     if (oldUrl == newUrl) {
       return
     }
+
     logVU("_onReplaceUrlInTab 11/1", tabId, oldUrl)
     logVU("_onReplaceUrlInTab 11/2", tabId, newUrl)
 
@@ -91,6 +92,11 @@ class VisitedUrls {
 
     // mark newUrl as activated
     this.cacheVisitedUrls.add(newUrl, newTitle)
+    // //
+    // const cachedTabData = this.cacheTabId.get(tabId)
+    // if (cachedTabData?.title) {
+    //   this.cacheVisitedUrls.add(newUrl, cachedTabData?.title)
+    // }
   }
   async _onCloseTab(tabId) {
     logVU("_onCloseTab 11", tabId)

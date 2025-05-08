@@ -81,6 +81,7 @@ export const tabsController = {
           await pageReady.onPageReady({
             tabId,
             url: Tab.url,
+            title: Tab.title,
             debugCaller: `tabs.onUpdated complete`,
           })
         }

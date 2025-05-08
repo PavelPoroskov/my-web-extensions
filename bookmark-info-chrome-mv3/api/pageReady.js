@@ -21,13 +21,11 @@ class PageReady {
   clearUrlOnPageOpen = ({ url }) => url
 
   async _clearUrlOnPageOpen({ tabId, url }) {
-    let cleanUrl = removeQueryParamsIfTarget(url);
+    const cleanUrl = removeQueryParamsIfTarget(url);
 
     if (url !== cleanUrl) {
       await page.changeUrlInTab({ tabId, url: cleanUrl })
     }
-
-    return cleanUrl || url
   }
 
   useSettings({ isDoCleanUrl }) {
@@ -38,31 +36,29 @@ class PageReady {
     }
   }
 
-  async onPageReady({ tabId, url, debugCaller }) {
+  async onPageReady({ tabId, url, title, debugCaller }) {
     if (url.startsWith('chrome:') || url.startsWith('about:')) {
       return
     }
     logPR(`onPageReady 00 <-${debugCaller}`, tabId)
     logPR('onPageReady 11', url)
 
-    const cleanUrl = await this.clearUrlOnPageOpen({ tabId, url })
+    const cleanUrl = removeQueryParamsIfTarget(url);
     const cleanedActiveTabUrl = removeQueryParamsIfTarget(memo.activeTabUrl);
 
     if (cleanUrl !== cleanedActiveTabUrl) {
       logPR('onPageReady 22');
-      const Tab = await chrome.tabs.get(tabId);
-
-      if (Tab) {
-        visitedUrls.onReplaceUrlInActiveTab({
-          tabId,
-          oldUrl: memo.activeTabUrl,
-          newUrl: cleanUrl,
-          newTitle: Tab.title,
-        });
-      }
+      visitedUrls.onReplaceUrlInActiveTab({
+        tabId,
+        oldUrl: memo.activeTabUrl,
+        newUrl: cleanUrl,
+        newTitle: title,
+      });
 
       memo.activeTabUrl = url
     }
+
+    await this.clearUrlOnPageOpen({ tabId, url })
   }
 }
 

@@ -74,23 +74,24 @@ const OtherHandlers = {
   // [EXTENSION_MSG_ID.PAGE_EVENT]: async (messageObj) => {
   //   logIMPE('runtime.onMessage PAGE_EVENT', messageObj);
   // },
-  [EXTENSION_MSG_ID.TAB_IS_READY]: async ({ tabId, url }) => {
+  [EXTENSION_MSG_ID.TAB_IS_READY]: async ({ tabId, url, title }) => {
     logIMT('runtime.onMessage TAB_IS_READY 00/1', url);
     logIMT('runtime.onMessage TAB_IS_READY 00/2', tabId, memo.activeTabId);
     // IT IS ONLY when new tab load first url
     if (tabId === memo.activeTabId) {
       logIMT('runtime.onMessage TAB_IS_READY 11');
-      await pageReady.onPageReady({
-        tabId,
-        url,
-        debugCaller: `runtime.onMessage TAB_IS_READY`,
-      });
-
       updateActiveTab({
         tabId,
         url,
         debugCaller: `runtime.onMessage TAB_IS_READY`,
       })
+
+      await pageReady.onPageReady({
+        tabId,
+        url,
+        title,
+        debugCaller: `runtime.onMessage TAB_IS_READY`,
+      });
     }
   },
 
