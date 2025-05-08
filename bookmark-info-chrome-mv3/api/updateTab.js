@@ -172,12 +172,13 @@ function updateTabTask(options) {
 
 const debouncedUpdateTab = debounce(updateTabTask, 30)
 
-export function debouncedUpdateActiveTab({ debugCaller } = {}) {
+export function debouncedUpdateActiveTab({ url, debugCaller } = {}) {
   logUTB('debouncedUpdateActiveTab () 00', 'memo[\'activeTabId\']', memo['activeTabId'])
 
   if (memo.activeTabId) {
     debouncedUpdateTab({
       tabId: memo.activeTabId,
+      url,
       debugCaller: `debouncedUpdateActiveTab () <- ${debugCaller}`,
     })
   }

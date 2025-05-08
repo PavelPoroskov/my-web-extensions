@@ -73,13 +73,12 @@ export const tabsController = {
 
     if (changeInfo?.status == 'complete') {
         if (tabId === memo.activeTabId) {
-          await pageReady.onPageReady({
+          debouncedUpdateActiveTab({
             tabId,
             url: Tab.url,
             debugCaller: `tabs.onUpdated complete`,
-          });
-
-          debouncedUpdateActiveTab({
+          })
+          await pageReady.onPageReady({
             tabId,
             url: Tab.url,
             debugCaller: `tabs.onUpdated complete`,
