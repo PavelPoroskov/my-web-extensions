@@ -51,6 +51,7 @@ async function getFolderMovements() {
   const renameList = []
 
   async function onFolder({ folder, level, bookmarkList, folderListLength }) {
+    logMF('onFolder() 00', folder.title)
     // // level 0: ROOT_FOLDER_ID
     // // level 1: BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID
     // if (level < 2) {
@@ -68,7 +69,9 @@ async function getFolderMovements() {
 
     // logMF('orderChildren() 11 folder')
     // logMF(folder)
+    logMF('onFolder() 11')
     const correct = await getFolderCorrectParentIdByTitle(folder.title)
+    logMF('onFolder() 22', correct)
 
     let correctParentId = correct.parentId
     let isCorrect = folder.parentId == correctParentId
@@ -77,7 +80,7 @@ async function getFolderMovements() {
       isCorrect = folder.parentId == correctParentId
     }
     if (!isCorrect) {
-      logMF('orderChildren() 22 correct')
+      logMF('onFolder() 33')
       logMF(correct)
       moveList.push({
         id: folder.id,

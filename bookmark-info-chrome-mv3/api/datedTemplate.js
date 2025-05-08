@@ -5,17 +5,17 @@ import {
   findOrCreateFolder,
 } from '../bookmark-controller-api/folder-create.js';
 
-// import {
-//   makeLogFunction,
-// } from '../api-low/index.js'
+import {
+  makeLogFunction,
+} from '../api-low/index.js'
 
-// const logDT = makeLogFunction({ module: 'datedTemplate.js' })
+const logDT = makeLogFunction({ module: 'datedTemplate.js' })
 
 class DatedTemplate {
   cacheForDatedTemplate = {}
 
   async getTagIdForTemplate(templateTitle) {
-
+    logDT('getTagIdForTemplate() 00', templateTitle)
     let id = this.cacheForDatedTemplate[templateTitle]
     if (id) {
       return id;
@@ -29,9 +29,15 @@ class DatedTemplate {
     return id;
   }
   async getTagIdForDated(title) {
+    logDT('getTagIdForDated() 00', title)
 
     const templateTitle = getDatedTemplate(title)
-    return await this.getIdForTemplate(templateTitle);
+    logDT('getTagIdForDated() 11', templateTitle)
+
+    const id = await this.getTagIdForTemplate(templateTitle);
+    logDT('getTagIdForDated() 22', id)
+
+    return id;
   }
 }
 
