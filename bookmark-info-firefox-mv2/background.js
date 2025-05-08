@@ -4237,10 +4237,11 @@ async function showVisits({ tabId, url }) {
 }
 
 async function showPartialBookmarks({ tabId, url, exactBkmIdList }) {
-  const partialBookmarkList = await getPartialBookmarkList({ url, exactBkmIdList })
+  const bookmarkList = await getPartialBookmarkList({ url, exactBkmIdList })
+  const filteredList = bookmarkList.filter(({ parentTitle }) => !isVisitedDatedTitle(parentTitle))
 
   const data = {
-    partialBookmarkList,
+    partialBookmarkList: filteredList,
   }
   logUTB('showPartialBookmarks () 99 sendMessage', tabId, data);
   await page.updateBookmarkInfoInPage({ tabId, data })
