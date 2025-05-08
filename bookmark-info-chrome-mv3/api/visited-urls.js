@@ -65,13 +65,27 @@ class VisitedUrls {
     this.cacheTabId.add(tabId, { url: cleanedUrl, title })
   }
   _onUpdateTab(tabId, oData) {
-    logVU("_onUpdateTab 11", tabId, oData)
+    const newData = {}
+
+    if (oData?.url) {
+      newData.url = oData?.url
+    }
+
+    if (oData?.title) {
+      newData.title = oData?.title
+    }
+
+    if (Object.keys(newData).length == 0) {
+      return
+    }
+    logVU("_onUpdateTab 11", tabId, newData)
 
     const before = this.cacheTabId.get(tabId)
     const after = {
       ...before,
-      ...oData,
+      ...newData,
     }
+
     this.cacheTabId.add(tabId, after)
   }
   _onReplaceUrlInActiveTab({ tabId, oldUrl, newUrl, newTitle }) {

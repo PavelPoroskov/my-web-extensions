@@ -29,46 +29,33 @@ export const tabsController = {
     logTC('tabs.onUpdated 00', 'tabId', tabId, 'Tab.index', Tab.index);
     logTC('tabs.onUpdated 00 ------changeInfo', changeInfo);
 
-    let checkUrl
-    switch (changeInfo?.status) {
-      case ('loading'): {
-        checkUrl = changeInfo?.url
-        break;
-      }
-      case ('complete'): {
-        checkUrl = changeInfo?.url
-        break;
-      }
-    }
-
-    if (checkUrl) {
+    if (changeInfo?.url) {
+      const newUrl = changeInfo.url
       const settings = await extensionSettings.get()
 
       if (settings[USER_OPTION.YOUTUBE_REDIRECT_CHANNEL_TO_VIDEOS]) {
-        const oUrl = new URL(checkUrl)
+        if (isYouTubeChannelWithoutSubdir(newUrl)) {
 
-        if (isYouTubeChannelWithoutSubdir(oUrl)) {
-          const isRedirectedBefore = !!redirectedUrl.get(`${tabId}#${checkUrl}`)
-          logTC('tabs.onUpdated ', checkUrl, 'isRedirectedBefore ', isRedirectedBefore);
+          const isRedirectedBefore = !!redirectedUrl.get(`${tabId}#${newUrl}`)
+          logTC('tabs.onUpdated ', newUrl, 'isRedirectedBefore ', isRedirectedBefore);
 
           if (!isRedirectedBefore) {
+            const oUrl = new URL(newUrl)
             oUrl.pathname = `${oUrl.pathname}/videos`
             const redirectUrl = oUrl.toString()
             logTC('tabs.onUpdated ', changeInfo?.status, 'tabId', tabId, 'redirectUrl', redirectUrl);
 
-            redirectedUrl.add(`${tabId}#${checkUrl}`)
+            redirectedUrl.add(`${tabId}#${newUrl}`)
             await chrome.tabs.update(tabId, { url: redirectUrl })
+
             return
           }
         }
       }
     }
 
-    if (changeInfo?.url) {
-      visitedUrls.onUpdateTab(tabId, { url: changeInfo.url });
-    }
-    if (changeInfo?.title) {
-      visitedUrls.onUpdateTab(tabId, { title: changeInfo.title });
+    if (changeInfo?.url || changeInfo?.title) {
+      visitedUrls.onUpdateTab(tabId, changeInfo);
     }
 
     if (changeInfo?.status == 'complete') {

@@ -38,4 +38,8 @@ function isYouTubeChannelPathWithoutSubdir(pathname) {
   return result
 }
 
-export const isYouTubeChannelWithoutSubdir = (oUrl) => isYoutube(oUrl.hostname) && isYouTubeChannelPathWithoutSubdir(oUrl.pathname)
+export const isYouTubeChannelWithoutSubdir = (url) => {
+  const oUrl = new URL(url)
+
+  return isYoutube(oUrl.hostname) && isYouTubeChannelPathWithoutSubdir(oUrl.pathname)
+}
