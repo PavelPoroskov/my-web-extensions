@@ -1,5 +1,5 @@
 import {
-  ROOT_FOLDER_ID,
+  BUILTIN_BROWSER_FOLDER_MAP,
   BOOKMARKS_BAR_FOLDER_ID,
   BOOKMARKS_MENU_FOLDER_ID,
   OTHER_BOOKMARKS_FOLDER_ID,
@@ -8,6 +8,7 @@ import {
 } from '../folder-api/index.js';
 import {
   moveFolderIgnoreInController,
+  removeFolder,
 } from '../bookmark-controller-api/index.js';
 import {
   makeLogFunction,
@@ -41,29 +42,30 @@ async function getFolderCorrectParentIdByTitle(title) {
   }
 }
 
-const mapIdToParentId = {
-  [BOOKMARKS_BAR_FOLDER_ID]: { parentId: ROOT_FOLDER_ID },
-  [OTHER_BOOKMARKS_FOLDER_ID]: { parentId: ROOT_FOLDER_ID },
-}
-if (BOOKMARKS_MENU_FOLDER_ID) {
-  mapIdToParentId[BOOKMARKS_MENU_FOLDER_ID] = { parentId: ROOT_FOLDER_ID }
-}
-
-async function getFolderCorrectParentId(folder) {
-  return mapIdToParentId[folder.id] || (await getFolderCorrectParentIdByTitle(folder.title))
-}
-
-async function orderChildren(parentId) {
-  if (!parentId) {
-    return []
-  }
+async function getFolderMovements() {
 
   const moveList = []
+  const removeList = []
 
-  async function onFolder({ folder, level }) {
+  async function onFolder({ folder, level, bookmarkList, folderListLength }) {
+    // // level 0: ROOT_FOLDER_ID
+    // // level 1: BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID
+    // if (level < 2) {
+    //   return
+    // }
+
+    if (folder.id in BUILTIN_BROWSER_FOLDER_MAP) {
+      return
+    }
+
+    if (bookmarkList.length == 0 && folderListLength == 0 && isDatedFolderTitle(folder.title)) {
+      removeList.push(folder.id)
+      return
+    }
+
     // logMF('orderChildren() 11 folder')
     // logMF(folder)
-    const correct = await getFolderCorrectParentId(folder)
+    const correct = await getFolderCorrectParentIdByTitle(folder.title)
 
     let correctParentId = correct.parentId
     let isCorrect = folder.parentId == correctParentId
@@ -82,36 +84,39 @@ async function orderChildren(parentId) {
     }
   }
 
-  const [rootFolder] = await chrome.bookmarks.getSubTree(parentId)
+  const [rootFolder] = await chrome.bookmarks.getTree()
   await traverseFolderRecursively({ folder: rootFolder, onFolder })
 
-  return moveList;
+  return {
+    removeList,
+    moveList,
+  };
 }
 
 export async function moveFolders() {
   logMF('moveFolders() 00')
 
-  const moveList1 = await orderChildren(BOOKMARKS_BAR_FOLDER_ID)
-  logMF('moveFolders() 11')
-  const moveList2 = await orderChildren(BOOKMARKS_MENU_FOLDER_ID)
-  logMF('moveFolders() 22')
-  const moveList3 = await orderChildren(OTHER_BOOKMARKS_FOLDER_ID)
-  logMF('moveFolders() 33')
+  const {
+    removeList,
+    moveList,
+  } = await getFolderMovements()
 
-  const totalMoveList = [
-    moveList1,
-    moveList2,
-    moveList3,
-  ]
-    .flat()
+  const sortedMoveList = moveList
     .sort((a,b) => -(a.level - b.level))
 
   logMF('moveFolders() 44')
-  logMF(totalMoveList)
+  logMF(sortedMoveList)
 
-  await totalMoveList.reduce(
+  await sortedMoveList.reduce(
     (promiseChain, { id, parentId }) => promiseChain.then(
       () => moveFolderIgnoreInController({ id, parentId })
+    ),
+    Promise.resolve(),
+  );
+
+  await removeList.reduce(
+    (promiseChain, folderId) => promiseChain.then(
+      () => removeFolder(folderId)
     ),
     Promise.resolve(),
   );

@@ -14,7 +14,12 @@ export async function traverseFolderRecursively({ folder: rootFolder, onFolder, 
       }
     }
 
-    await onFolder({ folder, bookmarkList: childBookmarkList, level })
+    await onFolder({
+      folder,
+      bookmarkList: childBookmarkList,
+      folderListLength: childFolderList.length,
+      level,
+    })
 
     const nextLevel = level + 1
     await childFolderList.reduce(

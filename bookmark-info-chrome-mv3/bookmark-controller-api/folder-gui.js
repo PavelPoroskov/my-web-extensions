@@ -2,9 +2,7 @@ import {
   USER_OPTION,
 } from '../constant/index.js'
 import {
-  BOOKMARKS_BAR_FOLDER_ID,
-  BOOKMARKS_MENU_FOLDER_ID,
-  OTHER_BOOKMARKS_FOLDER_ID,
+  BUILTIN_BROWSER_ROOT_FOLDER_MAP,
   getNewFolderRootId,
 } from '../folder-api/index.js'
 import {
@@ -26,10 +24,9 @@ export async function afterUserCreatedFolderInGUI({ id, parentId, title }) {
     }
   }
 
-  const rootArray = [BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID].filter(Boolean)
   const finalParentId = moveArgs.parentId || parentId
 
-  if (rootArray.includes(finalParentId)) {
+  if (finalParentId in BUILTIN_BROWSER_ROOT_FOLDER_MAP) {
     const firstLevelNodeList = await chrome.bookmarks.getChildren(finalParentId)
     const findIndex = firstLevelNodeList.find((item) => title.localeCompare(item.title) < 0)
 
