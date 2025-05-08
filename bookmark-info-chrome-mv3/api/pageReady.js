@@ -38,14 +38,18 @@ class PageReady {
     }
   }
 
-  async onPageReady({ tabId, url }) {
-    logPR('onPageReady 00', tabId, url);
+  async onPageReady({ tabId, url, debugCaller }) {
+    if (url.startsWith('chrome:') || url.startsWith('about:')) {
+      return
+    }
+    logPR(`onPageReady 00 <-${debugCaller}`, tabId)
+    logPR('onPageReady 11', url)
 
     const cleanUrl = await this.clearUrlOnPageOpen({ tabId, url })
     const cleanedActiveTabUrl = removeQueryParamsIfTarget(memo.activeTabUrl);
 
     if (cleanUrl !== cleanedActiveTabUrl) {
-      logPR('onPageReady 11');
+      logPR('onPageReady 22');
       const Tab = await chrome.tabs.get(tabId);
 
       if (Tab) {

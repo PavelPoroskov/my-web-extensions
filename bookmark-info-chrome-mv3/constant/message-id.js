@@ -5,6 +5,7 @@ export const EXTENSION_MSG_ID = {
   ADD_BOOKMARK_FOLDER_BY_NAME: 'ADD_BOOKMARK_FOLDER_BY_NAME',
   FIX_TAG: 'FIX_TAG',
   UNFIX_TAG: 'UNFIX_TAG',
+  PAGE_EVENT: 'PAGE_EVENT',
   TAB_IS_READY: 'TAB_IS_READY',
   SHOW_TAG_LIST: 'SHOW_TAG_LIST',
   // TODO remove duplication in EXTENSION_MSG_ID: message-id.js and options.js

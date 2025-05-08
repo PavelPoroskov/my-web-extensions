@@ -27,6 +27,8 @@ import {
 } from '../api-low/index.js'
 
 const logIM = makeLogFunction({ module: 'incoming-message.js' })
+const logIMT = makeLogFunction({ module: 'incoming-message.js/TAB_IS_READY' })
+// const logIMPE = makeLogFunction({ module: 'incoming-message.js/PAGE_EVENT' })
 
 const HandlersWithUpdateTab = {
   [EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_ID]: async ({ parentId, url, title }) => {
@@ -69,12 +71,19 @@ const HandlersWithUpdateTab = {
 }
 
 const OtherHandlers = {
+  // [EXTENSION_MSG_ID.PAGE_EVENT]: async (messageObj) => {
+  //   logIMPE('runtime.onMessage PAGE_EVENT', messageObj);
+  // },
   [EXTENSION_MSG_ID.TAB_IS_READY]: async ({ tabId, url }) => {
+    logIMT('runtime.onMessage TAB_IS_READY 00/1', url);
+    logIMT('runtime.onMessage TAB_IS_READY 00/2', tabId, memo.activeTabId);
     // IT IS ONLY when new tab load first url
     if (tabId === memo.activeTabId) {
+      logIMT('runtime.onMessage TAB_IS_READY 11');
       await pageReady.onPageReady({
         tabId,
         url,
+        debugCaller: `runtime.onMessage TAB_IS_READY`,
       });
 
       updateActiveTab({

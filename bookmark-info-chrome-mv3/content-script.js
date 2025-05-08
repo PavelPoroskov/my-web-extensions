@@ -1,6 +1,6 @@
 (async function() {
   let SHOW_LOG = false
-  // SHOW_LOG = true
+  SHOW_LOG = true
   const log = SHOW_LOG ? console.log : () => {};
   log('IN content-script 00');
 
@@ -16,6 +16,7 @@
     DELETE_BOOKMARK: 'DELETE_BOOKMARK',
     FIX_TAG: 'FIX_TAG',
     UNFIX_TAG: 'UNFIX_TAG',
+    PAGE_EVENT: 'PAGE_EVENT',
     TAB_IS_READY: 'TAB_IS_READY',
     SHOW_TAG_LIST: 'SHOW_TAG_LIST',
     UPDATE_AVAILABLE_ROWS: 'UPDATE_AVAILABLE_ROWS',
@@ -1356,14 +1357,50 @@
     }
   });
 
-  let isMsgReadyWasSend = false
+
+  // async function sendPageEvent(eventObj) {
+  //   try {
+  //     log('before sendPageEvent', eventObj);
+  //     await chrome.runtime.sendMessage({
+  //       command: EXTENSION_MSG_ID.PAGE_EVENT,
+  //       ...eventObj,
+  //     });
+  //     log('after sendPageEvent');
+  //   } catch (er) {
+  //     log('IGNORE sendPageEvent', er);
+  //   }
+  // }
+  // document.addEventListener("visibilitychange", () => {
+  //   sendPageEvent({
+  //     event: 'visibilitychange',
+  //     hidden: document.hidden,
+  //   })
+  // })
+  // document.addEventListener('readystatechange', () => {
+  //   sendPageEvent({
+  //     event: 'readystatechange',
+  //     readyState: document.readyState,
+  //   })
+  // });
+  // window.addEventListener('load', () => {
+  //   sendPageEvent({
+  //     event: 'load',
+  //   })
+  // });
+  // window.addEventListener('pageshow', () => {
+  //   sendPageEvent({
+  //     event: 'pageshow',
+  //     hidden: document.hidden,
+  //   })
+  // });
+  // window.addEventListener('popstate', (event) => {
+  //   sendPageEvent({
+  //     event: 'popstate',
+  //     state: event.state,
+  //   })
+  // });
 
   async function sendTabIsReady() {
-    if (isMsgReadyWasSend) {
-      return
-    }
-    isMsgReadyWasSend = true
-
     try {
       log('before send contentScriptReady');
       await chrome.runtime.sendMessage({
@@ -1374,6 +1411,16 @@
     } catch (er) {
       log('IGNORE send contentScriptReady', er);
     }
+  }
+  let isMsgReadyWasSend = false
+
+  async function sendTabIsReadyOnce() {
+    if (isMsgReadyWasSend) {
+      return
+    }
+    isMsgReadyWasSend = true
+
+    sendTabIsReady()
   }
 
   document.addEventListener("fullscreenchange", () => {
@@ -1405,27 +1452,15 @@
       }
       stateContainer.updateNoRender(update)
     } else {
-      sendTabIsReady()
+      sendTabIsReadyOnce()
     }
   });
-  // document.addEventListener('readystatechange', () => {
-  //   log('event document.readystatechange', document.readyState);
-
-  //   if (!document.readyState == 'loading') {
-  //     startHideYoutubePageHeader()
-  //   }
-  // });
-
-  // window.addEventListener('load', () => {
-  //   log('event window.load');
-  //   startHideYoutubePageHeader()
-  // });
   window.addEventListener('pageshow', () => {
     log('event window.pageshow');
     startHideYoutubePageHeader()
   });
 
   if (!document.hidden) {
-    sendTabIsReady()
+    sendTabIsReadyOnce()
   }
 })();

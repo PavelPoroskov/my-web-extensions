@@ -76,6 +76,7 @@ export const tabsController = {
           await pageReady.onPageReady({
             tabId,
             url: Tab.url,
+            debugCaller: `tabs.onUpdated complete`,
           });
 
           debouncedUpdateActiveTab({

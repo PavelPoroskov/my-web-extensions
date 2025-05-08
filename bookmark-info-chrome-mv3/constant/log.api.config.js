@@ -18,6 +18,8 @@ const logModuleList = [
   // 'getUrlFromUrl',
   // 'history.api',
   // 'incoming-message.js',
+  // 'incoming-message.js/TAB_IS_READY',
+  // 'incoming-message.js/PAGE_EVENT',
   // 'init-extension',
   // 'memo',
   // 'moveFolders.js',
