@@ -125,7 +125,7 @@ async function getPreviousVisitList(url) {
     const {
       urlForSearch,
       isUrlMatchToPartialUrlSearch,
-    } = await startPartialUrlSearch(url)
+    } = await startPartialUrlSearch({ url })
 
     historyItemList = (await chrome.history.search({
       text: urlForSearch,

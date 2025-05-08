@@ -4,6 +4,51 @@ import {
 
 const logUIS = makeLogFunction({ module: 'url-is.js' })
 
+const pathToList = (pathname) => {
+  let list = pathname.split(/(\/)/).filter(Boolean)
+
+  if (1 < list.length && list.at(-1) === '/') {
+    list = list.slice(0, -1)
+  }
+
+  return list
+}
+const isPartsEqual = (patternPart, pathPart) => {
+  let result
+
+  if (patternPart.startsWith(':')) {
+    result = pathPart && pathPart != '/'
+  } else {
+    result = pathPart === patternPart
+  }
+  logUIS('isPartsEqual () 11', patternPart, pathPart, result)
+
+  return result
+}
+
+export const getPathnamePart = ({ pathname, pattern }) => {
+  const patternAsList = pathToList(pattern)
+  const pathAsList = pathToList(pathname)
+  const resultPartList = []
+
+  let isOk = patternAsList.length <= pathAsList.length
+
+  let i = 0
+  while (isOk && i < patternAsList.length) {
+    isOk = isPartsEqual(patternAsList[i], pathAsList[i])
+    if (isOk) {
+      resultPartList.push(pathAsList[i])
+    }
+    i = i + 1
+  }
+
+  let resultPathname = isOk
+    ? resultPartList.join('')
+    : undefined
+
+  return resultPathname
+}
+
 export function makeIsSearchParamMatch(patternList) {
   logUIS('makeIsSearchParamMatch () 00', patternList)
   const isFnList = []
@@ -54,28 +99,6 @@ export const isPathnameMatchForPattern = ({ pathname, patternList }) => {
   logUIS('isPathnameMatch () 00', pathname)
   logUIS('isPathnameMatch () 00', patternList)
 
-  const pathToList = (pathname) => {
-    let list = pathname.split(/(\/)/).filter(Boolean)
-
-    if (1 < list.length && list.at(-1) === '/') {
-      list = list.slice(0, -1)
-    }
-
-    return list
-  }
-  const isPartsEqual = (patternPart, pathPart) => {
-    let result
-
-    if (patternPart.startsWith(':')) {
-      result = pathPart && pathPart != '/'
-    } else {
-      result = pathPart === patternPart
-    }
-    logUIS('isPartsEqual () 11', patternPart, pathPart, result)
-
-    return result
-  }
-
   if (patternList.includes('*')) {
     return true
   }
@@ -122,9 +145,17 @@ export function isUrlMath({ url, pattern }) {
 
   const [pathPattern, searchParamsPattern] = pattern.split('?')
 
-  if (!searchParamsPattern) {
-    return isPathnameMatchForPattern({ pathname, patternList: [pathPattern] })
+  if (pathPattern) {
+    if (!isPathnameMatchForPattern({ pathname, patternList: [pathPattern] })) {
+      return false
+    }
   }
 
-  return isPathnameMatchForPattern({ pathname, patternList: [pathPattern] }) && isSearchParamsMatchForPattern({ searchParams, searchParamsPattern })
+  if (searchParamsPattern) {
+    if (!isSearchParamsMatchForPattern({ searchParams, searchParamsPattern })) {
+      return false
+    }
+  }
+
+  return true
 }

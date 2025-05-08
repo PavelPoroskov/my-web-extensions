@@ -138,7 +138,7 @@ export async function getBookmarkInfoUni({ url, useCache=false, isShowTitle, isS
   };
 }
 
-export async function getPartialBookmarkList({ url, exactBkmIdList = [] }) {
+export async function getPartialBookmarkList({ url, exactBkmIdList = [], pathnamePattern }) {
   // 1 < pathname.length : it is not root path
   //    for https://www.youtube.com/watch?v=qqqqq other conditions than 1 < pathname.length
   // urlForSearch !== url : original url has search params, ending /, index[.xxxx]
@@ -148,7 +148,7 @@ export async function getPartialBookmarkList({ url, exactBkmIdList = [] }) {
     isSearchAvailable,
     urlForSearch,
     isUrlMatchToPartialUrlSearch,
-  } = await startPartialUrlSearch(url)
+  } = await startPartialUrlSearch({ url, pathnamePattern })
   logGB('getPartialBookmarkList () 22 startPartialUrlSearch', { isSearchAvailable, urlForSearch })
 
   if (!isSearchAvailable) {

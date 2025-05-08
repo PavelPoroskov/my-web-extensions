@@ -2,6 +2,7 @@ import {
   getHostSettings,
 } from './url-settings.js'
 import {
+  getPathnamePart,
   makeIsSearchParamMatch,
 } from './url-search-is.js'
 import {
@@ -42,10 +43,19 @@ export const getPathnameForSearch = (pathname) => {
   return mPathname
 }
 
-function isPathnameMatchForSearch({ oUrl, pathname }) {
-  const normalizedPathname = getPathnameForSearch(oUrl.pathname);
+// function isPathnameMatchForSearch({ oUrl, pathname }) {
+//   const normalizedPathname = getPathnameForSearch(oUrl.pathname);
 
-  return normalizedPathname === pathname
+//   return normalizedPathname === pathname
+// }
+
+function makeIsPathnameMatchForSearch({ normalizePathname }) {
+
+  return function isPathnameMatchForSearch({ oUrl, pathname }) {
+    const normalizedPathname = normalizePathname(oUrl.pathname);
+
+    return normalizedPathname === pathname
+  }
 }
 
 function isSearchParamsMatchForSearch({ oUrl, requiredSearchParams }) {
@@ -60,7 +70,7 @@ function isSearchParamsMatchForSearch({ oUrl, requiredSearchParams }) {
 }
 
 // ?TODO /posts == /posts?page=1 OR clean on open /posts?page=1 TO /posts IF page EQ 1
-export async function startPartialUrlSearch(url) {
+export async function startPartialUrlSearch({ url, pathnamePattern }) {
   logUS('startPartialUrlSearch () 00', url)
 
   try {
@@ -102,7 +112,30 @@ export async function startPartialUrlSearch(url) {
     if (!targetHostSettings?.isHashRequired) {
       oUrl.hash = ''
     }
-    oUrl.pathname = getPathnameForSearch(oUrl.pathname)
+
+
+    let newPathname
+    let isPathnameMatchForSearch
+
+    if (pathnamePattern) {
+      newPathname = getPathnamePart({
+        pathname: oUrl.pathname,
+        pattern: pathnamePattern,
+      })
+    }
+    if (newPathname) {
+      isPathnameMatchForSearch = makeIsPathnameMatchForSearch({
+        normalizePathname: (str) => getPathnamePart({
+          pathname: str,
+          pattern: pathnamePattern,
+        })
+      })
+    } else {
+      newPathname = getPathnameForSearch(oUrl.pathname)
+      isPathnameMatchForSearch = makeIsPathnameMatchForSearch({ normalizePathname: getPathnameForSearch })
+    }
+    oUrl.pathname = newPathname
+
     oUrl.search = ''
     const urlForSearch = oUrl.toString();
     const {

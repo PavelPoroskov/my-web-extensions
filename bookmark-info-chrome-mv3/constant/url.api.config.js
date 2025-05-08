@@ -26,6 +26,7 @@ const urlSettingsGo = {
     getAuthor: {
       pagePattern: '/watch?v=:id',
       authorSelector: '.ytd-channel-name a[href]',
+      authorPattern: '/:channel'
     }
   },
 }
@@ -77,17 +78,17 @@ const urlSettingsUse = {
       {
         pagePattern: '/jobs/view/:id',
         authorSelector: '.job-details-jobs-unified-top-card__company-name a[href^="https://www.linkedin.com/company/"]',
-        cleanAuthorUrlMethod: 'pathname-remove-last',
+        authorPattern: '/company/:company'
       },
       {
         pagePattern: '/jobs/collections/recommended/?currentJobId=:currentJobId',
         authorSelector: '.job-details-jobs-unified-top-card__company-name a[href^="https://www.linkedin.com/company/"]',
-        cleanAuthorUrlMethod: 'pathname-remove-last',
+        authorPattern: '/company/:company'
       },
       {
         pagePattern: '/jobs/search/?currentJobId=:currentJobId',
         authorSelector: '.job-details-jobs-unified-top-card__company-name a[href^="https://www.linkedin.com/company/"]',
-        cleanAuthorUrlMethod: 'pathname-remove-last',
+        authorPattern: '/company/:company'
       },
     ]
   },

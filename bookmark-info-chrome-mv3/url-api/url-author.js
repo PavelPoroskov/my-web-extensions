@@ -25,23 +25,6 @@ export function getAuthorUrlFromPostUrl(url) {
   return oUrl.toString()
 }
 
-function cleanAuthorUrlRemoveLast(url) {
-  const oUrl = new URL(url)
-  const pathPartList = oUrl.pathname.split(/(\/)/).filter(Boolean)
-
-  oUrl.pathname = pathPartList.slice(0, -1).join('')
-
-  return oUrl.toString()
-}
-
-export function cleanAuthorUrl({ url, method }) {
-  if (method == 'pathname-remove-last') {
-    return cleanAuthorUrlRemoveLast(url)
-  } else {
-    return url
-  }
-}
-
 export function getMatchedGetAuthor(url) {
   // logUAU('getMatchedGetAuthor () 00', url)
   const targetHostSettings = getHostSettings(url)
@@ -68,4 +51,3 @@ export function getMatchedGetAuthor(url) {
 
   return matchedGetAuthor
 }
-

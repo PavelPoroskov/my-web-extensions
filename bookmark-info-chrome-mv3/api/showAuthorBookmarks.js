@@ -1,8 +1,7 @@
 import {
-  getBookmarkInfoUni,
+  getPartialBookmarkList,
 } from './get-bookmarks.api.js'
 import {
-  cleanAuthorUrl,
   getAuthorUrlFromPostUrl,
   getMatchedGetAuthor,
   removeHashAndSearchParams,
@@ -20,19 +19,12 @@ export async function showAuthorBookmarksStep2({ tabId, url, authorUrl }) {
 
   if (authorUrl) {
     let cleanedAuthorUrl = removeHashAndSearchParams(authorUrl);
-
     const matchedGetAuthor = getMatchedGetAuthor(url)
-    if (matchedGetAuthor?.cleanAuthorUrlMethod) {
-      // https://www.linkedin.com/company/companyOne/life -> https://www.linkedin.com/company/companyOne
-      cleanedAuthorUrl = cleanAuthorUrl({
-        url: cleanedAuthorUrl,
-        method: matchedGetAuthor.cleanAuthorUrlMethod,
-      })
-    }
 
-    logSHA('showAuthorBookmarksStep2 () 11', 'cleanedAuthorUrl', cleanedAuthorUrl)
-    const bookmarkInfo = await getBookmarkInfoUni({ url: cleanedAuthorUrl, useCache: true, isShowUrl: true })
-    authorBookmarkList = bookmarkInfo.bookmarkList
+    authorBookmarkList = await getPartialBookmarkList({
+      url: cleanedAuthorUrl,
+      pathnamePattern: matchedGetAuthor?.authorPattern,
+    })
   }
 
   const data = {
