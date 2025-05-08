@@ -1,6 +1,6 @@
 (async function() {
   let SHOW_LOG = false
-  // SHOW_LOG = true
+  SHOW_LOG = true
   const log = SHOW_LOG ? console.log : () => {};
   log('IN content-script 00');
 
@@ -16,6 +16,7 @@
     DELETE_BOOKMARK: 'DELETE_BOOKMARK',
     FIX_TAG: 'FIX_TAG',
     UNFIX_TAG: 'UNFIX_TAG',
+    PAGE_EVENT: 'PAGE_EVENT',
     TAB_IS_READY: 'TAB_IS_READY',
     SHOW_TAG_LIST: 'SHOW_TAG_LIST',
     UPDATE_AVAILABLE_ROWS: 'UPDATE_AVAILABLE_ROWS',
@@ -42,7 +43,7 @@
   const BROWSER_SPECIFIC_OPTIONS = {
     DEL_BTN_RIGHT_PADDING: {
       [BROWSER_OPTIONS.CHROME]: '0.5ch',
-      [BROWSER_OPTIONS.FIREFOX]: '1ch'
+      [BROWSER_OPTIONS.FIREFOX]: '1.5ch'
     },
     LABEL_RIGHT_PADDING: {
       [BROWSER_OPTIONS.CHROME]: '0.3ch',
@@ -172,7 +173,7 @@
   background-color: bisque;
 }
 .bkm-info--btn-del {
-  padding-right: --bkm-info-del-rpad:
+  padding-right: var(--bkm-info-del-rpad);
   position: absolute;
   top: 0;
   right: 0;
@@ -395,7 +396,7 @@
           const newBookmarkList = bookmarkList.concat({
             id: '',
             title: document.title,
-            folder: tag.title,
+            parentTitle: tag.parentTitle,
             path: '',
             parentId,
             optimisticAdd: true,
@@ -465,7 +466,7 @@
         await browser.runtime.sendMessage({
           command: EXTENSION_MSG_ID.FIX_TAG,
           parentId,
-          title: tag?.title,
+          parentTitle: tag?.parentTitle,
         });
         break
       }
@@ -491,7 +492,7 @@
     }
   }
 
-  function filterTagList({ tagList, nAvailableRows, nUsedRows, nFixedTags }) {
+  function filterTagList({ tagList, nAvailableRows, nUsedRows }) {
     log('filterTagList ', tagList)
     if (!nAvailableRows) {
       return tagList
@@ -506,6 +507,7 @@
       return tagList
     }
 
+    const nFixedTags = tagList.filter(({ isFixed }) => isFixed).length
     const nAvailableRecentTags = nAvailableTags - nFixedTags
 
     const resultList = []
@@ -515,13 +517,13 @@
     while (nVisible < nAvailableTags && iWhile < tagList.length) {
       const item = tagList[iWhile]
       iWhile += 1
-      const { isHighlight, title } = item
+      const { isHighlight, parentTitle } = item
       // ageIndex: 0..m, 0 - the most recent
       const isVisible = item.isFixed || item.ageIndex < nAvailableRecentTags
 
       if (!isVisible) {
         if (isHighlight) {
-          lostHighlight = new Intl.Segmenter().segment(title).containing(0).segment.toUpperCase()
+          lostHighlight = new Intl.Segmenter().segment(parentTitle).containing(0).segment.toUpperCase()
         }
         continue
       }
@@ -529,7 +531,7 @@
       nVisible += 1
       let isMoveHighlight = false
       if (lostHighlight) {
-        const currentLetter = new Intl.Segmenter().segment(title).containing(0).segment.toUpperCase()
+        const currentLetter = new Intl.Segmenter().segment(parentTitle).containing(0).segment.toUpperCase()
         isMoveHighlight = currentLetter == lostHighlight
         lostHighlight = undefined
       }
@@ -554,6 +556,7 @@
 
     const visitString = input.visitString || ''
     const isShowTitle = input.isShowTitle || false
+    const isTagListAvailable = input.isTagListAvailable || false
     const tagList = input.tagList || []
     const tagListOpenMode = input.tagListOpenMode
     const isTagListOpen = tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL
@@ -605,8 +608,9 @@
       // const rowHeight = rootDiv.firstChild.clientHeight
       const rowHeight = rootDiv.firstChild.getBoundingClientRect().height
 
-      nTagListAvailableRows = Math.floor(viewportHeight / rowHeight)
-      // log('viewportHeight 11', viewportHeight, 'rowHeight', rowHeight, 'nTagListAvailableRows', nTagListAvailableRows)
+      if (rowHeight) {
+        nTagListAvailableRows = Math.floor(viewportHeight / rowHeight)
+      }
     }
 
     const drawList = []
@@ -630,7 +634,7 @@
       drawList.push({ type: 'author-bookmark', value })
     })
 
-    if (tagList.length > 0) {
+    if (isTagListAvailable) {
     //if (tagList.length > 0 && isTagListOpen) {
       const emptySlotsForDel = Math.max(0, optimisticDelFromTagList - optimisticAddFromTagList)
       const emptySlotsForAdd = Math.max(0, 2 - bookmarkList.length - partialBookmarkList.length - authorBookmarkList.length - emptySlotsForDel)
@@ -645,7 +649,7 @@
       drawList.push({ type: 'history', value: visitString })
     }
 
-    if (tagList.length > 0) {
+    if (isTagListAvailable) {
       drawList.push({ type: 'separator' })
 
       if (isTagListOpen) {
@@ -653,7 +657,6 @@
           tagList,
           nAvailableRows: nTagListAvailableRows,
           nUsedRows: drawList.length,
-          nFixedTags: input.nFixedTags,
         })
 
         filteredTagList.forEach((tag) => {
@@ -676,11 +679,11 @@
 
       switch (type) {
         case 'bookmark': {
-          const { id, path, folder } = value
+          const { id, path, parentTitle } = value
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
-          const textNode = document.createTextNode(folder);
+          const textNode = document.createTextNode(parentTitle);
           divLabel.appendChild(textNode);
           divLabel.setAttribute('data-restpath', path);
 
@@ -718,12 +721,12 @@
         }
         case 'partial-bookmark': {
           // TODO? go to original bookmark
-          const { id, folder, url } = value
+          const { id, parentTitle, url } = value
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
 
-          const textNode = document.createTextNode(`url*: ${folder}`);
+          const textNode = document.createTextNode(`url*: ${parentTitle}`);
           divLabel.appendChild(textNode);
           divLabel.setAttribute('data-restpath', `url*: ${url}`);
           divLabel.setAttribute('data-id', `pb#${id}`);
@@ -739,12 +742,12 @@
           break
         }
         case 'author-bookmark': {
-          const { id, folder, url } = value
+          const { id, parentTitle, url } = value
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', 'bkm-info--author');
 
-          const textNode = document.createTextNode(`author: ${folder}`);
+          const textNode = document.createTextNode(`author: ${parentTitle}`);
           divLabel.appendChild(textNode);
           divLabel.setAttribute('data-restpath', url);
           divLabel.setAttribute('data-id', `h#${id}`);
@@ -813,7 +816,7 @@
           break
         }
         case 'tag': {
-          const { parentId, title, isUsed, isLast, isFixed, isHighlight } = value
+          const { parentId, parentTitle, isUsed, isLast, isFixed, isHighlight } = value
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--tag');
 
@@ -834,7 +837,7 @@
 
           if (isHighlight) {
             const Segmenter = new Intl.Segmenter();
-            const arLetters = Array.from(Segmenter.segment(title));
+            const arLetters = Array.from(Segmenter.segment(parentTitle));
             const firstLetter = arLetters[0].segment
             const restLetters = arLetters.slice(1).map(({ segment }) => segment).join('')
 
@@ -847,7 +850,7 @@
             const textNodeLabel = document.createTextNode(restLetters);
             divLabel.appendChild(textNodeLabel);
           } else {
-            const textNodeLabel = document.createTextNode(`${title}`);
+            const textNodeLabel = document.createTextNode(`${parentTitle}`);
             divLabel.appendChild(textNodeLabel);
           }
 
@@ -925,11 +928,13 @@
     if (rootDiv.firstChild) {
       const viewportHeight = window.visualViewport.height || window.innerHeight
       const rowHeight = rootDiv.firstChild.getBoundingClientRect().height
-      const availableRows = Math.floor(viewportHeight / rowHeight)
-      // log('viewportHeight 22', viewportHeight, 'rowHeight', rowHeight, 'nTagListAvailableRows', nTagListAvailableRows)
 
-      if (availableRows != input.nTagListAvailableRows) {
-        updateAvailableRowsInExtension(availableRows)
+      if (rowHeight) {
+        const availableRows = Math.floor(viewportHeight / rowHeight)
+
+        if (availableRows != input.nTagListAvailableRows) {
+          updateAvailableRowsInExtension(availableRows)
+        }
       }
     }
   }
@@ -1150,22 +1155,22 @@
     toggleYoutubePageHeader({ nTry: 30 })
   }
 
-  async function addBookmarkByFolderNameList(inFolderNameList) {
-    const parentNameList = inFolderNameList
+  async function addBookmarkByFolderNameList(inParentTitleList) {
+    const parentTitleList = inParentTitleList
       .map((s) => s.trim())
       .filter(Boolean)
 
-    if (parentNameList.length == 0) {
+    if (parentTitleList.length == 0) {
       return
     }
 
     const fullState = stateContainer.getState()
     const bookmarkList = fullState.bookmarkList || []
     const newBookmarkList = bookmarkList.concat(
-      parentNameList.map((folderName) => ({
+      parentTitleList.map((parentTitle) => ({
         id: '',
         title: document.title,
-        folder: folderName,
+        parentTitle,
         path: '',
         parentId: '',
         optimisticAdd: true,
@@ -1177,7 +1182,7 @@
       command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME,
       url: document.location.href,
       title: document.title,
-      parentNameList,
+      parentTitleList,
     });
   }
 
@@ -1352,14 +1357,8 @@
     }
   });
 
-  let isMsgReadyWasSend = false
 
   async function sendTabIsReady() {
-    if (isMsgReadyWasSend) {
-      return
-    }
-    isMsgReadyWasSend = true
-
     try {
       log('before send contentScriptReady');
       await browser.runtime.sendMessage({
@@ -1370,6 +1369,16 @@
     } catch (er) {
       log('IGNORE send contentScriptReady', er);
     }
+  }
+  let isMsgReadyWasSend = false
+
+  async function sendTabIsReadyOnce() {
+    if (isMsgReadyWasSend) {
+      return
+    }
+    isMsgReadyWasSend = true
+
+    sendTabIsReady()
   }
 
   document.addEventListener("fullscreenchange", () => {
@@ -1401,27 +1410,15 @@
       }
       stateContainer.updateNoRender(update)
     } else {
-      sendTabIsReady()
+      sendTabIsReadyOnce()
     }
   });
-  // document.addEventListener('readystatechange', () => {
-  //   log('event document.readystatechange', document.readyState);
-
-  //   if (!document.readyState == 'loading') {
-  //     startHideYoutubePageHeader()
-  //   }
-  // });
-
-  // window.addEventListener('load', () => {
-  //   log('event window.load');
-  //   startHideYoutubePageHeader()
-  // });
   window.addEventListener('pageshow', () => {
     log('event window.pageshow');
     startHideYoutubePageHeader()
   });
 
   if (!document.hidden) {
-    sendTabIsReady()
+    sendTabIsReadyOnce()
   }
 })();

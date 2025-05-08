@@ -25,6 +25,7 @@ const BROWSER_SPECIFIC = Object.fromEntries(
   ADD_BOOKMARK_FOLDER_BY_NAME: 'ADD_BOOKMARK_FOLDER_BY_NAME',
   FIX_TAG: 'FIX_TAG',
   UNFIX_TAG: 'UNFIX_TAG',
+  PAGE_EVENT: 'PAGE_EVENT',
   TAB_IS_READY: 'TAB_IS_READY',
   SHOW_TAG_LIST: 'SHOW_TAG_LIST',
   // TODO remove duplication in EXTENSION_MSG_ID: message-id.js and options.js
@@ -219,6 +220,8 @@ const INTERNAL_VALUES = Object.fromEntries(
   // 'getUrlFromUrl',
   // 'history.api',
   // 'incoming-message.js',
+  // 'incoming-message.js/TAB_IS_READY',
+  // 'incoming-message.js/PAGE_EVENT',
   // 'init-extension',
   // 'memo',
   // 'moveFolders.js',
@@ -272,6 +275,7 @@ const urlSettingsGo = {
     getAuthor: {
       pagePattern: '/watch?v=:id',
       authorSelector: '.ytd-channel-name a[href]',
+      authorPattern: '/:channel'
     }
   },
 }
@@ -323,17 +327,17 @@ const urlSettingsUse = {
       {
         pagePattern: '/jobs/view/:id',
         authorSelector: '.job-details-jobs-unified-top-card__company-name a[href^="https://www.linkedin.com/company/"]',
-        cleanAuthorUrlMethod: 'pathname-remove-last',
+        authorPattern: '/company/:company'
       },
       {
         pagePattern: '/jobs/collections/recommended/?currentJobId=:currentJobId',
         authorSelector: '.job-details-jobs-unified-top-card__company-name a[href^="https://www.linkedin.com/company/"]',
-        cleanAuthorUrlMethod: 'pathname-remove-last',
+        authorPattern: '/company/:company'
       },
       {
         pagePattern: '/jobs/search/?currentJobId=:currentJobId',
         authorSelector: '.job-details-jobs-unified-top-card__company-name a[href^="https://www.linkedin.com/company/"]',
-        cleanAuthorUrlMethod: 'pathname-remove-last',
+        authorPattern: '/company/:company'
       },
     ]
   },
@@ -1148,6 +1152,24 @@ const BOOKMARKS_BAR_FOLDER_ID = IS_BROWSER_FIREFOX ? 'toolbar_____' : '1'
 const BOOKMARKS_MENU_FOLDER_ID = IS_BROWSER_FIREFOX ? 'menu________' : undefined
 const OTHER_BOOKMARKS_FOLDER_ID = IS_BROWSER_FIREFOX ? 'unfiled_____' : '2'
 
+const BUILTIN_BROWSER_FOLDER_MAP = Object.fromEntries(
+  [
+    ROOT_FOLDER_ID,
+    BOOKMARKS_BAR_FOLDER_ID,
+    BOOKMARKS_MENU_FOLDER_ID,
+    OTHER_BOOKMARKS_FOLDER_ID
+  ].filter(Boolean)
+    .map((id) => [id, true])
+)
+const BUILTIN_BROWSER_ROOT_FOLDER_MAP = Object.fromEntries(
+  [
+    BOOKMARKS_BAR_FOLDER_ID,
+    BOOKMARKS_MENU_FOLDER_ID,
+    OTHER_BOOKMARKS_FOLDER_ID
+  ].filter(Boolean)
+    .map((id) => [id, true])
+)
+
 async function getFolderByTitleInRoot(title) {
   const nodeList = await browser.bookmarks.search({ title });
   const foundItem = nodeList.find((node) => !node.url && node.parentId == OTHER_BOOKMARKS_FOLDER_ID)
@@ -1828,7 +1850,7 @@ async function getRecentList(nItems) {
   }
 
   return Object.entries(folderByIdMap)
-    .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+    .map(([parentId, { title, dateAdded }]) => ({ parentId, parentTitle: title, dateAdded }))
     .sort((a,b) => -(a.dateAdded - b.dateAdded))
 }
 
@@ -1844,7 +1866,7 @@ async function getRecentTagObj(nItems) {
   return Object.fromEntries(
     list
       .slice(0, nItems)
-      .map(({ parentId, title, dateAdded }) => [parentId, { title, dateAdded }])
+      .map(({ parentId, parentTitle, dateAdded }) => [parentId, { parentTitle, dateAdded }])
   )
 }
 
@@ -1894,7 +1916,7 @@ async function filterRecentTagObj(obj = {}, isFlatStructure) {
     filteredFolderList.map(({ id, title }) => [
       id,
       {
-        title,
+        parentTitle: title,
         dateAdded: obj[id].dateAdded,
       }
     ])
@@ -2074,45 +2096,38 @@ function highlightAlphabet({
 const logTL = makeLogFunction({ module: 'tagList.js' })
 
 class TagList {
+  isOn = false
+  isFlatStructure = false
+
   _recentTagObj = {}
   _fixedTagObj = {}
-  _tagList = []
 
-  USE_TAG_LIST = false
-  USE_FLAT_FOLDER_STRUCTURE
-  HIGHLIGHT_LAST
-  HIGHLIGHT_ALPHABET
-
-  isOpenGlobal
-  AVAILABLE_ROWS
-  MAX_AVAILABLE_ROWS
-  _nFixedTags = 0
+  recentListDesc = []
+  recentListLimit = []
+  tagList = []
+  tagListFormat = []
+  tagIdSet = new Set()
 
   changeCount = 0
-  changeProcessedCount = -1
+  changeProcessedCount = 0
 
-  addRecentTagFromFolder = () => { }
+
+  isOpenGlobal = false
+  AVAILABLE_ROWS = 0
+  MAX_AVAILABLE_ROWS = 0
+  HIGHLIGHT_LAST = false
+  HIGHLIGHT_ALPHABET = false
+  PINNED_TAGS_POSITION = undefined
+
+  addTag = () => { }
   removeTag = () => { }
 
-  get list() {
-    if (this.changeProcessedCount !== this.changeCount) {
-      this.changeProcessedCount = this.changeCount
-      this._tagList = this.refillList()
-      this._nFixedTags = Object.keys(this._fixedTagObj).length
-    }
+  fixTag = () => { }
+  unfixTag = () => { }
 
-    return this._tagList
-  }
-  get nFixedTags() {
-    if (this.changeProcessedCount !== this.changeCount) {
-      this.changeProcessedCount = this.changeCount
-      this._tagList = this.refillList()
-      this._nFixedTags = Object.keys(this._fixedTagObj).length
-    }
-    logTL('get nFixedTags() 00', this._nFixedTags)
+  openTagList = () => { }
+  updateAvailableRows = () => { }
 
-    return this._nFixedTags
-  }
   get nAvailableRows() {
     return this.AVAILABLE_ROWS
   }
@@ -2120,29 +2135,10 @@ class TagList {
     this.changeCount += 1
   }
 
-  _enableTagList(isEnabled) {
-    logTL('_enableTagList 00', isEnabled)
-    if (isEnabled) {
-      this.addRecentTagFromFolder = this._addRecentTagFromFolder
-      this.removeTag = this._removeTag
-    } else {
-      this.addRecentTagFromFolder = () => { }
-      this.removeTag = () => { }
-    }
-  }
-  blockTagList(isBlocking) {
-    if (this.USE_TAG_LIST) {
-      this._enableTagList(!isBlocking)
-    }
-  }
-  async readFromStorage(userSettings) {
-    this.USE_TAG_LIST = userSettings[USER_OPTION.USE_TAG_LIST]
-    this._enableTagList(this.USE_TAG_LIST)
-    if (!this.USE_TAG_LIST) {
-      return
-    }
+  async readFromStorage({ userSettings }) {
+    logTL('readFromStorage () 00')
 
-    this.USE_FLAT_FOLDER_STRUCTURE = userSettings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]
+    this.isFlatStructure = userSettings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]
     this.HIGHLIGHT_LAST = userSettings[USER_OPTION.TAG_LIST_HIGHLIGHT_LAST]
     this.HIGHLIGHT_ALPHABET = userSettings[USER_OPTION.TAG_LIST_HIGHLIGHT_ALPHABET]
     this.PINNED_TAGS_POSITION = userSettings[USER_OPTION.TAG_LIST_PINNED_TAGS_POSITION]
@@ -2154,6 +2150,8 @@ class TagList {
       INTERNAL_VALUES.TAG_LIST_IS_OPEN,
       INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS,
     ]);
+    logTL('readFromStorage () 11 savedObj')
+    logTL(savedObj)
     this.isOpenGlobal = savedObj[INTERNAL_VALUES.TAG_LIST_IS_OPEN]
     this.AVAILABLE_ROWS = savedObj[INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS]
     this.MAX_AVAILABLE_ROWS = this.AVAILABLE_ROWS
@@ -2163,26 +2161,37 @@ class TagList {
       actualRecentTagObj = await getRecentTagObj(this.AVAILABLE_ROWS)
     }
 
+    const savedRecentObj = savedObj[INTERNAL_VALUES.TAG_LIST_RECENT_MAP] || {}
+    const savedRecentObj2 = Object.fromEntries(
+      Object.entries(savedRecentObj).map(([parentId, item]) => [
+        parentId,
+        {
+          parentTitle: item.parentTitle || item.title,
+          dateAdded: item.dateAdded,
+        }
+      ])
+    )
     this._recentTagObj = {
-      ...savedObj[INTERNAL_VALUES.TAG_LIST_RECENT_MAP],
+      ...savedRecentObj2,
       ...actualRecentTagObj,
     }
     this._fixedTagObj = savedObj[INTERNAL_VALUES.TAG_LIST_FIXED_MAP]
 
-    if (!savedObj[INTERNAL_VALUES.TAG_LIST_SESSION_STARTED]) {
-      const isFlatStructure = this.USE_FLAT_FOLDER_STRUCTURE
-      this._recentTagObj = await filterRecentTagObj(this._recentTagObj, isFlatStructure)
-      this._fixedTagObj = await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
-      await setOptions({
-        [INTERNAL_VALUES.TAG_LIST_SESSION_STARTED]: true,
-        [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj,
-        [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj,
-      })
-    }
+    this._recentTagObj = await filterRecentTagObj(this._recentTagObj, this.isFlatStructure)
+    this._fixedTagObj = await filterFixedTagObj(this._fixedTagObj, this.isFlatStructure)
+    await setOptions({
+      [INTERNAL_VALUES.TAG_LIST_SESSION_STARTED]: true,
+      [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj,
+      [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj,
+    })
 
     this.markUpdates()
   }
-  async updateAvailableRows(availableRows) {
+  async _updateAvailableRows(availableRows) {
+    if (!availableRows) {
+      return
+    }
+
     logTL('updateAvailableRows () 00', availableRows)
     const beforeAvailableRows = this.AVAILABLE_ROWS
     this.AVAILABLE_ROWS = availableRows
@@ -2198,8 +2207,7 @@ class TagList {
         ...this._recentTagObj,
         ...actualRecentTagObj,
       }
-      const isFlatStructure = this.USE_FLAT_FOLDER_STRUCTURE
-      this._recentTagObj = await filterRecentTagObj(this._recentTagObj, isFlatStructure)
+      this._recentTagObj = await filterRecentTagObj(this._recentTagObj, this.isFlatStructure)
       Object.assign(updateObj, {
         [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj,
       })
@@ -2208,121 +2216,165 @@ class TagList {
     await setOptions(updateObj)
     this.markUpdates()
   }
-  async openTagList(isOpen) {
+  async _openTagList(isOpen) {
     this.isOpenGlobal = isOpen
     await setOptions({
       [INTERNAL_VALUES.TAG_LIST_IS_OPEN]: isOpen
     })
   }
-  async filterTagListForFlatFolderStructure() {
-    const savedObj = await getOptions([
-      INTERNAL_VALUES.TAG_LIST_RECENT_MAP,
-      INTERNAL_VALUES.TAG_LIST_FIXED_MAP,
-    ]);
-    this._recentTagObj = savedObj[INTERNAL_VALUES.TAG_LIST_RECENT_MAP]
-    this._fixedTagObj = savedObj[INTERNAL_VALUES.TAG_LIST_FIXED_MAP]
+  formatList(list) {
+    logTL('formatList () 00', list)
 
-    const isFlatStructure = true
-    // console.log('filterTagListForFlatFolderStructure ', this._fixedTagObj)
-    this._recentTagObj = await filterRecentTagObj(this._recentTagObj, isFlatStructure)
-    this._fixedTagObj = await filterFixedTagObj(this._fixedTagObj, isFlatStructure)
-    // console.log('filterTagListForFlatFolderStructure, after filter', this._fixedTagObj)
-    this.markUpdates()
-
-    await setOptions({
-      [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj,
-      [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj,
-    })
-  }
-  refillList() {
-    const recentTagLimit = Math.max(
-      this.AVAILABLE_ROWS - Object.keys(this._fixedTagObj).length,
-      0
-    )
-
-    const recentTagList = Object.entries(this._recentTagObj)
-      .filter(([parentId]) => !(parentId in this._fixedTagObj))
-      .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-      .sort((a, b) => -(a.dateAdded - b.dateAdded))
-      .slice(0, recentTagLimit)
-
-    const lastTagList = Object.entries(this._recentTagObj)
-      .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
-      .sort((a, b) => -(a.dateAdded - b.dateAdded))
+    const inList = list.filter(({ parentTitle }) => !!parentTitle)
+    const lastTagList = this.recentListDesc
       .slice(0, this.HIGHLIGHT_LAST)
+
     const lastTagSet = new Set(
       lastTagList.map(({ parentId }) => parentId)
     )
 
-    const fullList = [].concat(
-      recentTagList
-        .map(({ parentId, title }, index) => ({ parentId, title, isFixed: false, ageIndex: index })),
-      Object.entries(this._fixedTagObj)
-        .map(([parentId, title]) => ({
-          parentId,
-          title,
-          isFixed: true,
-        }))
-    )
-      .filter(({ title }) => !!title)
-      .map((item) => ({
-        ...item,
-        isLast: lastTagSet.has(item.parentId),
-      }))
-
     let resultList
     if (this.PINNED_TAGS_POSITION == TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.TOP) {
-      resultList = fullList.sort((a, b) => -(+a.isFixed - b.isFixed) || a.title.localeCompare(b.title))
+      resultList = inList.sort((a, b) => -(+a.isFixed - b.isFixed) || a.parentTitle.localeCompare(b.parentTitle))
 
       if (this.HIGHLIGHT_ALPHABET) {
         resultList = highlightAlphabet({
           list: resultList,
-          fnGetFirstLetter: ({ isFixed, title }) => `${isFixed ? 'F': 'R'}#${getFirstLetter(title)}`
+          fnGetFirstLetter: ({ isFixed, parentTitle }) => `${isFixed ? 'F': 'R'}#${getFirstLetter(parentTitle)}`
         })
       }
     } else {
-      resultList = fullList.sort((a, b) => a.title.localeCompare(b.title))
+      resultList = inList.sort((a, b) => a.parentTitle.localeCompare(b.parentTitle))
 
       if (this.HIGHLIGHT_ALPHABET) {
         resultList = highlightAlphabet({
           list: resultList,
-          fnGetFirstLetter: ({ title }) => getFirstLetter(title),
+          fnGetFirstLetter: ({ parentTitle }) => getFirstLetter(parentTitle),
         })
       }
     }
 
-    return resultList
+    return resultList.map((item) => ({
+      ...item,
+      isLast: lastTagSet.has(item.parentId),
+    }))
   }
-  async _addRecentTagFromFolder(folderNode) {
-    logTL('_addRecentTagFromFolder 00', folderNode)
+  getListWithBookmarks(addTagList = []) {
+    logTL('getListWithBookmarks () 00', addTagList)
+
+    if (this.changeProcessedCount !== this.changeCount) {
+      logTL('getListWithBookmarks () 11')
+      this.changeProcessedCount = this.changeCount
+
+      this.recentListDesc = Object.entries(this._recentTagObj)
+        .map(([parentId, { parentTitle, dateAdded }]) => ({ parentId, parentTitle, dateAdded }))
+        .sort((a, b) => -(a.dateAdded - b.dateAdded))
+
+      const recentTagLimit = Math.max(
+        this.AVAILABLE_ROWS - Object.keys(this._fixedTagObj).length,
+        0
+      )
+
+      this.recentListLimit = this.recentListDesc
+        .filter(({ parentId }) => !(parentId in this._fixedTagObj))
+        .slice(0, recentTagLimit)
+
+      logTL('getListWithBookmarks () 11 this._fixedTagObj', this._fixedTagObj)
+
+      this.tagList  = [].concat(
+        Object.entries(this._fixedTagObj)
+          .map(([parentId, parentTitle]) => ({
+            parentId,
+            parentTitle,
+            isFixed: true,
+          })),
+        this.recentListLimit
+          .map(({ parentId, parentTitle }, index) => ({ parentId, parentTitle, isFixed: false, ageIndex: index })),
+      )
+
+
+      this.tagIdSet = new Set(this.tagList.map(({ parentId }) => parentId))
+
+      this.tagListFormat = this.formatList(this.tagList)
+    }
+
+
+    logTL('getListWithBookmarks () 22')
+    const finalAddTagList = addTagList
+      .filter(({ parentId }) => !this.tagIdSet.has(parentId))
+
+    const requiredSlots = finalAddTagList.length
+
+    if (requiredSlots === 0) {
+      logTL('getListWithBookmarks () 33', this.tagListFormat)
+      return this.tagListFormat
+    }
+
+    logTL('getListWithBookmarks () 44 finalAddTagList', finalAddTagList)
+    const addSet = new Set(addTagList.map(({ parentId }) => parentId))
+
+    const availableSlots = Math.max(0, this.AVAILABLE_ROWS - this.tagList.length)
+    const replaceSlots = Math.max(0, requiredSlots - availableSlots)
+    const replaceList = finalAddTagList.slice(0, replaceSlots)
+    const connectList = finalAddTagList.slice(replaceSlots)
+
+    let resultList = this.tagList.slice()
+
+    if (0 < replaceList.length) {
+
+      let iTo = resultList.length - 1
+      let iFrom = replaceList.length - 1
+
+      while (-1 < iFrom && -1 < iTo) {
+        const item = resultList[iTo]
+
+        if (!item.isFixed && !addSet.has(item.parentId)) {
+          resultList[iTo].parentId = replaceList[iFrom].parentId
+          resultList[iTo].parentTitle = replaceList[iFrom].parentTitle
+          iFrom = iFrom - 1
+        }
+        iTo = iTo - 1
+      }
+    }
+    if (0 < connectList.length) {
+      const ageIndex = this.recentListLimit.length
+      resultList = resultList.concat(
+        connectList.map(({ parentId, parentTitle }) => ({ parentId, parentTitle, isFixed: false, ageIndex }))
+      )
+    }
+
+    return this.formatList(resultList)
+  }
+  async _addTag({ parentId, parentTitle }) {
+    logTL('_addRecentTagFromFolder 00', parentId, parentTitle)
     // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
-    if (this.USE_FLAT_FOLDER_STRUCTURE) {
+    if (this.isFlatStructure) {
       // if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
       //   return
       // }
 
       const unclassifiedFolderId = await getUnclassifiedFolderId()
-      if (unclassifiedFolderId && folderNode.id === unclassifiedFolderId) {
+      if (unclassifiedFolderId && parentId === unclassifiedFolderId) {
         return
       }
     }
 
-    if (!isDescriptiveFolderTitle(folderNode.title)) {
+    if (!isDescriptiveFolderTitle(parentTitle)) {
       return
     }
 
-    if (isDatedFolderTitle(folderNode.title)) {
+    if (isDatedFolderTitle(parentTitle)) {
       return
     }
 
-    this._recentTagObj[folderNode.id] = {
+    this._recentTagObj[parentId] = {
       dateAdded: Date.now(),
-      title: folderNode.title
+      parentTitle,
     }
 
     let fixedTagUpdate
-    if (folderNode.id in this._fixedTagObj) {
-      this._fixedTagObj[folderNode.id] = folderNode.title
+    if (parentId in this._fixedTagObj) {
+      this._fixedTagObj[parentId] = parentTitle
       fixedTagUpdate = {
         [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
       }
@@ -2330,7 +2382,7 @@ class TagList {
 
     if (this.MAX_AVAILABLE_ROWS + 20 < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
-        .map(([parentId, { title, dateAdded }]) => ({ parentId, title, dateAdded }))
+        .map(([parentId, { parentTitle, dateAdded }]) => ({ parentId, parentTitle, dateAdded }))
         .sort((a, b) => -(a.dateAdded - b.dateAdded))
         .slice(this.MAX_AVAILABLE_ROWS)
         .map(({ parentId }) => parentId)
@@ -2346,14 +2398,6 @@ class TagList {
       ...fixedTagUpdate,
     })
   }
-  // async _addRecentTagFromBkm(bkmNode) {
-  //   const parentId = bkmNode?.parentId
-
-  //   if (parentId) {
-  //     const [folderNode] = await browser.bookmarks.get(parentId)
-  //     await this.addRecentTagFromFolder(folderNode)
-  //   }
-  // }
   async _removeTag(id) {
     const isInFixedList = id in this._fixedTagObj
     let fixedTagUpdate
@@ -2383,13 +2427,13 @@ class TagList {
       })
     }
   }
-  async addFixedTag({ parentId, title }) {
-    if (!title || !parentId) {
+  async _fixTag({ parentId, parentTitle }) {
+    if (!parentTitle || !parentId) {
       return
     }
 
     if (!(parentId in this._fixedTagObj)) {
-      this._fixedTagObj[parentId] = title
+      this._fixedTagObj[parentId] = parentTitle
 
       this.markUpdates()
       await setOptions({
@@ -2397,13 +2441,69 @@ class TagList {
       })
     }
   }
-  async removeFixedTag(id) {
-    delete this._fixedTagObj[id]
+  async _unfixTag(parentId) {
+    delete this._fixedTagObj[parentId]
 
     this.markUpdates()
     await setOptions({
       [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
     })
+  }
+
+  useSettings({ isOn, userSettings }) {
+    this.isOn = isOn
+
+    if (isOn) {
+      this.addTag = this._addTag
+      this.removeTag = this._removeTag
+
+      this.fixTag = this._fixTag
+      this.unfixTag = this._unfixTag
+
+      this.openTagList = this._openTagList
+      this.updateAvailableRows = this._updateAvailableRows
+
+      // tagList.list
+      // tagList.isOpenGlobal
+      // tagList.nAvailableRows
+      // tagList.nFixedTags
+    } else {
+      this.addTag = () => { }
+      this.removeTag = () => { }
+
+      this.fixTag = () => { }
+      this.unfixTag = () => { }
+
+      this.openTagList = () => { }
+      this.updateAvailableRows = () => { }
+    }
+
+    this.changeCount = 0
+    this.changeProcessedCount = 0
+    this.tagIdSet = new Set()
+
+    if (isOn) {
+      this.readFromStorage({ userSettings })
+    } else {
+
+      this.isFlatStructure = false
+
+      this._recentTagObj = {}
+      this._fixedTagObj = {}
+
+      this.recentListDesc = []
+      this.recentListLimit = []
+      this.tagList = []
+      this.tagListFormat = []
+      this.tagIdSet = new Set()
+
+      this.isOpenGlobal = false
+      this.AVAILABLE_ROWS = 0
+      this.MAX_AVAILABLE_ROWS = 0
+      this.HIGHLIGHT_LAST = false
+      this.HIGHLIGHT_ALPHABET = false
+      this.PINNED_TAGS_POSITION = undefined
+    }
   }
 }
 
@@ -2521,6 +2621,51 @@ const HOST_LIST_FOR_PAGE_OPTIONS = HOST_URL_SETTINGS_LIST_SHORT
     )
 const logUIS = makeLogFunction({ module: 'url-is.js' })
 
+const pathToList = (pathname) => {
+  let list = pathname.split(/(\/)/).filter(Boolean)
+
+  if (1 < list.length && list.at(-1) === '/') {
+    list = list.slice(0, -1)
+  }
+
+  return list
+}
+const isPartsEqual = (patternPart, pathPart) => {
+  let result
+
+  if (patternPart.startsWith(':')) {
+    result = pathPart && pathPart != '/'
+  } else {
+    result = pathPart === patternPart
+  }
+  logUIS('isPartsEqual () 11', patternPart, pathPart, result)
+
+  return result
+}
+
+const getPathnamePart = ({ pathname, pattern }) => {
+  const patternAsList = pathToList(pattern)
+  const pathAsList = pathToList(pathname)
+  const resultPartList = []
+
+  let isOk = patternAsList.length <= pathAsList.length
+
+  let i = 0
+  while (isOk && i < patternAsList.length) {
+    isOk = isPartsEqual(patternAsList[i], pathAsList[i])
+    if (isOk) {
+      resultPartList.push(pathAsList[i])
+    }
+    i = i + 1
+  }
+
+  let resultPathname = isOk
+    ? resultPartList.join('')
+    : undefined
+
+  return resultPathname
+}
+
 function makeIsSearchParamMatch(patternList) {
   logUIS('makeIsSearchParamMatch () 00', patternList)
   const isFnList = []
@@ -2571,28 +2716,6 @@ const isPathnameMatchForPattern = ({ pathname, patternList }) => {
   logUIS('isPathnameMatch () 00', pathname)
   logUIS('isPathnameMatch () 00', patternList)
 
-  const pathToList = (pathname) => {
-    let list = pathname.split(/(\/)/).filter(Boolean)
-
-    if (1 < list.length && list.at(-1) === '/') {
-      list = list.slice(0, -1)
-    }
-
-    return list
-  }
-  const isPartsEqual = (patternPart, pathPart) => {
-    let result
-
-    if (patternPart.startsWith(':')) {
-      result = pathPart && pathPart != '/'
-    } else {
-      result = pathPart === patternPart
-    }
-    logUIS('isPartsEqual () 11', patternPart, pathPart, result)
-
-    return result
-  }
-
   if (patternList.includes('*')) {
     return true
   }
@@ -2639,11 +2762,19 @@ function isUrlMath({ url, pattern }) {
 
   const [pathPattern, searchParamsPattern] = pattern.split('?')
 
-  if (!searchParamsPattern) {
-    return isPathnameMatchForPattern({ pathname, patternList: [pathPattern] })
+  if (pathPattern) {
+    if (!isPathnameMatchForPattern({ pathname, patternList: [pathPattern] })) {
+      return false
+    }
   }
 
-  return isPathnameMatchForPattern({ pathname, patternList: [pathPattern] }) && isSearchParamsMatchForPattern({ searchParams, searchParamsPattern })
+  if (searchParamsPattern) {
+    if (!isSearchParamsMatchForPattern({ searchParams, searchParamsPattern })) {
+      return false
+    }
+  }
+
+  return true
 }
 const logUS = makeLogFunction({ module: 'url-search.js' })
 
@@ -2678,10 +2809,19 @@ const getPathnameForSearch = (pathname) => {
   return mPathname
 }
 
-function isPathnameMatchForSearch({ oUrl, pathname }) {
-  const normalizedPathname = getPathnameForSearch(oUrl.pathname);
+// function isPathnameMatchForSearch({ oUrl, pathname }) {
+//   const normalizedPathname = getPathnameForSearch(oUrl.pathname);
 
-  return normalizedPathname === pathname
+//   return normalizedPathname === pathname
+// }
+
+function makeIsPathnameMatchForSearch({ normalizePathname }) {
+
+  return function isPathnameMatchForSearch({ oUrl, pathname }) {
+    const normalizedPathname = normalizePathname(oUrl.pathname);
+
+    return normalizedPathname === pathname
+  }
 }
 
 function isSearchParamsMatchForSearch({ oUrl, requiredSearchParams }) {
@@ -2696,7 +2836,7 @@ function isSearchParamsMatchForSearch({ oUrl, requiredSearchParams }) {
 }
 
 // ?TODO /posts == /posts?page=1 OR clean on open /posts?page=1 TO /posts IF page EQ 1
-async function startPartialUrlSearch(url) {
+async function startPartialUrlSearch({ url, pathnamePattern }) {
   logUS('startPartialUrlSearch () 00', url)
 
   try {
@@ -2738,7 +2878,30 @@ async function startPartialUrlSearch(url) {
     if (!targetHostSettings?.isHashRequired) {
       oUrl.hash = ''
     }
-    oUrl.pathname = getPathnameForSearch(oUrl.pathname)
+
+
+    let newPathname
+    let isPathnameMatchForSearch
+
+    if (pathnamePattern) {
+      newPathname = getPathnamePart({
+        pathname: oUrl.pathname,
+        pattern: pathnamePattern,
+      })
+    }
+    if (newPathname) {
+      isPathnameMatchForSearch = makeIsPathnameMatchForSearch({
+        normalizePathname: (str) => getPathnamePart({
+          pathname: str,
+          pattern: pathnamePattern,
+        })
+      })
+    } else {
+      newPathname = getPathnameForSearch(oUrl.pathname)
+      isPathnameMatchForSearch = makeIsPathnameMatchForSearch({ normalizePathname: getPathnameForSearch })
+    }
+    oUrl.pathname = newPathname
+
     oUrl.search = ''
     const urlForSearch = oUrl.toString();
     const {
@@ -2860,23 +3023,6 @@ function removeHashAndSearchParams(url) {
   oUrl.pathname = pathPartList.slice(0, iEnd + 1).join('')
 
   return oUrl.toString()
-}
-
-function cleanAuthorUrlRemoveLast(url) {
-  const oUrl = new URL(url)
-  const pathPartList = oUrl.pathname.split(/(\/)/).filter(Boolean)
-
-  oUrl.pathname = pathPartList.slice(0, -1).join('')
-
-  return oUrl.toString()
-}
-
-function cleanAuthorUrl({ url, method }) {
-  if (method == 'pathname-remove-last') {
-    return cleanAuthorUrlRemoveLast(url)
-  } else {
-    return url
-  }
 }
 
 function getMatchedGetAuthor(url) {
@@ -3261,58 +3407,58 @@ async function createBookmarkWithApi({
 
 async function createBookmarkWithParentId({ parentId, url, title }) {
   const [parentNode] = await browser.bookmarks.get(parentId)
-  const parentName = parentNode.title
+  const parentTitle = parentNode.title
 
-  const isDatedTemplate = isDatedFolderTemplate(parentName)
+  const isDatedTemplate = isDatedFolderTemplate(parentTitle)
 
   if (isDatedTemplate) {
-    const datedFolder = await findOrCreateDatedFolder({ templateTitle: parentName, templateId: parentId })
+    const datedFolder = await findOrCreateDatedFolder({ templateTitle: parentTitle, templateId: parentId })
     await createBookmarkWithApi({ parentId: datedFolder.id, url, title })
-    await removePreviousDatedBookmarks({ url, template: parentName })
+    await removePreviousDatedBookmarks({ url, template: parentTitle })
 
-    if (!isVisitedDatedTemplate(parentName)) {
-      await tagList.addRecentTagFromFolder({ id: parentId, title: parentName })
+    if (!isVisitedDatedTemplate(parentTitle)) {
+      await tagList.addTag({ parentId, parentTitle })
     }
   } else {
     await createBookmarkWithApi({ parentId, url, title })
-    await tagList.addRecentTagFromFolder({ id: parentId, title: parentName })
+    await tagList.addTag({ parentId, parentTitle })
   }
 }
 
 async function afterUserCreatedBookmarkInGUI({ parentId, id, url, index }) {
   const [parentNode] = await browser.bookmarks.get(parentId)
-  const parentName = parentNode.title
+  const parentTitle = parentNode.title
 
-  const isDatedTemplate = isDatedFolderTemplate(parentName)
+  const isDatedTemplate = isDatedFolderTemplate(parentTitle)
 
   if (isDatedTemplate) {
-    const datedFolder = await findOrCreateDatedFolder({ templateTitle: parentName, templateId: parentId })
+    const datedFolder = await findOrCreateDatedFolder({ templateTitle: parentTitle, templateId: parentId })
     await moveBookmarkIgnoreInController({
       id,
       parentId: datedFolder.id,
       index: 0,
     })
 
-    await removePreviousDatedBookmarks({ url, template: parentName })
+    await removePreviousDatedBookmarks({ url, template: parentTitle })
 
-    if (!isVisitedDatedTemplate(parentName)) {
-      await tagList.addRecentTagFromFolder({ id: parentId, title: parentName })
+    if (!isVisitedDatedTemplate(parentTitle)) {
+      await tagList.addTag({ parentId, parentTitle })
     }
   } else {
     if (index !== 0) {
       await moveBookmarkIgnoreInController({ id, index: 0 })
     }
 
-    await tagList.addRecentTagFromFolder({ id: parentId, title: parentName })
+    await tagList.addTag({ parentId, parentTitle })
   }
 }
 
-async function createBookmark({ parentId, parentName, url, title }) {
+async function createBookmark({ parentId, parentTitle, url, title }) {
 
   if (parentId) {
     await createBookmarkWithParentId({ parentId, url, title })
-  } else if (parentName) {
-    const folderNode = await findOrCreateFolder(parentName)
+  } else if (parentTitle) {
+    const folderNode = await findOrCreateFolder(parentTitle)
 
     await createBookmarkWithParentId({
       parentId: folderNode.id,
@@ -3320,7 +3466,7 @@ async function createBookmark({ parentId, parentName, url, title }) {
       title,
     })
   } else {
-    throw new Error('createBookmark() must use parentId or parentName')
+    throw new Error('createBookmark() must use parentId or parentTitle')
   }
 }
 async function createBookmarkOpened({ url, title }) {
@@ -3330,11 +3476,11 @@ async function createBookmark({ parentId, parentName, url, title }) {
     return
   }
 
-  await createBookmark({ url, title, parentName: DATED_TEMPLATE_OPENED })
+  await createBookmark({ url, title, parentTitle: DATED_TEMPLATE_OPENED })
 }
 
 async function createBookmarkVisited({ url, title }) {
-  await createBookmark({ url, title, parentName: DATED_TEMPLATE_VISITED })
+  await createBookmark({ url, title, parentTitle: DATED_TEMPLATE_VISITED })
 
   // visited replaces opened
   await removeDatedBookmarksForTemplate({ url, template: DATED_TEMPLATE_OPENED })
@@ -3553,14 +3699,18 @@ class PageReady {
     }
   }
 
-  async onPageReady({ tabId, url }) {
-    logPR('onPageReady 00', tabId, url);
+  async onPageReady({ tabId, url, debugCaller }) {
+    if (url.startsWith('chrome:') || url.startsWith('about:')) {
+      return
+    }
+    logPR(`onPageReady 00 <-${debugCaller}`, tabId)
+    logPR('onPageReady 11', url)
 
     const cleanUrl = await this.clearUrlOnPageOpen({ tabId, url })
     const cleanedActiveTabUrl = removeQueryParamsIfTarget(memo.activeTabUrl);
 
     if (cleanUrl !== cleanedActiveTabUrl) {
-      logPR('onPageReady 11');
+      logPR('onPageReady 22');
       const Tab = await browser.tabs.get(tabId);
 
       if (Tab) {
@@ -3643,7 +3793,10 @@ async function initFromUserOptions() {
 
   await Promise.all([
     createContextMenu(userSettings),
-    tagList.readFromStorage(userSettings),
+    tagList.useSettings({
+      isOn: userSettings[USER_OPTION.USE_TAG_LIST],
+      userSettings,
+    }),
     visitedUrls.useSettings({
       isOn: userSettings[USER_OPTION.MARK_CLOSED_PAGE_AS_VISITED],
     }),
@@ -3756,12 +3909,12 @@ async function getBookmarkInfo({ url, isShowTitle, isShowUrl }) {
 
       return {
         id: bookmarkItem.id,
-        folder: fullPathList.at(-1),
-        path: fullPathList.slice(0, -1).concat('').join('/ '),
-        parentId: bookmarkItem.parentId,
-        source: bookmarkItem.source,
         ...(isShowUrl ? { url: bookmarkItem.url } : {}),
-        ...(isShowTitle ? { title: bookmarkItem.title } : {})
+        ...(isShowTitle ? { title: bookmarkItem.title } : {}),
+        parentId: bookmarkItem.parentId,
+        parentTitle: fullPathList.at(-1),
+        path: fullPathList.slice(0, -1).concat('').join('/ '),
+        source: bookmarkItem.source,
       }
     });
 }
@@ -3795,7 +3948,7 @@ async function getBookmarkInfoUni({ url, useCache=false, isShowTitle, isShowUrl 
   };
 }
 
-async function getPartialBookmarkList({ url, exactBkmIdList = [] }) {
+async function getPartialBookmarkList({ url, exactBkmIdList = [], pathnamePattern }) {
   // 1 < pathname.length : it is not root path
   //    for https://www.youtube.com/watch?v=qqqqq other conditions than 1 < pathname.length
   // urlForSearch !== url : original url has search params, ending /, index[.xxxx]
@@ -3805,7 +3958,7 @@ async function getPartialBookmarkList({ url, exactBkmIdList = [] }) {
     isSearchAvailable,
     urlForSearch,
     isUrlMatchToPartialUrlSearch,
-  } = await startPartialUrlSearch(url)
+  } = await startPartialUrlSearch({ url, pathnamePattern })
   logGB('getPartialBookmarkList () 22 startPartialUrlSearch', { isSearchAvailable, urlForSearch })
 
   if (!isSearchAvailable) {
@@ -3835,9 +3988,9 @@ async function getPartialBookmarkList({ url, exactBkmIdList = [] }) {
 
       return {
         id: bookmarkItem.id,
-        folder: folder?.title,
-        parentId: bookmarkItem.parentId,
         url: bookmarkItem.url,
+        parentId: bookmarkItem.parentId,
+        parentTitle: folder?.title,
       }
     });
 }
@@ -3952,7 +4105,7 @@ async function getPreviousVisitList(url) {
     const {
       urlForSearch,
       isUrlMatchToPartialUrlSearch,
-    } = await startPartialUrlSearch(url)
+    } = await startPartialUrlSearch({ url })
 
     historyItemList = (await browser.history.search({
       text: urlForSearch,
@@ -4001,19 +4154,12 @@ async function showAuthorBookmarksStep2({ tabId, url, authorUrl }) {
 
   if (authorUrl) {
     let cleanedAuthorUrl = removeHashAndSearchParams(authorUrl);
-
     const matchedGetAuthor = getMatchedGetAuthor(url)
-    if (matchedGetAuthor?.cleanAuthorUrlMethod) {
-      // https://www.linkedin.com/company/companyOne/life -> https://www.linkedin.com/company/companyOne
-      cleanedAuthorUrl = cleanAuthorUrl({
-        url: cleanedAuthorUrl,
-        method: matchedGetAuthor.cleanAuthorUrlMethod,
-      })
-    }
 
-    logSHA('showAuthorBookmarksStep2 () 11', 'cleanedAuthorUrl', cleanedAuthorUrl)
-    const bookmarkInfo = await getBookmarkInfoUni({ url: cleanedAuthorUrl, useCache: true, isShowUrl: true })
-    authorBookmarkList = bookmarkInfo.bookmarkList
+    authorBookmarkList = await getPartialBookmarkList({
+      url: cleanedAuthorUrl,
+      pathnamePattern: matchedGetAuthor?.authorPattern,
+    })
   }
 
   const data = {
@@ -4047,6 +4193,37 @@ async function showAuthorBookmarks({ tabId, url }) {
       showAuthorBookmarksStep2({ tabId })
   }
 }
+// import {
+//   makeLogFunction,
+// } from '../api-low/index.js'
+
+// const logDT = makeLogFunction({ module: 'datedTemplate.js' })
+
+class DatedTemplate {
+  cacheForDatedTemplate = {}
+
+  async getTagIdForTemplate(templateTitle) {
+
+    let id = this.cacheForDatedTemplate[templateTitle]
+    if (id) {
+      return id;
+    }
+
+    // TODO wait when create. use Promise.withResolvers. to not crete second 'opened DD-MM-YYYY' on closing window
+    const folder = await findOrCreateFolder(templateTitle)
+    id = folder.id
+    this.cacheForDatedTemplate[templateTitle] = id
+
+    return id;
+  }
+  async getTagIdForDated(title) {
+
+    const templateTitle = getDatedTemplate(title)
+    return await this.getIdForTemplate(templateTitle);
+  }
+}
+
+const datedTemplate = new DatedTemplate()
 const logUTB = makeLogFunction({ module: 'updateTab.js' })
 
 async function showVisits({ tabId, url }) {
@@ -4087,6 +4264,30 @@ async function showExtra({ tabId, url, settings, exactBkmIdList }) {
   }
 }
 
+async function bookmarkListToTagList(bookmarkList) {
+  const resultList = []
+  const templateTitleList = []
+
+  bookmarkList.forEach(({ parentId, parentTitle }) => {
+    if (isDatedFolderTitle(parentTitle)) {
+      if (!isVisitedDatedTitle(parentTitle)) {
+        //secondParentId = await datedTemplate.getTagIdForDated(title)
+        const templateTitle = getDatedTemplate(parentTitle)
+        templateTitleList.push(templateTitle)
+      }
+    } else {
+      resultList.push({ parentId, parentTitle })
+    }
+  })
+
+  const templateTagList = await Promise.all(templateTitleList.map(
+    (templateTitle) => datedTemplate.getTagIdForTemplate(templateTitle)
+      .then((templateId) => ({ parentId: templateId, parentTitle: templateTitle }))
+  ))
+
+  return resultList.concat(templateTagList)
+}
+
 async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
   logUTB(`UPDATE-TAB () 00 <- ${debugCaller}`, tabId);
   let url = inUrl
@@ -4114,19 +4315,23 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
 
   let bookmarkList = bookmarkInfo.bookmarkList
   if (settings[USER_OPTION.SHOW_VISITED] === SHOW_VISITED_OPTIONS.IF_NO_OTHER) {
-    bookmarkList = bookmarkList.filter(({ folder }) => !isVisitedDatedTitle(folder))
+    bookmarkList = bookmarkList.filter(({ parentTitle }) => !isVisitedDatedTitle(parentTitle))
 
     if (bookmarkList.length == 0) {
       bookmarkList = bookmarkInfo.bookmarkList
     }
   }
 
+  const tagFromBookmarkList = await bookmarkListToTagList(bookmarkInfo.bookmarkList)
+  const tagListList = tagList.getListWithBookmarks(tagFromBookmarkList)
+
   const data = {
     bookmarkList,
     fontSize: settings[USER_OPTION.FONT_SIZE],
     isShowTitle: settings[USER_OPTION.SHOW_BOOKMARK_TITLE],
 
-    tagList: tagList.list,
+    isTagListAvailable: tagList.isOn,
+    tagList: tagListList,
     tagListOpenMode: settings[USER_OPTION.TAG_LIST_OPEN_MODE],
     isTagListOpenGlobal: tagList.isOpenGlobal,
     tagLength: settings[USER_OPTION.TAG_LIST_TAG_LENGTH],
@@ -4156,12 +4361,13 @@ function updateTabTask(options) {
 
 const debouncedUpdateTab = debounce(updateTabTask, 30)
 
-function debouncedUpdateActiveTab({ debugCaller } = {}) {
+function debouncedUpdateActiveTab({ url, debugCaller } = {}) {
   logUTB('debouncedUpdateActiveTab () 00', 'memo[\'activeTabId\']', memo['activeTabId'])
 
   if (memo.activeTabId) {
     debouncedUpdateTab({
       tabId: memo.activeTabId,
+      url,
       debugCaller: `debouncedUpdateActiveTab () <- ${debugCaller}`,
     })
   }
@@ -4180,35 +4386,33 @@ async function updateActiveTab({ tabId, url, useCache, debugCaller } = {}) {
 }
 
 async function afterUserCreatedFolderInGUI({ id, parentId, title }) {
-  let correctParentId
-
+  const moveArgs = {}
   const settings = await extensionSettings.get()
 
   if (settings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
-    correctParentId = getNewFolderRootId(title)
-  }
+    const correctParentId = getNewFolderRootId(title)
 
-  const rootArray = [BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID].filter(Boolean)
-
-  const actualParentId = correctParentId || parentId
-  if (rootArray.includes(actualParentId)) {
-    const firstLevelNodeList = await browser.bookmarks.getChildren(actualParentId)
-    const findIndex = firstLevelNodeList.find((item) => title.localeCompare(item.title) < 0)
-
-    const moveArgs = {}
-    if (correctParentId && parentId != correctParentId) {
+    if (parentId != correctParentId) {
       moveArgs.parentId = correctParentId
     }
+  }
+
+  const finalParentId = moveArgs.parentId || parentId
+
+  if (finalParentId in BUILTIN_BROWSER_ROOT_FOLDER_MAP) {
+    const firstLevelNodeList = await browser.bookmarks.getChildren(finalParentId)
+    const findIndex = firstLevelNodeList.find((item) => title.localeCompare(item.title) < 0)
+
     if (findIndex) {
       moveArgs.index = findIndex.index
     }
+  }
 
-    if (Object.keys(moveArgs).length > 0) {
-      moveFolderIgnoreInController({
-        id,
-        ...moveArgs,
-      })
-    }
+  if (0 < Object.keys(moveArgs).length) {
+    moveFolderIgnoreInController({
+      id,
+      ...moveArgs,
+    })
   }
 }
 const logBQ = makeLogFunction({ module: 'bookmarkQueue.js' })
@@ -4314,7 +4518,7 @@ async function onCreateFolder(task) {
   const { node } = task
   logFQ('onCreateFolder () 00', node.title)
 
-  await tagList.addRecentTagFromFolder(node)
+  await tagList.addTag({ parentId: node.id, parentTitle: node.title })
   await afterUserCreatedFolderInGUI(node)
 }
 
@@ -4327,7 +4531,7 @@ async function onChangeFolder(task) {
   const { bookmarkId, node } = task
 
   memo.bkmFolderById.delete(bookmarkId);
-  await tagList.addRecentTagFromFolder(node)
+  await tagList.addTag({ parentId: node.id, parentTitle: node.title })
 }
 
 async function onDeleteFolder(task) {
@@ -4388,7 +4592,12 @@ const folderQueue = new NodeTaskQueue(folderQueueRunner)
       }
     }
 
-    await onFolder({ folder, bookmarkList: childBookmarkList, level })
+    await onFolder({
+      folder,
+      bookmarkList: childBookmarkList,
+      folderListLength: childFolderList.length,
+      level,
+    })
 
     const nextLevel = level + 1
     await childFolderList.reduce(
@@ -4605,34 +4814,6 @@ async function mergeSubFoldersLevelOneAndTwo(parentId) {
     Promise.resolve(),
   );
 }
-
-async function trimTitleInSubFolders(parentId) {
-  if (!parentId) {
-    return
-  }
-
-  const nodeList = await browser.bookmarks.getChildren(parentId)
-  const folderNodeList = nodeList.filter(({ url }) => !url)
-
-  const renameTaskList = []
-  for (const folderNode of folderNodeList) {
-
-    const trimmedTitle = trimTitle(folderNode.title)
-    if (folderNode.title !== trimmedTitle) {
-      renameTaskList.push({
-        id: folderNode.id,
-        title: trimmedTitle,
-      })
-    }
-  }
-
-  await renameTaskList.reduce(
-    (promiseChain, { id, title }) => promiseChain.then(
-      () => updateFolder({ id,  title })
-    ),
-    Promise.resolve(),
-  );
-}
 async function moveContentToStart(fromFolderId, toFolderId) {
   const nodeList = await browser.bookmarks.getChildren(fromFolderId)
   const reversedNodeList = nodeList.toReversed()
@@ -4707,22 +4888,6 @@ async function moveRootBookmarksToUnclassified() {
 }
 const logMF = makeLogFunction({ module: 'moveFolders.js' })
 
-const cacheForDatedTemplate = {}
-
-async function getParentIdForDatedFolder(title) {
-  const templateTitle = getDatedTemplate(title)
-
-  let parentId = cacheForDatedTemplate[templateTitle]
-
-  if (!parentId) {
-    const parentFolder = await findOrCreateFolder(templateTitle)
-    parentId = parentFolder.id
-    cacheForDatedTemplate[templateTitle] = parentId
-  }
-
-  return parentId;
-}
-
 async function getFolderCorrectParentIdByTitle(title) {
   let parentId = OTHER_BOOKMARKS_FOLDER_ID
   let secondParentId
@@ -4733,7 +4898,8 @@ async function getFolderCorrectParentIdByTitle(title) {
 
   if (isDatedFolderTitle(title)) {
     parentId = BOOKMARKS_MENU_FOLDER_ID || BOOKMARKS_BAR_FOLDER_ID
-    secondParentId = await getParentIdForDatedFolder(title)
+
+    secondParentId = await datedTemplate.getTagIdForDated(title)
   }
 
   return {
@@ -4742,29 +4908,31 @@ async function getFolderCorrectParentIdByTitle(title) {
   }
 }
 
-const mapIdToParentId = {
-  [BOOKMARKS_BAR_FOLDER_ID]: { parentId: ROOT_FOLDER_ID },
-  [OTHER_BOOKMARKS_FOLDER_ID]: { parentId: ROOT_FOLDER_ID },
-}
-if (BOOKMARKS_MENU_FOLDER_ID) {
-  mapIdToParentId[BOOKMARKS_MENU_FOLDER_ID] = { parentId: ROOT_FOLDER_ID }
-}
+async function getFolderMovements() {
 
-async function getFolderCorrectParentId(folder) {
-  return mapIdToParentId[folder.id] || (await getFolderCorrectParentIdByTitle(folder.title))
-}
-
-async function orderChildren(parentId) {
-  if (!parentId) {
-    return []
-  }
-
+  const removeList = []
   const moveList = []
+  const renameList = []
 
-  async function onFolder({ folder, level }) {
+  async function onFolder({ folder, level, bookmarkList, folderListLength }) {
+    // // level 0: ROOT_FOLDER_ID
+    // // level 1: BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID
+    // if (level < 2) {
+    //   return
+    // }
+
+    if (folder.id in BUILTIN_BROWSER_FOLDER_MAP) {
+      return
+    }
+
+    if (bookmarkList.length == 0 && folderListLength == 0 && isDatedFolderTitle(folder.title)) {
+      removeList.push(folder.id)
+      return
+    }
+
     // logMF('orderChildren() 11 folder')
     // logMF(folder)
-    const correct = await getFolderCorrectParentId(folder)
+    const correct = await getFolderCorrectParentIdByTitle(folder.title)
 
     let correctParentId = correct.parentId
     let isCorrect = folder.parentId == correctParentId
@@ -4781,38 +4949,60 @@ async function orderChildren(parentId) {
         level,
       })
     }
+
+
+    const trimmedTitle = trimTitle(folder.title)
+
+    if (folder.title !== trimmedTitle) {
+      renameList.push({
+        id: folder.id,
+        title: trimmedTitle,
+      })
+    }
   }
 
-  const [rootFolder] = await browser.bookmarks.getSubTree(parentId)
+  const [rootFolder] = await browser.bookmarks.getTree()
   await traverseFolderRecursively({ folder: rootFolder, onFolder })
 
-  return moveList;
+  return {
+    removeList,
+    moveList,
+    renameList,
+  };
 }
 
 async function moveFolders() {
   logMF('moveFolders() 00')
 
-  const moveList1 = await orderChildren(BOOKMARKS_BAR_FOLDER_ID)
-  logMF('moveFolders() 11')
-  const moveList2 = await orderChildren(BOOKMARKS_MENU_FOLDER_ID)
-  logMF('moveFolders() 22')
-  const moveList3 = await orderChildren(OTHER_BOOKMARKS_FOLDER_ID)
-  logMF('moveFolders() 33')
+  const {
+    removeList,
+    moveList,
+    renameList,
+  } = await getFolderMovements()
 
-  const totalMoveList = [
-    moveList1,
-    moveList2,
-    moveList3,
-  ]
-    .flat()
+  const sortedMoveList = moveList
     .sort((a,b) => -(a.level - b.level))
 
   logMF('moveFolders() 44')
-  logMF(totalMoveList)
+  logMF(sortedMoveList)
 
-  await totalMoveList.reduce(
+  await removeList.reduce(
+    (promiseChain, folderId) => promiseChain.then(
+      () => removeFolder(folderId)
+    ),
+    Promise.resolve(),
+  );
+
+  await sortedMoveList.reduce(
     (promiseChain, { id, parentId }) => promiseChain.then(
       () => moveFolderIgnoreInController({ id, parentId })
+    ),
+    Promise.resolve(),
+  );
+
+  await renameList.reduce(
+    (promiseChain, { id, title }) => promiseChain.then(
+      () => updateFolder({ id,  title })
     ),
     Promise.resolve(),
   );
@@ -4991,10 +5181,6 @@ async function orderBookmarks() {
   await mergeSubFoldersLevelOneAndTwo(BOOKMARKS_BAR_FOLDER_ID)
   await mergeSubFoldersLevelOneAndTwo(BOOKMARKS_MENU_FOLDER_ID)
   await mergeSubFoldersLevelOneAndTwo(OTHER_BOOKMARKS_FOLDER_ID)
-
-  await trimTitleInSubFolders(BOOKMARKS_BAR_FOLDER_ID)
-  await trimTitleInSubFolders(BOOKMARKS_MENU_FOLDER_ID)
-  await trimTitleInSubFolders(OTHER_BOOKMARKS_FOLDER_ID)
 
   logOD('orderBookmarks() 44')
   await sortFolders(BOOKMARKS_BAR_FOLDER_ID)
@@ -5262,7 +5448,6 @@ async function getUrlFromUrl() {
   }
 
   await orderBookmarks()
-  await tagList.filterTagListForFlatFolderStructure()
 }
 async function toggleYoutubeHeader() {
   const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
@@ -5388,6 +5573,8 @@ const contextMenusController = {
   }
 }
 const logIM = makeLogFunction({ module: 'incoming-message.js' })
+const logIMT = makeLogFunction({ module: 'incoming-message.js/TAB_IS_READY' })
+// const logIMPE = makeLogFunction({ module: 'incoming-message.js/PAGE_EVENT' })
 
 const HandlersWithUpdateTab = {
   [EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_ID]: async ({ parentId, url, title }) => {
@@ -5398,12 +5585,12 @@ const HandlersWithUpdateTab = {
       url,
     })
   },
-  [EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME]: async ({ parentNameList, url, title }) => {
-    logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', parentNameList);
+  [EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_NAME]: async ({ parentTitleList, url, title }) => {
+    logIM('runtime.onMessage ADD_BOOKMARK_FOLDER_BY_NAME', parentTitleList);
 
-    await Promise.allSettled(parentNameList.map(
-      (parentName) => createBookmark({
-        parentName,
+    await Promise.allSettled(parentTitleList.map(
+      (parentTitle) => createBookmark({
+        parentTitle,
         url,
         title,
       })
@@ -5415,13 +5602,13 @@ const HandlersWithUpdateTab = {
   },
 
 
-  [EXTENSION_MSG_ID.FIX_TAG]: async ({ parentId, title }) => {
+  [EXTENSION_MSG_ID.FIX_TAG]: async ({ parentId, parentTitle }) => {
     logIM('runtime.onMessage FIX_TAG');
-    await tagList.addFixedTag({ parentId, title })
+    await tagList.fixTag({ parentId, parentTitle })
   },
   [EXTENSION_MSG_ID.UNFIX_TAG]: async ({ parentId }) => {
     logIM('runtime.onMessage UNFIX_TAG');
-    await tagList.removeFixedTag(parentId)
+    await tagList.unfixTag(parentId)
   },
   [EXTENSION_MSG_ID.UPDATE_AVAILABLE_ROWS]: async ({ value }) => {
     logIM('runtime.onMessage UPDATE_AVAILABLE_ROWS', value);
@@ -5430,12 +5617,19 @@ const HandlersWithUpdateTab = {
 }
 
 const OtherHandlers = {
+  // [EXTENSION_MSG_ID.PAGE_EVENT]: async (messageObj) => {
+  //   logIMPE('runtime.onMessage PAGE_EVENT', messageObj);
+  // },
   [EXTENSION_MSG_ID.TAB_IS_READY]: async ({ tabId, url }) => {
+    logIMT('runtime.onMessage TAB_IS_READY 00/1', url);
+    logIMT('runtime.onMessage TAB_IS_READY 00/2', tabId, memo.activeTabId);
     // IT IS ONLY when new tab load first url
     if (tabId === memo.activeTabId) {
+      logIMT('runtime.onMessage TAB_IS_READY 11');
       await pageReady.onPageReady({
         tabId,
         url,
+        debugCaller: `runtime.onMessage TAB_IS_READY`,
       });
 
       updateActiveTab({
@@ -5627,12 +5821,12 @@ const tabsController = {
 
     if (changeInfo?.status == 'complete') {
         if (tabId === memo.activeTabId) {
-          await pageReady.onPageReady({
+          debouncedUpdateActiveTab({
             tabId,
             url: Tab.url,
-          });
-
-          debouncedUpdateActiveTab({
+            debugCaller: `tabs.onUpdated complete`,
+          })
+          await pageReady.onPageReady({
             tabId,
             url: Tab.url,
             debugCaller: `tabs.onUpdated complete`,
