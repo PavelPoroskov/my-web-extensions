@@ -1358,48 +1358,6 @@
   });
 
 
-  // async function sendPageEvent(eventObj) {
-  //   try {
-  //     log('before sendPageEvent', eventObj);
-  //     await chrome.runtime.sendMessage({
-  //       command: EXTENSION_MSG_ID.PAGE_EVENT,
-  //       ...eventObj,
-  //     });
-  //     log('after sendPageEvent');
-  //   } catch (er) {
-  //     log('IGNORE sendPageEvent', er);
-  //   }
-  // }
-  // document.addEventListener("visibilitychange", () => {
-  //   sendPageEvent({
-  //     event: 'visibilitychange',
-  //     hidden: document.hidden,
-  //   })
-  // })
-  // document.addEventListener('readystatechange', () => {
-  //   sendPageEvent({
-  //     event: 'readystatechange',
-  //     readyState: document.readyState,
-  //   })
-  // });
-  // window.addEventListener('load', () => {
-  //   sendPageEvent({
-  //     event: 'load',
-  //   })
-  // });
-  // window.addEventListener('pageshow', () => {
-  //   sendPageEvent({
-  //     event: 'pageshow',
-  //     hidden: document.hidden,
-  //   })
-  // });
-  // window.addEventListener('popstate', (event) => {
-  //   sendPageEvent({
-  //     event: 'popstate',
-  //     state: event.state,
-  //   })
-  // });
-
   async function sendTabIsReady() {
     try {
       log('before send contentScriptReady');
