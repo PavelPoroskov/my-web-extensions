@@ -22,6 +22,7 @@ const urlSettingsGo = {
     searchParamList: [
       'v',
       'list',
+      ['t'],
     ],
     getAuthor: {
       pagePattern: '/watch?v=:id',
