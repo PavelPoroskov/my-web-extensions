@@ -211,6 +211,7 @@ const INTERNAL_VALUES = Object.fromEntries(
   // 'clearUrlInActiveTab.js',
   // 'commands.controller',
   // 'contextMenu.controller',
+  // 'datedTemplate.js',
   // 'extensionSettings.js',
   // 'folderQueue.js',
   // 'find-create.js',
@@ -234,7 +235,7 @@ const INTERNAL_VALUES = Object.fromEntries(
   // 'storage.api.js',
   // 'storage.controller',
   // 'updateTab.js',
-  // 'tabs.controller',
+  // 'tabs.controller.js',
   // 'tagList-getRecent.js',
   // 'tagList-highlight.js',
   // 'tagList.js',
@@ -268,14 +269,21 @@ const urlSettingsGo = {
   },
   'youtu.be': 'youtube.com',
   'youtube.com': {
+    removeAllSearchParamForPath: [
+      '/:@channel',
+      '/:@channel/videos',
+      '/c/:channel',
+      '/c/:channel/videos',
+    ],
     searchParamList: [
       'v',
       'list',
+      ['t'],
     ],
     getAuthor: {
       pagePattern: '/watch?v=:id',
       authorSelector: '.ytd-channel-name a[href]',
-      authorPattern: '/:channel'
+      authorPattern: '/:@channel'
     }
   },
 }
@@ -350,6 +358,11 @@ const urlSettingsUse = {
   'marketplace.visualstudio.com': {
     searchParamList: [
       'itemName',
+    ],
+  },
+  'stackoverflow.com': {
+    removeAllSearchParamForPath: [
+      '/questions/:questionNumber/:question',
     ],
   },
   'udemy.com': {
@@ -1151,13 +1164,16 @@ const normalizeTitle = (title) => trimLowSingular(title.replaceAll('-', ''))
 const BOOKMARKS_BAR_FOLDER_ID = IS_BROWSER_FIREFOX ? 'toolbar_____' : '1'
 const BOOKMARKS_MENU_FOLDER_ID = IS_BROWSER_FIREFOX ? 'menu________' : undefined
 const OTHER_BOOKMARKS_FOLDER_ID = IS_BROWSER_FIREFOX ? 'unfiled_____' : '2'
+const MOBILE_BOOKMARKS_FOLDER_ID = IS_BROWSER_FIREFOX ? 'mobile______' : undefined
 
 const BUILTIN_BROWSER_FOLDER_MAP = Object.fromEntries(
   [
     ROOT_FOLDER_ID,
     BOOKMARKS_BAR_FOLDER_ID,
+    OTHER_BOOKMARKS_FOLDER_ID,
+
     BOOKMARKS_MENU_FOLDER_ID,
-    OTHER_BOOKMARKS_FOLDER_ID
+    MOBILE_BOOKMARKS_FOLDER_ID,
   ].filter(Boolean)
     .map((id) => [id, true])
 )
@@ -1557,7 +1573,7 @@ function isVisitedDatedTitle(title) {
   const name = folderName.trim().toLowerCase()
 
   return name.startsWith('todo')
-    || name.startsWith('source') || name.endsWith('source')
+    || name.startsWith('source')
     || name.startsWith('list') || name.endsWith('list')
     || name.endsWith('#top')
 }
@@ -2619,7 +2635,34 @@ const HOST_LIST_FOR_PAGE_OPTIONS = HOST_URL_SETTINGS_LIST_SHORT
     .map(
       ([hostname, obj]) => `${hostname}{${(obj.removeAllSearchParamForPath || []).toSorted().join(',')}}`
     )
-const logUIS = makeLogFunction({ module: 'url-is.js' })
+const logUP = makeLogFunction({ module: 'url-partial.js' })
+
+function removeIndexFromPathname(pathname) {
+  let list = pathname.split(/(\/)/)
+  const last = list.at(-1)
+
+  if (last.startsWith('index.') || last === 'index') {
+    list = list.slice(0, -1)
+  }
+
+  return list.join('')
+}
+
+function removeLastSlashFromPathname(pathname) {
+  return pathname.length > 1 && pathname.endsWith('/')
+    ? pathname.slice(0, -1)
+    : pathname
+}
+
+const getPathnameForSearch = (pathname) => {
+  let mPathname = pathname
+
+  // no index in pathname
+  mPathname = removeIndexFromPathname(mPathname)
+  mPathname = removeLastSlashFromPathname(mPathname)
+
+  return mPathname
+}
 
 const pathToList = (pathname) => {
   let list = pathname.split(/(\/)/).filter(Boolean)
@@ -2630,15 +2673,17 @@ const pathToList = (pathname) => {
 
   return list
 }
-const isPartsEqual = (patternPart, pathPart) => {
+const isPathPartMathToPatternPart = ({ patternPart, pathPart }) => {
   let result
 
-  if (patternPart.startsWith(':')) {
+  if (patternPart.startsWith(':@')) {
+    result = pathPart && pathPart.startsWith('@')
+  } else if (patternPart.startsWith(':')) {
     result = pathPart && pathPart != '/'
   } else {
     result = pathPart === patternPart
   }
-  logUIS('isPartsEqual () 11', patternPart, pathPart, result)
+  logUP('isPathPartMathToPatternPart () 11', patternPart, pathPart, result)
 
   return result
 }
@@ -2652,7 +2697,7 @@ const getPathnamePart = ({ pathname, pattern }) => {
 
   let i = 0
   while (isOk && i < patternAsList.length) {
-    isOk = isPartsEqual(patternAsList[i], pathAsList[i])
+    isOk = isPathPartMathToPatternPart({ patternPart: patternAsList[i], pathPart: pathAsList[i] })
     if (isOk) {
       resultPartList.push(pathAsList[i])
     }
@@ -2665,6 +2710,7 @@ const getPathnamePart = ({ pathname, pattern }) => {
 
   return resultPathname
 }
+const logUIS = makeLogFunction({ module: 'url-is.js' })
 
 function makeIsSearchParamMatch(patternList) {
   logUIS('makeIsSearchParamMatch () 00', patternList)
@@ -2712,29 +2758,23 @@ function makeIsSearchParamMatch(patternList) {
   return (name) => isFnList.some((isFn) => isFn(name))
 }
 
-const isPathnameMatchForPattern = ({ pathname, patternList }) => {
-  logUIS('isPathnameMatch () 00', pathname)
-  logUIS('isPathnameMatch () 00', patternList)
+const isPathnameMatchForPatternExactly = (pathname, pattern) => {
+  logUIS('isPathnameMatchForPatternExactly () 00', pathname)
+  logUIS('isPathnameMatchForPatternExactly () 00', pattern)
 
-  if (patternList.includes('*')) {
+  if (pattern === '*') {
     return true
   }
 
-  let isMath = false
   const pathAsList = pathToList(pathname)
-  logUIS('isPathnameMatch () 11 pathAsList', pathAsList)
+  logUIS('isPathnameMatchForPatternExactly () 11 pathAsList', pathAsList)
 
-  let i = 0
-  while (!isMath && i < patternList.length) {
-    const pattern = patternList[i]
-    const patternAsList = pathToList(pattern)
-    logUIS('isPathnameMatch () 11 patternAsList', patternAsList)
+  const patternAsList = pathToList(pattern)
+  logUIS('isPathnameMatchForPatternExactly () 11 patternAsList', patternAsList)
 
-    isMath = patternAsList.length > 0 && pathAsList.length === patternAsList.length
-      && patternAsList.every((patternPart, patternIndex) => isPartsEqual(patternPart, pathAsList[patternIndex])
-    )
-    i += 1
-  }
+  const isMath = 0 < patternAsList.length && pathAsList.length === patternAsList.length
+    && patternAsList.every((patternPart, patternIndex) => isPathPartMathToPatternPart({ patternPart, pathPart: pathAsList[patternIndex] })
+  )
 
   return isMath
 }
@@ -2752,7 +2792,7 @@ function isSearchParamsMatchForPattern({ searchParams, searchParamsPattern }) {
     .every((key) => searchParams.get(key) !== undefined)
 }
 
-function isUrlMath({ url, pattern }) {
+function isUrlMathPathnameAndSearchParams({ url, pattern }) {
   if (!pattern) {
     return false
   }
@@ -2763,7 +2803,7 @@ function isUrlMath({ url, pattern }) {
   const [pathPattern, searchParamsPattern] = pattern.split('?')
 
   if (pathPattern) {
-    if (!isPathnameMatchForPattern({ pathname, patternList: [pathPattern] })) {
+    if (!isPathnameMatchForPatternExactly(pathname, pathPattern)) {
       return false
     }
   }
@@ -2778,61 +2818,17 @@ function isUrlMath({ url, pattern }) {
 }
 const logUS = makeLogFunction({ module: 'url-search.js' })
 
-function isHostnameMatchForSearch({ oUrl, hostname }) {
-  return oUrl.hostname === hostname
+function isHostnameMatchForSearch(hostname, requiredHostname) {
+  return hostname === requiredHostname
 }
 
-function removeIndexFromPathname(pathname) {
-  let list = pathname.split(/(\/)/)
-  const last = list.at(-1)
-
-  if (last.startsWith('index.') || last === 'index') {
-    list = list.slice(0, -1)
-  }
-
-  return list.join('')
-}
-
-function removeLastSlashFromPathname(pathname) {
-  return pathname.length > 1 && pathname.endsWith('/')
-    ? pathname.slice(0, -1)
-    : pathname
-}
-
-const getPathnameForSearch = (pathname) => {
-  let mPathname = pathname
-
-  // no index in pathname
-  mPathname = removeIndexFromPathname(mPathname)
-  mPathname = removeLastSlashFromPathname(mPathname)
-
-  return mPathname
-}
-
-// function isPathnameMatchForSearch({ oUrl, pathname }) {
-//   const normalizedPathname = getPathnameForSearch(oUrl.pathname);
-
-//   return normalizedPathname === pathname
-// }
-
-function makeIsPathnameMatchForSearch({ normalizePathname }) {
-
-  return function isPathnameMatchForSearch({ oUrl, pathname }) {
-    const normalizedPathname = normalizePathname(oUrl.pathname);
-
-    return normalizedPathname === pathname
-  }
-}
-
-function isSearchParamsMatchForSearch({ oUrl, requiredSearchParams }) {
+function isSearchParamsMatchForSearch(searchParams, requiredSearchParams) {
   if (!requiredSearchParams) {
     return true
   }
 
-  const oSearchParams = oUrl.searchParams;
-
   return Object.keys(requiredSearchParams)
-    .every((key) => oSearchParams.get(key) === requiredSearchParams[key])
+    .every((key) => searchParams.get(key) === requiredSearchParams[key])
 }
 
 // ?TODO /posts == /posts?page=1 OR clean on open /posts?page=1 TO /posts IF page EQ 1
@@ -2889,24 +2885,28 @@ async function startPartialUrlSearch({ url, pathnamePattern }) {
         pattern: pathnamePattern,
       })
     }
+
     if (newPathname) {
-      isPathnameMatchForSearch = makeIsPathnameMatchForSearch({
-        normalizePathname: (str) => getPathnamePart({
-          pathname: str,
-          pattern: pathnamePattern,
-        })
-      })
+      isPathnameMatchForSearch = (pathname, requiredPathname) => {
+        const normalizedPathname = getPathnamePart({ pathname, pattern: pathnamePattern })
+
+        return normalizedPathname === requiredPathname
+      }
     } else {
       newPathname = getPathnameForSearch(oUrl.pathname)
-      isPathnameMatchForSearch = makeIsPathnameMatchForSearch({ normalizePathname: getPathnameForSearch })
-    }
-    oUrl.pathname = newPathname
+      isPathnameMatchForSearch = (pathname, requiredPathname) => {
+        const normalizedPathname = getPathnameForSearch(pathname)
 
+        return normalizedPathname === requiredPathname
+      }
+    }
+
+    oUrl.pathname = newPathname
     oUrl.search = ''
     const urlForSearch = oUrl.toString();
     const {
-      hostname: hostnameForSearch,
-      pathname: pathnameForSearch,
+      hostname: requiredHostname,
+      pathname: requiredPathname,
     } = new URL(urlForSearch);
 
     logUS('startPartialUrlSearch 99', 'requiredSearchParams', requiredSearchParams)
@@ -2917,9 +2917,9 @@ async function startPartialUrlSearch({ url, pathnamePattern }) {
       isUrlMatchToPartialUrlSearch: (testUrl) => {
         const oUrl = new URL(testUrl)
 
-        return isHostnameMatchForSearch({ oUrl, hostname: hostnameForSearch })
-          && isPathnameMatchForSearch({ oUrl, pathname: pathnameForSearch })
-          && isSearchParamsMatchForSearch({ oUrl, requiredSearchParams })
+        return isHostnameMatchForSearch(oUrl.hostname, requiredHostname)
+          && isPathnameMatchForSearch(oUrl.pathname, requiredPathname)
+          && isSearchParamsMatchForSearch(oUrl.searchParams, requiredSearchParams)
       }
     }
     // eslint-disable-next-line no-unused-vars
@@ -2971,7 +2971,8 @@ const removeQueryParamsIfTarget = (url) => {
       }
 
       if (isNotEmptyArray(removeAllSearchParamForPath)) {
-        if (isPathnameMatchForPattern({ pathname, patternList: removeAllSearchParamForPath })) {
+        const isMath = removeAllSearchParamForPath.some((pathPattern) => isPathnameMatchForPatternExactly(pathname, pathPattern))
+        if (isMath) {
           // remove all search params
           oUrl.search = ''
         }
@@ -3042,7 +3043,7 @@ function getMatchedGetAuthor(url) {
   while (!matchedGetAuthor && iWhile < getAuthorList.length) {
     const { pagePattern } = getAuthorList[iWhile]
 
-    if (isUrlMath({ url, pattern: pagePattern })) {
+    if (isUrlMathPathnameAndSearchParams({ url, pattern: pagePattern })) {
       matchedGetAuthor = getAuthorList[iWhile]
     }
 
@@ -3091,7 +3092,11 @@ function isYouTubeChannelPathWithoutSubdir(pathname) {
   return result
 }
 
-const isYouTubeChannelWithoutSubdir = (oUrl) => isYoutube(oUrl.hostname) && isYouTubeChannelPathWithoutSubdir(oUrl.pathname)
+const isYouTubeChannelWithoutSubdir = (url) => {
+  const oUrl = new URL(url)
+
+  return isYoutube(oUrl.hostname) && isYouTubeChannelPathWithoutSubdir(oUrl.pathname)
+}
 
 // ignore create from api to detect create from user
 class IgnoreBkmControllerApiActionSet {
@@ -3582,19 +3587,43 @@ class VisitedUrls {
     this.cacheTabId.add(tabId, { url: cleanedUrl, title })
   }
   _onUpdateTab(tabId, oData) {
-    logVU("_onUpdateTab 11", tabId, oData)
+    const newData = {}
+
+    if (oData?.url) {
+      newData.url = oData?.url
+    }
+
+    if (oData?.title) {
+      newData.title = oData?.title
+    }
+
+    if (Object.keys(newData).length == 0) {
+      return
+    }
+    logVU("_onUpdateTab 11", tabId, newData)
 
     const before = this.cacheTabId.get(tabId)
     const after = {
       ...before,
-      ...oData,
+      ...newData,
     }
+
     this.cacheTabId.add(tabId, after)
+
+    if (newData.title) {
+      const { url } = this.cacheTabId.get(tabId)
+      if (url) {
+        if (this.cacheVisitedUrls.has(url)) {
+          this.cacheVisitedUrls.add(url, newData.title)
+        }
+      }
+    }
   }
   _onReplaceUrlInActiveTab({ tabId, oldUrl, newUrl, newTitle }) {
     if (oldUrl == newUrl) {
       return
     }
+
     logVU("_onReplaceUrlInTab 11/1", tabId, oldUrl)
     logVU("_onReplaceUrlInTab 11/2", tabId, newUrl)
 
@@ -3608,6 +3637,11 @@ class VisitedUrls {
 
     // mark newUrl as activated
     this.cacheVisitedUrls.add(newUrl, newTitle)
+    // //
+    // const cachedTabData = this.cacheTabId.get(tabId)
+    // if (cachedTabData?.title) {
+    //   this.cacheVisitedUrls.add(newUrl, cachedTabData?.title)
+    // }
   }
   async _onCloseTab(tabId) {
     logVU("_onCloseTab 11", tabId)
@@ -3682,13 +3716,11 @@ class PageReady {
   clearUrlOnPageOpen = ({ url }) => url
 
   async _clearUrlOnPageOpen({ tabId, url }) {
-    let cleanUrl = removeQueryParamsIfTarget(url);
+    const cleanUrl = removeQueryParamsIfTarget(url);
 
     if (url !== cleanUrl) {
       await page.changeUrlInTab({ tabId, url: cleanUrl })
     }
-
-    return cleanUrl || url
   }
 
   useSettings({ isDoCleanUrl }) {
@@ -3699,31 +3731,29 @@ class PageReady {
     }
   }
 
-  async onPageReady({ tabId, url, debugCaller }) {
+  async onPageReady({ tabId, url, title, debugCaller }) {
     if (url.startsWith('chrome:') || url.startsWith('about:')) {
       return
     }
     logPR(`onPageReady 00 <-${debugCaller}`, tabId)
     logPR('onPageReady 11', url)
 
-    const cleanUrl = await this.clearUrlOnPageOpen({ tabId, url })
     const cleanedActiveTabUrl = removeQueryParamsIfTarget(memo.activeTabUrl);
+    const cleanUrl = removeQueryParamsIfTarget(url);
 
     if (cleanUrl !== cleanedActiveTabUrl) {
       logPR('onPageReady 22');
-      const Tab = await browser.tabs.get(tabId);
-
-      if (Tab) {
-        visitedUrls.onReplaceUrlInActiveTab({
-          tabId,
-          oldUrl: memo.activeTabUrl,
-          newUrl: cleanUrl,
-          newTitle: Tab.title,
-        });
-      }
+      visitedUrls.onReplaceUrlInActiveTab({
+        tabId,
+        oldUrl: memo.activeTabUrl,
+        newUrl: cleanUrl,
+        newTitle: title,
+      });
 
       memo.activeTabUrl = url
     }
+
+    await this.clearUrlOnPageOpen({ tabId, url })
   }
 }
 
@@ -4162,8 +4192,10 @@ async function showAuthorBookmarksStep2({ tabId, url, authorUrl }) {
     })
   }
 
+  const filteredList = authorBookmarkList.filter(({ parentTitle }) => !isVisitedDatedTitle(parentTitle))
+
   const data = {
-    authorBookmarkList,
+    authorBookmarkList: filteredList,
   }
   logSHA('showAuthorBookmarksStep2 () 99 sendMessage', tabId, data);
   await page.updateBookmarkInfoInPage({ tabId, data })
@@ -4193,17 +4225,13 @@ async function showAuthorBookmarks({ tabId, url }) {
       showAuthorBookmarksStep2({ tabId })
   }
 }
-// import {
-//   makeLogFunction,
-// } from '../api-low/index.js'
-
-// const logDT = makeLogFunction({ module: 'datedTemplate.js' })
+const logDT = makeLogFunction({ module: 'datedTemplate.js' })
 
 class DatedTemplate {
   cacheForDatedTemplate = {}
 
   async getTagIdForTemplate(templateTitle) {
-
+    logDT('getTagIdForTemplate() 00', templateTitle)
     let id = this.cacheForDatedTemplate[templateTitle]
     if (id) {
       return id;
@@ -4217,9 +4245,15 @@ class DatedTemplate {
     return id;
   }
   async getTagIdForDated(title) {
+    logDT('getTagIdForDated() 00', title)
 
     const templateTitle = getDatedTemplate(title)
-    return await this.getIdForTemplate(templateTitle);
+    logDT('getTagIdForDated() 11', templateTitle)
+
+    const id = await this.getTagIdForTemplate(templateTitle);
+    logDT('getTagIdForDated() 22', id)
+
+    return id;
   }
 }
 
@@ -4252,17 +4286,11 @@ async function showExtra({ tabId, url, settings, exactBkmIdList }) {
   const isShowPartialBookmarks = settings[USER_OPTION.USE_PARTIAL_URL_SEARCH]
   const isShowAuthorBookmarks = settings[USER_OPTION.URL_SHOW_AUTHOR_TAGS]
 
-  if (isShowVisits) {
-    showVisits({ tabId, url })
-  }
-
-  if (isShowPartialBookmarks) {
-    showPartialBookmarks({ tabId, url, exactBkmIdList })
-  }
-
-  if (isShowAuthorBookmarks) {
-    showAuthorBookmarks({ tabId, url })
-  }
+  await Promise.all([
+    isShowVisits && showVisits({ tabId, url }),
+    isShowPartialBookmarks && showPartialBookmarks({ tabId, url, exactBkmIdList }),
+    isShowAuthorBookmarks && showAuthorBookmarks({ tabId, url }),
+  ])
 }
 
 async function bookmarkListToTagList(bookmarkList) {
@@ -4344,7 +4372,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
   }
   logUTB('UPDATE-TAB () 99 sendMessage', tabId, data);
   await page.updateBookmarkInfoInPage({ tabId, data })
-  showExtra({
+  await showExtra({
     tabId,
     url,
     settings,
@@ -4916,6 +4944,7 @@ async function getFolderMovements() {
   const renameList = []
 
   async function onFolder({ folder, level, bookmarkList, folderListLength }) {
+    logMF('onFolder() 00', folder.title)
     // // level 0: ROOT_FOLDER_ID
     // // level 1: BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID
     // if (level < 2) {
@@ -4933,7 +4962,9 @@ async function getFolderMovements() {
 
     // logMF('orderChildren() 11 folder')
     // logMF(folder)
+    logMF('onFolder() 11')
     const correct = await getFolderCorrectParentIdByTitle(folder.title)
+    logMF('onFolder() 22', correct)
 
     let correctParentId = correct.parentId
     let isCorrect = folder.parentId == correctParentId
@@ -4942,7 +4973,7 @@ async function getFolderMovements() {
       isCorrect = folder.parentId == correctParentId
     }
     if (!isCorrect) {
-      logMF('orderChildren() 22 correct')
+      logMF('onFolder() 33')
       logMF(correct)
       moveList.push({
         id: folder.id,
@@ -5621,23 +5652,24 @@ const OtherHandlers = {
   // [EXTENSION_MSG_ID.PAGE_EVENT]: async (messageObj) => {
   //   logIMPE('runtime.onMessage PAGE_EVENT', messageObj);
   // },
-  [EXTENSION_MSG_ID.TAB_IS_READY]: async ({ tabId, url }) => {
+  [EXTENSION_MSG_ID.TAB_IS_READY]: async ({ tabId, url, title }) => {
     logIMT('runtime.onMessage TAB_IS_READY 00/1', url);
     logIMT('runtime.onMessage TAB_IS_READY 00/2', tabId, memo.activeTabId);
     // IT IS ONLY when new tab load first url
     if (tabId === memo.activeTabId) {
       logIMT('runtime.onMessage TAB_IS_READY 11');
-      await pageReady.onPageReady({
-        tabId,
-        url,
-        debugCaller: `runtime.onMessage TAB_IS_READY`,
-      });
-
-      updateActiveTab({
+      debouncedUpdateActiveTab({
         tabId,
         url,
         debugCaller: `runtime.onMessage TAB_IS_READY`,
       })
+
+      await pageReady.onPageReady({
+        tabId,
+        url,
+        title,
+        debugCaller: `runtime.onMessage TAB_IS_READY`,
+      });
     }
   },
 
@@ -5767,7 +5799,7 @@ const storageController = {
     }
   },
 };
-const logTC = makeLogFunction({ module: 'tabs.controller' })
+const logTC = makeLogFunction({ module: 'tabs.controller.js' })
 const redirectedUrl = new CacheWithLimit({ name: 'redirectedUrl', size: 20 })
 
 const tabsController = {
@@ -5777,62 +5809,51 @@ const tabsController = {
   async onUpdated(tabId, changeInfo, Tab) {
     logTC('tabs.onUpdated 00', 'tabId', tabId, 'Tab.index', Tab.index);
     logTC('tabs.onUpdated 00 ------changeInfo', changeInfo);
+    // logTC('tabs.onUpdated 00 ------Tab', Tab);
 
-    let checkUrl
-    switch (changeInfo?.status) {
-      case ('loading'): {
-        checkUrl = changeInfo?.url
-        break;
-      }
-      case ('complete'): {
-        checkUrl = changeInfo?.url
-        break;
-      }
-    }
-
-    if (checkUrl) {
+    if (changeInfo?.url) {
+      const newUrl = changeInfo.url
       const settings = await extensionSettings.get()
 
       if (settings[USER_OPTION.YOUTUBE_REDIRECT_CHANNEL_TO_VIDEOS]) {
-        const oUrl = new URL(checkUrl)
+        if (isYouTubeChannelWithoutSubdir(newUrl)) {
 
-        if (isYouTubeChannelWithoutSubdir(oUrl)) {
-          const isRedirectedBefore = !!redirectedUrl.get(`${tabId}#${checkUrl}`)
-          logTC('tabs.onUpdated ', checkUrl, 'isRedirectedBefore ', isRedirectedBefore);
+          const isRedirectedBefore = !!redirectedUrl.get(`${tabId}#${newUrl}`)
+          logTC('tabs.onUpdated ', newUrl, 'isRedirectedBefore ', isRedirectedBefore);
 
           if (!isRedirectedBefore) {
+            const oUrl = new URL(newUrl)
             oUrl.pathname = `${oUrl.pathname}/videos`
             const redirectUrl = oUrl.toString()
             logTC('tabs.onUpdated ', changeInfo?.status, 'tabId', tabId, 'redirectUrl', redirectUrl);
 
-            redirectedUrl.add(`${tabId}#${checkUrl}`)
+            redirectedUrl.add(`${tabId}#${newUrl}`)
             await browser.tabs.update(tabId, { url: redirectUrl })
+
             return
           }
         }
       }
     }
 
-    if (changeInfo?.url) {
-      visitedUrls.onUpdateTab(tabId, { url: changeInfo.url });
-    }
-    if (changeInfo?.title) {
-      visitedUrls.onUpdateTab(tabId, { title: changeInfo.title });
+    if (changeInfo?.url || changeInfo?.title) {
+      visitedUrls.onUpdateTab(tabId, changeInfo);
     }
 
     if (changeInfo?.status == 'complete') {
-        if (tabId === memo.activeTabId) {
-          debouncedUpdateActiveTab({
-            tabId,
-            url: Tab.url,
-            debugCaller: `tabs.onUpdated complete`,
-          })
-          await pageReady.onPageReady({
-            tabId,
-            url: Tab.url,
-            debugCaller: `tabs.onUpdated complete`,
-          })
-        }
+      if (tabId === memo.activeTabId) {
+        debouncedUpdateActiveTab({
+          tabId,
+          url: Tab.url,
+          debugCaller: `tabs.onUpdated complete`,
+        })
+        await pageReady.onPageReady({
+          tabId,
+          url: Tab.url,
+          title: Tab.title,
+          debugCaller: `tabs.onUpdated complete`,
+        })
+      }
      }
   },
   async onActivated({ tabId }) {
