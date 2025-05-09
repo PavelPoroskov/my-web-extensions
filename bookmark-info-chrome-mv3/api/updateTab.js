@@ -63,17 +63,11 @@ async function showExtra({ tabId, url, settings, exactBkmIdList }) {
   const isShowPartialBookmarks = settings[USER_OPTION.USE_PARTIAL_URL_SEARCH]
   const isShowAuthorBookmarks = settings[USER_OPTION.URL_SHOW_AUTHOR_TAGS]
 
-  if (isShowVisits) {
-    showVisits({ tabId, url })
-  }
-
-  if (isShowPartialBookmarks) {
-    showPartialBookmarks({ tabId, url, exactBkmIdList })
-  }
-
-  if (isShowAuthorBookmarks) {
-    showAuthorBookmarks({ tabId, url })
-  }
+  await Promise.all([
+    isShowVisits && showVisits({ tabId, url }),
+    isShowPartialBookmarks && showPartialBookmarks({ tabId, url, exactBkmIdList }),
+    isShowAuthorBookmarks && showAuthorBookmarks({ tabId, url }),
+  ])
 }
 
 async function bookmarkListToTagList(bookmarkList) {
@@ -155,7 +149,7 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
   }
   logUTB('UPDATE-TAB () 99 sendMessage', tabId, data);
   await page.updateBookmarkInfoInPage({ tabId, data })
-  showExtra({
+  await showExtra({
     tabId,
     url,
     settings,
