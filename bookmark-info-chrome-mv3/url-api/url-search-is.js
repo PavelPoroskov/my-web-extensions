@@ -1,53 +1,12 @@
 import {
+  pathToList,
+  isPathPartMathToPatternPart,
+} from './url-partial.js'
+import {
   makeLogFunction,
 } from '../api-low/index.js'
 
 const logUIS = makeLogFunction({ module: 'url-is.js' })
-
-const pathToList = (pathname) => {
-  let list = pathname.split(/(\/)/).filter(Boolean)
-
-  if (1 < list.length && list.at(-1) === '/') {
-    list = list.slice(0, -1)
-  }
-
-  return list
-}
-const isPartsEqual = (patternPart, pathPart) => {
-  let result
-
-  if (patternPart.startsWith(':')) {
-    result = pathPart && pathPart != '/'
-  } else {
-    result = pathPart === patternPart
-  }
-  logUIS('isPartsEqual () 11', patternPart, pathPart, result)
-
-  return result
-}
-
-export const getPathnamePart = ({ pathname, pattern }) => {
-  const patternAsList = pathToList(pattern)
-  const pathAsList = pathToList(pathname)
-  const resultPartList = []
-
-  let isOk = patternAsList.length <= pathAsList.length
-
-  let i = 0
-  while (isOk && i < patternAsList.length) {
-    isOk = isPartsEqual(patternAsList[i], pathAsList[i])
-    if (isOk) {
-      resultPartList.push(pathAsList[i])
-    }
-    i = i + 1
-  }
-
-  let resultPathname = isOk
-    ? resultPartList.join('')
-    : undefined
-
-  return resultPathname
-}
 
 export function makeIsSearchParamMatch(patternList) {
   logUIS('makeIsSearchParamMatch () 00', patternList)
@@ -95,29 +54,23 @@ export function makeIsSearchParamMatch(patternList) {
   return (name) => isFnList.some((isFn) => isFn(name))
 }
 
-export const isPathnameMatchForPattern = ({ pathname, patternList }) => {
-  logUIS('isPathnameMatch () 00', pathname)
-  logUIS('isPathnameMatch () 00', patternList)
+export const isPathnameMatchForPatternExactly = (pathname, pattern) => {
+  logUIS('isPathnameMatchForPatternExactly () 00', pathname)
+  logUIS('isPathnameMatchForPatternExactly () 00', pattern)
 
-  if (patternList.includes('*')) {
+  if (pattern === '*') {
     return true
   }
 
-  let isMath = false
   const pathAsList = pathToList(pathname)
-  logUIS('isPathnameMatch () 11 pathAsList', pathAsList)
+  logUIS('isPathnameMatchForPatternExactly () 11 pathAsList', pathAsList)
 
-  let i = 0
-  while (!isMath && i < patternList.length) {
-    const pattern = patternList[i]
-    const patternAsList = pathToList(pattern)
-    logUIS('isPathnameMatch () 11 patternAsList', patternAsList)
+  const patternAsList = pathToList(pattern)
+  logUIS('isPathnameMatchForPatternExactly () 11 patternAsList', patternAsList)
 
-    isMath = patternAsList.length > 0 && pathAsList.length === patternAsList.length
-      && patternAsList.every((patternPart, patternIndex) => isPartsEqual(patternPart, pathAsList[patternIndex])
-    )
-    i += 1
-  }
+  const isMath = 0 < patternAsList.length && pathAsList.length === patternAsList.length
+    && patternAsList.every((patternPart, patternIndex) => isPathPartMathToPatternPart({ patternPart, pathPart: pathAsList[patternIndex] })
+  )
 
   return isMath
 }
@@ -135,7 +88,7 @@ function isSearchParamsMatchForPattern({ searchParams, searchParamsPattern }) {
     .every((key) => searchParams.get(key) !== undefined)
 }
 
-export function isUrlMath({ url, pattern }) {
+export function isUrlMathPathnameAndSearchParams({ url, pattern }) {
   if (!pattern) {
     return false
   }
@@ -146,7 +99,7 @@ export function isUrlMath({ url, pattern }) {
   const [pathPattern, searchParamsPattern] = pattern.split('?')
 
   if (pathPattern) {
-    if (!isPathnameMatchForPattern({ pathname, patternList: [pathPattern] })) {
+    if (!isPathnameMatchForPatternExactly(pathname, pathPattern)) {
       return false
     }
   }

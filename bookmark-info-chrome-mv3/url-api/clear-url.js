@@ -6,7 +6,7 @@ import {
   getHostSettings,
 } from './url-settings.js'
 import {
-  isPathnameMatchForPattern,
+  isPathnameMatchForPatternExactly,
   makeIsSearchParamMatch,
 } from './url-search-is.js'
 
@@ -52,7 +52,8 @@ export const removeQueryParamsIfTarget = (url) => {
       }
 
       if (isNotEmptyArray(removeAllSearchParamForPath)) {
-        if (isPathnameMatchForPattern({ pathname, patternList: removeAllSearchParamForPath })) {
+        const isMath = removeAllSearchParamForPath.some((pathPattern) => isPathnameMatchForPatternExactly(pathname, pathPattern))
+        if (isMath) {
           // remove all search params
           oUrl.search = ''
         }

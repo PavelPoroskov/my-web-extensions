@@ -2,7 +2,7 @@ import {
   getHostSettings,
 } from './url-settings.js'
 import {
-  isUrlMath,
+  isUrlMathPathnameAndSearchParams,
 } from './url-search-is.js'
 
 export function getAuthorUrlFromPostUrl(url) {
@@ -42,7 +42,7 @@ export function getMatchedGetAuthor(url) {
   while (!matchedGetAuthor && iWhile < getAuthorList.length) {
     const { pagePattern } = getAuthorList[iWhile]
 
-    if (isUrlMath({ url, pattern: pagePattern })) {
+    if (isUrlMathPathnameAndSearchParams({ url, pattern: pagePattern })) {
       matchedGetAuthor = getAuthorList[iWhile]
     }
 
