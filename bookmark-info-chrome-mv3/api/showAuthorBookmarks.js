@@ -8,6 +8,9 @@ import {
 } from '../url-api/index.js'
 import { page } from '../api-mid/index.js'
 import {
+  isVisitedDatedTitle,
+} from '../folder-api/index.js'
+import {
   makeLogFunction,
 } from '../api-low/index.js'
 
@@ -27,8 +30,10 @@ export async function showAuthorBookmarksStep2({ tabId, url, authorUrl }) {
     })
   }
 
+  const filteredList = authorBookmarkList.filter(({ parentTitle }) => !isVisitedDatedTitle(parentTitle))
+
   const data = {
-    authorBookmarkList,
+    authorBookmarkList: filteredList,
   }
   logSHA('showAuthorBookmarksStep2 () 99 sendMessage', tabId, data);
   await page.updateBookmarkInfoInPage({ tabId, data })
