@@ -43,8 +43,8 @@ class PageReady {
     logPR(`onPageReady 00 <-${debugCaller}`, tabId)
     logPR('onPageReady 11', url)
 
-    const cleanUrl = removeQueryParamsIfTarget(url);
     const cleanedActiveTabUrl = removeQueryParamsIfTarget(memo.activeTabUrl);
+    const cleanUrl = removeQueryParamsIfTarget(url);
 
     if (cleanUrl !== cleanedActiveTabUrl) {
       logPR('onPageReady 22');

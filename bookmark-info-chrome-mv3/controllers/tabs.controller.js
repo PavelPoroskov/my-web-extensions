@@ -18,7 +18,7 @@ import {
   isYouTubeChannelWithoutSubdir,
 } from '../url-api/index.js'
 
-const logTC = makeLogFunction({ module: 'tabs.controller' })
+const logTC = makeLogFunction({ module: 'tabs.controller.js' })
 const redirectedUrl = new CacheWithLimit({ name: 'redirectedUrl', size: 20 })
 
 export const tabsController = {
@@ -28,6 +28,7 @@ export const tabsController = {
   async onUpdated(tabId, changeInfo, Tab) {
     logTC('tabs.onUpdated 00', 'tabId', tabId, 'Tab.index', Tab.index);
     logTC('tabs.onUpdated 00 ------changeInfo', changeInfo);
+    // logTC('tabs.onUpdated 00 ------Tab', Tab);
 
     if (changeInfo?.url) {
       const newUrl = changeInfo.url
@@ -59,19 +60,19 @@ export const tabsController = {
     }
 
     if (changeInfo?.status == 'complete') {
-        if (tabId === memo.activeTabId) {
-          debouncedUpdateActiveTab({
-            tabId,
-            url: Tab.url,
-            debugCaller: `tabs.onUpdated complete`,
-          })
-          await pageReady.onPageReady({
-            tabId,
-            url: Tab.url,
-            title: Tab.title,
-            debugCaller: `tabs.onUpdated complete`,
-          })
-        }
+      if (tabId === memo.activeTabId) {
+        debouncedUpdateActiveTab({
+          tabId,
+          url: Tab.url,
+          debugCaller: `tabs.onUpdated complete`,
+        })
+        await pageReady.onPageReady({
+          tabId,
+          url: Tab.url,
+          title: Tab.title,
+          debugCaller: `tabs.onUpdated complete`,
+        })
+      }
      }
   },
   async onActivated({ tabId }) {

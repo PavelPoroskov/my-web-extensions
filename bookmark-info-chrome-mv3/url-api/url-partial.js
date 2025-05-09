@@ -31,7 +31,7 @@ export const getPathnameForSearch = (pathname) => {
   return mPathname
 }
 
-const pathToList = (pathname) => {
+export const pathToList = (pathname) => {
   let list = pathname.split(/(\/)/).filter(Boolean)
 
   if (1 < list.length && list.at(-1) === '/') {

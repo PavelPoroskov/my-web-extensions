@@ -33,7 +33,7 @@ const logModuleList = [
   // 'storage.api.js',
   // 'storage.controller',
   // 'updateTab.js',
-  // 'tabs.controller',
+  // 'tabs.controller.js',
   // 'tagList-getRecent.js',
   // 'tagList-highlight.js',
   // 'tagList.js',
