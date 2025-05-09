@@ -87,6 +87,15 @@ class VisitedUrls {
     }
 
     this.cacheTabId.add(tabId, after)
+
+    if (newData.title) {
+      const { url } = this.cacheTabId.get(tabId)
+      if (url) {
+        if (this.cacheVisitedUrls.has(url)) {
+          this.cacheVisitedUrls.add(url, newData.title)
+        }
+      }
+    }
   }
   _onReplaceUrlInActiveTab({ tabId, oldUrl, newUrl, newTitle }) {
     if (oldUrl == newUrl) {
