@@ -110,6 +110,11 @@ const urlSettingsUse = {
       'itemName',
     ],
   },
+  'stackoverflow.com': {
+    removeAllSearchParamForPath: [
+      '/questions/:questionNumber/:question',
+    ],
+  },
   'udemy.com': {
     removeAllSearchParamForPath: [
       '/course/:id/',
