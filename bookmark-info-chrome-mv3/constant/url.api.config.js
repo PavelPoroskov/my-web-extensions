@@ -19,6 +19,12 @@ const urlSettingsGo = {
   },
   'youtu.be': 'youtube.com',
   'youtube.com': {
+    removeAllSearchParamForPath: [
+      '/:@channel',
+      '/:@channel/videos',
+      '/c/:channel',
+      '/c/:channel/videos',
+    ],
     searchParamList: [
       'v',
       'list',
@@ -27,7 +33,7 @@ const urlSettingsGo = {
     getAuthor: {
       pagePattern: '/watch?v=:id',
       authorSelector: '.ytd-channel-name a[href]',
-      authorPattern: '/:channel'
+      authorPattern: '/:@channel'
     }
   },
 }

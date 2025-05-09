@@ -43,7 +43,9 @@ const pathToList = (pathname) => {
 export const isPathPartMathToPatternPart = ({ patternPart, pathPart }) => {
   let result
 
-  if (patternPart.startsWith(':')) {
+  if (patternPart.startsWith(':@')) {
+    result = pathPart && pathPart.startsWith('@')
+  } else if (patternPart.startsWith(':')) {
     result = pathPart && pathPart != '/'
   } else {
     result = pathPart === patternPart
