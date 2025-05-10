@@ -22,8 +22,8 @@ const logTC = makeLogFunction({ module: 'tabs.controller.js' })
 const redirectedUrl = new CacheWithLimit({ name: 'redirectedUrl', size: 20 })
 
 export const tabsController = {
-  // onCreated({ pendingUrl: url, index, id }) {
-  //   logTC('tabs.onCreated', index, id, url);
+  // onCreated(Tab) {
+  //   logTC('tabs.onCreated', Tab);
   // },
   async onUpdated(tabId, changeInfo, Tab) {
     logTC('tabs.onUpdated 00', 'tabId', tabId, 'Tab.index', Tab.index);
@@ -55,9 +55,9 @@ export const tabsController = {
       }
     }
 
-    visitedUrls.updateTab(tabId, changeInfo, Tab.active);
-
     if (Tab.active && changeInfo?.status == 'complete') {
+      memo.activeTabUrl = Tab.url
+
       pageReady.clearUrlOnPageOpen({ tabId, url: Tab.url })
 
       updateActiveTab({
@@ -65,9 +65,9 @@ export const tabsController = {
         url: Tab.url,
         debugCaller: `tabs.onUpdated complete`,
       })
-
-      memo.activeTabUrl = Tab.url
     }
+
+    visitedUrls.updateTab(tabId, changeInfo, Tab.active);
   },
   async onActivated({ tabId }) {
     logTC('tabs.onActivated 00', 'memo[\'activeTabId\'] <=', tabId);
