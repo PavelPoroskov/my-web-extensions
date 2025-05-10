@@ -31,6 +31,20 @@ class VisitedUrls {
     this.cacheTabId = new CacheWithLimit({ name: 'cacheVisitedTabIds', size: 500 });
   }
 
+  useSettings({ isOn }) {
+    this.isOn = isOn
+
+    if (!this.isOn) {
+      this.cacheVisitedUrls.clear()
+      this.cacheTabId.clear()
+    }
+
+    if (this.isOn) {
+      findOrCreateFolderByTitleInRoot(DATED_TEMPLATE_VISITED)
+      findOrCreateFolderByTitleInRoot(DATED_TEMPLATE_OPENED)
+    }
+  }
+
   _markUrl({ url, title, mark }) {
     if (!url) {
       return
@@ -52,18 +66,34 @@ class VisitedUrls {
     }
   }
 
-  visitTab(tabId, url, title) {
-    if (!this.isOn) {
+  _onReplaceUrlInActiveTab({ tabId, oldUrl: inOldUrl, newUrl: inNewUrl, newTitle }) {
+    const oldUrl = removeQueryParamsIfTarget(inOldUrl);
+    const newUrl = removeQueryParamsIfTarget(inNewUrl);
+
+    if (oldUrl == newUrl) {
       return
     }
 
-    logVU("visitTab 00 ", url)
-    const cleanedUrl = removeQueryParamsIfTarget(url);
-    logVU("visitTab 11 ", cleanedUrl)
+    logVU("_onReplaceUrlInTab 11/1", tabId, oldUrl)
+    logVU("_onReplaceUrlInTab 11/2", tabId, newUrl)
 
-    this.cacheVisitedUrls.add(cleanedUrl, title)
-    this.cacheTabId.add(tabId, { url: cleanedUrl, title })
+    // mark oldUrl as visited
+    const title = this.cacheVisitedUrls.get(oldUrl)
+    logVU("_onReplaceUrlInTab 22", 'title', title)
+
+    if (title) {
+      this._markUrl({ url: oldUrl, title, mark: URL_MARK_OPTIONS.VISITED })
+    }
+
+    // mark newUrl as activated
+    this.cacheVisitedUrls.add(newUrl, newTitle)
+    // //
+    // const cachedTabData = this.cacheTabId.get(tabId)
+    // if (cachedTabData?.title) {
+    //   this.cacheVisitedUrls.add(newUrl, cachedTabData?.title)
+    // }
   }
+
   updateTab(tabId, changeInfo, isActiveTab) {
     if (!this.isOn) {
       return
@@ -80,6 +110,8 @@ class VisitedUrls {
           url: beforeData.url,
           title: beforeData.title,
         }
+
+        delete beforeData.before
       }
 
       beforeData = undefined
@@ -126,33 +158,20 @@ class VisitedUrls {
       })
     }
   }
-  _onReplaceUrlInActiveTab({ tabId, oldUrl: inOldUrl, newUrl: inNewUrl, newTitle }) {
-    const oldUrl = removeQueryParamsIfTarget(inOldUrl);
-    const newUrl = removeQueryParamsIfTarget(inNewUrl);
 
-    if (oldUrl == newUrl) {
+  visitTab(tabId, url, title) {
+    if (!this.isOn) {
       return
     }
 
-    logVU("_onReplaceUrlInTab 11/1", tabId, oldUrl)
-    logVU("_onReplaceUrlInTab 11/2", tabId, newUrl)
+    logVU("visitTab 00 ", url)
+    const cleanedUrl = removeQueryParamsIfTarget(url);
+    logVU("visitTab 11 ", cleanedUrl)
 
-    // mark oldUrl as visited
-    const title = this.cacheVisitedUrls.get(oldUrl)
-    logVU("_onReplaceUrlInTab 22", 'title', title)
-
-    if (title) {
-      this._markUrl({ url: oldUrl, title, mark: URL_MARK_OPTIONS.VISITED })
-    }
-
-    // mark newUrl as activated
-    this.cacheVisitedUrls.add(newUrl, newTitle)
-    // //
-    // const cachedTabData = this.cacheTabId.get(tabId)
-    // if (cachedTabData?.title) {
-    //   this.cacheVisitedUrls.add(newUrl, cachedTabData?.title)
-    // }
+    this.cacheVisitedUrls.add(cleanedUrl, title)
+    this.cacheTabId.add(tabId, { url: cleanedUrl, title })
   }
+
   async closeTab(tabId) {
     if (!this.isOn) {
       return
@@ -196,20 +215,6 @@ class VisitedUrls {
 
     this.cacheTabId.delete(tabId)
     logVU("closeTab 99", tabId)
-  }
-
-  useSettings({ isOn }) {
-    this.isOn = isOn
-
-    if (!this.isOn) {
-      this.cacheVisitedUrls.clear()
-      this.cacheTabId.clear()
-    }
-
-    if (this.isOn) {
-      findOrCreateFolderByTitleInRoot(DATED_TEMPLATE_VISITED)
-      findOrCreateFolderByTitleInRoot(DATED_TEMPLATE_OPENED)
-    }
   }
 }
 
