@@ -484,6 +484,24 @@ const HOST_URL_SETTINGS_SHORT = Object.assign(
 
 const MS_DIFF_FOR_SINGLE_BKM = 80
 
+function debounce_leading(func, timeout = 300){
+  let timer;
+
+  return (...args) => {
+    if (!timer) {
+      func.apply(this, args);
+    }
+
+    clearTimeout(timer);
+    timer = setTimeout(
+      () => {
+        timer = undefined;
+      },
+      timeout,
+    );
+  };
+}
+
 function ignoreBatch(func, timeout = MS_DIFF_FOR_SINGLE_BKM){
   let lastCallTime
   let timer;
@@ -3192,6 +3210,18 @@ async function moveFolderIgnoreInController({ id, parentId, index }) {
   return await moveNodeIgnoreInController({ id, parentId, index })
 }
 
+async function moveFolderContentToStart(fromFolderId, toFolderId) {
+  const nodeList = await browser.bookmarks.getChildren(fromFolderId)
+  const reversedNodeList = nodeList.toReversed()
+
+  await reversedNodeList.reduce(
+    (promiseChain, node) => promiseChain.then(
+      () => moveNodeIgnoreInController({ id: node.id, parentId: toFolderId, index: 0 })
+    ),
+    Promise.resolve(),
+  );
+}
+
 async function updateFolder({ id, title }) {
   await browser.bookmarks.update(id, { title })
 }
@@ -3548,16 +3578,32 @@ const URL_MARK_OPTIONS = {
 
 class VisitedUrls {
   constructor () {
+    this.isOn = false
+
     this.cacheVisitedUrls = new CacheWithLimit({ name: 'cacheVisitedUrls', size: 500 });
     this.cacheTabId = new CacheWithLimit({ name: 'cacheVisitedTabIds', size: 500 });
   }
 
-  onUpdateTab = () => { }
-  onActivateTab = () => { }
-  onReplaceUrlInActiveTab = () => { }
-  onCloseTab = () => { }
+  useSettings({ isOn }) {
+    logVU("useSettings", { isOn })
+    this.isOn = isOn
 
-  markUrl({ url, title, mark }) {
+    if (!this.isOn) {
+      this.cacheVisitedUrls.clear()
+      this.cacheTabId.clear()
+    }
+
+    if (this.isOn) {
+      findOrCreateFolderByTitleInRoot(DATED_TEMPLATE_VISITED)
+      findOrCreateFolderByTitleInRoot(DATED_TEMPLATE_OPENED)
+    }
+  }
+
+  _markUrl({ url, title, mark }) {
+    if (!this.isOn) {
+      return
+    }
+
     if (!url) {
       return
     }
@@ -3578,61 +3624,22 @@ class VisitedUrls {
     }
   }
 
-  _onActivateTab(tabId, url, title) {
-    logVU("_onActivateTab 00 ", url)
-    const cleanedUrl = removeQueryParamsIfTarget(url);
-    logVU("_onActivateTab 11 ", cleanedUrl)
+  _onReplaceUrlInActiveTab({ tabId, oldUrl: inOldUrl, newUrl: inNewUrl, oldTitle, newTitle }) {
+    const oldUrl = removeQueryParamsIfTarget(inOldUrl);
+    const newUrl = removeQueryParamsIfTarget(inNewUrl);
+    logVU("_onReplaceUrlInTab 11/1", tabId, oldUrl)
+    logVU("_onReplaceUrlInTab 11/2", tabId, newUrl)
 
-    this.cacheVisitedUrls.add(cleanedUrl, title)
-    this.cacheTabId.add(tabId, { url: cleanedUrl, title })
-  }
-  _onUpdateTab(tabId, oData) {
-    const newData = {}
-
-    if (oData?.url) {
-      newData.url = oData?.url
-    }
-
-    if (oData?.title) {
-      newData.title = oData?.title
-    }
-
-    if (Object.keys(newData).length == 0) {
-      return
-    }
-    logVU("_onUpdateTab 11", tabId, newData)
-
-    const before = this.cacheTabId.get(tabId)
-    const after = {
-      ...before,
-      ...newData,
-    }
-
-    this.cacheTabId.add(tabId, after)
-
-    if (newData.title) {
-      const { url } = this.cacheTabId.get(tabId)
-      if (url) {
-        if (this.cacheVisitedUrls.has(url)) {
-          this.cacheVisitedUrls.add(url, newData.title)
-        }
-      }
-    }
-  }
-  _onReplaceUrlInActiveTab({ tabId, oldUrl, newUrl, newTitle }) {
     if (oldUrl == newUrl) {
       return
     }
 
-    logVU("_onReplaceUrlInTab 11/1", tabId, oldUrl)
-    logVU("_onReplaceUrlInTab 11/2", tabId, newUrl)
-
     // mark oldUrl as visited
-    const title = this.cacheVisitedUrls.get(oldUrl)
-    logVU("_onReplaceUrlInTab 22", 'title', title)
+    // const title = this.cacheVisitedUrls.get(oldUrl)
+    // logVU("_onReplaceUrlInTab 22", 'title', title)
 
-    if (title) {
-      this.markUrl({ url: oldUrl, title, mark: URL_MARK_OPTIONS.VISITED })
+    if (oldTitle) {
+      this._markUrl({ url: oldUrl, title: oldTitle, mark: URL_MARK_OPTIONS.VISITED })
     }
 
     // mark newUrl as activated
@@ -3643,25 +3650,103 @@ class VisitedUrls {
     //   this.cacheVisitedUrls.add(newUrl, cachedTabData?.title)
     // }
   }
-  async _onCloseTab(tabId) {
-    logVU("_onCloseTab 11", tabId)
+
+  updateTab(tabId, changeInfo, isActiveTab) {
+    logVU("_onUpdateTab 00", tabId, changeInfo)
+
+    let beforeData = this.cacheTabId.get(tabId)
+    const updateObj = {}
+
+    // if (changeInfo?.status == 'loading' && changeInfo?.url) {
+    if (changeInfo?.status && changeInfo?.url) {
+      if (changeInfo.url !== beforeData?.url) {
+        updateObj.time = Date.now()
+
+        if (beforeData) {
+          updateObj.before = {
+            url: beforeData.url,
+            title: beforeData.title,
+          }
+
+          delete beforeData.before
+        }
+
+        beforeData = undefined
+      }
+    }
+
+    if (changeInfo?.status == 'complete') {
+      updateObj.isComplete = true
+    }
+
+    if (changeInfo?.url) {
+      updateObj.url = changeInfo?.url
+    }
+
+    if (changeInfo?.title) {
+      updateObj.title = changeInfo?.title
+    }
+
+    if (Object.keys(updateObj).length == 0) {
+      return
+    }
+
+    const afterData = {
+      ...beforeData,
+      ...updateObj,
+    }
+    logVU("_onUpdateTab 55", tabId, afterData)
+
+    this.cacheTabId.add(tabId, afterData)
+
+    if (updateObj.title) {
+      const { url } = afterData
+
+      if (url) {
+        if (this.cacheVisitedUrls.has(url)) {
+          this.cacheVisitedUrls.add(url, updateObj.title)
+        }
+      }
+    }
+
+    if (isActiveTab && afterData.url && afterData.title != undefined && afterData.isComplete) {
+      this._onReplaceUrlInActiveTab({
+        tabId,
+        oldUrl: afterData?.before?.url,
+        newUrl: afterData.url,
+        oldTitle: afterData?.before?.title,
+        newTitle: afterData.title,
+      })
+    }
+  }
+
+  visitTab(tabId, url, title) {
+    logVU("visitTab 00 ", url, title)
+    const cleanedUrl = removeQueryParamsIfTarget(url);
+
+    this.cacheVisitedUrls.add(cleanedUrl, title)
+    // this.cacheTabId.add(tabId, { url: cleanedUrl, title })
+  }
+
+  async closeTab(tabId) {
+    logVU("closeTab 11", tabId)
     const cachedTabData = this.cacheTabId.get(tabId)
-    logVU("_onCloseTab 22 cachedTabData", cachedTabData)
+    logVU("closeTab 22 cachedTabData", cachedTabData)
 
     if (!cachedTabData) {
       return
     }
     const { url, title: tabTitle } = cachedTabData
-    logVU("_onCloseTab 33", url)
+    logVU("closeTab 33", url)
 
     const urlTitle = this.cacheVisitedUrls.get(url)
 
     if (urlTitle) {
-      logVU("_onCloseUrl 44", urlTitle)
-      this.markUrl({ url, title: urlTitle, mark: URL_MARK_OPTIONS.VISITED })
+      logVU("closeTab 44", urlTitle)
+      this._markUrl({ url, title: urlTitle, mark: URL_MARK_OPTIONS.VISITED })
     } else {
       let title = tabTitle
-      logVU("_onCloseUrl 55", tabTitle)
+      logVU("closeTab 55", tabTitle)
 
       if (!title) {
         const historyItemList = await browser.history.search({
@@ -3677,45 +3762,30 @@ class VisitedUrls {
         title = url
       }
 
-      this.markUrl({ url, title, mark: URL_MARK_OPTIONS.OPENED })
+      this._markUrl({ url, title, mark: URL_MARK_OPTIONS.OPENED })
     }
 
     this.cacheTabId.delete(tabId)
-    logVU("_onCloseUrl 99", tabId)
-  }
-
-  useSettings({ isOn }) {
-    if (isOn) {
-      this.onUpdateTab = this._onUpdateTab
-      this.onActivateTab = this._onActivateTab
-      this.onReplaceUrlInActiveTab = this._onReplaceUrlInActiveTab
-      this.onCloseTab = this._onCloseTab
-
-      findOrCreateFolderByTitleInRoot(DATED_TEMPLATE_VISITED)
-      findOrCreateFolderByTitleInRoot(DATED_TEMPLATE_OPENED)
-
-    } else {
-      this.onUpdateTab = () => { }
-      this.onActivateTab = () => { }
-      this.onReplaceUrlInTab = () => { }
-      this.onCloseTab = () => { }
-
-      this.cacheVisitedUrls.clear()
-      this.cacheTabId.clear()
-    }
+    logVU("closeTab 99", tabId)
   }
 }
 
 const visitedUrls = new VisitedUrls()
-const logPR = makeLogFunction({ module: 'pageReady.js' })
+// import {
+//   makeLogFunction,
+// } from '../api-low/index.js'
+// const logPR = makeLogFunction({ module: 'pageReady.js' })
 
 class PageReady {
   constructor () {
+    this.isOn = false
   }
 
-  clearUrlOnPageOpen = ({ url }) => url
+  async clearUrlOnPageOpen({ tabId, url }) {
+    if (!this.isOn) {
+      return
+    }
 
-  async _clearUrlOnPageOpen({ tabId, url }) {
     const cleanUrl = removeQueryParamsIfTarget(url);
 
     if (url !== cleanUrl) {
@@ -3723,37 +3793,8 @@ class PageReady {
     }
   }
 
-  useSettings({ isDoCleanUrl }) {
-    if (isDoCleanUrl) {
-      this.clearUrlOnPageOpen = this._clearUrlOnPageOpen
-    } else {
-      this.clearUrlOnPageOpen = ({ url }) => url
-    }
-  }
-
-  async onPageReady({ tabId, url, title, debugCaller }) {
-    if (url.startsWith('chrome:') || url.startsWith('about:')) {
-      return
-    }
-    logPR(`onPageReady 00 <-${debugCaller}`, tabId)
-    logPR('onPageReady 11', url)
-
-    const cleanedActiveTabUrl = removeQueryParamsIfTarget(memo.activeTabUrl);
-    const cleanUrl = removeQueryParamsIfTarget(url);
-
-    if (cleanUrl !== cleanedActiveTabUrl) {
-      logPR('onPageReady 22');
-      visitedUrls.onReplaceUrlInActiveTab({
-        tabId,
-        oldUrl: memo.activeTabUrl,
-        newUrl: cleanUrl,
-        newTitle: title,
-      });
-
-      memo.activeTabUrl = url
-    }
-
-    await this.clearUrlOnPageOpen({ tabId, url })
+  useSettings({ isOn }) {
+    this.isOn = isOn
   }
 }
 
@@ -3831,7 +3872,7 @@ async function initFromUserOptions() {
       isOn: userSettings[USER_OPTION.MARK_CLOSED_PAGE_AS_VISITED],
     }),
     pageReady.useSettings({
-      isDoCleanUrl: userSettings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN],
+      isOn: userSettings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN],
     }),
   ])
 }
@@ -4317,23 +4358,8 @@ async function bookmarkListToTagList(bookmarkList) {
   return resultList.concat(templateTagList)
 }
 
-async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
+async function updateTab({ tabId, url, debugCaller, useCache=false }) {
   logUTB(`UPDATE-TAB () 00 <- ${debugCaller}`, tabId);
-  let url = inUrl
-
-  if (!url) {
-    try {
-      const Tab = await browser.tabs.get(tabId);
-      url = Tab?.url
-    } catch (er) {
-      logUTB('IGNORING. tab was deleted', er);
-    }
-  }
-
-  if (!(url && isSupportedProtocol(url))) {
-    return
-  }
-
   logUTB('UPDATE-TAB () 11', url);
 
   await initExtension({ debugCaller: 'updateTab ()' })
@@ -4380,39 +4406,41 @@ async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
   })
 }
 
-function updateTabTask(options) {
-  if (options?.isStop) {
+async function updateTabTask(options) {
+  let tabId = options?.tabId
+  let url = options?.url
+
+  if (!tabId) {
+    const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+    const [activeTab] = tabs;
+
+    if (activeTab) {
+      tabId = activeTab?.id
+      url = activeTab?.url
+    }
+  }
+
+  if (!url && tabId) {
+    try {
+      const Tab = await browser.tabs.get(tabId);
+      url = Tab?.url
+    } catch (er) {
+      logUTB('IGNORING. tab was deleted', er);
+    }
+  }
+
+  if (!(url && isSupportedProtocol(url))) {
     return
   }
 
-  updateTab(options)
-}
-
-const debouncedUpdateTab = debounce(updateTabTask, 30)
-
-function debouncedUpdateActiveTab({ url, debugCaller } = {}) {
-  logUTB('debouncedUpdateActiveTab () 00', 'memo[\'activeTabId\']', memo['activeTabId'])
-
-  if (memo.activeTabId) {
-    debouncedUpdateTab({
-      tabId: memo.activeTabId,
-      url,
-      debugCaller: `debouncedUpdateActiveTab () <- ${debugCaller}`,
-    })
-  }
-}
-
-async function updateActiveTab({ tabId, url, useCache, debugCaller } = {}) {
-  // stop debounced
-  debouncedUpdateTab({ isStop: true })
-
-  updateTab({
+  await updateTab({
+    ...options,
     tabId,
     url,
-    useCache,
-    debugCaller: `updateActiveTab () <- ${debugCaller}`,
   })
 }
+
+const updateActiveTab = debounce_leading(updateTabTask, 30)
 
 async function afterUserCreatedFolderInGUI({ id, parentId, title }) {
   const moveArgs = {}
@@ -4534,7 +4562,7 @@ async function bookmarkQueueRunner(task) {
   }
 
   if (isCallUpdateActiveTab) {
-    debouncedUpdateActiveTab({
+    updateActiveTab({
       debugCaller: `bookmarks.on ${task.action}`
     });
   }
@@ -4596,7 +4624,7 @@ async function folderQueueRunner(task) {
   }
 
   if (isCallUpdateActiveTab) {
-    debouncedUpdateActiveTab({
+    updateActiveTab({
       debugCaller: `bookmarks(folders).on ${task.action}`
     });
   }
@@ -4753,18 +4781,7 @@ async function flatFolders() {
   await flatChildren({ parentId: BOOKMARKS_BAR_FOLDER_ID, freeSuffix })
   await flatChildren({ parentId: OTHER_BOOKMARKS_FOLDER_ID, freeSuffix })
 }
-async function moveContent(fromFolderId, toFolderId) {
-  const nodeList = await browser.bookmarks.getChildren(fromFolderId)
-
-  await nodeList.reduce(
-    (promiseChain, node) => promiseChain.then(
-      () => moveNodeIgnoreInController({ id: node.id, parentId: toFolderId })
-    ),
-    Promise.resolve(),
-  );
-}
-
-async function mergeSubFoldersLevelOne(parentId) {
+async function mergeSubFoldersLevelOne(parentId) {
   if (!parentId) {
     return
   }
@@ -4803,7 +4820,7 @@ async function mergeSubFoldersLevelOne(parentId) {
 
   await moveTaskList.reduce(
     (promiseChain, { fromNode, toNode }) => promiseChain.then(
-      () => moveContent(fromNode.id, toNode.id)
+      () => moveFolderContentToStart(fromNode.id, toNode.id)
     ),
     Promise.resolve(),
   );
@@ -4843,19 +4860,7 @@ async function mergeSubFoldersLevelOneAndTwo(parentId) {
     Promise.resolve(),
   );
 }
-async function moveContentToStart(fromFolderId, toFolderId) {
-  const nodeList = await browser.bookmarks.getChildren(fromFolderId)
-  const reversedNodeList = nodeList.toReversed()
-
-  await reversedNodeList.reduce(
-    (promiseChain, node) => promiseChain.then(
-      () => moveNodeIgnoreInController({ id: node.id, parentId: toFolderId, index: 0 })
-    ),
-    Promise.resolve(),
-  );
-}
-
-async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
+async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
   if (!fromId) {
     return
   }
@@ -4867,7 +4872,7 @@ async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
 
   await folderList.reduce(
     (promiseChain, folderNode) => promiseChain.then(
-      () => moveContentToStart(folderNode.id, unclassifiedId)
+      () => moveFolderContentToStart(folderNode.id, unclassifiedId)
     ),
     Promise.resolve(),
   );
@@ -5652,24 +5657,16 @@ const OtherHandlers = {
   // [EXTENSION_MSG_ID.PAGE_EVENT]: async (messageObj) => {
   //   logIMPE('runtime.onMessage PAGE_EVENT', messageObj);
   // },
-  [EXTENSION_MSG_ID.TAB_IS_READY]: async ({ tabId, url, title }) => {
+  [EXTENSION_MSG_ID.TAB_IS_READY]: async ({ tabId, url }) => {
     logIMT('runtime.onMessage TAB_IS_READY 00/1', url);
     logIMT('runtime.onMessage TAB_IS_READY 00/2', tabId, memo.activeTabId);
     // IT IS ONLY when new tab load first url
     if (tabId === memo.activeTabId) {
       logIMT('runtime.onMessage TAB_IS_READY 11');
-      debouncedUpdateActiveTab({
-        tabId,
-        url,
-        debugCaller: `runtime.onMessage TAB_IS_READY`,
-      })
 
-      await pageReady.onPageReady({
-        tabId,
-        url,
-        title,
-        debugCaller: `runtime.onMessage TAB_IS_READY`,
-      });
+      pageReady.clearUrlOnPageOpen({ tabId, url })
+
+      updateActiveTab({ tabId, debugCaller: `runtime.onMessage TAB_IS_READY` })
     }
   },
 
@@ -5754,7 +5751,7 @@ const runtimeController = {
     logRC('runtime.onStartup');
 
     await initExtension({ debugCaller: 'runtime.onStartup' })
-    debouncedUpdateActiveTab({
+    updateActiveTab({
       debugCaller: 'runtime.onStartup'
     });
 
@@ -5770,7 +5767,7 @@ const runtimeController = {
     logRC('runtime.onInstalled');
 
     await initExtension({ debugCaller: 'runtime.onInstalled' })
-    debouncedUpdateActiveTab({
+    updateActiveTab({
       debugCaller: 'runtime.onInstalled'
     });
   },
@@ -5803,8 +5800,8 @@ const storageController = {
 const redirectedUrl = new CacheWithLimit({ name: 'redirectedUrl', size: 20 })
 
 const tabsController = {
-  // onCreated({ pendingUrl: url, index, id }) {
-  //   logTC('tabs.onCreated', index, id, url);
+  // onCreated(Tab) {
+  //   logTC('tabs.onCreated', Tab);
   // },
   async onUpdated(tabId, changeInfo, Tab) {
     logTC('tabs.onUpdated 00', 'tabId', tabId, 'Tab.index', Tab.index);
@@ -5836,25 +5833,19 @@ const tabsController = {
       }
     }
 
-    if (changeInfo?.url || changeInfo?.title) {
-      visitedUrls.onUpdateTab(tabId, changeInfo);
+    if (Tab.active && changeInfo?.status == 'complete') {
+      memo.activeTabUrl = Tab.url
+
+      pageReady.clearUrlOnPageOpen({ tabId, url: Tab.url })
+
+      updateActiveTab({
+        tabId,
+        url: Tab.url,
+        debugCaller: `tabs.onUpdated complete`,
+      })
     }
 
-    if (changeInfo?.status == 'complete') {
-      if (tabId === memo.activeTabId) {
-        debouncedUpdateActiveTab({
-          tabId,
-          url: Tab.url,
-          debugCaller: `tabs.onUpdated complete`,
-        })
-        await pageReady.onPageReady({
-          tabId,
-          url: Tab.url,
-          title: Tab.title,
-          debugCaller: `tabs.onUpdated complete`,
-        })
-      }
-     }
+    visitedUrls.updateTab(tabId, changeInfo, Tab.active);
   },
   async onActivated({ tabId }) {
     logTC('tabs.onActivated 00', 'memo[\'activeTabId\'] <=', tabId);
@@ -5866,7 +5857,7 @@ const tabsController = {
     // }
     memo.activeTabId = tabId;
 
-    debouncedUpdateActiveTab({
+    updateActiveTab({
       tabId,
       debugCaller: 'tabs.onActivated'
     });
@@ -5882,7 +5873,7 @@ const tabsController = {
 
         // QUESTION: on open windows with stored tabs. every tab is activated?
         // firefox: only one active tab
-        visitedUrls.onActivateTab(tabId, Tab.url, Tab.title)
+        visitedUrls.visitTab(tabId, Tab.url, Tab.title)
       }
     } catch (er) {
       logTC('tabs.onActivated. IGNORING. tab was deleted', er);
@@ -5894,7 +5885,7 @@ const tabsController = {
     // 2) manually close not active tab
     // 3) close tab on close window = 1)
 
-    visitedUrls.onCloseTab(tabId)
+    visitedUrls.closeTab(tabId)
   }
 }
 const logWC = makeLogFunction({ module: 'windows.controller' })
@@ -5909,7 +5900,7 @@ const windowsController = {
 
     logWC('windows.onFocusChanged', windowId);
     await setFirstActiveTab({ debugCaller: 'windows.onFocusChanged' })
-    debouncedUpdateActiveTab({
+    updateActiveTab({
       debugCaller: 'windows.onFocusChanged'
     });
   },
