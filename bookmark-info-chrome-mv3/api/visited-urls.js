@@ -52,7 +52,7 @@ class VisitedUrls {
     }
   }
 
-  onActivateTab(tabId, url, title) {
+  visitTab(tabId, url, title) {
     if (!this.isOn) {
       return
     }
@@ -101,10 +101,13 @@ class VisitedUrls {
       }
     }
   }
-  onReplaceUrlInActiveTab({ tabId, oldUrl, newUrl, newTitle }) {
+  onReplaceUrlInActiveTab({ tabId, oldUrl: inOldUrl, newUrl: inNewUrl, newTitle }) {
     if (!this.isOn) {
       return
     }
+
+    const oldUrl = removeQueryParamsIfTarget(inOldUrl);
+    const newUrl = removeQueryParamsIfTarget(inNewUrl);
 
     if (oldUrl == newUrl) {
       return

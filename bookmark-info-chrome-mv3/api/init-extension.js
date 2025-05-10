@@ -92,7 +92,7 @@ async function initFromUserOptions() {
       isOn: userSettings[USER_OPTION.MARK_CLOSED_PAGE_AS_VISITED],
     }),
     pageReady.useSettings({
-      isDoCleanUrl: userSettings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN],
+      isOn: userSettings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN],
     }),
   ])
 }

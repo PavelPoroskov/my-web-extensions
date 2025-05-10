@@ -8,6 +8,7 @@ import {
 import {
   showAuthorBookmarksStep2,
   updateActiveTab,
+  pageReady,
 } from '../api/index.js'
 import {
   EXTENSION_MSG_ID,
@@ -79,6 +80,7 @@ const OtherHandlers = {
     // IT IS ONLY when new tab load first url
     if (tabId === memo.activeTabId) {
       logIMT('runtime.onMessage TAB_IS_READY 11');
+      pageReady.clearUrlOnPageOpen({ tabId, url })
       updateActiveTab({ tabId, debugCaller: `runtime.onMessage TAB_IS_READY` })
     }
   },

@@ -61,6 +61,8 @@ export const tabsController = {
 
     if (Tab.active) {
       if (changeInfo?.status == 'complete') {
+        pageReady.clearUrlOnPageOpen({ tabId, url: Tab.url })
+
         updateActiveTab({
           tabId,
           url: Tab.url,
@@ -69,12 +71,14 @@ export const tabsController = {
       }
 
       if (changeInfo?.status == 'complete') {
-        await pageReady.onPageReady({
+        visitedUrls.onReplaceUrlInActiveTab({
           tabId,
-          url: Tab.url,
-          title: Tab.title,
-          debugCaller: `tabs.onUpdated complete`,
-        })
+          oldUrl: memo.activeTabUrl,
+          newUrl: Tab.url,
+          newTitle: Tab.title,
+        });
+
+        memo.activeTabUrl = Tab.url
       }
     }
   },
@@ -104,7 +108,7 @@ export const tabsController = {
 
         // QUESTION: on open windows with stored tabs. every tab is activated?
         // firefox: only one active tab
-        visitedUrls.onActivateTab(tabId, Tab.url, Tab.title)
+        visitedUrls.visitTab(tabId, Tab.url, Tab.title)
       }
     } catch (er) {
       logTC('tabs.onActivated. IGNORING. tab was deleted', er);
