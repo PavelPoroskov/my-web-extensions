@@ -94,11 +94,21 @@ async function bookmarkListToTagList(bookmarkList) {
   return resultList.concat(templateTagList)
 }
 
-async function updateTab({ tabId, url: inUrl, debugCaller, useCache=false }) {
-  logUTB(`UPDATE-TAB () 00 <- ${debugCaller}`, tabId);
+async function updateTab({ tabId: inTabId, url: inUrl, debugCaller, useCache=false }) {
+  logUTB(`UPDATE-TAB () 00 <- ${debugCaller}`, inTabId);
+
+  let tabId = inTabId
   let url = inUrl
 
-  if (!url) {
+  if (!tabId) {
+    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    const [activeTab] = tabs;
+
+    tabId = activeTab?.id
+    url = activeTab?.url
+  }
+
+  if (!url && tabId) {
     try {
       const Tab = await chrome.tabs.get(tabId);
       url = Tab?.url
@@ -167,16 +177,12 @@ function updateTabTask(options) {
 
 const debouncedUpdateTab = debounce(updateTabTask, 30)
 
-export function debouncedUpdateActiveTab({ url, debugCaller } = {}) {
+export function debouncedUpdateActiveTab({ debugCaller } = {}) {
   logUTB('debouncedUpdateActiveTab () 00', 'memo[\'activeTabId\']', memo['activeTabId'])
 
-  if (memo.activeTabId) {
-    debouncedUpdateTab({
-      tabId: memo.activeTabId,
-      url,
-      debugCaller: `debouncedUpdateActiveTab () <- ${debugCaller}`,
-    })
-  }
+  debouncedUpdateTab({
+    debugCaller: `debouncedUpdateActiveTab () <- ${debugCaller}`,
+  })
 }
 
 export async function updateActiveTab({ tabId, url, useCache, debugCaller } = {}) {
