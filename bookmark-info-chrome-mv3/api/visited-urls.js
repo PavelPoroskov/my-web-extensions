@@ -26,16 +26,12 @@ const URL_MARK_OPTIONS = {
 
 class VisitedUrls {
   constructor () {
+    this.isOn = false
     this.cacheVisitedUrls = new CacheWithLimit({ name: 'cacheVisitedUrls', size: 500 });
     this.cacheTabId = new CacheWithLimit({ name: 'cacheVisitedTabIds', size: 500 });
   }
 
-  onUpdateTab = () => { }
-  onActivateTab = () => { }
-  onReplaceUrlInActiveTab = () => { }
-  onCloseTab = () => { }
-
-  markUrl({ url, title, mark }) {
+  _markUrl({ url, title, mark }) {
     if (!url) {
       return
     }
@@ -56,7 +52,11 @@ class VisitedUrls {
     }
   }
 
-  _onActivateTab(tabId, url, title) {
+  onActivateTab(tabId, url, title) {
+    if (!this.isOn) {
+      return
+    }
+
     logVU("_onActivateTab 00 ", url)
     const cleanedUrl = removeQueryParamsIfTarget(url);
     logVU("_onActivateTab 11 ", cleanedUrl)
@@ -64,7 +64,11 @@ class VisitedUrls {
     this.cacheVisitedUrls.add(cleanedUrl, title)
     this.cacheTabId.add(tabId, { url: cleanedUrl, title })
   }
-  _onUpdateTab(tabId, oData) {
+  onUpdateTab(tabId, oData) {
+    if (!this.isOn) {
+      return
+    }
+
     const newData = {}
 
     if (oData?.url) {
@@ -97,7 +101,11 @@ class VisitedUrls {
       }
     }
   }
-  _onReplaceUrlInActiveTab({ tabId, oldUrl, newUrl, newTitle }) {
+  onReplaceUrlInActiveTab({ tabId, oldUrl, newUrl, newTitle }) {
+    if (!this.isOn) {
+      return
+    }
+
     if (oldUrl == newUrl) {
       return
     }
@@ -110,7 +118,7 @@ class VisitedUrls {
     logVU("_onReplaceUrlInTab 22", 'title', title)
 
     if (title) {
-      this.markUrl({ url: oldUrl, title, mark: URL_MARK_OPTIONS.VISITED })
+      this._markUrl({ url: oldUrl, title, mark: URL_MARK_OPTIONS.VISITED })
     }
 
     // mark newUrl as activated
@@ -121,7 +129,11 @@ class VisitedUrls {
     //   this.cacheVisitedUrls.add(newUrl, cachedTabData?.title)
     // }
   }
-  async _onCloseTab(tabId) {
+  async onCloseTab(tabId) {
+    if (!this.isOn) {
+      return
+    }
+
     logVU("_onCloseTab 11", tabId)
     const cachedTabData = this.cacheTabId.get(tabId)
     logVU("_onCloseTab 22 cachedTabData", cachedTabData)
@@ -136,7 +148,7 @@ class VisitedUrls {
 
     if (urlTitle) {
       logVU("_onCloseUrl 44", urlTitle)
-      this.markUrl({ url, title: urlTitle, mark: URL_MARK_OPTIONS.VISITED })
+      this._markUrl({ url, title: urlTitle, mark: URL_MARK_OPTIONS.VISITED })
     } else {
       let title = tabTitle
       logVU("_onCloseUrl 55", tabTitle)
@@ -155,7 +167,7 @@ class VisitedUrls {
         title = url
       }
 
-      this.markUrl({ url, title, mark: URL_MARK_OPTIONS.OPENED })
+      this._markUrl({ url, title, mark: URL_MARK_OPTIONS.OPENED })
     }
 
     this.cacheTabId.delete(tabId)
@@ -163,23 +175,16 @@ class VisitedUrls {
   }
 
   useSettings({ isOn }) {
-    if (isOn) {
-      this.onUpdateTab = this._onUpdateTab
-      this.onActivateTab = this._onActivateTab
-      this.onReplaceUrlInActiveTab = this._onReplaceUrlInActiveTab
-      this.onCloseTab = this._onCloseTab
+    this.isOn = isOn
 
-      findOrCreateFolderByTitleInRoot(DATED_TEMPLATE_VISITED)
-      findOrCreateFolderByTitleInRoot(DATED_TEMPLATE_OPENED)
-
-    } else {
-      this.onUpdateTab = () => { }
-      this.onActivateTab = () => { }
-      this.onReplaceUrlInTab = () => { }
-      this.onCloseTab = () => { }
-
+    if (!this.isOn) {
       this.cacheVisitedUrls.clear()
       this.cacheTabId.clear()
+    }
+
+    if (this.isOn) {
+      findOrCreateFolderByTitleInRoot(DATED_TEMPLATE_VISITED)
+      findOrCreateFolderByTitleInRoot(DATED_TEMPLATE_OPENED)
     }
   }
 }
