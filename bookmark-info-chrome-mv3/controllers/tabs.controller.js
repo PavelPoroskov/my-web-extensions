@@ -59,13 +59,16 @@ export const tabsController = {
       visitedUrls.onUpdateTab(tabId, changeInfo);
     }
 
-    if (changeInfo?.status == 'complete') {
-      if (tabId === memo.activeTabId) {
+    if (Tab.active) {
+      if (changeInfo?.status == 'complete') {
         debouncedUpdateActiveTab({
           tabId,
           url: Tab.url,
           debugCaller: `tabs.onUpdated complete`,
         })
+      }
+
+      if (changeInfo?.status == 'complete') {
         await pageReady.onPageReady({
           tabId,
           url: Tab.url,
@@ -73,7 +76,7 @@ export const tabsController = {
           debugCaller: `tabs.onUpdated complete`,
         })
       }
-     }
+    }
   },
   async onActivated({ tabId }) {
     logTC('tabs.onActivated 00', 'memo[\'activeTabId\'] <=', tabId);
