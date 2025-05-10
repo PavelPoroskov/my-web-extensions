@@ -6,7 +6,7 @@ import {
   makeLogFunction,
 } from '../api-low/index.js'
 import {
-  debouncedUpdateActiveTab,
+  updateActiveTab,
 } from '../api/index.js'
 import {
   NODE_ACTION,
@@ -71,7 +71,7 @@ async function folderQueueRunner(task) {
   }
 
   if (isCallUpdateActiveTab) {
-    debouncedUpdateActiveTab({
+    updateActiveTab({
       debugCaller: `bookmarks(folders).on ${task.action}`
     });
   }

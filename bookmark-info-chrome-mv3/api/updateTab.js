@@ -1,11 +1,10 @@
 import {
   extensionSettings,
-  memo,
   page,
   tagList,
 } from '../api-mid/index.js'
 import {
-  debounce,
+  debounce_leading,
   makeLogFunction,
 } from '../api-low/index.js'
 import {
@@ -94,33 +93,8 @@ async function bookmarkListToTagList(bookmarkList) {
   return resultList.concat(templateTagList)
 }
 
-async function updateTab({ tabId: inTabId, url: inUrl, debugCaller, useCache=false }) {
-  logUTB(`UPDATE-TAB () 00 <- ${debugCaller}`, inTabId);
-
-  let tabId = inTabId
-  let url = inUrl
-
-  if (!tabId) {
-    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    const [activeTab] = tabs;
-
-    tabId = activeTab?.id
-    url = activeTab?.url
-  }
-
-  if (!url && tabId) {
-    try {
-      const Tab = await chrome.tabs.get(tabId);
-      url = Tab?.url
-    } catch (er) {
-      logUTB('IGNORING. tab was deleted', er);
-    }
-  }
-
-  if (!(url && isSupportedProtocol(url))) {
-    return
-  }
-
+async function updateTab({ tabId, url, debugCaller, useCache=false }) {
+  logUTB(`UPDATE-TAB () 00 <- ${debugCaller}`, tabId);
   logUTB('UPDATE-TAB () 11', url);
 
   await initExtension({ debugCaller: 'updateTab ()' })
@@ -167,32 +141,38 @@ async function updateTab({ tabId: inTabId, url: inUrl, debugCaller, useCache=fal
   })
 }
 
-function updateTabTask(options) {
-  if (options?.isStop) {
+async function updateTabTask(options) {
+  let tabId = options?.tabId
+  let url = options?.url
+
+  if (!tabId) {
+    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    const [activeTab] = tabs;
+
+    if (activeTab) {
+      tabId = activeTab?.id
+      url = activeTab?.url
+    }
+  }
+
+  if (!url && tabId) {
+    try {
+      const Tab = await chrome.tabs.get(tabId);
+      url = Tab?.url
+    } catch (er) {
+      logUTB('IGNORING. tab was deleted', er);
+    }
+  }
+
+  if (!(url && isSupportedProtocol(url))) {
     return
   }
 
-  updateTab(options)
-}
-
-const debouncedUpdateTab = debounce(updateTabTask, 30)
-
-export function debouncedUpdateActiveTab({ debugCaller } = {}) {
-  logUTB('debouncedUpdateActiveTab () 00', 'memo[\'activeTabId\']', memo['activeTabId'])
-
-  debouncedUpdateTab({
-    debugCaller: `debouncedUpdateActiveTab () <- ${debugCaller}`,
-  })
-}
-
-export async function updateActiveTab({ tabId, url, useCache, debugCaller } = {}) {
-  // stop debounced
-  debouncedUpdateTab({ isStop: true })
-
-  updateTab({
+  await updateTab({
+    ...options,
     tabId,
     url,
-    useCache,
-    debugCaller: `updateActiveTab () <- ${debugCaller}`,
   })
 }
+
+export const updateActiveTab = debounce_leading(updateTabTask, 30)

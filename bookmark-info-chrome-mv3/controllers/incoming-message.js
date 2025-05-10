@@ -7,7 +7,6 @@ import {
 } from '../command/index.js'
 import {
   showAuthorBookmarksStep2,
-  debouncedUpdateActiveTab,
   updateActiveTab,
 } from '../api/index.js'
 import {
@@ -80,7 +79,7 @@ const OtherHandlers = {
     // IT IS ONLY when new tab load first url
     if (tabId === memo.activeTabId) {
       logIMT('runtime.onMessage TAB_IS_READY 11');
-      debouncedUpdateActiveTab({ debugCaller: `runtime.onMessage TAB_IS_READY` })
+      updateActiveTab({ tabId, debugCaller: `runtime.onMessage TAB_IS_READY` })
     }
   },
 

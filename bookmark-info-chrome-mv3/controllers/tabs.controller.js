@@ -1,6 +1,6 @@
 import {
   pageReady,
-  debouncedUpdateActiveTab,
+  updateActiveTab,
   visitedUrls,
 } from '../api/index.js'
 import {
@@ -61,7 +61,7 @@ export const tabsController = {
 
     if (Tab.active) {
       if (changeInfo?.status == 'complete') {
-        debouncedUpdateActiveTab({
+        updateActiveTab({
           tabId,
           url: Tab.url,
           debugCaller: `tabs.onUpdated complete`,
@@ -88,7 +88,7 @@ export const tabsController = {
     // }
     memo.activeTabId = tabId;
 
-    debouncedUpdateActiveTab({
+    updateActiveTab({
       tabId,
       debugCaller: 'tabs.onActivated'
     });

@@ -15,6 +15,24 @@ export function debounce(func, timeout = 300){
 
 const MS_DIFF_FOR_SINGLE_BKM = 80
 
+export function debounce_leading(func, timeout = 300){
+  let timer;
+
+  return (...args) => {
+    if (!timer) {
+      func.apply(this, args);
+    }
+
+    clearTimeout(timer);
+    timer = setTimeout(
+      () => {
+        timer = undefined;
+      },
+      timeout,
+    );
+  };
+}
+
 export function ignoreBatch(func, timeout = MS_DIFF_FOR_SINGLE_BKM){
   let lastCallTime
   let timer;

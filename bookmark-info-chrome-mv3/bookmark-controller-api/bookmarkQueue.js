@@ -8,7 +8,7 @@ import {
   getUnclassifiedFolderId,
 } from '../folder-api/index.js'
 import {
-  debouncedUpdateActiveTab,
+  updateActiveTab,
 } from '../api/index.js'
 import {
   moveBookmarkIgnoreInController,
@@ -117,7 +117,7 @@ async function bookmarkQueueRunner(task) {
   }
 
   if (isCallUpdateActiveTab) {
-    debouncedUpdateActiveTab({
+    updateActiveTab({
       debugCaller: `bookmarks.on ${task.action}`
     });
   }

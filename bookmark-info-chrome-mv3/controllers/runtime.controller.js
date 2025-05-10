@@ -1,5 +1,5 @@
 import {
-  debouncedUpdateActiveTab,
+  updateActiveTab,
 } from '../api/index.js'
 import {
   orderBookmarks,
@@ -23,7 +23,7 @@ export const runtimeController = {
     logRC('runtime.onStartup');
 
     await initExtension({ debugCaller: 'runtime.onStartup' })
-    debouncedUpdateActiveTab({
+    updateActiveTab({
       debugCaller: 'runtime.onStartup'
     });
 
@@ -39,7 +39,7 @@ export const runtimeController = {
     logRC('runtime.onInstalled');
 
     await initExtension({ debugCaller: 'runtime.onInstalled' })
-    debouncedUpdateActiveTab({
+    updateActiveTab({
       debugCaller: 'runtime.onInstalled'
     });
   },
