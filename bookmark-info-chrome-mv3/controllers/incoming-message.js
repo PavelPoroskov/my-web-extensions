@@ -6,7 +6,6 @@ import {
   moveToFlatFolderStructure,
 } from '../command/index.js'
 import {
-  pageReady,
   showAuthorBookmarksStep2,
   debouncedUpdateActiveTab,
   updateActiveTab,

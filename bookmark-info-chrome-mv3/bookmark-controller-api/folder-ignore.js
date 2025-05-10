@@ -22,7 +22,7 @@ export async function createFolderIgnoreInController({
   return await chrome.bookmarks.create(options)
 }
 
-export async function moveNodeIgnoreInController({ id, parentId, index }) {
+async function moveNodeIgnoreInController({ id, parentId, index }) {
   const options = {}
   if (parentId != undefined) {
     options.parentId = parentId
@@ -44,6 +44,18 @@ export async function moveFolderIgnoreInController({ id, parentId, index }) {
   return await moveNodeIgnoreInController({ id, parentId, index })
 }
 
+export async function moveFolderContentToStart(fromFolderId, toFolderId) {
+  const nodeList = await chrome.bookmarks.getChildren(fromFolderId)
+  const reversedNodeList = nodeList.toReversed()
+
+  await reversedNodeList.reduce(
+    (promiseChain, node) => promiseChain.then(
+      () => moveNodeIgnoreInController({ id: node.id, parentId: toFolderId, index: 0 })
+    ),
+    Promise.resolve(),
+  );
+}
+
 export async function updateFolder({ id, title }) {
   await chrome.bookmarks.update(id, { title })
 }
@@ -51,3 +63,4 @@ export async function updateFolder({ id, title }) {
 export async function removeFolder(bkmId) {
   await chrome.bookmarks.remove(bkmId)
 }
+

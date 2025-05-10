@@ -5,21 +5,9 @@ import {
   OTHER_BOOKMARKS_FOLDER_ID,
 } from '../folder-api/index.js'
 import {
-  moveNodeIgnoreInController,
+  moveFolderContentToStart,
   removeFolder,
 } from '../bookmark-controller-api/index.js'
-
-async function moveContentToStart(fromFolderId, toFolderId) {
-  const nodeList = await chrome.bookmarks.getChildren(fromFolderId)
-  const reversedNodeList = nodeList.toReversed()
-
-  await reversedNodeList.reduce(
-    (promiseChain, node) => promiseChain.then(
-      () => moveNodeIgnoreInController({ id: node.id, parentId: toFolderId, index: 0 })
-    ),
-    Promise.resolve(),
-  );
-}
 
 async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
   if (!fromId) {
@@ -33,7 +21,7 @@ async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
 
   await folderList.reduce(
     (promiseChain, folderNode) => promiseChain.then(
-      () => moveContentToStart(folderNode.id, unclassifiedId)
+      () => moveFolderContentToStart(folderNode.id, unclassifiedId)
     ),
     Promise.resolve(),
   );

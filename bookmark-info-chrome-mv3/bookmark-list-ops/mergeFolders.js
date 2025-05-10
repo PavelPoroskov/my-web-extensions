@@ -3,20 +3,8 @@ import {
 } from '../folder-api/index.js'
 import {
   removeFolder,
-  moveNodeIgnoreInController,
+  moveFolderContentToStart,
 } from '../bookmark-controller-api/index.js'
-
-
-async function moveContent(fromFolderId, toFolderId) {
-  const nodeList = await chrome.bookmarks.getChildren(fromFolderId)
-
-  await nodeList.reduce(
-    (promiseChain, node) => promiseChain.then(
-      () => moveNodeIgnoreInController({ id: node.id, parentId: toFolderId })
-    ),
-    Promise.resolve(),
-  );
-}
 
 async function mergeSubFoldersLevelOne(parentId) {
   if (!parentId) {
@@ -57,7 +45,7 @@ async function mergeSubFoldersLevelOne(parentId) {
 
   await moveTaskList.reduce(
     (promiseChain, { fromNode, toNode }) => promiseChain.then(
-      () => moveContent(fromNode.id, toNode.id)
+      () => moveFolderContentToStart(fromNode.id, toNode.id)
     ),
     Promise.resolve(),
   );
