@@ -55,31 +55,18 @@ export const tabsController = {
       }
     }
 
-    if (changeInfo?.url || changeInfo?.title) {
-      visitedUrls.onUpdateTab(tabId, changeInfo);
-    }
+    visitedUrls.updateTab(tabId, changeInfo, Tab.active);
 
-    if (Tab.active) {
-      if (changeInfo?.status == 'complete') {
-        pageReady.clearUrlOnPageOpen({ tabId, url: Tab.url })
+    if (Tab.active && changeInfo?.status == 'complete') {
+      pageReady.clearUrlOnPageOpen({ tabId, url: Tab.url })
 
-        updateActiveTab({
-          tabId,
-          url: Tab.url,
-          debugCaller: `tabs.onUpdated complete`,
-        })
-      }
+      updateActiveTab({
+        tabId,
+        url: Tab.url,
+        debugCaller: `tabs.onUpdated complete`,
+      })
 
-      if (changeInfo?.status == 'complete') {
-        visitedUrls.onReplaceUrlInActiveTab({
-          tabId,
-          oldUrl: memo.activeTabUrl,
-          newUrl: Tab.url,
-          newTitle: Tab.title,
-        });
-
-        memo.activeTabUrl = Tab.url
-      }
+      memo.activeTabUrl = Tab.url
     }
   },
   async onActivated({ tabId }) {
@@ -120,6 +107,6 @@ export const tabsController = {
     // 2) manually close not active tab
     // 3) close tab on close window = 1)
 
-    visitedUrls.onCloseTab(tabId)
+    visitedUrls.closeTab(tabId)
   }
 }

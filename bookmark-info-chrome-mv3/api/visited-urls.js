@@ -57,55 +57,76 @@ class VisitedUrls {
       return
     }
 
-    logVU("_onActivateTab 00 ", url)
+    logVU("visitTab 00 ", url)
     const cleanedUrl = removeQueryParamsIfTarget(url);
-    logVU("_onActivateTab 11 ", cleanedUrl)
+    logVU("visitTab 11 ", cleanedUrl)
 
     this.cacheVisitedUrls.add(cleanedUrl, title)
     this.cacheTabId.add(tabId, { url: cleanedUrl, title })
   }
-  onUpdateTab(tabId, oData) {
+  updateTab(tabId, changeInfo, isActiveTab) {
     if (!this.isOn) {
       return
     }
 
-    const newData = {}
+    let beforeData = this.cacheTabId.get(tabId)
+    const updateObj = {}
 
-    if (oData?.url) {
-      newData.url = oData?.url
+    if (changeInfo?.status == 'loading') {
+      updateObj.time = Date.now()
+
+      if (beforeData) {
+        updateObj.before = {
+          url: beforeData.url,
+          title: beforeData.title,
+        }
+      }
+
+      beforeData = undefined
+    } if (changeInfo?.status == 'complete') {
+      updateObj.isComplete = true
     }
 
-    if (oData?.title) {
-      newData.title = oData?.title
+    if (changeInfo?.url) {
+      updateObj.url = changeInfo?.url
     }
 
-    if (Object.keys(newData).length == 0) {
+    if (changeInfo?.title) {
+      updateObj.title = changeInfo?.title
+    }
+
+    if (Object.keys(updateObj).length == 0) {
       return
     }
-    logVU("_onUpdateTab 11", tabId, newData)
+    logVU("_onUpdateTab 11", tabId, updateObj)
 
-    const before = this.cacheTabId.get(tabId)
-    const after = {
-      ...before,
-      ...newData,
+    const afterData = {
+      ...beforeData,
+      ...updateObj,
     }
 
-    this.cacheTabId.add(tabId, after)
+    this.cacheTabId.add(tabId, afterData)
 
-    if (newData.title) {
-      const { url } = this.cacheTabId.get(tabId)
+    if (updateObj.title) {
+      const { url } = afterData
+
       if (url) {
         if (this.cacheVisitedUrls.has(url)) {
-          this.cacheVisitedUrls.add(url, newData.title)
+          this.cacheVisitedUrls.add(url, updateObj.title)
         }
       }
     }
-  }
-  onReplaceUrlInActiveTab({ tabId, oldUrl: inOldUrl, newUrl: inNewUrl, newTitle }) {
-    if (!this.isOn) {
-      return
-    }
 
+    if (isActiveTab && afterData.url && afterData.title != undefined && afterData.isComplete) {
+      this._onReplaceUrlInActiveTab({
+        tabId,
+        oldUrl: afterData?.before?.url,
+        newUrl: afterData.url,
+        newTitle: afterData.title,
+      })
+    }
+  }
+  _onReplaceUrlInActiveTab({ tabId, oldUrl: inOldUrl, newUrl: inNewUrl, newTitle }) {
     const oldUrl = removeQueryParamsIfTarget(inOldUrl);
     const newUrl = removeQueryParamsIfTarget(inNewUrl);
 
@@ -132,29 +153,29 @@ class VisitedUrls {
     //   this.cacheVisitedUrls.add(newUrl, cachedTabData?.title)
     // }
   }
-  async onCloseTab(tabId) {
+  async closeTab(tabId) {
     if (!this.isOn) {
       return
     }
 
-    logVU("_onCloseTab 11", tabId)
+    logVU("closeTab 11", tabId)
     const cachedTabData = this.cacheTabId.get(tabId)
-    logVU("_onCloseTab 22 cachedTabData", cachedTabData)
+    logVU("closeTab 22 cachedTabData", cachedTabData)
 
     if (!cachedTabData) {
       return
     }
     const { url, title: tabTitle } = cachedTabData
-    logVU("_onCloseTab 33", url)
+    logVU("closeTab 33", url)
 
     const urlTitle = this.cacheVisitedUrls.get(url)
 
     if (urlTitle) {
-      logVU("_onCloseUrl 44", urlTitle)
+      logVU("closeTab 44", urlTitle)
       this._markUrl({ url, title: urlTitle, mark: URL_MARK_OPTIONS.VISITED })
     } else {
       let title = tabTitle
-      logVU("_onCloseUrl 55", tabTitle)
+      logVU("closeTab 55", tabTitle)
 
       if (!title) {
         const historyItemList = await chrome.history.search({
@@ -174,7 +195,7 @@ class VisitedUrls {
     }
 
     this.cacheTabId.delete(tabId)
-    logVU("_onCloseUrl 99", tabId)
+    logVU("closeTab 99", tabId)
   }
 
   useSettings({ isOn }) {
