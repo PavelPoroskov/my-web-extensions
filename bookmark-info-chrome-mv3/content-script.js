@@ -1241,9 +1241,9 @@
         let optimisticToStorageDel = fullState.optimisticToStorageDel
         let optimisticToStorageAdd = fullState.optimisticToStorageAdd
 
-        const bookmarkList = message.bookmarkList || []
-        const partialBookmarkList = message.partialBookmarkList || []
-        const authorBookmarkList = message.authorBookmarkList || []
+        const bookmarkList = message.bookmarkList || bookmarkListBefore
+        const partialBookmarkList = message.partialBookmarkList || partialBookmarkListBefore
+        const authorBookmarkList = message.authorBookmarkList || authorBookmarkListBefore
         const diff = (bookmarkList.length + partialBookmarkList.length + authorBookmarkList.length)
           - bookmarkListBefore.length
           - partialBookmarkListBefore.length
