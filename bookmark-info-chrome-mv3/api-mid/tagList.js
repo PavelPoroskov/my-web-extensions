@@ -26,8 +26,18 @@ import {
 const logTL = makeLogFunction({ module: 'tagList.js' })
 
 class TagList {
-  isOn = false
+  isOn = true
+
   isFlatStructure = false
+  isOpenGlobal = false
+  AVAILABLE_ROWS = 0
+  MAX_AVAILABLE_ROWS = 0
+  HIGHLIGHT_LAST = false
+  HIGHLIGHT_ALPHABET = false
+  PINNED_TAGS_POSITION = undefined
+
+  changeCount = 0
+  changeProcessedCount = -1
 
   _recentTagObj = {}
   _fixedTagObj = {}
@@ -38,34 +48,14 @@ class TagList {
   tagListFormat = []
   tagIdSet = new Set()
 
-  changeCount = 0
-  changeProcessedCount = 0
-
-
-  isOpenGlobal = false
-  AVAILABLE_ROWS = 0
-  MAX_AVAILABLE_ROWS = 0
-  HIGHLIGHT_LAST = false
-  HIGHLIGHT_ALPHABET = false
-  PINNED_TAGS_POSITION = undefined
-
-  addTag = () => { }
-  removeTag = () => { }
-
-  fixTag = () => { }
-  unfixTag = () => { }
-
-  openTagList = () => { }
-  updateAvailableRows = () => { }
-
   get nAvailableRows() {
     return this.AVAILABLE_ROWS
   }
-  markUpdates() {
+  _markUpdates() {
     this.changeCount += 1
   }
 
-  async readFromStorage({ userSettings }) {
+  async _readFromStorage({ userSettings }) {
     logTL('readFromStorage () 00')
 
     this.isFlatStructure = userSettings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]
@@ -115,9 +105,13 @@ class TagList {
       [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj,
     })
 
-    this.markUpdates()
+    this._markUpdates()
   }
-  async _updateAvailableRows(availableRows) {
+  async updateAvailableRows(availableRows) {
+    if (!this.isOn) {
+      return
+    }
+
     if (!availableRows) {
       return
     }
@@ -144,15 +138,19 @@ class TagList {
     }
 
     await setOptions(updateObj)
-    this.markUpdates()
+    this._markUpdates()
   }
-  async _openTagList(isOpen) {
+  async openTagList(isOpen) {
+    if (!this.isOn) {
+      return
+    }
+
     this.isOpenGlobal = isOpen
     await setOptions({
       [INTERNAL_VALUES.TAG_LIST_IS_OPEN]: isOpen
     })
   }
-  formatList(list) {
+  _formatList(list) {
     logTL('formatList () 00', list)
 
     const inList = list.filter(({ parentTitle }) => !!parentTitle)
@@ -190,6 +188,10 @@ class TagList {
     }))
   }
   getListWithBookmarks(addTagList = []) {
+    if (!this.isOn) {
+      return []
+    }
+
     logTL('getListWithBookmarks () 00', addTagList)
 
     if (this.changeProcessedCount !== this.changeCount) {
@@ -225,7 +227,7 @@ class TagList {
 
       this.tagIdSet = new Set(this.tagList.map(({ parentId }) => parentId))
 
-      this.tagListFormat = this.formatList(this.tagList)
+      this.tagListFormat = this._formatList(this.tagList)
     }
 
 
@@ -273,9 +275,13 @@ class TagList {
       )
     }
 
-    return this.formatList(resultList)
+    return this._formatList(resultList)
   }
-  async _addTag({ parentId, parentTitle }) {
+  async addTag({ parentId, parentTitle }) {
+    if (!this.isOn) {
+      return
+    }
+
     logTL('_addRecentTagFromFolder 00', parentId, parentTitle)
     // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
     if (this.isFlatStructure) {
@@ -322,13 +328,17 @@ class TagList {
       })
     }
 
-    this.markUpdates()
+    this._markUpdates()
     setOptions({
       [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj,
       ...fixedTagUpdate,
     })
   }
-  async _removeTag(id) {
+  async removeTag(id) {
+    if (!this.isOn) {
+      return
+    }
+
     const isInFixedList = id in this._fixedTagObj
     let fixedTagUpdate
 
@@ -350,14 +360,18 @@ class TagList {
     }
 
     if (isInFixedList || isInRecentList) {
-      this.markUpdates()
+      this._markUpdates()
       await setOptions({
         ...fixedTagUpdate,
         ...recentTagUpdate,
       })
     }
   }
-  async _fixTag({ parentId, parentTitle }) {
+  async fixTag({ parentId, parentTitle }) {
+    if (!this.isOn) {
+      return
+    }
+
     if (!parentTitle || !parentId) {
       return
     }
@@ -365,16 +379,20 @@ class TagList {
     if (!(parentId in this._fixedTagObj)) {
       this._fixedTagObj[parentId] = parentTitle
 
-      this.markUpdates()
+      this._markUpdates()
       await setOptions({
         [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
       })
     }
   }
-  async _unfixTag(parentId) {
+  async unfixTag(parentId) {
+    if (!this.isOn) {
+      return
+    }
+
     delete this._fixedTagObj[parentId]
 
-    this.markUpdates()
+    this._markUpdates()
     await setOptions({
       [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
     })
@@ -383,57 +401,10 @@ class TagList {
   useSettings({ isOn, userSettings }) {
     this.isOn = isOn
 
-    if (isOn) {
-      this.addTag = this._addTag
-      this.removeTag = this._removeTag
-
-      this.fixTag = this._fixTag
-      this.unfixTag = this._unfixTag
-
-      this.openTagList = this._openTagList
-      this.updateAvailableRows = this._updateAvailableRows
-
-      // tagList.list
-      // tagList.isOpenGlobal
-      // tagList.nAvailableRows
-      // tagList.nFixedTags
-    } else {
-      this.addTag = () => { }
-      this.removeTag = () => { }
-
-      this.fixTag = () => { }
-      this.unfixTag = () => { }
-
-      this.openTagList = () => { }
-      this.updateAvailableRows = () => { }
-    }
-
     this.changeCount = 0
-    this.changeProcessedCount = 0
-    this.tagIdSet = new Set()
+    this.changeProcessedCount = -1
 
-    if (isOn) {
-      this.readFromStorage({ userSettings })
-    } else {
-
-      this.isFlatStructure = false
-
-      this._recentTagObj = {}
-      this._fixedTagObj = {}
-
-      this.recentListDesc = []
-      this.recentListLimit = []
-      this.tagList = []
-      this.tagListFormat = []
-      this.tagIdSet = new Set()
-
-      this.isOpenGlobal = false
-      this.AVAILABLE_ROWS = 0
-      this.MAX_AVAILABLE_ROWS = 0
-      this.HIGHLIGHT_LAST = false
-      this.HIGHLIGHT_ALPHABET = false
-      this.PINNED_TAGS_POSITION = undefined
-    }
+    this._readFromStorage({ userSettings })
   }
 }
 
