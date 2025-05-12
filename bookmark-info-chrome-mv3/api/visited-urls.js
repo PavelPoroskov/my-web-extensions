@@ -62,10 +62,12 @@ class VisitedUrls {
 
     switch (mark) {
       case URL_MARK_OPTIONS.VISITED: {
+        logVU("**** _markUrl 11 VISITED", url)
         createBookmarkVisited({ url, title })
         break
       }
       case URL_MARK_OPTIONS.OPENED: {
+        logVU("**** _markUrl 11 OPENED", url)
         createBookmarkOpened({ url, title })
         break
       }
@@ -169,7 +171,11 @@ class VisitedUrls {
   }
 
   visitTab(tabId, url, title) {
-    logVU("visitTab 00 ", url, title)
+    if (!url || !title) {
+      return
+    }
+
+    logVU("visitTab 00-", url, "-", title, "-")
     const cleanedUrl = removeQueryParamsIfTarget(url);
 
     this.cacheVisitedUrls.add(cleanedUrl, title)

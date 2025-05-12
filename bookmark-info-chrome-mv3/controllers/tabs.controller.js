@@ -67,7 +67,10 @@ export const tabsController = {
       })
     }
 
-    visitedUrls.updateTab(tabId, changeInfo, Tab.active);
+    const toChangeInfo = changeInfo?.frozen
+      ? { ...changeInfo, title: Tab.title }
+      : changeInfo
+    visitedUrls.updateTab(tabId, toChangeInfo, Tab.active);
   },
   async onActivated({ tabId }) {
     logTC('tabs.onActivated 00', 'memo[\'activeTabId\'] <=', tabId);
@@ -89,13 +92,13 @@ export const tabsController = {
 
       if (Tab) {
         logTC('tabs.onActivated 11', Tab.index, tabId, Tab.url);
-        // console.log('CHANGE memo.activeTabUrl tabs.onActivated 1', memo.activeTabUrl);
-        // console.log('CHANGE memo.activeTabUrl tabs.onActivated 2', Tab.url);
-        memo.activeTabUrl = Tab.url
+        // Chrome for new tab: empty Tab.url, empty Tab.title, not empty Tab.pendingUrl
+        // Chrome for existed tab: not empty Tab.url, not empty Tab.title, undefined Tab.pendingUrl
+        memo.activeTabUrl = Tab.pendingUrl || Tab.url
 
         // QUESTION: on open windows with stored tabs. every tab is activated?
         // firefox: only one active tab
-        visitedUrls.visitTab(tabId, Tab.url, Tab.title)
+        visitedUrls.visitTab(tabId, memo.activeTabUrl, Tab.title)
       }
     } catch (er) {
       logTC('tabs.onActivated. IGNORING. tab was deleted', er);
