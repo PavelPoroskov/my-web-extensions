@@ -18,6 +18,23 @@ import {
 
 const logRC = makeLogFunction({ module: 'runtime.controller' })
 
+function checkCommandShortcuts() {
+  chrome.commands.getAll((commands) => {
+    let missingShortcuts = [];
+
+    for (let {name, shortcut} of commands) {
+      // console.log("COMMAND", name, shortcut)
+      if (shortcut === '') {
+        missingShortcuts.push(name);
+      }
+    }
+
+    // if (missingShortcuts.length > 0) {
+    //   console.log("NO SHORTCUTS FOR", missingShortcuts)
+    // }
+  });
+}
+
 export const runtimeController = {
   async onStartup() {
     logRC('runtime.onStartup');
@@ -34,6 +51,8 @@ export const runtimeController = {
     if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
       await orderBookmarks()
     }
+
+    checkCommandShortcuts()
   },
   async onInstalled () {
     logRC('runtime.onInstalled');
@@ -42,6 +61,8 @@ export const runtimeController = {
     updateActiveTab({
       debugCaller: 'runtime.onInstalled'
     });
+
+    checkCommandShortcuts()
   },
   async onMessage (message, sender) {
     logRC('runtime.onMessage message', message);
