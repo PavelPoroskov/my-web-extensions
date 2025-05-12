@@ -28,8 +28,12 @@ const getFullPath = (id, bkmFolderById) => {
   let currentId = id;
   while (currentId) {
     const folder = bkmFolderById.get(currentId);
-    path.push(folder.title);
-    currentId = folder.parentId;
+
+    if (folder) {
+      path.push(folder.title);
+    }
+
+    currentId = folder?.parentId;
   }
 
   return path.filter(Boolean).toReversed()
@@ -58,7 +62,15 @@ async function addBookmarkParentInfo({ bookmarkList, folderByIdMap, isFullPath =
   const knownFolderList = knownParentIdList.map((id) => folderByIdMap.get(id))
 
   if (unknownParentIdList.length > 0) {
-    const unknownFolderList = await chrome.bookmarks.get(unknownParentIdList)
+    // const unknownFolderList = await chrome.bookmarks.get(unknownParentIdList)
+    const unknownFolderListList = await Promise.all(
+      unknownParentIdList.map(
+        (id) => chrome.bookmarks.get(id).catch(() => undefined)
+      )
+    )
+    const unknownFolderList = unknownFolderListList
+      .filter(Boolean)
+      .flat()
 
     unknownFolderList.forEach((folder) => {
       folderByIdMap.add(
