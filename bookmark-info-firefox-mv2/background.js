@@ -5703,6 +5703,23 @@ async function onIncomingMessage (message, sender) {
 }
 const logRC = makeLogFunction({ module: 'runtime.controller' })
 
+function checkCommandShortcuts() {
+  browser.commands.getAll((commands) => {
+    let missingShortcuts = [];
+
+    for (let {name, shortcut} of commands) {
+      // console.log("COMMAND", name, shortcut)
+      if (shortcut === '') {
+        missingShortcuts.push(name);
+      }
+    }
+
+    // if (missingShortcuts.length > 0) {
+    //   console.log("NO SHORTCUTS FOR", missingShortcuts)
+    // }
+  });
+}
+
 const runtimeController = {
   async onStartup() {
     logRC('runtime.onStartup');
@@ -5719,6 +5736,8 @@ const runtimeController = {
     if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
       await orderBookmarks()
     }
+
+    checkCommandShortcuts()
   },
   async onInstalled () {
     logRC('runtime.onInstalled');
@@ -5727,6 +5746,8 @@ const runtimeController = {
     updateActiveTab({
       debugCaller: 'runtime.onInstalled'
     });
+
+    checkCommandShortcuts()
   },
   async onMessage (message, sender) {
     logRC('runtime.onMessage message', message);
