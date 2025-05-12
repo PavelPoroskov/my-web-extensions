@@ -3571,10 +3571,12 @@ class VisitedUrls {
 
     switch (mark) {
       case URL_MARK_OPTIONS.VISITED: {
+        logVU("**** _markUrl 11 VISITED", url)
         createBookmarkVisited({ url, title })
         break
       }
       case URL_MARK_OPTIONS.OPENED: {
+        logVU("**** _markUrl 11 OPENED", url)
         createBookmarkOpened({ url, title })
         break
       }
@@ -3678,7 +3680,11 @@ class VisitedUrls {
   }
 
   visitTab(tabId, url, title) {
-    logVU("visitTab 00 ", url, title)
+    if (!url || !title) {
+      return
+    }
+
+    logVU("visitTab 00-", url, "-", title, "-")
     const cleanedUrl = removeQueryParamsIfTarget(url);
 
     this.cacheVisitedUrls.add(cleanedUrl, title)
@@ -3866,8 +3872,12 @@ const getFullPath = (id, bkmFolderById) => {
   let currentId = id;
   while (currentId) {
     const folder = bkmFolderById.get(currentId);
-    path.push(folder.title);
-    currentId = folder.parentId;
+
+    if (folder) {
+      path.push(folder.title);
+    }
+
+    currentId = folder?.parentId;
   }
 
   return path.filter(Boolean).toReversed()
@@ -3896,7 +3906,15 @@ async function addBookmarkParentInfo({ bookmarkList, folderByIdMap, isFullPath =
   const knownFolderList = knownParentIdList.map((id) => folderByIdMap.get(id))
 
   if (unknownParentIdList.length > 0) {
-    const unknownFolderList = await browser.bookmarks.get(unknownParentIdList)
+    // const unknownFolderList = await browser.bookmarks.get(unknownParentIdList)
+    const unknownFolderListList = await Promise.all(
+      unknownParentIdList.map(
+        (id) => browser.bookmarks.get(id).catch(() => undefined)
+      )
+    )
+    const unknownFolderList = unknownFolderListList
+      .filter(Boolean)
+      .flat()
 
     unknownFolderList.forEach((folder) => {
       folderByIdMap.add(
@@ -5759,7 +5777,7 @@ const runtimeController = {
 
 const storageController = {
 
-  onChanged(changes, namespace) {
+  async onChanged(changes, namespace) {
 
     if (namespace === 'local') {
       const changesSet = new Set(Object.keys(changes))
@@ -5770,6 +5788,7 @@ const storageController = {
         logSC('storage.onChanged', namespace, changes);
 
         extensionSettings.invalidate()
+        await initExtension({ debugCaller: 'storage.onChanged' })
       }
     }
   },
@@ -5823,7 +5842,10 @@ const tabsController = {
       })
     }
 
-    visitedUrls.updateTab(tabId, changeInfo, Tab.active);
+    const toChangeInfo = changeInfo?.frozen
+      ? { ...changeInfo, title: Tab.title }
+      : changeInfo
+    visitedUrls.updateTab(tabId, toChangeInfo, Tab.active);
   },
   async onActivated({ tabId }) {
     logTC('tabs.onActivated 00', 'memo[\'activeTabId\'] <=', tabId);
@@ -5845,13 +5867,13 @@ const tabsController = {
 
       if (Tab) {
         logTC('tabs.onActivated 11', Tab.index, tabId, Tab.url);
-        // console.log('CHANGE memo.activeTabUrl tabs.onActivated 1', memo.activeTabUrl);
-        // console.log('CHANGE memo.activeTabUrl tabs.onActivated 2', Tab.url);
-        memo.activeTabUrl = Tab.url
+        // Chrome for new tab: empty Tab.url, empty Tab.title, not empty Tab.pendingUrl
+        // Chrome for existed tab: not empty Tab.url, not empty Tab.title, undefined Tab.pendingUrl
+        memo.activeTabUrl = Tab.pendingUrl || Tab.url
 
         // QUESTION: on open windows with stored tabs. every tab is activated?
         // firefox: only one active tab
-        visitedUrls.visitTab(tabId, Tab.url, Tab.title)
+        visitedUrls.visitTab(tabId, memo.activeTabUrl, Tab.title)
       }
     } catch (er) {
       logTC('tabs.onActivated. IGNORING. tab was deleted', er);
