@@ -398,13 +398,13 @@ class TagList {
     })
   }
 
-  useSettings({ isOn, userSettings }) {
+  async useSettings({ isOn, userSettings }) {
     this.isOn = isOn
 
     this.changeCount = 0
     this.changeProcessedCount = -1
 
-    this._readFromStorage({ userSettings })
+    await this._readFromStorage({ userSettings })
   }
 }
 
