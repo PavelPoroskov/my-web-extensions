@@ -4,6 +4,7 @@ import {
 import {
   extensionSettings,
 } from '../api-mid/index.js'
+import { initExtension } from '../api/init-extension.js'
 import {
   makeLogFunction,
 } from '../api-low/index.js'
@@ -12,7 +13,7 @@ const logSC = makeLogFunction({ module: 'storage.controller' })
 
 export const storageController = {
 
-  onChanged(changes, namespace) {
+  async onChanged(changes, namespace) {
 
     if (namespace === 'local') {
       const changesSet = new Set(Object.keys(changes))
@@ -23,6 +24,7 @@ export const storageController = {
         logSC('storage.onChanged', namespace, changes);
 
         extensionSettings.invalidate()
+        await initExtension({ debugCaller: 'storage.onChanged' })
       }
     }
   },
