@@ -7,7 +7,7 @@ import {
 } from './url-settings.js'
 import {
   isPathnameMatchForPatternExactly,
-  makeIsSearchParamMatch,
+  makeIsSearchParamItemMatch,
 } from './url-search-is.js'
 
 const logCUA = makeLogFunction({ module: 'clear-url.js' })
@@ -34,12 +34,12 @@ export const removeQueryParamsIfTarget = (url) => {
       if (isNotEmptyArray(removeSearchParamList)) {
         logCUA('removeQueryParamsIfTarget () 33 isNotEmptyArray(removeSearchParamList)')
 
-        const isSearchParamMatch = makeIsSearchParamMatch(removeSearchParamList)
+        const isSearchParamItemMatch = makeIsSearchParamItemMatch(removeSearchParamList)
 
         const matchedParamList = []
-        for (const [searchParam] of oSearchParams) {
-          if (isSearchParamMatch(searchParam)) {
-            matchedParamList.push(searchParam)
+        for (const [key, value] of oSearchParams) {
+          if (isSearchParamItemMatch({ key, value })) {
+            matchedParamList.push(key)
           }
         }
         // remove query params by list

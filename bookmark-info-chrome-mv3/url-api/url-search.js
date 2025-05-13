@@ -6,7 +6,7 @@ import {
   getPathnamePart,
 } from './url-partial.js'
 import {
-  makeIsSearchParamMatch,
+  makeIsSearchParamItemMatch,
 } from './url-search-is.js'
 import {
   isNotEmptyArray,
@@ -19,13 +19,13 @@ function isHostnameMatchForSearch(hostname, requiredHostname) {
   return hostname === requiredHostname
 }
 
-function isSearchParamsMatchForSearch(searchParams, requiredSearchParams) {
+function isSearchParamListMatchForPartialSearch(searchParams, requiredSearchParams) {
   if (!requiredSearchParams) {
     return true
   }
 
-  return Object.keys(requiredSearchParams)
-    .every((key) => searchParams.get(key) === requiredSearchParams[key])
+  return Object.entries(requiredSearchParams)
+    .every(([key, value]) => searchParams.get(key) === value)
 }
 
 // ?TODO /posts == /posts?page=1 OR clean on open /posts?page=1 TO /posts IF page EQ 1
@@ -49,15 +49,15 @@ export async function startPartialUrlSearch({ url, pathnamePattern }) {
       const { importantSearchParamList } = targetHostSettings
 
       if (isNotEmptyArray(importantSearchParamList)) {
-        const isSearchParamMatch = makeIsSearchParamMatch(importantSearchParamList)
+        const isSearchParamItemMatch = makeIsSearchParamItemMatch(importantSearchParamList)
         const oSearchParams = oUrl.searchParams;
         logUS('startPartialUrlSearch 22', 'oSearchParams', oSearchParams)
 
         const matchedParamList = []
-        for (const [searchParam] of oSearchParams) {
-          logUS('startPartialUrlSearch 22', 'for (const [searchParam] of oSearchParams', searchParam)
-          if (isSearchParamMatch(searchParam)) {
-            matchedParamList.push(searchParam)
+        for (const [key, value] of oSearchParams) {
+          logUS('startPartialUrlSearch 22', 'for (const [searchParam] of oSearchParams', key)
+          if (isSearchParamItemMatch({ key, value })) {
+            matchedParamList.push(key)
           }
         }
 
@@ -81,16 +81,16 @@ export async function startPartialUrlSearch({ url, pathnamePattern }) {
         pathname: oUrl.pathname,
         pattern: pathnamePattern,
       })
-    }
 
-    if (newPathname) {
       isPathnameMatchForSearch = (pathname, requiredPathname) => {
         const normalizedPathname = getPathnamePart({ pathname, pattern: pathnamePattern })
 
         return normalizedPathname === requiredPathname
       }
+
     } else {
       newPathname = getPathnameForSearch(oUrl.pathname)
+
       isPathnameMatchForSearch = (pathname, requiredPathname) => {
         const normalizedPathname = getPathnameForSearch(pathname)
 
@@ -116,7 +116,7 @@ export async function startPartialUrlSearch({ url, pathnamePattern }) {
 
         return isHostnameMatchForSearch(oUrl.hostname, requiredHostname)
           && isPathnameMatchForSearch(oUrl.pathname, requiredPathname)
-          && isSearchParamsMatchForSearch(oUrl.searchParams, requiredSearchParams)
+          && isSearchParamListMatchForPartialSearch(oUrl.searchParams, requiredSearchParams)
       }
     }
     // eslint-disable-next-line no-unused-vars
