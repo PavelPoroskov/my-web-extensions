@@ -7,7 +7,6 @@ import {
   isVisitedDatedTemplate,
 } from '../folder-api/index.js'
 import {
-  getBookmarkList,
   getBookmarkListDirty,
   makeLogFunction,
 } from '../api-low/index.js'
@@ -43,7 +42,7 @@ async function getRecentList(nItems) {
     .map(([id]) => id)
 
   if (unknownIdList.length > 0) {
-    const unknownFolderList = await getBookmarkList(unknownIdList)
+    const unknownFolderList = await getBookmarkListDirty(unknownIdList)
     unknownFolderList.forEach(({ id, title }) => {
       folderByIdMap[id].title = title
     })

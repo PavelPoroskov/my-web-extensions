@@ -4,17 +4,6 @@ export async function getBookmarkList(idList) {
     return []
   }
 
-  // const resultList = await Promise.allSettled(
-  //   idList.map(
-  //     (id) => chrome.bookmarks.get(id)
-  //   )
-  // )
-
-  // return resultList
-  //   .map((result) => result.value)
-  //   .filter(Boolean)
-  //   .flat()
-
   const list = await chrome.bookmarks.get(idList)
 
   return list

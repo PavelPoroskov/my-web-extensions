@@ -1,5 +1,5 @@
 import {
-  getBookmarkList,
+  getBookmarkListDirty,
   makeLogFunction,
 } from '../api-low/index.js';
 import {
@@ -21,7 +21,7 @@ export async function getDatedBookmarks({ url, template }) {
     return []
   }
 
-  const parentFolderList = await getBookmarkList(uniqueParentIdList)
+  const parentFolderList = await getBookmarkListDirty(uniqueParentIdList)
 
   const parentMap = Object.fromEntries(
     parentFolderList
