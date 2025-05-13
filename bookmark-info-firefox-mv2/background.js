@@ -278,7 +278,6 @@ const urlSettingsGo = {
     searchParamList: [
       'v',
       'list',
-      ['t'],
     ],
     getAuthor: {
       pagePattern: '/watch?v=:id',
@@ -468,7 +467,58 @@ const HOST_URL_SETTINGS_SHORT = Object.assign(
   urlSettingsEnt,
 )
 
+async function getBookmarkList(idList) {
+  if (!(Array.isArray(idList) && idList.length > 0)) {
+    return []
+  }
+
+  // const resultList = await Promise.allSettled(
+  //   idList.map(
+  //     (id) => browser.bookmarks.get(id)
+  //   )
+  // )
+
+  // return resultList
+  //   .map((result) => result.value)
+  //   .filter(Boolean)
+  //   .flat()
+
+  const list = await browser.bookmarks.get(idList)
+
+  return list
+}
+
+async function getBookmarkListDirty(idList) {
+  if (!(Array.isArray(idList) && idList.length > 0)) {
+    return []
+  }
+
+  const resultList = await Promise.allSettled(
+    idList.map(
+      (id) => browser.bookmarks.get(id)
+    )
+  )
+
+  return resultList
+    .map((result) => result.value)
+    .filter(Boolean)
+    .flat()
+}
 const MS_DIFF_FOR_SINGLE_BKM = 80
+
+function debounce(func, timeout = 300){
+  let timer;
+
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(
+      () => {
+        func.apply(this, args);
+      },
+      timeout,
+    );
+  };
+}
 
 function debounce_leading(func, timeout = 300){
   let timer;
@@ -1861,9 +1911,7 @@ async function getRecentList(nItems) {
     .map(([id]) => id)
 
   if (unknownIdList.length > 0) {
-    // logRA('getRecentList () 11 before await browser.bookmarks.get(unknownIdList)')
-    const unknownFolderList = await browser.bookmarks.get(unknownIdList)
-    // logRA('getRecentList () 11 after', unknownFolderList.length)
+    const unknownFolderList = await getBookmarkList(unknownIdList)
     unknownFolderList.forEach(({ id, title }) => {
       folderByIdMap[id].title = title
     })
@@ -1896,16 +1944,9 @@ async function filterFolders(idList, isFlatStructure) {
     return []
   }
 
-  // const folderList = await browser.bookmarks.get(idList)
-  const folderList = await Promise.all(
-    idList.map(
-      (id) => browser.bookmarks.get(id).catch(() => undefined)
-    )
-  )
+  const folderList = await getBookmarkListDirty(idList)
   logRA('filterFolders () 22', 'folderList', folderList.length, folderList)
   let filteredFolderList = folderList
-    .filter(Boolean)
-    .flat()
     .filter(({ title }) => !!title)
     .filter(({ title }) => isDescriptiveFolderTitle(title))
     .filter(({ title }) => !isDatedFolderTitle(title))
@@ -2907,6 +2948,10 @@ async function startPartialUrlSearch({ url, pathnamePattern }) {
 const logCUA = makeLogFunction({ module: 'clear-url.js' })
 
 const removeQueryParamsIfTarget = (url) => {
+  if (!url) {
+    return url
+  }
+
   logCUA('removeQueryParamsIfTarget () 00', url)
   let cleanUrl = url
 
@@ -3312,7 +3357,13 @@ async function moveBookmarkIgnoreInController({ id, parentId, index }) {
 }
 
 async function removeBookmark(bkmId) {
-  await browser.bookmarks.remove(bkmId)
+  try {
+    await browser.bookmarks.remove(bkmId)
+  // eslint-disable-next-line no-unused-vars
+  } catch (er)
+  // eslint-disable-next-line no-empty
+  {
+  }
 }
 const logBDT = makeLogFunction({ module: 'bookmark-dated.js' })
 
@@ -3326,7 +3377,7 @@ async function getDatedBookmarks({ url, template }) {
     return []
   }
 
-  const parentFolderList = await browser.bookmarks.get(uniqueParentIdList)
+  const parentFolderList = await getBookmarkList(uniqueParentIdList)
 
   const parentMap = Object.fromEntries(
     parentFolderList
@@ -3556,7 +3607,7 @@ class VisitedUrls {
     }
   }
 
-  _markUrl({ url, title, mark }) {
+  async _markUrl({ url, title, mark }) {
     if (!this.isOn) {
       return
     }
@@ -3572,18 +3623,24 @@ class VisitedUrls {
     switch (mark) {
       case URL_MARK_OPTIONS.VISITED: {
         logVU("**** _markUrl 11 VISITED", url)
-        createBookmarkVisited({ url, title })
+        await createBookmarkVisited({ url, title })
         break
       }
       case URL_MARK_OPTIONS.OPENED: {
         logVU("**** _markUrl 11 OPENED", url)
-        createBookmarkOpened({ url, title })
+        await createBookmarkOpened({ url, title })
         break
       }
     }
   }
 
-  _onReplaceUrlInActiveTab({ tabId, oldUrl: inOldUrl, newUrl: inNewUrl, oldTitle, newTitle }) {
+  _onReplaceUrlInActiveTab({
+    tabId,
+    oldUrl: inOldUrl,
+    oldTitle,
+    newUrl: inNewUrl,
+    newTitle,
+  }) {
     const oldUrl = removeQueryParamsIfTarget(inOldUrl);
     const newUrl = removeQueryParamsIfTarget(inNewUrl);
     logVU("_onReplaceUrlInTab 11/1", tabId, oldUrl)
@@ -3597,18 +3654,20 @@ class VisitedUrls {
     // const title = this.cacheVisitedUrls.get(oldUrl)
     // logVU("_onReplaceUrlInTab 22", 'title', title)
 
-    if (oldTitle) {
+    // logVU("_onReplaceUrlInTab 22 oldTitle", oldTitle)
+    if (oldUrl && oldTitle) {
+      // logVU("_onReplaceUrlInTab 222")
       this._markUrl({ url: oldUrl, title: oldTitle, mark: URL_MARK_OPTIONS.VISITED })
     }
 
     // mark newUrl as activated
-    this.cacheVisitedUrls.add(newUrl, newTitle)
-    // //
-    // const cachedTabData = this.cacheTabId.get(tabId)
-    // if (cachedTabData?.title) {
-    //   this.cacheVisitedUrls.add(newUrl, cachedTabData?.title)
-    // }
+    if (newUrl) {
+      // logVU("_onReplaceUrlInTab 33 newTitle", newTitle)
+      this.cacheVisitedUrls.add(newUrl, newTitle)
+    }
   }
+
+  _debouncedReplaceUrl = debounce(this._onReplaceUrlInActiveTab.bind(this), 40)
 
   updateTab(tabId, changeInfo, isActiveTab) {
     logVU("_onUpdateTab 00", tabId, changeInfo)
@@ -3669,18 +3728,22 @@ class VisitedUrls {
     }
 
     if (isActiveTab && afterData.url && afterData.title != undefined && afterData.isComplete) {
-      this._onReplaceUrlInActiveTab({
+      this._debouncedReplaceUrl({
         tabId,
         oldUrl: afterData?.before?.url,
-        newUrl: afterData.url,
         oldTitle: afterData?.before?.title,
+        newUrl: afterData.url,
         newTitle: afterData.title,
       })
     }
   }
 
   visitTab(tabId, url, title) {
-    if (!url || !title) {
+    if (!url) {
+      return
+    }
+
+    if (url.startsWith('chrome:') || url.startsWith('about:')) {
       return
     }
 
@@ -3699,32 +3762,15 @@ class VisitedUrls {
     if (!cachedTabData) {
       return
     }
-    const { url, title: tabTitle } = cachedTabData
+    const { url, title: cachedTitle } = cachedTabData
     logVU("closeTab 33", url)
+    const title = cachedTitle || url
 
-    const urlTitle = this.cacheVisitedUrls.get(url)
-
-    if (urlTitle) {
-      logVU("closeTab 44", urlTitle)
-      this._markUrl({ url, title: urlTitle, mark: URL_MARK_OPTIONS.VISITED })
+    if (this.cacheVisitedUrls.has(url)) {
+      logVU("closeTab 44", title)
+      this._markUrl({ url, title, mark: URL_MARK_OPTIONS.VISITED })
     } else {
-      let title = tabTitle
-      logVU("closeTab 55", tabTitle)
-
-      if (!title) {
-        const historyItemList = await browser.history.search({
-          text: url,
-          maxResults: 1,
-        })
-        if (0 < historyItemList.length) {
-          title = historyItemList[0].title
-        }
-      }
-
-      if (!title) {
-        title = url
-      }
-
+      logVU("closeTab 55", title)
       this._markUrl({ url, title, mark: URL_MARK_OPTIONS.OPENED })
     }
 
@@ -3906,15 +3952,7 @@ async function addBookmarkParentInfo({ bookmarkList, folderByIdMap, isFullPath =
   const knownFolderList = knownParentIdList.map((id) => folderByIdMap.get(id))
 
   if (unknownParentIdList.length > 0) {
-    // const unknownFolderList = await browser.bookmarks.get(unknownParentIdList)
-    const unknownFolderListList = await Promise.all(
-      unknownParentIdList.map(
-        (id) => browser.bookmarks.get(id).catch(() => undefined)
-      )
-    )
-    const unknownFolderList = unknownFolderListList
-      .filter(Boolean)
-      .flat()
+    const unknownFolderList = await getBookmarkList(unknownParentIdList)
 
     unknownFolderList.forEach((folder) => {
       folderByIdMap.add(
@@ -5641,7 +5679,11 @@ const OtherHandlers = {
 
       pageReady.clearUrlOnPageOpen({ tabId, url })
 
-      updateActiveTab({ tabId, debugCaller: `runtime.onMessage TAB_IS_READY` })
+      updateActiveTab({
+        tabId,
+        url,
+        debugCaller: `runtime.onMessage TAB_IS_READY`,
+      })
     }
   },
 
@@ -5842,8 +5884,8 @@ const tabsController = {
       })
     }
 
-    const toChangeInfo = changeInfo?.frozen
-      ? { ...changeInfo, title: Tab.title }
+    const toChangeInfo = changeInfo?.status == 'complete'
+      ? { title: Tab.title, ...changeInfo,  }
       : changeInfo
     visitedUrls.updateTab(tabId, toChangeInfo, Tab.active);
   },
