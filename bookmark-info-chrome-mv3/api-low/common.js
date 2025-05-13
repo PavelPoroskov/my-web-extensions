@@ -1,6 +1,20 @@
 
 const MS_DIFF_FOR_SINGLE_BKM = 80
 
+export function debounce(func, timeout = 300){
+  let timer;
+
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(
+      () => {
+        func.apply(this, args);
+      },
+      timeout,
+    );
+  };
+}
+
 export function debounce_leading(func, timeout = 300){
   let timer;
 

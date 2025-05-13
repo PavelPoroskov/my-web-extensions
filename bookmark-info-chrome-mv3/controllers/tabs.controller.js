@@ -67,8 +67,8 @@ export const tabsController = {
       })
     }
 
-    const toChangeInfo = changeInfo?.frozen
-      ? { ...changeInfo, title: Tab.title }
+    const toChangeInfo = changeInfo?.status == 'complete'
+      ? { title: Tab.title, ...changeInfo,  }
       : changeInfo
     visitedUrls.updateTab(tabId, toChangeInfo, Tab.active);
   },

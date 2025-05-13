@@ -7,6 +7,7 @@ import {
 } from '../bookmark-controller-api/folder-create.js'
 import {
   CacheWithLimit,
+  debounce,
   makeLogFunction,
 } from '../api-low/index.js'
 import {
@@ -47,7 +48,7 @@ class VisitedUrls {
     }
   }
 
-  _markUrl({ url, title, mark }) {
+  async _markUrl({ url, title, mark }) {
     if (!this.isOn) {
       return
     }
@@ -63,18 +64,24 @@ class VisitedUrls {
     switch (mark) {
       case URL_MARK_OPTIONS.VISITED: {
         logVU("**** _markUrl 11 VISITED", url)
-        createBookmarkVisited({ url, title })
+        await createBookmarkVisited({ url, title })
         break
       }
       case URL_MARK_OPTIONS.OPENED: {
         logVU("**** _markUrl 11 OPENED", url)
-        createBookmarkOpened({ url, title })
+        await createBookmarkOpened({ url, title })
         break
       }
     }
   }
 
-  _onReplaceUrlInActiveTab({ tabId, oldUrl: inOldUrl, newUrl: inNewUrl, oldTitle, newTitle }) {
+  _onReplaceUrlInActiveTab({
+    tabId,
+    oldUrl: inOldUrl,
+    oldTitle,
+    newUrl: inNewUrl,
+    newTitle,
+  }) {
     const oldUrl = removeQueryParamsIfTarget(inOldUrl);
     const newUrl = removeQueryParamsIfTarget(inNewUrl);
     logVU("_onReplaceUrlInTab 11/1", tabId, oldUrl)
@@ -88,18 +95,20 @@ class VisitedUrls {
     // const title = this.cacheVisitedUrls.get(oldUrl)
     // logVU("_onReplaceUrlInTab 22", 'title', title)
 
-    if (oldTitle) {
+    // logVU("_onReplaceUrlInTab 22 oldTitle", oldTitle)
+    if (oldUrl && oldTitle) {
+      // logVU("_onReplaceUrlInTab 222")
       this._markUrl({ url: oldUrl, title: oldTitle, mark: URL_MARK_OPTIONS.VISITED })
     }
 
     // mark newUrl as activated
-    this.cacheVisitedUrls.add(newUrl, newTitle)
-    // //
-    // const cachedTabData = this.cacheTabId.get(tabId)
-    // if (cachedTabData?.title) {
-    //   this.cacheVisitedUrls.add(newUrl, cachedTabData?.title)
-    // }
+    if (newUrl) {
+      // logVU("_onReplaceUrlInTab 33 newTitle", newTitle)
+      this.cacheVisitedUrls.add(newUrl, newTitle)
+    }
   }
+
+  _debouncedReplaceUrl = debounce(this._onReplaceUrlInActiveTab.bind(this), 40)
 
   updateTab(tabId, changeInfo, isActiveTab) {
     logVU("_onUpdateTab 00", tabId, changeInfo)
@@ -160,18 +169,22 @@ class VisitedUrls {
     }
 
     if (isActiveTab && afterData.url && afterData.title != undefined && afterData.isComplete) {
-      this._onReplaceUrlInActiveTab({
+      this._debouncedReplaceUrl({
         tabId,
         oldUrl: afterData?.before?.url,
-        newUrl: afterData.url,
         oldTitle: afterData?.before?.title,
+        newUrl: afterData.url,
         newTitle: afterData.title,
       })
     }
   }
 
   visitTab(tabId, url, title) {
-    if (!url || !title) {
+    if (!url) {
+      return
+    }
+
+    if (url.startsWith('chrome:') || url.startsWith('about:')) {
       return
     }
 
@@ -190,32 +203,15 @@ class VisitedUrls {
     if (!cachedTabData) {
       return
     }
-    const { url, title: tabTitle } = cachedTabData
+    const { url, title: cachedTitle } = cachedTabData
     logVU("closeTab 33", url)
+    const title = cachedTitle || url
 
-    const urlTitle = this.cacheVisitedUrls.get(url)
-
-    if (urlTitle) {
-      logVU("closeTab 44", urlTitle)
-      this._markUrl({ url, title: urlTitle, mark: URL_MARK_OPTIONS.VISITED })
+    if (this.cacheVisitedUrls.has(url)) {
+      logVU("closeTab 44", title)
+      this._markUrl({ url, title, mark: URL_MARK_OPTIONS.VISITED })
     } else {
-      let title = tabTitle
-      logVU("closeTab 55", tabTitle)
-
-      if (!title) {
-        const historyItemList = await chrome.history.search({
-          text: url,
-          maxResults: 1,
-        })
-        if (0 < historyItemList.length) {
-          title = historyItemList[0].title
-        }
-      }
-
-      if (!title) {
-        title = url
-      }
-
+      logVU("closeTab 55", title)
       this._markUrl({ url, title, mark: URL_MARK_OPTIONS.OPENED })
     }
 

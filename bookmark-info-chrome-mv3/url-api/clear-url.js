@@ -13,6 +13,10 @@ import {
 const logCUA = makeLogFunction({ module: 'clear-url.js' })
 
 export const removeQueryParamsIfTarget = (url) => {
+  if (!url) {
+    return url
+  }
+
   logCUA('removeQueryParamsIfTarget () 00', url)
   let cleanUrl = url
 
