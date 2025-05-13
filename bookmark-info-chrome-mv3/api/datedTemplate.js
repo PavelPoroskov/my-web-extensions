@@ -39,6 +39,9 @@ class DatedTemplate {
 
     return id;
   }
+  clearCache() {
+    this.cacheForDatedTemplate = {}
+  }
 }
 
 export const datedTemplate = new DatedTemplate()
