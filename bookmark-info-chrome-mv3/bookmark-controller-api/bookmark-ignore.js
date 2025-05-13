@@ -43,5 +43,11 @@ export async function moveBookmarkIgnoreInController({ id, parentId, index }) {
 }
 
 export async function removeBookmark(bkmId) {
-  await chrome.bookmarks.remove(bkmId)
+  try {
+    await chrome.bookmarks.remove(bkmId)
+  // eslint-disable-next-line no-unused-vars
+  } catch (er)
+  // eslint-disable-next-line no-empty
+  {
+  }
 }
