@@ -7,6 +7,8 @@ import {
   isVisitedDatedTemplate,
 } from '../folder-api/index.js'
 import {
+  getBookmarkList,
+  getBookmarkListDirty,
   makeLogFunction,
 } from '../api-low/index.js'
 
@@ -41,9 +43,7 @@ async function getRecentList(nItems) {
     .map(([id]) => id)
 
   if (unknownIdList.length > 0) {
-    // logRA('getRecentList () 11 before await chrome.bookmarks.get(unknownIdList)')
-    const unknownFolderList = await chrome.bookmarks.get(unknownIdList)
-    // logRA('getRecentList () 11 after', unknownFolderList.length)
+    const unknownFolderList = await getBookmarkList(unknownIdList)
     unknownFolderList.forEach(({ id, title }) => {
       folderByIdMap[id].title = title
     })
@@ -76,16 +76,9 @@ async function filterFolders(idList, isFlatStructure) {
     return []
   }
 
-  // const folderList = await chrome.bookmarks.get(idList)
-  const folderList = await Promise.all(
-    idList.map(
-      (id) => chrome.bookmarks.get(id).catch(() => undefined)
-    )
-  )
+  const folderList = await getBookmarkListDirty(idList)
   logRA('filterFolders () 22', 'folderList', folderList.length, folderList)
   let filteredFolderList = folderList
-    .filter(Boolean)
-    .flat()
     .filter(({ title }) => !!title)
     .filter(({ title }) => isDescriptiveFolderTitle(title))
     .filter(({ title }) => !isDatedFolderTitle(title))

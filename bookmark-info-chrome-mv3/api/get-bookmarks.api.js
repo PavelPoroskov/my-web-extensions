@@ -2,6 +2,7 @@ import {
   memo,
 } from '../api-mid/index.js'
 import {
+  getBookmarkList,
   makeLogFunction,
 } from '../api-low/index.js'
 import {
@@ -62,15 +63,7 @@ async function addBookmarkParentInfo({ bookmarkList, folderByIdMap, isFullPath =
   const knownFolderList = knownParentIdList.map((id) => folderByIdMap.get(id))
 
   if (unknownParentIdList.length > 0) {
-    // const unknownFolderList = await chrome.bookmarks.get(unknownParentIdList)
-    const unknownFolderListList = await Promise.all(
-      unknownParentIdList.map(
-        (id) => chrome.bookmarks.get(id).catch(() => undefined)
-      )
-    )
-    const unknownFolderList = unknownFolderListList
-      .filter(Boolean)
-      .flat()
+    const unknownFolderList = await getBookmarkList(unknownParentIdList)
 
     unknownFolderList.forEach((folder) => {
       folderByIdMap.add(

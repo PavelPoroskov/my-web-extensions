@@ -14,6 +14,7 @@ createFileForFirefox(
     'constant/url.api.config.js',
     'constant/index.js',
 
+    'api-low/bookmark.api.js',
     'api-low/common.js',
     'api-low/pluralize-rules.js',
     'api-low/pluralize.js',

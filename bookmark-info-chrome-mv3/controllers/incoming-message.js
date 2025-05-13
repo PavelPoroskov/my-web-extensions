@@ -83,7 +83,11 @@ const OtherHandlers = {
 
       pageReady.clearUrlOnPageOpen({ tabId, url })
 
-      updateActiveTab({ tabId, debugCaller: `runtime.onMessage TAB_IS_READY` })
+      updateActiveTab({
+        tabId,
+        url,
+        debugCaller: `runtime.onMessage TAB_IS_READY`,
+      })
     }
   },
 
