@@ -27,8 +27,8 @@ const urlSettingsGo = {
     ],
     searchParamList: [
       'v',
-      'list',
-      'index',
+      // ['list'],
+      ['index'],
       ['start_radio'],
       ['rv'],
     ],
