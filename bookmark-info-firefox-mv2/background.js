@@ -277,7 +277,10 @@ const urlSettingsGo = {
     ],
     searchParamList: [
       'v',
-      'list',
+      // ['list'],
+      ['index'],
+      ['start_radio'],
+      ['rv'],
     ],
     getAuthor: {
       pagePattern: '/watch?v=:id',
@@ -467,26 +470,15 @@ const HOST_URL_SETTINGS_SHORT = Object.assign(
   urlSettingsEnt,
 )
 
-async function getBookmarkList(idList) {
-  if (!(Array.isArray(idList) && idList.length > 0)) {
-    return []
-  }
+// async function getBookmarkList(idList) {
+//   if (!(Array.isArray(idList) && idList.length > 0)) {
+//     return []
+//   }
 
-  // const resultList = await Promise.allSettled(
-  //   idList.map(
-  //     (id) => browser.bookmarks.get(id)
-  //   )
-  // )
+//   const list = await browser.bookmarks.get(idList)
 
-  // return resultList
-  //   .map((result) => result.value)
-  //   .filter(Boolean)
-  //   .flat()
-
-  const list = await browser.bookmarks.get(idList)
-
-  return list
-}
+//   return list
+// }
 
 async function getBookmarkListDirty(idList) {
   if (!(Array.isArray(idList) && idList.length > 0)) {
@@ -1220,6 +1212,7 @@ const BOOKMARKS_MENU_FOLDER_ID = IS_BROWSER_FIREFOX ? 'menu________' : undefined
 const OTHER_BOOKMARKS_FOLDER_ID = IS_BROWSER_FIREFOX ? 'unfiled_____' : '2'
 const MOBILE_BOOKMARKS_FOLDER_ID = IS_BROWSER_FIREFOX ? 'mobile______' : undefined
 
+// eslint-disable-next-line no-unused-vars
 const BUILTIN_BROWSER_FOLDER_MAP = Object.fromEntries(
   [
     ROOT_FOLDER_ID,
@@ -1911,7 +1904,7 @@ async function getRecentList(nItems) {
     .map(([id]) => id)
 
   if (unknownIdList.length > 0) {
-    const unknownFolderList = await getBookmarkList(unknownIdList)
+    const unknownFolderList = await getBookmarkListDirty(unknownIdList)
     unknownFolderList.forEach(({ id, title }) => {
       folderByIdMap[id].title = title
     })
@@ -2728,50 +2721,59 @@ const getPathnamePart = ({ pathname, pattern }) => {
 }
 const logUIS = makeLogFunction({ module: 'url-is.js' })
 
-function makeIsSearchParamMatch(patternList) {
-  logUIS('makeIsSearchParamMatch () 00', patternList)
+function makeIsSearchParamItemMatch(patternList) {
+  logUIS('makeIsSearchParamItemMatch () 00', patternList)
   const isFnList = []
 
   patternList.forEach((pattern) => {
-    logUIS('makeIsSearchParamMatch () 11', 'pattern', pattern)
+    logUIS('makeIsSearchParamItemMatch () 11', 'pattern', pattern)
     const asteriskIndex = pattern.indexOf('*')
     const partsLength = pattern.split('*').length
     switch (true) {
       case asteriskIndex < 0: {
+        const equalIndex = pattern.indexOf('=')
         const fullPattern = pattern
-        isFnList.push((s) => s == fullPattern)
-        logUIS('makeIsSearchParamMatch () 11', '(s) => s == fullPattern', fullPattern)
+
+        if (0 < equalIndex) {
+          const [paramName, paramValue] = pattern.split('=')
+          isFnList.push(({ key, value }) => key == paramName && value == paramValue)
+          logUIS('makeIsSearchParamItemMatch () 11', '({k,v}) => k == k1 && v == v1', fullPattern)
+        } else {
+          isFnList.push(({ key }) => key == fullPattern)
+          logUIS('makeIsSearchParamItemMatch () 11', '(s) => s == fullPattern', fullPattern)
+        }
+
         break
       }
       case asteriskIndex == 0 && partsLength == 2: {
         if (pattern.length == 1) {
           isFnList.push(() => true)
-          logUIS('makeIsSearchParamMatch () 11', '() => true', pattern)
+          logUIS('makeIsSearchParamItemMatch () 11', '() => true', pattern)
         } else {
           const end = pattern.slice(asteriskIndex + 1)
           // isFnList.push((s) => s.endsWith(end) && end.length < s.length)
-          isFnList.push((s) => s.endsWith(end))
-          logUIS('makeIsSearchParamMatch () 11', '(s) => s.endsWith(end)', end)
+          isFnList.push(({ key }) => key.endsWith(end))
+          logUIS('makeIsSearchParamItemMatch () 11', '(s) => s.endsWith(end)', end)
         }
         break
       }
       case 0 < asteriskIndex && partsLength == 2: {
         const start = pattern.slice(0, asteriskIndex)
         if (asteriskIndex == pattern.length - 1) {
-          isFnList.push((s) => s.startsWith(start))
-          logUIS('makeIsSearchParamMatch () 11', '(s) => s.startsWith(start)', start)
+          isFnList.push(({ key }) => key.startsWith(start))
+          logUIS('makeIsSearchParamItemMatch () 11', '(s) => s.startsWith(start)', start)
         } else {
           const end = pattern.slice(asteriskIndex + 1)
           const minLength = start.length + end.length
-          isFnList.push((s) => s.startsWith(start) && s.endsWith(end) && minLength <= s.length)
-          logUIS('makeIsSearchParamMatch () 11', '(s) => s.startsWith(start) && s.endsWith(end) && minLength <= s.length', start, end)
+          isFnList.push(({ key }) => key.startsWith(start) && key.endsWith(end) && minLength <= key.length)
+          logUIS('makeIsSearchParamItemMatch () 11', '(s) => s.startsWith(start) && s.endsWith(end) && minLength <= s.length', start, end)
         }
       }
     }
   })
 
-  logUIS('makeIsSearchParamMatch () 99', 'isFnList.length', isFnList.length)
-  return (name) => isFnList.some((isFn) => isFn(name))
+  logUIS('makeIsSearchParamItemMatch () 99', 'isFnList.length', isFnList.length)
+  return ({ key, value }) => isFnList.some((isFn) => isFn({ key, value }))
 }
 
 const isPathnameMatchForPatternExactly = (pathname, pattern) => {
@@ -2838,13 +2840,13 @@ function isHostnameMatchForSearch(hostname, requiredHostname) {
   return hostname === requiredHostname
 }
 
-function isSearchParamsMatchForSearch(searchParams, requiredSearchParams) {
+function isSearchParamListMatchForPartialSearch(searchParams, requiredSearchParams) {
   if (!requiredSearchParams) {
     return true
   }
 
-  return Object.keys(requiredSearchParams)
-    .every((key) => searchParams.get(key) === requiredSearchParams[key])
+  return Object.entries(requiredSearchParams)
+    .every(([key, value]) => searchParams.get(key) === value)
 }
 
 // ?TODO /posts == /posts?page=1 OR clean on open /posts?page=1 TO /posts IF page EQ 1
@@ -2868,15 +2870,15 @@ async function startPartialUrlSearch({ url, pathnamePattern }) {
       const { importantSearchParamList } = targetHostSettings
 
       if (isNotEmptyArray(importantSearchParamList)) {
-        const isSearchParamMatch = makeIsSearchParamMatch(importantSearchParamList)
+        const isSearchParamItemMatch = makeIsSearchParamItemMatch(importantSearchParamList)
         const oSearchParams = oUrl.searchParams;
         logUS('startPartialUrlSearch 22', 'oSearchParams', oSearchParams)
 
         const matchedParamList = []
-        for (const [searchParam] of oSearchParams) {
-          logUS('startPartialUrlSearch 22', 'for (const [searchParam] of oSearchParams', searchParam)
-          if (isSearchParamMatch(searchParam)) {
-            matchedParamList.push(searchParam)
+        for (const [key, value] of oSearchParams) {
+          logUS('startPartialUrlSearch 22', 'for (const [searchParam] of oSearchParams', key)
+          if (isSearchParamItemMatch({ key, value })) {
+            matchedParamList.push(key)
           }
         }
 
@@ -2900,16 +2902,16 @@ async function startPartialUrlSearch({ url, pathnamePattern }) {
         pathname: oUrl.pathname,
         pattern: pathnamePattern,
       })
-    }
 
-    if (newPathname) {
       isPathnameMatchForSearch = (pathname, requiredPathname) => {
         const normalizedPathname = getPathnamePart({ pathname, pattern: pathnamePattern })
 
         return normalizedPathname === requiredPathname
       }
+
     } else {
       newPathname = getPathnameForSearch(oUrl.pathname)
+
       isPathnameMatchForSearch = (pathname, requiredPathname) => {
         const normalizedPathname = getPathnameForSearch(pathname)
 
@@ -2935,7 +2937,7 @@ async function startPartialUrlSearch({ url, pathnamePattern }) {
 
         return isHostnameMatchForSearch(oUrl.hostname, requiredHostname)
           && isPathnameMatchForSearch(oUrl.pathname, requiredPathname)
-          && isSearchParamsMatchForSearch(oUrl.searchParams, requiredSearchParams)
+          && isSearchParamListMatchForPartialSearch(oUrl.searchParams, requiredSearchParams)
       }
     }
     // eslint-disable-next-line no-unused-vars
@@ -2969,12 +2971,12 @@ const removeQueryParamsIfTarget = (url) => {
       if (isNotEmptyArray(removeSearchParamList)) {
         logCUA('removeQueryParamsIfTarget () 33 isNotEmptyArray(removeSearchParamList)')
 
-        const isSearchParamMatch = makeIsSearchParamMatch(removeSearchParamList)
+        const isSearchParamItemMatch = makeIsSearchParamItemMatch(removeSearchParamList)
 
         const matchedParamList = []
-        for (const [searchParam] of oSearchParams) {
-          if (isSearchParamMatch(searchParam)) {
-            matchedParamList.push(searchParam)
+        for (const [key, value] of oSearchParams) {
+          if (isSearchParamItemMatch({ key, value })) {
+            matchedParamList.push(key)
           }
         }
         // remove query params by list
@@ -3377,7 +3379,7 @@ async function getDatedBookmarks({ url, template }) {
     return []
   }
 
-  const parentFolderList = await getBookmarkList(uniqueParentIdList)
+  const parentFolderList = await getBookmarkListDirty(uniqueParentIdList)
 
   const parentMap = Object.fromEntries(
     parentFolderList
@@ -3952,7 +3954,7 @@ async function addBookmarkParentInfo({ bookmarkList, folderByIdMap, isFullPath =
   const knownFolderList = knownParentIdList.map((id) => folderByIdMap.get(id))
 
   if (unknownParentIdList.length > 0) {
-    const unknownFolderList = await getBookmarkList(unknownParentIdList)
+    const unknownFolderList = await getBookmarkListDirty(unknownParentIdList)
 
     unknownFolderList.forEach((folder) => {
       folderByIdMap.add(
@@ -4309,6 +4311,9 @@ class DatedTemplate {
 
     return id;
   }
+  clearCache() {
+    this.cacheForDatedTemplate = {}
+  }
 }
 
 const datedTemplate = new DatedTemplate()
@@ -4609,6 +4614,8 @@ async function onDeleteFolder(task) {
 
   memo.bkmFolderById.delete(bookmarkId);
   await tagList.removeTag(bookmarkId)
+
+  datedTemplate.clearCache()
 }
 
 async function folderQueueRunner(task) {
@@ -4679,120 +4686,6 @@ const folderQueue = new NodeTaskQueue(folderQueueRunner)
   }
 
   await traverseFolder({ folder: rootFolder, level: startLevel })
-}
-async function getMaxUsedSuffix() {
-  async function getFolders() {
-    const folderById = {};
-    let nTotalBookmark = 0
-    let nTotalFolder = 0
-
-    function onFolder({ folder, bookmarkList }) {
-      folderById[folder.id] = {
-        id: folder.id,
-        title: folder.title,
-      }
-
-      nTotalBookmark += bookmarkList.length
-      nTotalFolder += 1
-    }
-
-    const [rootFolder] = await browser.bookmarks.getTree();
-    await traverseFolderRecursively({ folder: rootFolder, onFolder })
-
-    return {
-      folderById,
-      nTotalBookmark,
-      nTotalFolder,
-    };
-  }
-
-  const { folderById } = await getFolders();
-
-  let maxUsedSuffix
-  const allowedFirstChar = '123456789'
-  const allowedSecondChar = '0123456789'
-
-  Object.values(folderById).forEach(({ title }) => {
-    const wordList = title.trimEnd().split(' ')
-    const lastWord = wordList.at(-1)
-    const firstWord = wordList.at(-2)
-
-    if (firstWord) {
-      const firstChar = lastWord[0]
-      const secondCharList = Array.from(lastWord.slice(1))
-
-      const isNumber = allowedFirstChar.includes(firstChar) && secondCharList.every((secondChar) => allowedSecondChar.includes(secondChar))
-
-      if (isNumber) {
-        maxUsedSuffix = Math.max(maxUsedSuffix || 0, +lastWord)
-      }
-    }
-  })
-
-  return maxUsedSuffix
-}
-
-async function flatChildren({ parentId, freeSuffix }) {
-  if (!parentId) {
-    return []
-  }
-
-  const moveList = []
-  const flatFolderNameSet = new Set()
-
-  function onFolder({ folder, bookmarkList, level }) {
-    const oData = {
-      id: folder.id,
-      bookmarkListLength: bookmarkList.length,
-      level,
-    }
-
-    if (flatFolderNameSet.has(folder.title)) {
-      oData.newTitle = `${folder.title} ${freeSuffix}`
-      freeSuffix += 1
-
-      flatFolderNameSet.add(oData.newTitle)
-    } else {
-      flatFolderNameSet.add(folder.title)
-    }
-
-    moveList.push(oData)
-  }
-
-  const [rootFolder] = await browser.bookmarks.getSubTree(parentId)
-  await traverseFolderRecursively({ folder: rootFolder, onFolder, startLevel: 0 })
-
-
-  const sortedMoveList = moveList
-    .sort((a,b) => -(a.level - b.level))
-
-  await sortedMoveList.reduce(
-    (promiseChain, { id, bookmarkListLength, level, newTitle }) => promiseChain.then(
-      async () => {
-        if (0 < bookmarkListLength) {
-          if (1 < level) {
-            await moveFolderIgnoreInController({ id, parentId })
-          }
-          if (newTitle && 0 < level) {
-            await updateFolder({ id, title: newTitle })
-          }
-        } else {
-          if (0 < level) {
-            await removeFolder(id)
-          }
-        }
-      }
-    ),
-    Promise.resolve(),
-  );
-}
-
-async function flatFolders() {
-  const usedSuffix = await getMaxUsedSuffix()
-  let freeSuffix = usedSuffix ? usedSuffix + 1 : 1;
-
-  await flatChildren({ parentId: BOOKMARKS_BAR_FOLDER_ID, freeSuffix })
-  await flatChildren({ parentId: OTHER_BOOKMARKS_FOLDER_ID, freeSuffix })
 }
 async function mergeSubFoldersLevelOne(parentId) {
   if (!parentId) {
@@ -4963,15 +4856,15 @@ async function getFolderMovements() {
 
   async function onFolder({ folder, level, bookmarkList, folderListLength }) {
     logMF('onFolder() 00', folder.title)
-    // // level 0: ROOT_FOLDER_ID
-    // // level 1: BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID
-    // if (level < 2) {
-    //   return
-    // }
-
-    if (folder.id in BUILTIN_BROWSER_FOLDER_MAP) {
+    // level 0: ROOT_FOLDER_ID
+    // level 1: BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID
+    if (!(2 <= level)) {
       return
     }
+
+    // if (folder.id in BUILTIN_BROWSER_FOLDER_MAP) {
+    //   return
+    // }
 
     if (bookmarkList.length == 0 && folderListLength == 0 && isDatedFolderTitle(folder.title)) {
       removeList.push(folder.id)
@@ -5493,8 +5386,6 @@ async function getUrlFromUrl() {
     await extensionSettings.update({
       [USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]: true,
     })
-
-    await flatFolders()
   }
 
   await orderBookmarks()

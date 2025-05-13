@@ -1,13 +1,13 @@
 
-export async function getBookmarkList(idList) {
-  if (!(Array.isArray(idList) && idList.length > 0)) {
-    return []
-  }
+// export async function getBookmarkList(idList) {
+//   if (!(Array.isArray(idList) && idList.length > 0)) {
+//     return []
+//   }
 
-  const list = await chrome.bookmarks.get(idList)
+//   const list = await chrome.bookmarks.get(idList)
 
-  return list
-}
+//   return list
+// }
 
 export async function getBookmarkListDirty(idList) {
   if (!(Array.isArray(idList) && idList.length > 0)) {
