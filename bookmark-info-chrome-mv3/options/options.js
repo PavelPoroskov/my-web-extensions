@@ -146,13 +146,15 @@ function restoreOptions(settings) {
   optionId = 'FLAT_BOOKMARKS';
   domId = `#${optionId}`
   element = document.querySelector(domId)
-  element.addEventListener('click', async () => {
+  element.addEventListener('click', async (evt) => {
     await chrome.runtime.sendMessage({
       command: EXTENSION_MSG_ID.OPTIONS_ASKS_FLAT_BOOKMARKS,
     });
     const text = 'Operation started'
     const value = document.querySelector('#FLAT_BOOKMARKS_RESULT');
     value.textContent = text;
+
+    evt.target.disabled = true;
 
     await wait(50)
   });
