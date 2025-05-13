@@ -1,5 +1,4 @@
 import {
-  flatFolders,
   orderBookmarks,
 } from '../bookmark-list-ops/index.js'
 import {
@@ -16,8 +15,6 @@ export async function moveToFlatFolderStructure() {
     await extensionSettings.update({
       [USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]: true,
     })
-
-    await flatFolders()
   }
 
   await orderBookmarks()

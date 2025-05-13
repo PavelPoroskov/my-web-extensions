@@ -8,7 +8,8 @@ export const BOOKMARKS_MENU_FOLDER_ID = IS_BROWSER_FIREFOX ? 'menu________' : un
 export const OTHER_BOOKMARKS_FOLDER_ID = IS_BROWSER_FIREFOX ? 'unfiled_____' : '2'
 export const MOBILE_BOOKMARKS_FOLDER_ID = IS_BROWSER_FIREFOX ? 'mobile______' : undefined
 
-export const BUILTIN_BROWSER_FOLDER_MAP = Object.fromEntries(
+// eslint-disable-next-line no-unused-vars
+const BUILTIN_BROWSER_FOLDER_MAP = Object.fromEntries(
   [
     ROOT_FOLDER_ID,
     BOOKMARKS_BAR_FOLDER_ID,
