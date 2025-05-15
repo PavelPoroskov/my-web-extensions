@@ -151,7 +151,7 @@ class TagList {
     })
   }
   _formatList(list) {
-    logTL('formatList () 00', list)
+    // logTL('formatList () 00', list)
 
     const inList = list.filter(({ parentTitle }) => !!parentTitle)
     const lastTagList = this.recentListDesc
@@ -238,7 +238,8 @@ class TagList {
     const requiredSlots = finalAddTagList.length
 
     if (requiredSlots === 0) {
-      logTL('getListWithBookmarks () 33', this.tagListFormat)
+      logTL('getListWithBookmarks () 33 length', this.tagListFormat.length)
+      // logTL(this.tagListFormat)
       return this.tagListFormat
     }
 
@@ -275,7 +276,10 @@ class TagList {
       )
     }
 
-    return this._formatList(resultList)
+    const tagListFormatWith = this._formatList(resultList)
+    logTL('getListWithBookmarks () 99', tagListFormatWith.length)
+
+    return tagListFormatWith
   }
   async addTag({ parentId, parentTitle }) {
     if (!this.isOn) {

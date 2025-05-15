@@ -114,6 +114,8 @@ async function updateTab({ tabId, url, debugCaller, useCache=false }) {
 
   const tagFromBookmarkList = await bookmarkListToTagList(bookmarkInfo.bookmarkList)
   const tagListList = tagList.getListWithBookmarks(tagFromBookmarkList)
+  // logUTB('updateTab() tagListList', tagListList.length,'tagList.nAvailableRows', tagList.nAvailableRows)
+  // logUTB(tagListList)
 
   const data = {
     bookmarkList,
