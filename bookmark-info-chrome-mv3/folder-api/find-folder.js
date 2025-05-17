@@ -3,6 +3,7 @@ import {
   OTHER_BOOKMARKS_FOLDER_ID,
 } from './special-folder.js';
 import {
+  trimTitle,
   trimLow,
   trimLowSingular,
   normalizeTitle,
@@ -13,15 +14,54 @@ import {
 
 const logFF = makeLogFunction({ module: 'find-folder.js' })
 
-export async function findFolderWithExactTitle({ title, rootId }) {
-  let foundItem
-
+async function findFolderWithExactTitle(title) {
   const nodeList = await chrome.bookmarks.search({ title });
+  const foundItem = nodeList.find((node) => !node.url)
 
-  if (rootId) {
-    foundItem = nodeList.find((node) => !node.url && node.parentId == rootId)
-  } else {
-    foundItem = nodeList.find((node) => !node.url)
+  return foundItem
+}
+
+export async function findFolderWithExactTitleInRoot({ title, rootId }) {
+  const nodeList = await chrome.bookmarks.search({ title });
+  const foundItem = nodeList.find((node) => !node.url && node.parentId == rootId)
+
+  return foundItem
+}
+
+function makeIsTitleMatch({ title, normalizeFn = (str) => str }) {
+  const pattern = normalizeFn(title)
+  const patternLength = pattern.length
+
+  return function isTitleMatch(testTitle) {
+    const normalizedTestTitle = normalizeFn(testTitle)
+
+    // if (normalizedTestTitle === pattern) {
+    //   return true
+    // }
+
+    if (normalizedTestTitle.startsWith(pattern)) {
+      const rest = normalizedTestTitle.slice(patternLength)
+
+      return rest.split(' ').filter(Boolean)
+        .every((word) => word.startsWith('#'))
+    }
+
+    return false
+  }
+}
+
+async function findByTitle({ title, normalizeFn }) {
+  let foundItem
+  const bookmarkList = await chrome.bookmarks.search(title);
+  const isTitleMatch = makeIsTitleMatch({ title, normalizeFn })
+
+  let i = 0
+  while (!foundItem && i < bookmarkList.length) {
+    const checkItem = bookmarkList[i]
+    if (!checkItem.url && isTitleMatch(checkItem.title)) {
+      foundItem = checkItem
+    }
+    i += 1
   }
 
   return foundItem
@@ -29,22 +69,13 @@ export async function findFolderWithExactTitle({ title, rootId }) {
 
 // example1: node.js -> NodeJS
 async function findTitleEndsWithJS(title) {
-  let foundItem
   const lowTitle = trimLow(title)
-
-  if (lowTitle.endsWith('.js')) {
-    const noDotTitle = `${lowTitle.slice(0, -3)}js`
-    const bookmarkList = await chrome.bookmarks.search(noDotTitle);
-
-    let i = 0
-    while (!foundItem && i < bookmarkList.length) {
-      const checkItem = bookmarkList[i]
-      if (!checkItem.url && trimLow(checkItem.title) === noDotTitle) {
-        foundItem = checkItem
-      }
-      i += 1
-    }
+  if (!lowTitle.endsWith('.js')) {
+    return
   }
+
+  const noDotTitle = `${lowTitle.slice(0, -3)}js`
+  const foundItem = await findByTitle({ title: noDotTitle, normalizeFn: trimLow })
 
   return foundItem
 }
@@ -56,18 +87,8 @@ async function findTitleRemoveDash(title) {
     return
   }
 
-  let foundItem
-  const noDashTitle = trimLowSingular(title.replaceAll('-', ''))
-  const bookmarkList = await chrome.bookmarks.search(noDashTitle);
-
-  let i = 0
-  while (!foundItem && i < bookmarkList.length) {
-    const checkItem = bookmarkList[i]
-    if (!checkItem.url && trimLowSingular(checkItem.title) === noDashTitle) {
-      foundItem = checkItem
-    }
-    i += 1
-  }
+  const noDashTitle = title.replaceAll('-', '')
+  const foundItem = await findByTitle({ title: noDashTitle, normalizeFn: trimLowSingular })
 
   return foundItem
 }
@@ -78,58 +99,27 @@ async function findTitleReplaceDashToSpace(title) {
     return
   }
 
-  let foundItem
-  const dashToSpaceTitle = trimLowSingular(title.replaceAll('-', ' '))
-  const bookmarkList = await chrome.bookmarks.search(dashToSpaceTitle);
-
-  let i = 0
-  while (!foundItem && i < bookmarkList.length) {
-    const checkItem = bookmarkList[i]
-    if (!checkItem.url && trimLowSingular(checkItem.title) === dashToSpaceTitle) {
-      foundItem = checkItem
-    }
-    i += 1
-  }
+  const dashToSpaceTitle = title.replaceAll('-', ' ')
+  const foundItem = await findByTitle({ title: dashToSpaceTitle, normalizeFn: trimLowSingular })
 
   return foundItem
 }
 
 // example1: AI Video -> ai-video
 async function findTitleReplaceSpaceToDash(title) {
-  const trimLowSingularTitle = trimLowSingular(title)
-  if (trimLowSingularTitle.indexOf(' ') == -1) {
+  const trimmedTitle = trimTitle(title)
+  if (trimmedTitle.indexOf(' ') == -1) {
     return
   }
 
-  let foundItem
-  const spaceToDashTitle = trimLowSingularTitle.replaceAll(' ', '-')
-  const bookmarkList = await chrome.bookmarks.search(spaceToDashTitle);
-
-  let i = 0
-  while (!foundItem && i < bookmarkList.length) {
-    const checkItem = bookmarkList[i]
-    if (!checkItem.url && trimLowSingular(checkItem.title) === spaceToDashTitle) {
-      foundItem = checkItem
-    }
-    i += 1
-  }
+  const spaceToDashTitle = title.replaceAll(' ', '-')
+  const foundItem = await findByTitle({ title: spaceToDashTitle, normalizeFn: trimLowSingular })
 
   return foundItem
 }
 
 async function findTitleNormalized(title) {
-  let foundItem
-  const normalizedTitle = normalizeTitle(title)
-  const bookmarkList = await chrome.bookmarks.search(title);
-
-  let i = 0
-  while (!foundItem && i < bookmarkList.length) {
-    const checkItem = bookmarkList[i]
-    if (!checkItem.url && normalizeTitle(checkItem.title) === normalizedTitle) {
-      foundItem = checkItem
-    }
-    i += 1
-  }
+  const foundItem = await findByTitle({ title, normalizeFn: normalizeTitle })
 
   return foundItem
 }
@@ -144,13 +134,13 @@ async function findTitleDropEnding(title) {
 
   let foundItem
   const dropEndTitle = lowTitle.slice(0, -3)
-  const normalizedTitle = normalizeTitle(title)
   const bookmarkList = await chrome.bookmarks.search(dropEndTitle);
+  const isTitleMatch = makeIsTitleMatch({ title, normalizeFn: normalizeTitle })
 
   let i = 0
   while (!foundItem && i < bookmarkList.length) {
     const checkItem = bookmarkList[i]
-    if (!checkItem.url && normalizeTitle(checkItem.title) === normalizedTitle) {
+    if (!checkItem.url && isTitleMatch(checkItem.title)) {
       foundItem = checkItem
     }
     i += 1
@@ -159,9 +149,9 @@ async function findTitleDropEnding(title) {
   return foundItem
 }
 
-function findFolderFrom({ normalizedTitle, startFolder }) {
+function findFolderFrom({ isTitleMatch, startFolder }) {
   function traverseSubFolder(folderNode) {
-    if (normalizeTitle(folderNode.title) === normalizedTitle) {
+    if (isTitleMatch(folderNode.title)) {
       return folderNode
     }
 
@@ -183,8 +173,10 @@ async function findFolderInSubtree({ title, parentId }) {
   const normalizedTitle = normalizeTitle(title)
   logFF('findFolderInSubtree 00 normalizedTitle', normalizedTitle, parentId)
   // search in direct children
+  const isTitleMatch = makeIsTitleMatch({ title, normalizeFn: normalizeTitle })
+
   const firstLevelNodeList = await chrome.bookmarks.getChildren(parentId)
-  let foundItem = firstLevelNodeList.find((node) => !node.url && normalizeTitle(node.title) === normalizedTitle)
+  let foundItem = firstLevelNodeList.find((node) => !node.url && isTitleMatch(node.title))
   logFF('findFolderInSubtree 11 firstLevelNodeList', foundItem)
 
   if (!foundItem) {
@@ -203,7 +195,7 @@ async function findFolderInSubtree({ title, parentId }) {
 
     let i = 0
     while (!foundItem && i < allSecondLevelFolderList.length) {
-      foundItem = findFolderFrom({ normalizedTitle, startFolder: allSecondLevelFolderList[i] })
+      foundItem = findFolderFrom({ isTitleMatch, startFolder: allSecondLevelFolderList[i] })
       i += 1
     }
     logFF('findFolderInSubtree 22 secondLevelFolderList', foundItem)
@@ -217,7 +209,12 @@ export async function findFolder(title) {
   let foundItem
 
   if (!foundItem) {
-    foundItem = await findFolderWithExactTitle({ title })
+    foundItem = await findTitleNormalized(title)
+    logFF('findTitleNormalized -> ', foundItem)
+  }
+
+  if (!foundItem) {
+    foundItem = await findFolderWithExactTitle(title)
     logFF('findFolderWithExactTitle -> ', foundItem)
   }
 
@@ -239,11 +236,6 @@ export async function findFolder(title) {
   if (!foundItem) {
     foundItem = await findTitleReplaceSpaceToDash(title)
     logFF('findTitleReplaceSpaceToDash -> ', foundItem)
-  }
-
-  if (!foundItem) {
-    foundItem = await findTitleNormalized(title)
-    logFF('findTitleNormalized -> ', foundItem)
   }
 
   if (!foundItem) {

@@ -4,7 +4,7 @@ import {
 import {
   OTHER_BOOKMARKS_FOLDER_ID,
   findFolder,
-  findFolderWithExactTitle,
+  findFolderWithExactTitleInRoot,
   getDatedTitle,
   isDatedFolderTemplate,
   getNewFolderRootId,
@@ -66,7 +66,7 @@ export async function findOrCreateDatedFolder({ templateTitle, templateId }) {
   const datedTitle = getDatedTitle(templateTitle)
   logFCR('findOrCreateDatedFolder () 11', 'datedTitle', datedTitle)
   const rootId = getNewFolderRootIdForDated(templateTitle, templateId)
-  let foundFolder = await findFolderWithExactTitle({ title: datedTitle, rootId })
+  let foundFolder = await findFolderWithExactTitleInRoot({ title: datedTitle, rootId })
 
   if (!foundFolder) {
     const firstLevelNodeList = await chrome.bookmarks.getChildren(rootId)
