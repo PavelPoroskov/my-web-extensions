@@ -33,6 +33,31 @@ export function debounce_leading(func, timeout = 300){
   };
 }
 
+export function debounce_leading3(func, timeout = 300){
+  let timer;
+  let nDeferred = 0
+
+  return (...args) => {
+    nDeferred = nDeferred + 1
+
+    if (!timer) {
+      nDeferred = 0
+      func.apply(this, args);
+    }
+
+    clearTimeout(timer);
+    timer = setTimeout(
+      () => {
+        timer = undefined;
+        if (0 < nDeferred) {
+          func.apply(this, args);
+        }
+      },
+      timeout,
+    );
+  };
+}
+
 export function ignoreBatch(func, timeout = MS_DIFF_FOR_SINGLE_BKM){
   let lastCallTime
   let timer;

@@ -194,9 +194,9 @@ class TagList {
 
     logTL('getListWithBookmarks () 00', addTagList)
 
-    if (this.changeProcessedCount !== this.changeCount) {
+    const changeCount = this.changeCount
+    if (this.changeProcessedCount < changeCount) {
       logTL('getListWithBookmarks () 11')
-      this.changeProcessedCount = this.changeCount
 
       this.recentListDesc = Object.entries(this._recentTagObj)
         .map(([parentId, { parentTitle, dateAdded }]) => ({ parentId, parentTitle, dateAdded }))
@@ -228,6 +228,10 @@ class TagList {
       this.tagIdSet = new Set(this.tagList.map(({ parentId }) => parentId))
 
       this.tagListFormat = this._formatList(this.tagList)
+
+      if (this.changeProcessedCount < changeCount) {
+        this.changeProcessedCount = changeCount
+      }
     }
 
 
@@ -286,7 +290,7 @@ class TagList {
       return
     }
 
-    logTL('_addRecentTagFromFolder 00', parentId, parentTitle)
+    logTL('addTag 00', parentId, parentTitle)
     // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
     if (this.isFlatStructure) {
       // if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
@@ -320,7 +324,7 @@ class TagList {
       }
     }
 
-    if (this.MAX_AVAILABLE_ROWS + 20 < Object.keys(this._recentTagObj).length) {
+    if (this.MAX_AVAILABLE_ROWS && this.MAX_AVAILABLE_ROWS + 20 < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
         .map(([parentId, { parentTitle, dateAdded }]) => ({ parentId, parentTitle, dateAdded }))
         .sort((a, b) => -(a.dateAdded - b.dateAdded))
