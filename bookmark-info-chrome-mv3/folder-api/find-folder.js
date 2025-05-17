@@ -13,59 +13,6 @@ import {
 
 const logFF = makeLogFunction({ module: 'find-folder.js' })
 
-function findFolderFrom({ normalizedTitle, startFolder }) {
-  function traverseSubFolder(folderNode) {
-    if (normalizeTitle(folderNode.title) === normalizedTitle) {
-      return folderNode
-    }
-
-    const folderList = folderNode.children
-      .filter(({ url }) => !url)
-
-    let foundItem
-    let i = 0
-    while (!foundItem && i < folderList.length) {
-      foundItem = traverseSubFolder(folderList[i])
-      i += 1
-    }
-  }
-
-  return traverseSubFolder(startFolder)
-}
-
-async function findFolderInSubtree({ title, parentId }) {
-  const normalizedTitle = normalizeTitle(title)
-  logFF('findFolderInSubtree 00 normalizedTitle', normalizedTitle, parentId)
-  // search in direct children
-  const firstLevelNodeList = await chrome.bookmarks.getChildren(parentId)
-  let foundItem = firstLevelNodeList.find((node) => !node.url && normalizeTitle(node.title) === normalizedTitle)
-  logFF('findFolderInSubtree 11 firstLevelNodeList', foundItem)
-
-  if (!foundItem) {
-    // search in subfolders of direct children
-    const [otherBookmarks] = await chrome.bookmarks.getSubTree(parentId)
-    const batchList = []
-
-    for (const firstLevelNode of otherBookmarks.children) {
-      if (!firstLevelNode.url) {
-        const secondLevelFolderList = firstLevelNode.children.filter(({ url }) => !url)
-        batchList.push(secondLevelFolderList)
-      }
-    }
-
-    const allSecondLevelFolderList = batchList.flat()
-
-    let i = 0
-    while (!foundItem && i < allSecondLevelFolderList.length) {
-      foundItem = findFolderFrom({ normalizedTitle, startFolder: allSecondLevelFolderList[i] })
-      i += 1
-    }
-    logFF('findFolderInSubtree 22 secondLevelFolderList', foundItem)
-  }
-
-  return foundItem
-}
-
 export async function findFolderWithExactTitle({ title, rootId }) {
   let foundItem
 
@@ -207,6 +154,59 @@ async function findTitleDropEnding(title) {
       foundItem = checkItem
     }
     i += 1
+  }
+
+  return foundItem
+}
+
+function findFolderFrom({ normalizedTitle, startFolder }) {
+  function traverseSubFolder(folderNode) {
+    if (normalizeTitle(folderNode.title) === normalizedTitle) {
+      return folderNode
+    }
+
+    const folderList = folderNode.children
+      .filter(({ url }) => !url)
+
+    let foundItem
+    let i = 0
+    while (!foundItem && i < folderList.length) {
+      foundItem = traverseSubFolder(folderList[i])
+      i += 1
+    }
+  }
+
+  return traverseSubFolder(startFolder)
+}
+
+async function findFolderInSubtree({ title, parentId }) {
+  const normalizedTitle = normalizeTitle(title)
+  logFF('findFolderInSubtree 00 normalizedTitle', normalizedTitle, parentId)
+  // search in direct children
+  const firstLevelNodeList = await chrome.bookmarks.getChildren(parentId)
+  let foundItem = firstLevelNodeList.find((node) => !node.url && normalizeTitle(node.title) === normalizedTitle)
+  logFF('findFolderInSubtree 11 firstLevelNodeList', foundItem)
+
+  if (!foundItem) {
+    // search in subfolders of direct children
+    const [otherBookmarks] = await chrome.bookmarks.getSubTree(parentId)
+    const batchList = []
+
+    for (const firstLevelNode of otherBookmarks.children) {
+      if (!firstLevelNode.url) {
+        const secondLevelFolderList = firstLevelNode.children.filter(({ url }) => !url)
+        batchList.push(secondLevelFolderList)
+      }
+    }
+
+    const allSecondLevelFolderList = batchList.flat()
+
+    let i = 0
+    while (!foundItem && i < allSecondLevelFolderList.length) {
+      foundItem = findFolderFrom({ normalizedTitle, startFolder: allSecondLevelFolderList[i] })
+      i += 1
+    }
+    logFF('findFolderInSubtree 22 secondLevelFolderList', foundItem)
   }
 
   return foundItem
