@@ -530,6 +530,31 @@ function debounce_leading(func, timeout = 300){
   };
 }
 
+function debounce_leading3(func, timeout = 300){
+  let timer;
+  let nDeferred = 0
+
+  return (...args) => {
+    nDeferred = nDeferred + 1
+
+    if (!timer) {
+      nDeferred = 0
+      func.apply(this, args);
+    }
+
+    clearTimeout(timer);
+    timer = setTimeout(
+      () => {
+        timer = undefined;
+        if (0 < nDeferred) {
+          func.apply(this, args);
+        }
+      },
+      timeout,
+    );
+  };
+}
+
 function ignoreBatch(func, timeout = MS_DIFF_FOR_SINGLE_BKM){
   let lastCallTime
   let timer;
@@ -2275,7 +2300,7 @@ class TagList {
     })
   }
   _formatList(list) {
-    logTL('formatList () 00', list)
+    // logTL('formatList () 00', list)
 
     const inList = list.filter(({ parentTitle }) => !!parentTitle)
     const lastTagList = this.recentListDesc
@@ -2318,9 +2343,9 @@ class TagList {
 
     logTL('getListWithBookmarks () 00', addTagList)
 
-    if (this.changeProcessedCount !== this.changeCount) {
+    const changeCount = this.changeCount
+    if (this.changeProcessedCount < changeCount) {
       logTL('getListWithBookmarks () 11')
-      this.changeProcessedCount = this.changeCount
 
       this.recentListDesc = Object.entries(this._recentTagObj)
         .map(([parentId, { parentTitle, dateAdded }]) => ({ parentId, parentTitle, dateAdded }))
@@ -2352,6 +2377,10 @@ class TagList {
       this.tagIdSet = new Set(this.tagList.map(({ parentId }) => parentId))
 
       this.tagListFormat = this._formatList(this.tagList)
+
+      if (this.changeProcessedCount < changeCount) {
+        this.changeProcessedCount = changeCount
+      }
     }
 
 
@@ -2362,7 +2391,8 @@ class TagList {
     const requiredSlots = finalAddTagList.length
 
     if (requiredSlots === 0) {
-      logTL('getListWithBookmarks () 33', this.tagListFormat)
+      logTL('getListWithBookmarks () 33 length', this.tagListFormat.length)
+      // logTL(this.tagListFormat)
       return this.tagListFormat
     }
 
@@ -2399,14 +2429,17 @@ class TagList {
       )
     }
 
-    return this._formatList(resultList)
+    const tagListFormatWith = this._formatList(resultList)
+    logTL('getListWithBookmarks () 99', tagListFormatWith.length)
+
+    return tagListFormatWith
   }
   async addTag({ parentId, parentTitle }) {
     if (!this.isOn) {
       return
     }
 
-    logTL('_addRecentTagFromFolder 00', parentId, parentTitle)
+    logTL('addTag 00', parentId, parentTitle)
     // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
     if (this.isFlatStructure) {
       // if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
@@ -2440,7 +2473,7 @@ class TagList {
       }
     }
 
-    if (this.MAX_AVAILABLE_ROWS + 20 < Object.keys(this._recentTagObj).length) {
+    if (this.MAX_AVAILABLE_ROWS && this.MAX_AVAILABLE_ROWS + 20 < Object.keys(this._recentTagObj).length) {
       const redundantIdList = Object.entries(this._recentTagObj)
         .map(([parentId, { parentTitle, dateAdded }]) => ({ parentId, parentTitle, dateAdded }))
         .sort((a, b) => -(a.dateAdded - b.dateAdded))
@@ -4397,6 +4430,8 @@ async function updateTab({ tabId, url, debugCaller, useCache=false }) {
 
   const tagFromBookmarkList = await bookmarkListToTagList(bookmarkInfo.bookmarkList)
   const tagListList = tagList.getListWithBookmarks(tagFromBookmarkList)
+  // logUTB('updateTab() tagListList', tagListList.length,'tagList.nAvailableRows', tagList.nAvailableRows)
+  // logUTB(tagListList)
 
   const data = {
     bookmarkList,
@@ -4458,7 +4493,9 @@ async function updateTabTask(options) {
   })
 }
 
-const updateActiveTab = debounce_leading(updateTabTask, 30)
+const updateActiveTab = IS_BROWSER_CHROME
+  ? debounce_leading3(updateTabTask, 50)
+  : debounce_leading(updateTabTask, 50)
 
 async function afterUserCreatedFolderInGUI({ id, parentId, title }) {
   const moveArgs = {}
