@@ -99,13 +99,13 @@ class TagList {
 
     this._recentTagObj = await filterRecentTagObj(this._recentTagObj, this.isFlatStructure)
     this._fixedTagObj = await filterFixedTagObj(this._fixedTagObj, this.isFlatStructure)
+
+    this._markUpdates()
     await setOptions({
       [INTERNAL_VALUES.TAG_LIST_SESSION_STARTED]: true,
       [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj,
       [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj,
     })
-
-    this._markUpdates()
   }
   async updateAvailableRows(availableRows) {
     if (!this.isOn) {
@@ -137,8 +137,8 @@ class TagList {
       })
     }
 
-    await setOptions(updateObj)
     this._markUpdates()
+    await setOptions(updateObj)
   }
   async openTagList(isOpen) {
     if (!this.isOn) {
@@ -337,7 +337,7 @@ class TagList {
     }
 
     this._markUpdates()
-    setOptions({
+    await setOptions({
       [INTERNAL_VALUES.TAG_LIST_RECENT_MAP]: this._recentTagObj,
       ...fixedTagUpdate,
     })
@@ -408,9 +408,6 @@ class TagList {
 
   async useSettings({ isOn, userSettings }) {
     this.isOn = isOn
-
-    this.changeCount = 0
-    this.changeProcessedCount = -1
 
     await this._readFromStorage({ userSettings })
   }
