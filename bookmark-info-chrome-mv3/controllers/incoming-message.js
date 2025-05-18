@@ -85,7 +85,6 @@ const OtherHandlers = {
 
       updateActiveTab({
         tabId,
-        url,
         debugCaller: `runtime.onMessage TAB_IS_READY`,
       })
     }

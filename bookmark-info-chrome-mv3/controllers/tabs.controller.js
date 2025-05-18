@@ -62,7 +62,6 @@ export const tabsController = {
 
       updateActiveTab({
         tabId,
-        url: Tab.url,
         debugCaller: `tabs.onUpdated complete`,
       })
     }
