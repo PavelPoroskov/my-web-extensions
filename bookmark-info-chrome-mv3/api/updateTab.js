@@ -99,10 +99,8 @@ async function updateTab({ tabId, url, debugCaller, useCache=false }) {
   logUTB(`UPDATE-TAB () 00 <- ${debugCaller}`, tabId);
   logUTB('UPDATE-TAB () 11', url);
 
-  await initExtension({ debugCaller: 'updateTab ()' })
   const settings = await extensionSettings.get()
   const isShowTitle = settings[USER_OPTION.SHOW_BOOKMARK_TITLE]
-
   const bookmarkInfo = await getBookmarkInfoUni({ url, useCache, isShowTitle })
 
   let bookmarkList = bookmarkInfo.bookmarkList
@@ -171,6 +169,8 @@ async function updateTabTask(options) {
   if (!(url && isSupportedProtocol(url))) {
     return
   }
+
+  await initExtension({ debugCaller: 'updateTab ()' })
 
   await updateTab({
     ...options,
