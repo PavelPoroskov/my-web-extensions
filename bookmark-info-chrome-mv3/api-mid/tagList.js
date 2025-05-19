@@ -76,26 +76,18 @@ class TagList {
     this.AVAILABLE_ROWS = savedObj[INTERNAL_VALUES.TAG_LIST_AVAILABLE_ROWS]
     this.MAX_AVAILABLE_ROWS = this.AVAILABLE_ROWS
 
-    let actualRecentTagObj = {}
-    if (!savedObj[INTERNAL_VALUES.TAG_LIST_SESSION_STARTED]) {
-      actualRecentTagObj = await getRecentTagObj(this.AVAILABLE_ROWS)
-    }
+    this._recentTagObj = savedObj[INTERNAL_VALUES.TAG_LIST_RECENT_MAP] || {}
+    this._fixedTagObj = savedObj[INTERNAL_VALUES.TAG_LIST_FIXED_MAP] || {}
 
-    const savedRecentObj = savedObj[INTERNAL_VALUES.TAG_LIST_RECENT_MAP] || {}
-    const savedRecentObj2 = Object.fromEntries(
-      Object.entries(savedRecentObj).map(([parentId, item]) => [
-        parentId,
-        {
-          parentTitle: item.parentTitle || item.title,
-          dateAdded: item.dateAdded,
+    if (Object.keys(this._recentTagObj) < this.AVAILABLE_ROWS) {
+      if (!savedObj[INTERNAL_VALUES.TAG_LIST_SESSION_STARTED]) {
+        const actualRecentTagObj = await getRecentTagObj(this.AVAILABLE_ROWS)
+        this._recentTagObj = {
+          ...actualRecentTagObj,
+          ...this._recentTagObj,
         }
-      ])
-    )
-    this._recentTagObj = {
-      ...savedRecentObj2,
-      ...actualRecentTagObj,
+      }
     }
-    this._fixedTagObj = savedObj[INTERNAL_VALUES.TAG_LIST_FIXED_MAP]
 
     this._recentTagObj = await filterRecentTagObj(this._recentTagObj, this.isFlatStructure)
     this._fixedTagObj = await filterFixedTagObj(this._fixedTagObj, this.isFlatStructure)
@@ -128,8 +120,8 @@ class TagList {
     if (beforeAvailableRows < availableRows) {
       let actualRecentTagObj = await getRecentTagObj(this.AVAILABLE_ROWS)
       this._recentTagObj = {
-        ...this._recentTagObj,
         ...actualRecentTagObj,
+        ...this._recentTagObj,
       }
       this._recentTagObj = await filterRecentTagObj(this._recentTagObj, this.isFlatStructure)
       Object.assign(updateObj, {
