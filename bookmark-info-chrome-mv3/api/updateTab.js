@@ -78,7 +78,6 @@ async function bookmarkListToTagList(bookmarkList) {
   bookmarkList.forEach(({ parentId, parentTitle }) => {
     if (isDatedFolderTitle(parentTitle)) {
       if (!isVisitedDatedTitle(parentTitle)) {
-        //secondParentId = await datedTemplate.getTagIdForDated(title)
         const templateTitle = getDatedTemplate(parentTitle)
         templateTitleList.push(templateTitle)
       }
@@ -88,7 +87,7 @@ async function bookmarkListToTagList(bookmarkList) {
   })
 
   const templateTagList = await Promise.all(templateTitleList.map(
-    (templateTitle) => datedTemplate.getTagIdForTemplate(templateTitle)
+    (templateTitle) => datedTemplate.getIdForDatedTemplateFolder(templateTitle)
       .then((templateId) => ({ parentId: templateId, parentTitle: templateTitle }))
   ))
 

@@ -14,8 +14,8 @@ const logDT = makeLogFunction({ module: 'datedTemplate.js' })
 class DatedTemplate {
   cacheForDatedTemplate = {}
 
-  async getTagIdForTemplate(templateTitle) {
-    logDT('getTagIdForTemplate() 00', templateTitle)
+  async getIdForDatedTemplateFolder(templateTitle) {
+    logDT('getIdForDatedTemplateFolder() 00', templateTitle)
     let id = this.cacheForDatedTemplate[templateTitle]
     if (id) {
       return id;
@@ -28,14 +28,14 @@ class DatedTemplate {
 
     return id;
   }
-  async getTagIdForDated(title) {
-    logDT('getTagIdForDated() 00', title)
+  async getParentIdForDatedFolder(title) {
+    logDT('getParentIdForDatedFolder() 00', title)
 
     const templateTitle = getDatedTemplate(title)
-    logDT('getTagIdForDated() 11', templateTitle)
+    logDT('getParentIdForDatedFolder() 11', templateTitle)
 
-    const id = await this.getTagIdForTemplate(templateTitle);
-    logDT('getTagIdForDated() 22', id)
+    const id = await this.getIdForDatedTemplateFolder(templateTitle);
+    logDT('getParentIdForDatedFolder() 22', id)
 
     return id;
   }
