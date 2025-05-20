@@ -37,6 +37,8 @@ async function onChangeFolder(task) {
 
   memo.bkmFolderById.delete(bookmarkId);
   await tagList.addTag({ parentId: node.id, parentTitle: node.title })
+
+  datedTemplate.clearCache(bookmarkId)
 }
 
 async function onDeleteFolder(task) {
@@ -45,7 +47,7 @@ async function onDeleteFolder(task) {
   memo.bkmFolderById.delete(bookmarkId);
   await tagList.removeTag(bookmarkId)
 
-  datedTemplate.clearCache()
+  datedTemplate.clearCache(bookmarkId)
 }
 
 async function folderQueueRunner(task) {

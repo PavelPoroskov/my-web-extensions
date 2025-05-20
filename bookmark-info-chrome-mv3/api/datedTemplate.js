@@ -12,11 +12,13 @@ import {
 const logDT = makeLogFunction({ module: 'datedTemplate.js' })
 
 class DatedTemplate {
-  cacheForDatedTemplate = {}
+  // title to id
+  cacheTitleToId = {}
+  mapIdToTitle = {}
 
   async getIdForDatedTemplateFolder(templateTitle) {
     logDT('getIdForDatedTemplateFolder() 00', templateTitle)
-    let id = this.cacheForDatedTemplate[templateTitle]
+    let id = this.cacheTitleToId[templateTitle]
     if (id) {
       return id;
     }
@@ -24,7 +26,8 @@ class DatedTemplate {
     // TODO wait when create. use Promise.withResolvers. to not crete second 'opened DD-MM-YYYY' on closing window
     const folder = await findOrCreateFolder(templateTitle)
     id = folder.id
-    this.cacheForDatedTemplate[templateTitle] = id
+    this.cacheTitleToId[templateTitle] = id
+    this.mapIdToTitle[id] = id
 
     return id;
   }
@@ -39,8 +42,13 @@ class DatedTemplate {
 
     return id;
   }
-  clearCache() {
-    this.cacheForDatedTemplate = {}
+  clearCache(folderId) {
+    const title = this.mapIdToTitle[folderId]
+
+    if (title) {
+      delete this.mapIdToTitle[folderId]
+      delete this.cacheTitleToId[title]
+    }
   }
 }
 
