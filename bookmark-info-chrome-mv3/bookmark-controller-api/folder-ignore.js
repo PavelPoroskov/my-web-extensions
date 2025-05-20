@@ -56,6 +56,11 @@ export async function moveFolderContentToStart(fromFolderId, toFolderId) {
   );
 }
 
+export async function updateFolderIgnoreInController({ id, title }) {
+  ignoreBkmControllerApiActionSet.addIgnoreUpdate(id)
+  await chrome.bookmarks.update(id, { title })
+}
+
 export async function updateFolder({ id, title }) {
   await chrome.bookmarks.update(id, { title })
 }

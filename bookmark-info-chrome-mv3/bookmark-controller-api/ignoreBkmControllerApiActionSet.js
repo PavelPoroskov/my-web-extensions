@@ -48,8 +48,8 @@ class IgnoreBkmControllerApiActionSet {
   // addIgnoreRemove = this.makeAddIgnoreAction('remove')
   // hasIgnoreRemove = this.makeHasIgnoreAction('remove')
 
-  // addIgnoreUpdate = this.makeAddIgnoreAction('update')
-  // hasIgnoreUpdate = this.makeHasIgnoreAction('update')
+  addIgnoreUpdate = this.makeAddIgnoreAction('update')
+  hasIgnoreUpdate = this.makeHasIgnoreAction('update')
 }
 
 export const ignoreBkmControllerApiActionSet = new IgnoreBkmControllerApiActionSet()

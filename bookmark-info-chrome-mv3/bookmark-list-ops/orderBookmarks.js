@@ -5,6 +5,8 @@ import {
   UNCLASSIFIED_TITLE,
 } from '../folder-api/index.js'
 import {
+  compareDatedTitle,
+  datedTemplate,
   findOrCreateFolderByTitleInRoot,
 } from '../bookmark-controller-api/index.js'
 import {
@@ -37,13 +39,14 @@ const logOD = makeLogFunction({ module: 'orderBookmarks.js' })
 export async function orderBookmarks() {
   logOD('orderBookmarks() 00')
 
+  const datedRootFreshId = await datedTemplate.getIdDatedRootFresh()
+  const datedRootOthersId = await datedTemplate.getIdDatedRootOthers()
   await findOrCreateFolderByTitleInRoot(UNCLASSIFIED_TITLE)
 
   logOD('orderBookmarks() 11')
   await moveFolders()
   logOD('orderBookmarks() 11.2')
-  await moveOldDatedFolders(BOOKMARKS_BAR_FOLDER_ID)
-  await moveOldDatedFolders(BOOKMARKS_MENU_FOLDER_ID)
+  await moveOldDatedFolders({ fromId: datedRootFreshId, toId: datedRootOthersId })
 
   logOD('orderBookmarks() 22')
   await moveRootBookmarksToUnclassified()
@@ -55,9 +58,11 @@ export async function orderBookmarks() {
   await mergeSubFoldersLevelOneAndTwo(OTHER_BOOKMARKS_FOLDER_ID)
 
   logOD('orderBookmarks() 44')
-  await sortFolders(BOOKMARKS_BAR_FOLDER_ID)
-  await sortFolders(BOOKMARKS_MENU_FOLDER_ID)
-  await sortFolders(OTHER_BOOKMARKS_FOLDER_ID)
+  await sortFolders({ parentId: BOOKMARKS_BAR_FOLDER_ID })
+  await sortFolders({ parentId: BOOKMARKS_MENU_FOLDER_ID })
+  await sortFolders({ parentId: OTHER_BOOKMARKS_FOLDER_ID })
+  await sortFolders({ parentId: datedRootFreshId, compare: compareDatedTitle })
+  await sortFolders({ parentId: datedRootOthersId, compare: compareDatedTitle })
 
   logOD('orderBookmarks() 55')
   await removeDoubleBookmarks()

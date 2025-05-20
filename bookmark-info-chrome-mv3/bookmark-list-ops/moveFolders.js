@@ -1,6 +1,5 @@
 import {
   BOOKMARKS_BAR_FOLDER_ID,
-  BOOKMARKS_MENU_FOLDER_ID,
   OTHER_BOOKMARKS_FOLDER_ID,
   isTopFolder,
   isDatedFolderTitle,
@@ -30,9 +29,8 @@ async function getFolderCorrectParentIdByTitle(title) {
   }
 
   if (isDatedFolderTitle(title)) {
-    parentId = BOOKMARKS_MENU_FOLDER_ID || BOOKMARKS_BAR_FOLDER_ID
-
-    secondParentId = await datedTemplate.getParentIdForDatedTitle(title)
+    parentId = await datedTemplate.getIdDatedRootFresh()
+    secondParentId = await datedTemplate.getIdDatedRootOthers()
   }
 
   return {

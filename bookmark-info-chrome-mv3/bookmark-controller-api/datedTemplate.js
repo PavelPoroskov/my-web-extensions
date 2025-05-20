@@ -13,6 +13,21 @@ import {
 
 const logDT = makeLogFunction({ module: 'datedTemplate.js' })
 
+const DATED_ROOT_FRESH = '@D fresh'
+const DATED_ROOT_OTHERS = '@D others'
+
+export function compareDatedTitle(a,b) {
+  const partsA = a.split('.')
+  const orderA = partsA.at(-1)
+  const restA = partsA.slice(0, -1).join('.')
+
+  const partsB = b.split('.')
+  const orderB = partsB.at(-1)
+  const restB = partsB.slice(0, -1).join('.')
+
+  return (orderA || '').localeCompare(orderB || '') || (restA || '').localeCompare(restB || '')
+}
+
 class DatedTemplate {
   // title to id
   cacheTitleToId = {}
@@ -47,6 +62,7 @@ class DatedTemplate {
     return id
   }
   async getIdForDatedTemplateTitle(templateTitle) {
+  // async getIdForTitle(templateTitle) {
     logDT('getIdForDatedTemplateTitle() 00', templateTitle)
 
     const id = await this._useCache({
@@ -57,12 +73,22 @@ class DatedTemplate {
 
     return id
   }
+  async getIdDatedRootFresh() {
+    const id = await this.getIdForDatedTemplateTitle(DATED_ROOT_FRESH)
+    return id
+  }
+  async getIdDatedRootOthers() {
+    const id = await this.getIdForDatedTemplateTitle(DATED_ROOT_OTHERS)
+    return id
+  }
   async findOrCreateDatedFolderId({ templateTitle, templateId }) {
     logDT('findOrCreateDatedFolderWithCache() 00', templateTitle, templateId)
 
+    const rootId = await this.getIdDatedRootFresh()
+
     const id = await this._useCache({
       getKey: (options) => getDatedTitle(options.templateTitle),
-      getValue: findOrCreateDatedFolder,
+      getValue: (options) => findOrCreateDatedFolder({ ...options, rootId }),
       options: { templateTitle, templateId },
     })
 

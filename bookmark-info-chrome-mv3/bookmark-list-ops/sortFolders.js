@@ -1,11 +1,8 @@
 import {
-  isDatedFolderTemplate,
-} from '../folder-api/index.js';
-import {
   moveFolderIgnoreInController,
 } from '../bookmark-controller-api/index.js'
 
-export async function sortFolders(parentId) {
+export async function sortFolders({ parentId, compare=(a,b)=> a.localeCompare(b) }) {
   if (!parentId) {
     return
   }
@@ -15,7 +12,7 @@ export async function sortFolders(parentId) {
 
   const sortedNodeList = nodeList
     .filter(({ url }) => !url)
-    .toSorted(({ title: a }, { title: b }) => a.localeCompare(b))
+    .toSorted(({ title: a }, { title: b }) => compare(a,b))
 
   let minMoveIndex = -1
 
@@ -38,17 +35,6 @@ export async function sortFolders(parentId) {
   await sortedNodeList.reduce(
     (promiseChain, node, index) => promiseChain.then(
       () => placeFolder({ node, index })
-    ),
-    Promise.resolve(),
-  );
-
-
-  const subfolderList = sortedNodeList
-    .filter(({ title }) => isDatedFolderTemplate(title))
-
-  await subfolderList.reduce(
-    (promiseChain, node) => promiseChain.then(
-      () => sortFolders(node.id)
     ),
     Promise.resolve(),
   );

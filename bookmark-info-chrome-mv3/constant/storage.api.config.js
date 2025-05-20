@@ -74,6 +74,9 @@ const USER_OPTION_META = {
   },
 }
 
+// used for migrations
+export const DATA_FORMAT = 20250520;
+
 const INTERNAL_VALUES_META = {
   TAG_LIST_IS_OPEN: {
     default: false,
@@ -94,6 +97,9 @@ const INTERNAL_VALUES_META = {
   },
   BROWSER_START_TIME: {
     storage: STORAGE_TYPE.SESSION,
+  },
+  DATA_FORMAT: {
+    default: 20240101,
   },
 }
 

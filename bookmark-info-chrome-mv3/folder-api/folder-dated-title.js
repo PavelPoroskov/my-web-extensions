@@ -7,6 +7,8 @@ const weekdaySet = new Set(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
 export const DATED_TEMPLATE_VISITED = 'visited @D'
 export const DATED_TEMPLATE_OPENED = 'opened @D'
 
+export const isWeekday = (str) => weekdaySet.has(str)
+
 const inRange = ({ n, from, to }) => {
   if (!Number.isInteger(n)) {
     return false
@@ -23,7 +25,7 @@ const inRange = ({ n, from, to }) => {
   return true
 }
 
-const isDate = (str) => {
+export const isDate = (str) => {
   const partList = str.split('-')
 
   if (!(partList.length == 3)) {
@@ -49,39 +51,42 @@ export function getDatedTitle(folderTitle) {
   const sWeekday = weekdayFormatter.format(today)
 
   const days = Math.floor((futureDate - today)/oneDayMs)
-  const sDays = new Number(days).toString(36).padStart(3,'0')
+  const order = new Number(days).toString(36).padStart(3,'0')
 
-  return `${fixedPart} ${sDays} ${sToday} ${sWeekday}`
+  return `${fixedPart} ${sToday} ${sWeekday}.${order}`
 }
 
 export function isDatedFolderTitle(str) {
   const partList = str.split(' ')
 
-  if (!(4 <= partList.length)) {
+  if (!(3 <= partList.length)) {
     return false
   }
 
-  const result = weekdaySet.has(partList.at(-1)) && partList.at(-3).length == 3 && isDate(partList.at(-2)) && !!partList.at(-4)
+  const weekdayAndOrder = partList.at(-1)
+  const [weekday,order] = weekdayAndOrder.split('.')
+
+  const result = isWeekday(weekday || '') && (order || '').length == 3 && isDate(partList.at(-2)) && !!partList.at(-3)
 
   return result
 }
 
 export function isDatedTitleForTemplate({ title, template }) {
   if (!isDatedFolderTemplate(template)) {
-    return
+    return false
   }
   if (!isDatedFolderTitle(title)) {
     return false
   }
 
-  const fixedPartFromTitle = title.split(' ').slice(0, -3).join(' ')
+  const fixedPartFromTitle = title.split(' ').slice(0, -2).join(' ')
   const fixedPartFromTemplate = template.slice(0, -3).trim()
 
   return fixedPartFromTitle == fixedPartFromTemplate
 }
 
 export function getDatedTemplate(title) {
-  const fixedPartFromTitle = title.split(' ').slice(0, -3).join(' ')
+  const fixedPartFromTitle = title.split(' ').slice(0, -2).join(' ')
 
   return `${fixedPartFromTitle} @D`
 }
@@ -89,11 +94,6 @@ export function getDatedTemplate(title) {
 export function isVisitedDatedTemplate(templateTitle) {
   return templateTitle == DATED_TEMPLATE_VISITED
     || templateTitle == DATED_TEMPLATE_OPENED
-}
-
-export function isServiceDatedTemplate(templateTitle) {
-  return isVisitedDatedTemplate(templateTitle)
-    || templateTitle.toLowerCase().startsWith('done ')
 }
 
 export function isVisitedDatedTitle(title) {

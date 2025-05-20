@@ -1,15 +1,12 @@
+import { updateActiveTab } from '../api/index.js'
+import { orderBookmarks } from '../bookmark-list-ops/index.js'
+import { migration } from '../migration/index.js'
 import {
-  updateActiveTab,
-} from '../api/index.js'
-import {
-  orderBookmarks,
-} from '../bookmark-list-ops/index.js'
-import {
+  DATA_FORMAT,
+  INTERNAL_VALUES,
   USER_OPTION,
 } from '../constant/index.js'
-import {
-  onIncomingMessage,
-} from './incoming-message.js'
+import { onIncomingMessage } from './incoming-message.js'
 import { initExtension } from '../api/init-extension.js'
 import {
   getOptions,
@@ -45,8 +42,13 @@ export const runtimeController = {
     });
 
     const savedObj = await getOptions([
+      INTERNAL_VALUES.DATA_FORMAT,
       USER_OPTION.USE_FLAT_FOLDER_STRUCTURE,
     ]);
+
+    if (savedObj[INTERNAL_VALUES.DATA_FORMAT] !== DATA_FORMAT) {
+      await migration({ from: savedObj[INTERNAL_VALUES.DATA_FORMAT] })
+    }
 
     if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
       await orderBookmarks()
