@@ -16,7 +16,7 @@ import {
   makeLogFunction,
 } from '../api-low/index.js';
 import {
-  traverseFolderRecursively,
+  traverseTreeRecursively,
 } from './traverseFolder.js'
 
 const logMF = makeLogFunction({ module: 'moveFolders.js' })
@@ -49,15 +49,12 @@ async function getFolderMovements() {
 
   async function onFolder({ folder, level, bookmarkList, folderListLength }) {
     logMF('onFolder() 00', folder.title)
+
     // level 0: ROOT_FOLDER_ID
     // level 1: BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID
-    if (!(2 <= level)) {
+    if (level < 2) {
       return
     }
-
-    // if (folder.id in BUILTIN_BROWSER_FOLDER_MAP) {
-    //   return
-    // }
 
     if (bookmarkList.length == 0 && folderListLength == 0 && isDatedFolderTitle(folder.title)) {
       removeList.push(folder.id)
@@ -97,8 +94,7 @@ async function getFolderMovements() {
     }
   }
 
-  const [rootFolder] = await chrome.bookmarks.getTree()
-  await traverseFolderRecursively({ folder: rootFolder, onFolder })
+  await traverseTreeRecursively({ onFolder })
 
   return {
     removeList,

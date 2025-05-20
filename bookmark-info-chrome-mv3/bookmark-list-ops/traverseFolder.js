@@ -32,3 +32,9 @@ export async function traverseFolderRecursively({ folder: rootFolder, onFolder, 
 
   await traverseFolder({ folder: rootFolder, level: startLevel })
 }
+
+export async function traverseTreeRecursively({ onFolder }) {
+
+  const [rootFolder] = await chrome.bookmarks.getTree()
+  await traverseFolderRecursively({ folder: rootFolder, onFolder, startLevel: 0 })
+}

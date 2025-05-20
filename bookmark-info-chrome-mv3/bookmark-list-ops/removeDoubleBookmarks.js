@@ -5,7 +5,7 @@ import {
   removeBookmark,
 } from '../bookmark-controller-api/index.js'
 import {
-  traverseFolderRecursively,
+  traverseTreeRecursively,
 } from './traverseFolder.js'
 
 async function getDoubles() {
@@ -39,8 +39,7 @@ async function getDoubles() {
     }
   }
 
-  const [rootFolder] = await chrome.bookmarks.getTree()
-  await traverseFolderRecursively({ folder: rootFolder, onFolder })
+  await traverseTreeRecursively({ onFolder })
 
   return doubleList
 }
