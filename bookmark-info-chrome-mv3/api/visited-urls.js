@@ -3,17 +3,10 @@ import {
   createBookmarkOpened,
 } from '../bookmark-controller-api/bookmark-visited.js'
 import {
-  findOrCreateFolderByTitleInRoot,
-} from '../bookmark-controller-api/folder-create.js'
-import {
   CacheWithLimit,
   debounce,
   makeLogFunction,
 } from '../api-low/index.js'
-import {
-  DATED_TEMPLATE_VISITED,
-  DATED_TEMPLATE_OPENED,
-} from '../folder-api/index.js'
 import {
   removeQueryParamsIfTarget,
 } from '../url-api/index.js'
@@ -40,11 +33,6 @@ class VisitedUrls {
     if (!this.isOn) {
       this.cacheVisitedUrls.clear()
       this.cacheTabId.clear()
-    }
-
-    if (this.isOn) {
-      findOrCreateFolderByTitleInRoot(DATED_TEMPLATE_VISITED)
-      findOrCreateFolderByTitleInRoot(DATED_TEMPLATE_OPENED)
     }
   }
 
