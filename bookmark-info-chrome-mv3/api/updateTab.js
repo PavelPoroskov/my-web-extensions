@@ -87,7 +87,7 @@ async function bookmarkListToTagList(bookmarkList) {
   })
 
   const templateTagList = await Promise.all(templateTitleList.map(
-    (templateTitle) => datedTemplate.getIdForDatedTemplateFolder(templateTitle)
+    (templateTitle) => datedTemplate.getIdForDatedTemplateTitle(templateTitle)
       .then((templateId) => ({ parentId: templateId, parentTitle: templateTitle }))
   ))
 

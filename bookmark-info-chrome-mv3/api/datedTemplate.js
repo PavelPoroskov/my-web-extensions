@@ -16,8 +16,8 @@ class DatedTemplate {
   cacheTitleToId = {}
   mapIdToTitle = {}
 
-  async getIdForDatedTemplateFolder(templateTitle) {
-    logDT('getIdForDatedTemplateFolder() 00', templateTitle)
+  async getIdForDatedTemplateTitle(templateTitle) {
+    logDT('getIdForDatedTemplateTitle() 00', templateTitle)
     let id = this.cacheTitleToId[templateTitle]
     if (id) {
       return id;
@@ -31,14 +31,14 @@ class DatedTemplate {
 
     return id;
   }
-  async getParentIdForDatedFolder(title) {
-    logDT('getParentIdForDatedFolder() 00', title)
+  async getParentIdForDatedTitle(title) {
+    logDT('getParentIdForDatedTitle() 00', title)
 
     const templateTitle = getDatedTemplate(title)
-    logDT('getParentIdForDatedFolder() 11', templateTitle)
+    logDT('getParentIdForDatedTitle() 11', templateTitle)
 
-    const id = await this.getIdForDatedTemplateFolder(templateTitle);
-    logDT('getParentIdForDatedFolder() 22', id)
+    const id = await this.getIdForDatedTemplateTitle(templateTitle);
+    logDT('getParentIdForDatedTitle() 22', id)
 
     return id;
   }

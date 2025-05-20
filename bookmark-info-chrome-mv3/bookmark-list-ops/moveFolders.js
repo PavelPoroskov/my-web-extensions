@@ -34,7 +34,7 @@ async function getFolderCorrectParentIdByTitle(title) {
   if (isDatedFolderTitle(title)) {
     parentId = BOOKMARKS_MENU_FOLDER_ID || BOOKMARKS_BAR_FOLDER_ID
 
-    secondParentId = await datedTemplate.getParentIdForDatedFolder(title)
+    secondParentId = await datedTemplate.getParentIdForDatedTitle(title)
   }
 
   return {
