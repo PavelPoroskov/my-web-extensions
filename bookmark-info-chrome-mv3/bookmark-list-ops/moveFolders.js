@@ -10,13 +10,11 @@ import {
   moveFolderIgnoreInController,
   removeFolder,
   updateFolder,
+  datedTemplate,
 } from '../bookmark-controller-api/index.js';
 import {
   makeLogFunction,
 } from '../api-low/index.js';
-import {
-  datedTemplate,
-} from '../api/index.js';
 import {
   traverseFolderRecursively,
 } from './traverseFolder.js'

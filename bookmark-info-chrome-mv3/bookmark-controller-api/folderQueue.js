@@ -6,9 +6,11 @@ import {
   makeLogFunction,
 } from '../api-low/index.js'
 import {
-  datedTemplate,
   updateActiveTab,
 } from '../api/index.js'
+import {
+  datedTemplate,
+} from './datedTemplate.js'
 import {
   NODE_ACTION,
   NodeTaskQueue

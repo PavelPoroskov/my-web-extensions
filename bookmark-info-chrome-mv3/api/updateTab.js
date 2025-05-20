@@ -33,7 +33,7 @@ import {
 } from './showAuthorBookmarks.js'
 import {
   datedTemplate,
-} from './datedTemplate.js';
+} from '../bookmark-controller-api/datedTemplate.js';
 import { initExtension } from './init-extension.js'
 
 const logUTB = makeLogFunction({ module: 'updateTab.js' })

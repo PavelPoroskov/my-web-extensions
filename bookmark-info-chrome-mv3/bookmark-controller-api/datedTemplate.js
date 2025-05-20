@@ -5,7 +5,7 @@ import {
 import {
   findOrCreateDatedFolder,
   findOrCreateFolder,
-} from '../bookmark-controller-api/folder-create.js';
+} from './folder-create.js';
 
 import {
   makeLogFunction,
@@ -21,6 +21,7 @@ class DatedTemplate {
 
   async _useCache({ getKey, getValue, options }) {
     const key = getKey(options)
+    logDT('_useCache() 00 key', key)
 
     let id = this.cacheTitleToId[key]
     if (id) {
@@ -37,6 +38,7 @@ class DatedTemplate {
     } else {
       folder = await promise
     }
+    logDT('_useCache() 33 folder', folder)
     id = folder.id
 
     this.cacheTitleToId[key] = id
@@ -55,7 +57,8 @@ class DatedTemplate {
 
     return id
   }
-  async getIdForNewDated({ templateTitle, templateId }) {
+  async findOrCreateDatedFolderId({ templateTitle, templateId }) {
+    logDT('findOrCreateDatedFolderWithCache() 00', templateTitle, templateId)
 
     const id = await this._useCache({
       getKey: (options) => getDatedTitle(options.templateTitle),

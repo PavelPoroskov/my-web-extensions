@@ -1,6 +1,7 @@
 // is used in bookmark-list-ops/
 export * from './folder-ignore.js'
 export * from './folder-create.js'
+export * from './datedTemplate.js'
 export * from './bookmark-ignore.js'
 
 // is used in command/addBookmark.js
