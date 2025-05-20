@@ -4,7 +4,6 @@ import {
   tagList,
 } from '../api-mid/index.js'
 import {
-  debounce_leading,
   debounce_leading3,
   makeLogFunction,
 } from '../api-low/index.js'
@@ -26,7 +25,6 @@ import {
 import {
   USER_OPTION,
   SHOW_VISITED_OPTIONS,
-  IS_BROWSER_CHROME,
 } from '../constant/index.js'
 import {
   showAuthorBookmarks,
@@ -178,6 +176,4 @@ async function updateTabTask(options) {
   })
 }
 
-export const updateActiveTab = IS_BROWSER_CHROME
-  ? debounce_leading3(updateTabTask, 50)
-  : debounce_leading(updateTabTask, 50)
+export const updateActiveTab = debounce_leading3(updateTabTask, 50)
