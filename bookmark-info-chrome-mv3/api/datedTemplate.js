@@ -1,7 +1,9 @@
 import {
   getDatedTemplate,
+  getDatedTitle,
 } from '../folder-api/index.js';
 import {
+  findOrCreateDatedFolder,
   findOrCreateFolder,
 } from '../bookmark-controller-api/folder-create.js';
 
@@ -15,21 +17,53 @@ class DatedTemplate {
   // title to id
   cacheTitleToId = {}
   mapIdToTitle = {}
+  mapPromise = {}
 
-  async getIdForDatedTemplateTitle(templateTitle) {
-    logDT('getIdForDatedTemplateTitle() 00', templateTitle)
-    let id = this.cacheTitleToId[templateTitle]
+  async _useCache({ getKey, getValue, options }) {
+    const key = getKey(options)
+
+    let id = this.cacheTitleToId[key]
     if (id) {
+      delete this.mapPromise[key]
       return id;
     }
 
-    // TODO wait when create. use Promise.withResolvers. to not crete second 'opened DD-MM-YYYY' on closing window
-    const folder = await findOrCreateFolder(templateTitle)
-    id = folder.id
-    this.cacheTitleToId[templateTitle] = id
-    this.mapIdToTitle[id] = id
+    let folder
+    const promise = this.mapPromise[key]
 
-    return id;
+    if (!promise) {
+      this.mapPromise[key] = getValue(options)
+      folder = await this.mapPromise[key]
+    } else {
+      folder = await promise
+    }
+    id = folder.id
+
+    this.cacheTitleToId[key] = id
+    this.mapIdToTitle[id] = key
+
+    return id
+  }
+  async getIdForDatedTemplateTitle(templateTitle) {
+    logDT('getIdForDatedTemplateTitle() 00', templateTitle)
+
+    const id = await this._useCache({
+      getKey: (options) => options,
+      getValue: findOrCreateFolder,
+      options: templateTitle,
+    })
+
+    return id
+  }
+  async getIdForNewDated({ templateTitle, templateId }) {
+
+    const id = await this._useCache({
+      getKey: (options) => getDatedTitle(options.templateTitle),
+      getValue: findOrCreateDatedFolder,
+      options: { templateTitle, templateId },
+    })
+
+    return id
   }
   async getParentIdForDatedTitle(title) {
     logDT('getParentIdForDatedTitle() 00', title)
@@ -47,6 +81,7 @@ class DatedTemplate {
 
     if (title) {
       delete this.mapIdToTitle[folderId]
+      delete this.mapPromise[title]
       delete this.cacheTitleToId[title]
     }
   }
