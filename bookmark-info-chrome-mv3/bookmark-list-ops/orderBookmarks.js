@@ -3,9 +3,9 @@ import {
   BOOKMARKS_MENU_FOLDER_ID,
   OTHER_BOOKMARKS_FOLDER_ID,
   UNCLASSIFIED_TITLE,
+  compareDatedTitle,
 } from '../folder-api/index.js'
 import {
-  compareDatedTitle,
   datedTemplate,
   findOrCreateFolderByTitleInRoot,
 } from '../bookmark-controller-api/index.js'

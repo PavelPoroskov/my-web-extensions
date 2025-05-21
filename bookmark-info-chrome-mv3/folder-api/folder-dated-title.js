@@ -56,6 +56,28 @@ export function getDatedTitle(folderTitle) {
   return `${fixedPart} ${sToday} ${sWeekday}.${order}`
 }
 
+export function compareDatedTitle(a,b) {
+  const orderA = a.slice(-3)
+  const restA = a.slice(0, -4)
+
+  const orderB = b.slice(-3)
+  const restB = b.slice(0, -4)
+
+  return (orderA || '').localeCompare(orderB || '') || (restA || '').localeCompare(restB || '')
+}
+
+export function makeCompareDatedTitleWithFixed(a) {
+  const orderA = a.slice(-3)
+  const restA = a.slice(0, -4)
+
+  return function compareDatedTitleWithFixed(b) {
+    const orderB = b.slice(-3)
+    const restB = b.slice(0, -4)
+
+    return (orderA || '').localeCompare(orderB || '') || (restA || '').localeCompare(restB || '')
+  }
+}
+
 export function isDatedFolderTitle(str) {
   const partList = str.split(' ')
 

@@ -8,6 +8,7 @@ import {
   getDatedTitle,
   isDatedFolderTemplate,
   getNewFolderRootId,
+  makeCompareDatedTitleWithFixed,
 } from '../folder-api/index.js';
 import {
   createFolderIgnoreInController,
@@ -55,20 +56,6 @@ export async function findOrCreateFolder(title) {
   return folder
 }
 
-function makeCompareDatedTitle(a) {
-  const partsA = a.split('.')
-  const orderA = partsA.at(-1)
-  const restA = partsA.slice(0, -1).join('.')
-
-  return function compareDatedTitle(_a,b) {
-    const partsB = b.split('.')
-    const orderB = partsB.at(-1)
-    const restB = partsB.slice(0, -1).join('.')
-
-    return (orderA || '').localeCompare(orderB || '') || (restA || '').localeCompare(restB || '')
-  }
-}
-
 // folderTitle = 'DONE @D' 'selected @D' 'BEST @D'
 export async function findOrCreateDatedFolder({ templateTitle, rootId }) {
   if (!isDatedFolderTemplate(templateTitle)) {
@@ -82,8 +69,8 @@ export async function findOrCreateDatedFolder({ templateTitle, rootId }) {
 
   if (!foundFolder) {
     const firstLevelNodeList = await chrome.bookmarks.getChildren(rootId)
-    const compareDatedTitle = makeCompareDatedTitle(datedTitle)
-    const findIndex = firstLevelNodeList.find((node) => !node.url && compareDatedTitle(datedTitle, node.title) < 0)
+    const compareDatedTitleWithFixed = makeCompareDatedTitleWithFixed(datedTitle)
+    const findIndex = firstLevelNodeList.find((node) => !node.url && compareDatedTitleWithFixed(node.title) < 0)
 
     const folderParams = {
       parentId: rootId,

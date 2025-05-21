@@ -16,18 +16,6 @@ const logDT = makeLogFunction({ module: 'datedTemplate.js' })
 const DATED_ROOT_NEW = '@D new'
 const DATED_ROOT_OLD = '@D old'
 
-export function compareDatedTitle(a,b) {
-  const partsA = a.split('.')
-  const orderA = partsA.at(-1)
-  const restA = partsA.slice(0, -1).join('.')
-
-  const partsB = b.split('.')
-  const orderB = partsB.at(-1)
-  const restB = partsB.slice(0, -1).join('.')
-
-  return (orderA || '').localeCompare(orderB || '') || (restA || '').localeCompare(restB || '')
-}
-
 class DatedTemplate {
   // title to id
   cacheTitleToId = {}
