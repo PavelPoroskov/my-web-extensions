@@ -5,6 +5,7 @@ export const DEFAULT_HOST_SETTINGS = {
     ['utm_*'],
     ['email_hash'],
     ['sent_date'],
+    ['pid=0'],
   ],
 }
 
