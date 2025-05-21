@@ -2,6 +2,7 @@ import {
   isDatedFolderTitle,
 } from '../folder-api/index.js'
 import {
+  datedTemplate,
   moveFolderIgnoreInController,
 } from '../bookmark-controller-api/index.js'
 import {
@@ -12,7 +13,9 @@ const logMOD = makeLogFunction({ module: 'moveOldDatedFolders.js' })
 
 const KEEP_DATED_FOLDERS = 3
 
-export async function moveOldDatedFolders({ fromId, toId }) {
+export async function moveOldDatedFolders() {
+  const fromId = await datedTemplate.findDatedRootNew()
+
   if (!fromId) {
     return
   }
@@ -39,6 +42,12 @@ export async function moveOldDatedFolders({ fromId, toId }) {
     .slice(KEEP_DATED_FOLDERS)
     .map(([,list]) => list)
     .flat()
+
+  if (moveList.length == 0) {
+    return
+  }
+
+  const toId = await datedTemplate.findOrCreateDatedRootOld()
 
   await moveList.reduce(
     (promiseChain, node) => promiseChain.then(

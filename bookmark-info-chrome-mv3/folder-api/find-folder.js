@@ -21,9 +21,9 @@ async function findFolderWithExactTitle(title) {
   return foundItem
 }
 
-export async function findFolderWithExactTitleInRoot({ title, rootId }) {
+export async function findSubFolderWithExactTitle({ title, parentId }) {
   const nodeList = await chrome.bookmarks.search({ title });
-  const foundItem = nodeList.find((node) => !node.url && node.parentId == rootId)
+  const foundItem = nodeList.find((node) => !node.url && node.parentId == parentId)
 
   return foundItem
 }

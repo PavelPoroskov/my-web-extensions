@@ -1,10 +1,10 @@
 import {
-  getDatedTemplate,
   getDatedTitle,
 } from '../folder-api/index.js';
 import {
-  findOrCreateDatedFolder,
-  findOrCreateFolder,
+  _findOrCreateDatedFolder,
+  _findOrCreateFolder,
+  _findFolder,
 } from './folder-create.js';
 
 import {
@@ -15,6 +15,7 @@ const logDT = makeLogFunction({ module: 'datedTemplate.js' })
 
 const DATED_ROOT_NEW = '@D new'
 const DATED_ROOT_OLD = '@D old'
+const UNCLASSIFIED_TITLE = 'zz-bookmark-info--unclassified'
 
 class DatedTemplate {
   // title to id
@@ -22,77 +23,6 @@ class DatedTemplate {
   mapIdToTitle = {}
   mapPromise = {}
 
-  async _useCache({ getKey, getValue, options }) {
-    const key = getKey(options)
-    logDT('_useCache() 00 key', key)
-
-    let id = this.cacheTitleToId[key]
-    if (id) {
-      delete this.mapPromise[key]
-      return id;
-    }
-
-    let folder
-    const promise = this.mapPromise[key]
-
-    if (!promise) {
-      this.mapPromise[key] = getValue(options)
-      folder = await this.mapPromise[key]
-    } else {
-      folder = await promise
-    }
-    logDT('_useCache() 33 folder', folder)
-    id = folder.id
-
-    this.cacheTitleToId[key] = id
-    this.mapIdToTitle[id] = key
-
-    return id
-  }
-  async getIdForDatedTemplateTitle(templateTitle) {
-  // async getIdForTitle(templateTitle) {
-    logDT('getIdForDatedTemplateTitle() 00', templateTitle)
-
-    const id = await this._useCache({
-      getKey: (options) => options,
-      getValue: findOrCreateFolder,
-      options: templateTitle,
-    })
-
-    return id
-  }
-  async getIdDatedRootNew() {
-    const id = await this.getIdForDatedTemplateTitle(DATED_ROOT_NEW)
-    return id
-  }
-  async getIdDatedRootOld() {
-    const id = await this.getIdForDatedTemplateTitle(DATED_ROOT_OLD)
-    return id
-  }
-  async findOrCreateDatedFolderId({ templateTitle, templateId }) {
-    logDT('findOrCreateDatedFolderWithCache() 00', templateTitle, templateId)
-
-    const rootId = await this.getIdDatedRootNew()
-
-    const id = await this._useCache({
-      getKey: (options) => getDatedTitle(options.templateTitle),
-      getValue: (options) => findOrCreateDatedFolder({ ...options, rootId }),
-      options: { templateTitle, templateId },
-    })
-
-    return id
-  }
-  async getParentIdForDatedTitle(title) {
-    logDT('getParentIdForDatedTitle() 00', title)
-
-    const templateTitle = getDatedTemplate(title)
-    logDT('getParentIdForDatedTitle() 11', templateTitle)
-
-    const id = await this.getIdForDatedTemplateTitle(templateTitle);
-    logDT('getParentIdForDatedTitle() 22', id)
-
-    return id;
-  }
   clearCache(folderId) {
     const title = this.mapIdToTitle[folderId]
 
@@ -101,6 +31,121 @@ class DatedTemplate {
       delete this.mapPromise[title]
       delete this.cacheTitleToId[title]
     }
+  }
+
+  async _useCacheForCreate({ getKey, getValue, options }) {
+    const key = getKey(options)
+    logDT('_useCacheForCreate() 00 key', key)
+
+    let id = this.cacheTitleToId[key]
+    if (id) {
+      delete this.mapPromise[key]
+      return id;
+    }
+
+    const promise = this.mapPromise[key]
+
+    if (!promise) {
+      this.mapPromise[key] = getValue(options)
+      id = await this.mapPromise[key]
+    } else {
+      id = await promise
+    }
+
+    this.cacheTitleToId[key] = id
+    this.mapIdToTitle[id] = key
+
+    return id
+  }
+  async findOrCreateFolder(templateTitle) {
+    logDT('findOrCreateFolder() 00', templateTitle)
+
+    const id = await this._useCacheForCreate({
+      getKey: (options) => options,
+      getValue: _findOrCreateFolder,
+      options: templateTitle,
+    })
+
+    return id
+  }
+  async findOrCreateDatedFolderId({ templateTitle, templateId }) {
+    logDT('findOrCreateDatedFolderWithCache() 00', templateTitle, templateId)
+
+    const parentId = await this.findOrCreateDatedRootNew()
+
+    const id = await this._useCacheForCreate({
+      getKey: (options) => getDatedTitle(options.templateTitle),
+      getValue: (options) => _findOrCreateDatedFolder({ ...options, parentId }),
+      options: { templateTitle, templateId },
+    })
+
+    return id
+  }
+
+  async _useCacheForFind({ getKey, getValue, options }) {
+    const key = getKey(options)
+    logDT('_useCacheForFind() 00 key', key)
+
+    let id = this.cacheTitleToId[key]
+    if (id || id === null) {
+      delete this.mapPromise[key]
+      return id;
+    }
+
+    const promise = this.mapPromise[key]
+
+    if (!promise) {
+      this.mapPromise[key] = getValue(options)
+      id = await this.mapPromise[key]
+    } else {
+      id = await promise
+    }
+
+    this.cacheTitleToId[key] = id || null
+
+    if (id) {
+      this.mapIdToTitle[id] = key
+    }
+
+    return id
+  }
+  async _findFolder(title) {
+    logDT('findFolder() 00', title)
+
+    const id = await this._useCacheForFind({
+      getKey: (options) => options,
+      getValue: _findFolder,
+      options: title,
+    })
+
+    return id
+  }
+
+  async findOrCreateDatedRootNew() {
+    const id = await this.findOrCreateFolder(DATED_ROOT_NEW)
+    return id
+  }
+  async findDatedRootNew() {
+    const id = await this._findFolder(DATED_ROOT_NEW)
+    return id
+  }
+
+  async findOrCreateDatedRootOld() {
+    const id = await this.findOrCreateFolder(DATED_ROOT_OLD)
+    return id
+  }
+  async findDatedRootOld() {
+    const id = await this._findFolder(DATED_ROOT_OLD)
+    return id
+  }
+
+  async findOrCreateUnclassified() {
+    const id = await this.findOrCreateFolder(UNCLASSIFIED_TITLE)
+    return id
+  }
+  async findUnclassified() {
+    const id = await this._findFolder(UNCLASSIFIED_TITLE)
+    return id
   }
 }
 

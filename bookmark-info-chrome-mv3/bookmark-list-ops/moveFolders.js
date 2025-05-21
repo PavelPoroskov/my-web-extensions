@@ -29,8 +29,8 @@ async function getFolderCorrectParentIdByTitle(title) {
   }
 
   if (isDatedFolderTitle(title)) {
-    parentId = await datedTemplate.getIdDatedRootNew()
-    secondParentId = await datedTemplate.getIdDatedRootOld()
+    parentId = await datedTemplate.findOrCreateDatedRootNew()
+    secondParentId = await datedTemplate.findDatedRootOld()
   }
 
   return {

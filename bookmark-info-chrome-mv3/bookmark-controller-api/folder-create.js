@@ -4,7 +4,7 @@ import {
 import {
   OTHER_BOOKMARKS_FOLDER_ID,
   findFolder,
-  findFolderWithExactTitleInRoot,
+  findSubFolderWithExactTitle,
   getDatedTitle,
   isDatedFolderTemplate,
   getNewFolderRootId,
@@ -17,7 +17,7 @@ import {
 
 const logFCR = makeLogFunction({ module: 'folder-create.js' })
 
-export async function findOrCreateFolder(title) {
+export async function _findOrCreateFolder(title) {
   let folder = await findFolder(title)
 
   if (!folder) {
@@ -53,27 +53,27 @@ export async function findOrCreateFolder(title) {
     }
   }
 
-  return folder
+  return folder.id
 }
 
 // folderTitle = 'DONE @D' 'selected @D' 'BEST @D'
-export async function findOrCreateDatedFolder({ templateTitle, rootId }) {
+export async function _findOrCreateDatedFolder({ templateTitle, parentId }) {
   if (!isDatedFolderTemplate(templateTitle)) {
     return
   }
-  logFCR('findOrCreateDatedFolder () 00', templateTitle)
+  logFCR('_findOrCreateDatedFolder () 00', templateTitle)
 
   const datedTitle = getDatedTitle(templateTitle)
-  logFCR('findOrCreateDatedFolder () 11', 'datedTitle', datedTitle)
-  let foundFolder = await findFolderWithExactTitleInRoot({ title: datedTitle, rootId })
+  logFCR('_findOrCreateDatedFolder () 11', 'datedTitle', datedTitle)
+  let foundFolder = await findSubFolderWithExactTitle({ title: datedTitle, parentId })
 
   if (!foundFolder) {
-    const firstLevelNodeList = await chrome.bookmarks.getChildren(rootId)
+    const firstLevelNodeList = await chrome.bookmarks.getChildren(parentId)
     const compareDatedTitleWithFixed = makeCompareDatedTitleWithFixed(datedTitle)
     const findIndex = firstLevelNodeList.find((node) => !node.url && compareDatedTitleWithFixed(node.title) < 0)
 
     const folderParams = {
-      parentId: rootId,
+      parentId,
       title: datedTitle,
     }
 
@@ -84,22 +84,14 @@ export async function findOrCreateDatedFolder({ templateTitle, rootId }) {
     foundFolder = await createFolderIgnoreInController(folderParams)
   }
 
-  return foundFolder
+  return foundFolder.id
 }
 
-export async function findOrCreateFolderByTitleInRoot(title) {
-  const nodeList = await chrome.bookmarks.search({ title });
-  const foundItem = nodeList.find((node) => !node.url && node.parentId == OTHER_BOOKMARKS_FOLDER_ID)
+export async function _findFolder(title) {
+  // const folder = await findFolder(title)
+  const folder = await findSubFolderWithExactTitle({ title, parentId: OTHER_BOOKMARKS_FOLDER_ID })
 
-  if (foundItem) {
-    return foundItem.id
+  if (folder) {
+    return folder.id
   }
-
-  const folder = {
-    parentId: OTHER_BOOKMARKS_FOLDER_ID,
-    title
-  }
-  const newNode = await createFolderIgnoreInController(folder)
-
-  return newNode.id
 }
