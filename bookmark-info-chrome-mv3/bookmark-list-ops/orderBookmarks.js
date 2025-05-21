@@ -5,7 +5,7 @@ import {
   compareDatedTitle,
 } from '../folder-api/index.js'
 import {
-  datedTemplate,
+  folderCreator,
 } from '../bookmark-controller-api/index.js'
 import {
   moveFolders,
@@ -56,8 +56,8 @@ export async function orderBookmarks() {
   await sortFolders({ parentId: BOOKMARKS_MENU_FOLDER_ID })
   await sortFolders({ parentId: OTHER_BOOKMARKS_FOLDER_ID })
 
-  const datedRootNewId = datedTemplate.findDatedRootNew()
-  const datedRootOldId = datedTemplate.findDatedRootOld()
+  const datedRootNewId = folderCreator.findDatedRootNew()
+  const datedRootOldId = folderCreator.findDatedRootOld()
   await sortFolders({ parentId: datedRootNewId, compare: compareDatedTitle })
   await sortFolders({ parentId: datedRootOldId, compare: compareDatedTitle })
 

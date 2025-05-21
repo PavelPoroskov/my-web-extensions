@@ -3,7 +3,7 @@ import {
 } from '../folder-api/index.js';
 import {
   moveBookmarkIgnoreInController,
-  datedTemplate,
+  folderCreator,
 } from '../bookmark-controller-api/index.js'
 
 async function moveRootBookmarks({ fromId }) {
@@ -24,7 +24,7 @@ async function moveRootBookmarks({ fromId }) {
     return
   }
 
-  const unclassifiedId = await datedTemplate.findOrCreateUnclassified()
+  const unclassifiedId = await folderCreator.findOrCreateUnclassified()
 
   await bkmList.reduce(
     (promiseChain, bkm) => promiseChain.then(

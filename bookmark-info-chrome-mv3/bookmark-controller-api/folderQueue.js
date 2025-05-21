@@ -9,8 +9,8 @@ import {
   updateActiveTab,
 } from '../api/index.js'
 import {
-  datedTemplate,
-} from './datedTemplate.js'
+  folderCreator,
+} from './folderCreator.js'
 import {
   NODE_ACTION,
   NodeTaskQueue
@@ -40,7 +40,7 @@ async function onChangeFolder(task) {
   memo.bkmFolderById.delete(bookmarkId);
   await tagList.addTag({ parentId: node.id, parentTitle: node.title })
 
-  datedTemplate.clearCache(bookmarkId)
+  folderCreator.clearCache(bookmarkId)
 }
 
 async function onDeleteFolder(task) {
@@ -49,7 +49,7 @@ async function onDeleteFolder(task) {
   memo.bkmFolderById.delete(bookmarkId);
   await tagList.removeTag(bookmarkId)
 
-  datedTemplate.clearCache(bookmarkId)
+  folderCreator.clearCache(bookmarkId)
 }
 
 async function folderQueueRunner(task) {

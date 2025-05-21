@@ -9,7 +9,7 @@ import {
   moveFolderIgnoreInController,
   removeFolder,
   updateFolder,
-  datedTemplate,
+  folderCreator,
 } from '../bookmark-controller-api/index.js';
 import {
   makeLogFunction,
@@ -29,8 +29,8 @@ async function getFolderCorrectParentIdByTitle(title) {
   }
 
   if (isDatedFolderTitle(title)) {
-    parentId = await datedTemplate.findOrCreateDatedRootNew()
-    secondParentId = await datedTemplate.findDatedRootOld()
+    parentId = await folderCreator.findOrCreateDatedRootNew()
+    secondParentId = await folderCreator.findDatedRootOld()
   }
 
   return {

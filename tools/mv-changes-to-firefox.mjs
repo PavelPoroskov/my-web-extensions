@@ -52,7 +52,7 @@ createFileForFirefox(
     'bookmark-controller-api/ignoreBkmControllerApiActionSet.js',
     'bookmark-controller-api/folder-ignore.js',
     'bookmark-controller-api/folder-create.js',
-    'bookmark-controller-api/datedTemplate.js',
+    'bookmark-controller-api/folderCreator.js',
     'bookmark-controller-api/bookmark-ignore.js',
     'bookmark-controller-api/bookmark-dated.js',
     'bookmark-controller-api/bookmark-create.js',

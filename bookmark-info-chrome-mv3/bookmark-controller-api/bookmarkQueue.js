@@ -24,8 +24,8 @@ import {
   NodeTaskQueue,
 } from './nodeTaskQueue.js'
 import {
-  datedTemplate,
-} from './datedTemplate.js'
+  folderCreator,
+} from './folderCreator.js'
 
 const logBQ = makeLogFunction({ module: 'bookmarkQueue.js' })
 
@@ -74,7 +74,7 @@ async function onMoveBookmark(task) {
       isReplaceMoveToCreate = index == lastIndex && url == memo.activeTabUrl
     }
 
-    const unclassifiedFolderId = await datedTemplate.findUnclassified()
+    const unclassifiedFolderId = await folderCreator.findUnclassified()
     isReplaceMoveToCreate = isReplaceMoveToCreate && parentId !== unclassifiedFolderId
 
     if (isReplaceMoveToCreate) {

@@ -9,8 +9,8 @@ import {
   _findOrCreateFolder,
 } from './folder-create.js';
 import {
-  datedTemplate,
-} from './datedTemplate.js';
+  folderCreator,
+} from './folderCreator.js';
 import {
   removePreviousDatedBookmarks,
 } from './bookmark-dated.js';
@@ -56,7 +56,7 @@ async function createBookmarkWithParentId({ parentId, url, title }) {
   const isDatedTemplate = isDatedFolderTemplate(parentTitle)
 
   if (isDatedTemplate) {
-    const datedFolderId = await datedTemplate.findOrCreateDatedFolderId({ templateTitle: parentTitle, templateId: parentId })
+    const datedFolderId = await folderCreator.findOrCreateDatedFolderId({ templateTitle: parentTitle, templateId: parentId })
     await createBookmarkWithApi({ parentId: datedFolderId, url, title })
     await removePreviousDatedBookmarks({ url, template: parentTitle })
 
@@ -76,7 +76,7 @@ export async function afterUserCreatedBookmarkInGUI({ parentId, id, url, index }
   const isDatedTemplate = isDatedFolderTemplate(parentTitle)
 
   if (isDatedTemplate) {
-    const datedFolderId = await datedTemplate.findOrCreateDatedFolderId({ templateTitle: parentTitle, templateId: parentId })
+    const datedFolderId = await folderCreator.findOrCreateDatedFolderId({ templateTitle: parentTitle, templateId: parentId })
     await moveBookmarkIgnoreInController({
       id,
       parentId: datedFolderId,

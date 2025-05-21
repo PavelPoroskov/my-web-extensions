@@ -9,7 +9,7 @@ const logModuleList = [
   // 'clearUrlInActiveTab.js',
   // 'commands.controller',
   // 'contextMenu.controller',
-  // 'datedTemplate.js',
+  // 'folderCreator.js',
   // 'extensionSettings.js',
   // 'folderQueue.js',
   // 'find-create.js',

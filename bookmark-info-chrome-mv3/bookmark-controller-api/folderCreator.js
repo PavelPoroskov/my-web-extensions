@@ -13,9 +13,9 @@ import {
   makeLogFunction,
 } from '../api-low/index.js'
 
-const logDT = makeLogFunction({ module: 'datedTemplate.js' })
+const logDT = makeLogFunction({ module: 'folderCreator.js' })
 
-class DatedTemplate {
+class FolderCreator {
   // title to id
   cacheTitleToId = {}
   mapIdToTitle = {}
@@ -147,4 +147,4 @@ class DatedTemplate {
   }
 }
 
-export const datedTemplate = new DatedTemplate()
+export const folderCreator = new FolderCreator()

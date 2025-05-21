@@ -6,7 +6,7 @@ import {
 import {
   moveFolderContentToStart,
   removeFolder,
-  datedTemplate,
+  folderCreator,
 } from '../bookmark-controller-api/index.js'
 
 async function moveNotDescriptiveFolders({ fromId }) {
@@ -23,7 +23,7 @@ async function moveNotDescriptiveFolders({ fromId }) {
     return
   }
 
-  const unclassifiedId = await datedTemplate.findOrCreateUnclassified()
+  const unclassifiedId = await folderCreator.findOrCreateUnclassified()
 
   await folderList.reduce(
     (promiseChain, folderNode) => promiseChain.then(

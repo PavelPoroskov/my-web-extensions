@@ -30,8 +30,8 @@ import {
   showAuthorBookmarks,
 } from './showAuthorBookmarks.js'
 import {
-  datedTemplate,
-} from '../bookmark-controller-api/datedTemplate.js';
+  folderCreator,
+} from '../bookmark-controller-api/folderCreator.js';
 import { initExtension } from './init-extension.js'
 
 const logUTB = makeLogFunction({ module: 'updateTab.js' })
@@ -85,7 +85,7 @@ async function bookmarkListToTagList(bookmarkList) {
   })
 
   const templateTagList = await Promise.all(templateTitleList.map(
-    (templateTitle) => datedTemplate.findOrCreateFolder(templateTitle)
+    (templateTitle) => folderCreator.findOrCreateFolder(templateTitle)
       .then((templateId) => ({ parentId: templateId, parentTitle: templateTitle }))
   ))
 
