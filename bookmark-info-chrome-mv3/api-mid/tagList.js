@@ -1,5 +1,5 @@
 import {
-  getUnclassifiedFolderId,
+  isSpecialFolderTitle,
   isDescriptiveFolderTitle,
   isDatedFolderTitle,
 } from '../folder-api/index.js'
@@ -289,8 +289,7 @@ class TagList {
       //   return
       // }
 
-      const unclassifiedFolderId = await getUnclassifiedFolderId()
-      if (unclassifiedFolderId && parentId === unclassifiedFolderId) {
+      if (isSpecialFolderTitle(parentTitle)) {
         return
       }
     }

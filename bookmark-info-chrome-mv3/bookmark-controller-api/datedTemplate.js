@@ -1,21 +1,19 @@
 import {
   getDatedTitle,
+  DATED_ROOT_NEW,
+  DATED_ROOT_OLD,
+  UNCLASSIFIED_TITLE,
 } from '../folder-api/index.js';
 import {
   _findOrCreateDatedFolder,
   _findOrCreateFolder,
   _findFolder,
 } from './folder-create.js';
-
 import {
   makeLogFunction,
 } from '../api-low/index.js'
 
 const logDT = makeLogFunction({ module: 'datedTemplate.js' })
-
-const DATED_ROOT_NEW = '@D new'
-const DATED_ROOT_OLD = '@D old'
-const UNCLASSIFIED_TITLE = 'zz-bookmark-info--unclassified'
 
 class DatedTemplate {
   // title to id

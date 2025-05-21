@@ -1,5 +1,4 @@
 import {
-  getUnclassifiedFolderId,
   isDescriptiveFolderTitle,
   BOOKMARKS_BAR_FOLDER_ID,
   OTHER_BOOKMARKS_FOLDER_ID,
@@ -7,9 +6,10 @@ import {
 import {
   moveFolderContentToStart,
   removeFolder,
+  datedTemplate,
 } from '../bookmark-controller-api/index.js'
 
-async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
+async function moveNotDescriptiveFolders({ fromId }) {
   if (!fromId) {
     return
   }
@@ -18,6 +18,12 @@ async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
   const folderList = nodeList
     .filter(({ url }) => !url)
     .filter(({ title }) => !isDescriptiveFolderTitle(title))
+
+  if (folderList.length == 0) {
+    return
+  }
+
+  const unclassifiedId = await datedTemplate.findOrCreateUnclassified()
 
   await folderList.reduce(
     (promiseChain, folderNode) => promiseChain.then(
@@ -35,8 +41,7 @@ async function moveNotDescriptiveFolders({ fromId, unclassifiedId }) {
 }
 
 export async function moveNotDescriptiveFoldersToUnclassified() {
-  const unclassifiedId = await getUnclassifiedFolderId()
 
-  await moveNotDescriptiveFolders({ fromId: BOOKMARKS_BAR_FOLDER_ID, unclassifiedId })
-  await moveNotDescriptiveFolders({ fromId: OTHER_BOOKMARKS_FOLDER_ID, unclassifiedId })
+  await moveNotDescriptiveFolders({ fromId: BOOKMARKS_BAR_FOLDER_ID })
+  await moveNotDescriptiveFolders({ fromId: OTHER_BOOKMARKS_FOLDER_ID })
 }

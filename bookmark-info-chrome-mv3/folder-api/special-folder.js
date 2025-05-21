@@ -29,28 +29,16 @@ export const BUILTIN_BROWSER_ROOT_FOLDER_MAP = Object.fromEntries(
     .map((id) => [id, true])
 )
 
-async function getFolderByTitleInRoot(title) {
-  const nodeList = await chrome.bookmarks.search({ title });
-  const foundItem = nodeList.find((node) => !node.url && node.parentId == OTHER_BOOKMARKS_FOLDER_ID)
+export const DATED_ROOT_NEW = '@D new'
+export const DATED_ROOT_OLD = '@D old'
+export const UNCLASSIFIED_TITLE = 'zz-bookmark-info--unclassified'
 
-  if (foundItem) {
-    return foundItem.id
-  }
+const mapSpecialTitle = new Set([
+  DATED_ROOT_NEW,
+  DATED_ROOT_OLD,
+  UNCLASSIFIED_TITLE,
+])
+
+export function isSpecialFolderTitle(title) {
+  return mapSpecialTitle.has(title)
 }
-
-function memoize(fnGetValue) {
-  let isValueWasGet = false
-  let value
-
-  return async function () {
-    if (isValueWasGet) {
-      return value
-    }
-
-    isValueWasGet = true
-
-    return value = fnGetValue()
-  }
-}
-
-export const getUnclassifiedFolderId = memoize(async () => getFolderByTitleInRoot(UNCLASSIFIED_TITLE))

@@ -5,9 +5,6 @@ import {
   makeLogFunction,
 } from '../api-low/index.js'
 import {
-  getUnclassifiedFolderId,
-} from '../folder-api/index.js'
-import {
   updateActiveTab,
 } from '../api/index.js'
 import {
@@ -26,6 +23,9 @@ import {
   NODE_ACTION,
   NodeTaskQueue,
 } from './nodeTaskQueue.js'
+import {
+  datedTemplate,
+} from './datedTemplate.js'
 
 const logBQ = makeLogFunction({ module: 'bookmarkQueue.js' })
 
@@ -74,7 +74,7 @@ async function onMoveBookmark(task) {
       isReplaceMoveToCreate = index == lastIndex && url == memo.activeTabUrl
     }
 
-    const unclassifiedFolderId = await getUnclassifiedFolderId()
+    const unclassifiedFolderId = await datedTemplate.findUnclassified()
     isReplaceMoveToCreate = isReplaceMoveToCreate && parentId !== unclassifiedFolderId
 
     if (isReplaceMoveToCreate) {

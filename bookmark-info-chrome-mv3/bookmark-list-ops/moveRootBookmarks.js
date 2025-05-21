@@ -1,12 +1,12 @@
 import {
-  getUnclassifiedFolderId,
   OTHER_BOOKMARKS_FOLDER_ID,
 } from '../folder-api/index.js';
 import {
   moveBookmarkIgnoreInController,
+  datedTemplate,
 } from '../bookmark-controller-api/index.js'
 
-async function moveRootBookmarks({ fromId, unclassifiedId }) {
+async function moveRootBookmarks({ fromId }) {
   if (!fromId) {
     return
   }
@@ -20,6 +20,12 @@ async function moveRootBookmarks({ fromId, unclassifiedId }) {
     .filter(({ url }) => !url.startsWith('place:'))
   // console.log('### moveRootBookmarks bkmList,', bkmList)
 
+  if (bkmList.length == 0) {
+    return
+  }
+
+  const unclassifiedId = await datedTemplate.findOrCreateUnclassified()
+
   await bkmList.reduce(
     (promiseChain, bkm) => promiseChain.then(
       () => moveBookmarkIgnoreInController({ id: bkm.id, parentId: unclassifiedId })
@@ -29,9 +35,8 @@ async function moveRootBookmarks({ fromId, unclassifiedId }) {
 }
 
 export async function moveRootBookmarksToUnclassified() {
-  const unclassifiedId = await getUnclassifiedFolderId()
 
   // await moveRootBookmarks({ fromId: BOOKMARKS_BAR_FOLDER_ID, unclassifiedId })
   // await moveRootBookmarks({ fromId: BOOKMARKS_MENU_FOLDER_ID, unclassifiedId })
-  await moveRootBookmarks({ fromId: OTHER_BOOKMARKS_FOLDER_ID, unclassifiedId })
+  await moveRootBookmarks({ fromId: OTHER_BOOKMARKS_FOLDER_ID })
 }
