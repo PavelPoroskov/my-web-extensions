@@ -13,8 +13,8 @@ import {
 
 const logDT = makeLogFunction({ module: 'datedTemplate.js' })
 
-const DATED_ROOT_FRESH = '@D fresh'
-const DATED_ROOT_OTHERS = '@D others'
+const DATED_ROOT_NEW = '@D new'
+const DATED_ROOT_OLD = '@D old'
 
 export function compareDatedTitle(a,b) {
   const partsA = a.split('.')
@@ -73,18 +73,18 @@ class DatedTemplate {
 
     return id
   }
-  async getIdDatedRootFresh() {
-    const id = await this.getIdForDatedTemplateTitle(DATED_ROOT_FRESH)
+  async getIdDatedRootNew() {
+    const id = await this.getIdForDatedTemplateTitle(DATED_ROOT_NEW)
     return id
   }
-  async getIdDatedRootOthers() {
-    const id = await this.getIdForDatedTemplateTitle(DATED_ROOT_OTHERS)
+  async getIdDatedRootOld() {
+    const id = await this.getIdForDatedTemplateTitle(DATED_ROOT_OLD)
     return id
   }
   async findOrCreateDatedFolderId({ templateTitle, templateId }) {
     logDT('findOrCreateDatedFolderWithCache() 00', templateTitle, templateId)
 
-    const rootId = await this.getIdDatedRootFresh()
+    const rootId = await this.getIdDatedRootNew()
 
     const id = await this._useCache({
       getKey: (options) => getDatedTitle(options.templateTitle),
