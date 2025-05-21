@@ -53,7 +53,7 @@ export function getDatedTitle(folderTitle) {
   const days = Math.floor((futureDate - today)/oneDayMs)
   const order = new Number(days).toString(36).padStart(3,'0')
 
-  return `${fixedPart} ${sToday} ${sWeekday}.${order}`
+  return `${fixedPart} ${sToday} ${sWeekday} ${order}`
 }
 
 export function compareDatedTitle(a,b) {
@@ -81,14 +81,11 @@ export function makeCompareDatedTitleWithFixed(a) {
 export function isDatedFolderTitle(str) {
   const partList = str.split(' ')
 
-  if (!(3 <= partList.length)) {
+  if (!(4 <= partList.length)) {
     return false
   }
 
-  const weekdayAndOrder = partList.at(-1)
-  const [weekday,order] = weekdayAndOrder.split('.')
-
-  const result = isWeekday(weekday || '') && (order || '').length == 3 && isDate(partList.at(-2)) && !!partList.at(-3)
+  const result = isWeekday(partList.at(-2)) && partList.at(-1).length == 3 && isDate(partList.at(-3)) && !!partList.at(-4)
 
   return result
 }
@@ -101,14 +98,14 @@ export function isDatedTitleForTemplate({ title, template }) {
     return false
   }
 
-  const fixedPartFromTitle = title.split(' ').slice(0, -2).join(' ')
+  const fixedPartFromTitle = title.split(' ').slice(0, -3).join(' ')
   const fixedPartFromTemplate = template.slice(0, -3).trim()
 
   return fixedPartFromTitle == fixedPartFromTemplate
 }
 
 export function getDatedTemplate(title) {
-  const fixedPartFromTitle = title.split(' ').slice(0, -2).join(' ')
+  const fixedPartFromTitle = title.split(' ').slice(0, -3).join(' ')
 
   return `${fixedPartFromTitle} @D`
 }

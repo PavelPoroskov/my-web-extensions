@@ -33,7 +33,7 @@ function fromOldTitleToNewTitle(str) {
   const order = partList.at(-3)
   const fixed = partList.slice(0, -3).join(' ')
 
-  return `${fixed} ${date} ${weekday}.${order}`
+  return `${fixed} ${date} ${weekday} ${order}`
 }
 
 export async function migration20250520() {
