@@ -11,7 +11,7 @@ import {
 
 const logMOD = makeLogFunction({ module: 'moveOldDatedFolders.js' })
 
-const KEEP_DATED_FOLDERS = 3
+const KEEP_DATED_FOLDERS = 5
 
 export async function moveOldDatedFolders() {
   const fromId = await folderCreator.findDatedRootNew()
@@ -25,7 +25,9 @@ export async function moveOldDatedFolders() {
 
   const getDate = (str) => {
     const partList = str.split(' ')
-    return partList.at(-2)
+    const strDDMMYYYY = partList.at(-3)
+
+    return strDDMMYYYY.split('-').toReversed().join('')
   }
   const datedFolderList = childrenList
     .filter(({ url, title }) => !url && isDatedFolderTitle(title))
