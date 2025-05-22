@@ -56,8 +56,8 @@ export async function orderBookmarks() {
   await sortFolders({ parentId: BOOKMARKS_MENU_FOLDER_ID })
   await sortFolders({ parentId: OTHER_BOOKMARKS_FOLDER_ID })
 
-  const datedRootNewId = folderCreator.findDatedRootNew()
-  const datedRootOldId = folderCreator.findDatedRootOld()
+  const datedRootNewId = await folderCreator.findDatedRootNew()
+  const datedRootOldId = await folderCreator.findDatedRootOld()
   await sortFolders({ parentId: datedRootNewId, compare: compareDatedTitle })
   await sortFolders({ parentId: datedRootOldId, compare: compareDatedTitle })
 
