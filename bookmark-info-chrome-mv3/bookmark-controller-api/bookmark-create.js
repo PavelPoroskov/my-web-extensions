@@ -15,12 +15,11 @@ import {
   createBookmarkIgnoreInController,
   moveBookmarkIgnoreInController,
 } from './bookmark-ignore.js'
+import {
+  makeLogFunction,
+} from '../api-low/index.js'
 
-// import {
-//   makeLogFunction,
-// } from '../api-low/index.js'
-
-// const logCBK = makeLogFunction({ module: 'bookmark-create.js' })
+const logCBK = makeLogFunction({ module: 'bookmark-create.js' })
 
 
 let lastCreatedBkmParentId
@@ -35,6 +34,7 @@ async function createBookmarkWithApi({
   url,
   title,
 }) {
+  // logCBK('createBookmarkWithApi() 00', parentId, url)
   lastCreatedBkmParentId = parentId
   lastCreatedBkmUrl = url
 
@@ -47,13 +47,16 @@ async function createBookmarkWithApi({
 }
 
 async function createBookmarkWithParentId({ parentId, url, title }) {
+  // logCBK('createBookmarkWithParentId() 00', parentId, url)
   const [parentNode] = await chrome.bookmarks.get(parentId)
   const parentTitle = parentNode.title
 
   const isDatedTemplate = isDatedFolderTemplate(parentTitle)
 
   if (isDatedTemplate) {
+    // logCBK('createBookmarkWithParentId() 11 before get findOrCreateDatedFolderId')
     const datedFolderId = await folderCreator.findOrCreateDatedFolderId({ templateTitle: parentTitle, templateId: parentId })
+    // logCBK('createBookmarkWithParentId() 22 datedFolderId', datedFolderId)
     await createBookmarkWithApi({ parentId: datedFolderId, url, title })
     await removePreviousDatedBookmarks({ url, template: parentTitle })
 

@@ -145,12 +145,16 @@ async function updateTabTask(options) {
   let url = options?.url
 
   if (!tabId) {
-    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    const [activeTab] = tabs;
+    try {
+      const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      const [activeTab] = tabs;
 
-    if (activeTab) {
-      tabId = activeTab?.id
-      url = activeTab?.url
+      if (activeTab) {
+        tabId = activeTab?.id
+        url = activeTab?.url
+      }
+    } catch (er) {
+      return
     }
   }
 
