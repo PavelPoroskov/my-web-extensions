@@ -4,6 +4,7 @@ import {
 } from '../api-low/index.js';
 import {
   isDatedTitleForTemplate,
+  compareDatedTitle,
 } from '../folder-api/index.js';
 import {
   removeBookmark,
@@ -11,9 +12,9 @@ import {
 
 const logBDT = makeLogFunction({ module: 'bookmark-dated.js' })
 
-export async function getDatedBookmarks({ url, template }) {
+export async function getDatedBookmarkList({ url, template }) {
   const bookmarkList = await chrome.bookmarks.search({ url });
-  logBDT('getDatedBookmarks () 00', bookmarkList)
+  logBDT('getDatedBookmarkList () 00', bookmarkList)
 
   const parentIdList = bookmarkList.map(({ parentId }) => parentId)
   const uniqueParentIdList = Array.from(new Set(parentIdList))
@@ -36,10 +37,10 @@ export async function getDatedBookmarks({ url, template }) {
 }
 
 export async function removePreviousDatedBookmarks({ url, template }) {
-  const bookmarkList = await getDatedBookmarks({ url, template })
+  const bookmarkList = await getDatedBookmarkList({ url, template })
 
   const removeFolderList = bookmarkList
-    .toSorted((a,b) => a.parentTitle.localeCompare(b.parentTitle))
+    .toSorted((a,b) => compareDatedTitle(a.parentTitle, b.parentTitle))
     .slice(1)
 
   if (removeFolderList.length == 0) {
@@ -54,7 +55,7 @@ export async function removePreviousDatedBookmarks({ url, template }) {
 }
 
 export async function removeDatedBookmarksForTemplate({ url, template }) {
-  const removeFolderList = await getDatedBookmarks({ url, template })
+  const removeFolderList = await getDatedBookmarkList({ url, template })
 
   await Promise.all(
     removeFolderList.map(

@@ -3,7 +3,7 @@ import {
   DATED_TEMPLATE_VISITED,
 } from '../folder-api/index.js';
 import {
-  getDatedBookmarks,
+  getDatedBookmarkList,
   removeDatedBookmarksForTemplate,
 } from './bookmark-dated.js';
 import {
@@ -11,7 +11,7 @@ import {
 } from './bookmark-create.js';
 
 export async function createBookmarkOpened({ url, title }) {
-  const list = await getDatedBookmarks({ url, template: DATED_TEMPLATE_VISITED })
+  const list = await getDatedBookmarkList({ url, template: DATED_TEMPLATE_VISITED })
 
   if (0 < list.length) {
     return
