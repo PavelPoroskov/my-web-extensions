@@ -6,9 +6,6 @@ import {
   isVisitedDatedTemplate,
 } from '../folder-api/index.js';
 import {
-  _findOrCreateFolder,
-} from './folder-create.js';
-import {
   folderCreator,
 } from './folderCreator.js';
 import {
@@ -102,7 +99,7 @@ export async function createBookmark({ parentId, parentTitle, url, title }) {
   if (parentId) {
     await createBookmarkWithParentId({ parentId, url, title })
   } else if (parentTitle) {
-    const parentId = await _findOrCreateFolder(parentTitle)
+    const parentId = await folderCreator.findOrCreateFolder(parentTitle)
 
     await createBookmarkWithParentId({
       parentId,
