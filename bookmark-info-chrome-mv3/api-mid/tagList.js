@@ -26,27 +26,39 @@ import {
 const logTL = makeLogFunction({ module: 'tagList.js' })
 
 class TagList {
-  isOn = true
 
-  isFlatStructure = false
-  isOpenGlobal = false
-  AVAILABLE_ROWS = 0
-  MAX_AVAILABLE_ROWS = 0
-  HIGHLIGHT_LAST = false
-  HIGHLIGHT_ALPHABET = false
-  PINNED_TAGS_POSITION = undefined
+  constructor () {
+    this.isOn = false
+    this.isRestoringDone = false
 
-  changeCount = 0
-  changeProcessedCount = -1
+    this.isFlatStructure = false
+    this.AVAILABLE_ROWS = 0
+    this.MAX_AVAILABLE_ROWS = 0
+    this.HIGHLIGHT_LAST = false
+    this.HIGHLIGHT_ALPHABET = false
+    this.PINNED_TAGS_POSITION = undefined
 
-  _recentTagObj = {}
-  _fixedTagObj = {}
+    this.isOpenGlobal = false
 
-  recentListDesc = []
-  recentListLimit = []
-  tagList = []
-  tagListFormat = []
-  tagIdSet = new Set()
+    this.changeProcessedCount = -1
+    this.changeCount = 0
+
+    this._recentTagObj = {}
+    this._fixedTagObj = {}
+
+    this.recentListDesc = []
+    this.recentListLimit = []
+    this.tagList = []
+    this.tagListFormat = []
+    this.tagIdSet = new Set()
+  }
+
+  async useSettings({ isOn, userSettings }) {
+    this.isOn = isOn
+
+    await this._readFromStorage({ userSettings })
+    this.isRestoringDone = true
+  }
 
   get nAvailableRows() {
     return this.AVAILABLE_ROWS
@@ -146,6 +158,7 @@ class TagList {
     // logTL('formatList () 00', list)
 
     const inList = list.filter(({ parentTitle }) => !!parentTitle)
+
     const lastTagList = this.recentListDesc
       .slice(0, this.HIGHLIGHT_LAST)
 
@@ -181,14 +194,15 @@ class TagList {
   }
   getListWithBookmarks(addTagList = []) {
     if (!this.isOn) {
+      logTL('getListWithBookmarks () 00 RETURN ', 0)
       return []
     }
 
-    logTL('getListWithBookmarks () 00', addTagList)
-
+    logTL('getListWithBookmarks () 00 this.isRestoringDone', this.isRestoringDone)
     const changeCount = this.changeCount
     if (this.changeProcessedCount < changeCount) {
-      logTL('getListWithBookmarks () 11')
+      // logTL('getListWithBookmarks () 11 this._recentTagObj length', Object.keys(this._recentTagObj).length )
+      // logTL('getListWithBookmarks () 11 this._fixedTagObj length', Object.keys(this._fixedTagObj).length )
 
       this.recentListDesc = Object.entries(this._recentTagObj)
         .map(([parentId, { parentTitle, dateAdded }]) => ({ parentId, parentTitle, dateAdded }))
@@ -203,7 +217,10 @@ class TagList {
         .filter(({ parentId }) => !(parentId in this._fixedTagObj))
         .slice(0, recentTagLimit)
 
-      logTL('getListWithBookmarks () 11 this._fixedTagObj', this._fixedTagObj)
+      // logTL('getListWithBookmarks () 11 this.AVAILABLE_ROWS', this.AVAILABLE_ROWS )
+      // logTL('getListWithBookmarks () 11 recentTagLimit', recentTagLimit )
+      // logTL('getListWithBookmarks () 11 this.recentListDesc length', this.recentListDesc.length )
+      // logTL('getListWithBookmarks () 11 this.recentListLimit length', this.recentListLimit.length )
 
       this.tagList  = [].concat(
         Object.entries(this._fixedTagObj)
@@ -220,6 +237,8 @@ class TagList {
       this.tagIdSet = new Set(this.tagList.map(({ parentId }) => parentId))
 
       this.tagListFormat = this._formatList(this.tagList)
+      // logTL('getListWithBookmarks () 11 this.tagList length', this.tagList.length )
+      // logTL('getListWithBookmarks () 11 this.tagListFormat length', this.tagListFormat.length )
 
       if (this.changeProcessedCount < changeCount) {
         this.changeProcessedCount = changeCount
@@ -234,7 +253,7 @@ class TagList {
     const requiredSlots = finalAddTagList.length
 
     if (requiredSlots === 0) {
-      logTL('getListWithBookmarks () 33 length', this.tagListFormat.length)
+      logTL('getListWithBookmarks () 33 RETURN ', this.tagListFormat.length)
       // logTL(this.tagListFormat)
       return this.tagListFormat
     }
@@ -273,7 +292,7 @@ class TagList {
     }
 
     const tagListFormatWith = this._formatList(resultList)
-    logTL('getListWithBookmarks () 99', tagListFormatWith.length)
+    logTL('getListWithBookmarks () RETURN 99', tagListFormatWith.length)
 
     return tagListFormatWith
   }
@@ -395,12 +414,6 @@ class TagList {
     await setOptions({
       [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
     })
-  }
-
-  async useSettings({ isOn, userSettings }) {
-    this.isOn = isOn
-
-    await this._readFromStorage({ userSettings })
   }
 }
 
