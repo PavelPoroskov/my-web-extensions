@@ -153,7 +153,8 @@ async function updateTabTask(options) {
         tabId = activeTab?.id
         url = activeTab?.url
       }
-    } catch (er) {
+    // eslint-disable-next-line no-unused-vars
+    } catch (_er) {
       return
     }
   }

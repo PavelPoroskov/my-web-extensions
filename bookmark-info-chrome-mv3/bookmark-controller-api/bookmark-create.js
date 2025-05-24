@@ -15,11 +15,11 @@ import {
   createBookmarkIgnoreInController,
   moveBookmarkIgnoreInController,
 } from './bookmark-ignore.js'
-import {
-  makeLogFunction,
-} from '../api-low/index.js'
+// import {
+//   makeLogFunction,
+// } from '../api-low/index.js'
 
-const logCBK = makeLogFunction({ module: 'bookmark-create.js' })
+// const logCBK = makeLogFunction({ module: 'bookmark-create.js' })
 
 
 let lastCreatedBkmParentId
