@@ -73,6 +73,8 @@ export const runtimeController = {
     }
 
     checkCommandShortcuts()
+
+    //? chrome.runtime.reload() to fix empty page options after update
   },
   async onMessage (message, sender) {
     logRC('runtime.onMessage message', message);

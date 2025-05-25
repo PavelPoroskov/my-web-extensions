@@ -44,6 +44,17 @@ export async function moveFolderIgnoreInController({ id, parentId, index }) {
   return await moveNodeIgnoreInController({ id, parentId, index })
 }
 
+export async function moveFolderContentToEnd(fromFolderId, toFolderId) {
+  const nodeList = await chrome.bookmarks.getChildren(fromFolderId)
+
+  await nodeList.reduce(
+    (promiseChain, node) => promiseChain.then(
+      () => moveNodeIgnoreInController({ id: node.id, parentId: toFolderId })
+    ),
+    Promise.resolve(),
+  );
+}
+
 export async function moveFolderContentToStart(fromFolderId, toFolderId) {
   const nodeList = await chrome.bookmarks.getChildren(fromFolderId)
   const reversedNodeList = nodeList.toReversed()

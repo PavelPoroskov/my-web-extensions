@@ -43,7 +43,7 @@ function makeIsTitleMatch({ title, normalizeFn = (str) => str }) {
       const rest = normalizedTestTitle.slice(patternLength)
 
       return rest.split(' ').filter(Boolean)
-        .every((word) => word.startsWith('#'))
+        .every((word) => word.startsWith('#') || word.startsWith(':'))
     }
 
     return false

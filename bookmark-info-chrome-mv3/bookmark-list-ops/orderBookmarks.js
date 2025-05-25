@@ -11,7 +11,7 @@ import {
   moveFolders,
 } from './moveFolders.js'
 import {
-  mergeSubFoldersLevelOneAndTwo,
+  mergeFolders,
 } from './mergeFolders.js'
 import {
   moveNotDescriptiveFoldersToUnclassified,
@@ -47,9 +47,7 @@ export async function orderBookmarks() {
   await moveNotDescriptiveFoldersToUnclassified()
 
   logOD('orderBookmarks() 33')
-  await mergeSubFoldersLevelOneAndTwo(BOOKMARKS_BAR_FOLDER_ID)
-  await mergeSubFoldersLevelOneAndTwo(BOOKMARKS_MENU_FOLDER_ID)
-  await mergeSubFoldersLevelOneAndTwo(OTHER_BOOKMARKS_FOLDER_ID)
+  await mergeFolders()
 
   logOD('orderBookmarks() 44')
   await sortFolders({ parentId: BOOKMARKS_BAR_FOLDER_ID })

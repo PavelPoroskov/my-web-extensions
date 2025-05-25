@@ -23,6 +23,7 @@ const logModuleList = [
   // 'incoming-message.js/PAGE_EVENT',
   // 'init-extension',
   // 'memo',
+  // 'mergeFolders.js',
   // 'moveFolders.js',
   // 'moveOldDatedFolders.js',
   // 'orderBookmarks.js',
