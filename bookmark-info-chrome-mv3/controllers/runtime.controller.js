@@ -20,15 +20,10 @@ function checkCommandShortcuts() {
     let missingShortcuts = [];
 
     for (let {name, shortcut} of commands) {
-      // console.log("COMMAND", name, shortcut)
       if (shortcut === '') {
         missingShortcuts.push(name);
       }
     }
-
-    // if (missingShortcuts.length > 0) {
-    //   console.log("NO SHORTCUTS FOR", missingShortcuts)
-    // }
   });
 }
 
@@ -63,6 +58,19 @@ export const runtimeController = {
     updateActiveTab({
       debugCaller: 'runtime.onInstalled'
     });
+
+    const savedObj = await getOptions([
+      INTERNAL_VALUES.DATA_FORMAT,
+      USER_OPTION.USE_FLAT_FOLDER_STRUCTURE,
+    ]);
+
+    if (savedObj[INTERNAL_VALUES.DATA_FORMAT] !== DATA_FORMAT) {
+      await migration({ from: savedObj[INTERNAL_VALUES.DATA_FORMAT] })
+
+      if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
+        await orderBookmarks()
+      }
+    }
 
     checkCommandShortcuts()
   },
