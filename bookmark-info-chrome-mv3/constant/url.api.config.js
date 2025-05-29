@@ -2,10 +2,11 @@ export const DEFAULT_HOST_SETTINGS = {
   isHashRequired: false,
   searchParamList: [
     '*id',
-    ['utm_*'],
+    ['any'],
     ['email_hash'],
-    ['sent_date'],
     ['pid=0'],
+    ['sent_date'],
+    ['utm_*'],
   ],
 }
 
