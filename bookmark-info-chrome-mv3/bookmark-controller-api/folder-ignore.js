@@ -44,6 +44,7 @@ export async function moveFolderIgnoreInController({ id, parentId, index }) {
   return await moveNodeIgnoreInController({ id, parentId, index })
 }
 
+// eslint-disable-next-line no-unused-vars
 export async function moveFolderContentToEnd(fromFolderId, toFolderId) {
   const nodeList = await chrome.bookmarks.getChildren(fromFolderId)
 

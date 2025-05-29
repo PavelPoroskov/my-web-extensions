@@ -83,6 +83,7 @@ createFileForFirefox(
     'bookmark-list-ops/removeDoubleBookmarks.js',
     'bookmark-list-ops/sortFolders.js',
     'bookmark-list-ops/orderBookmarks.js',
+    'bookmark-list-ops/replaceHostname.js',
     'bookmark-list-ops/index.js',
 
     'migration/migration20250520.js',

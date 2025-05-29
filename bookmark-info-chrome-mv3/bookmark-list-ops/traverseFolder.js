@@ -1,5 +1,5 @@
 
-export async function traverseFolderRecursively({ folder: rootFolder, onFolder, startLevel=0 }) {
+async function traverseFolderRecursively({ folder: rootFolder, onFolder, startLevel=0 }) {
   async function traverseFolder({ folder, level }) {
     const childBookmarkList = []
     const childFolderList = []

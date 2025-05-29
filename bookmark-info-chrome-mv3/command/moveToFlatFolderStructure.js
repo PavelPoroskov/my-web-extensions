@@ -1,5 +1,6 @@
 import {
   orderBookmarks,
+  // replaceHostname,
 } from '../bookmark-list-ops/index.js'
 import {
   USER_OPTION,
@@ -18,4 +19,6 @@ export async function moveToFlatFolderStructure() {
   }
 
   await orderBookmarks()
+
+  // await replaceHostname()
 }
