@@ -68,13 +68,32 @@
 
     return (
 `
+:root {
+  --bkm-info-onprint: ${onPrint};
+}
+@media print {
+  header, footer, aside, nav {
+      display: var(--bkm-info-onprint);
+  }
+  #page article.article {
+      width: 100%;
+  }
+  #page #sidebar.sidebar {
+      width: 0;
+  }
+  .blockSpoiler, .blockSpoiler-content {
+    display: var(--bkm-info-onprint);
+  }
+  div.social-share-buttons {
+    display: var(--bkm-info-onprint) !important;
+  }
+}
 #bkm-info--root {
   --bkm-info-font-size: ${fontSize}px;
   --bkm-info-font-letter: ${fontSizeLetter}px;
   --bkm-info-tag-length: ${tagLength}ch;
   --bkm-info-label-rpad: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
   --bkm-info-del-rpad: ${BROWSER_SPECIFIC.DEL_BTN_RIGHT_PADDING};
-  --bkm-info-onprint: ${onPrint};
 
   font-size: var(--bkm-info-font-size);
   width: var(--bkm-info-tag-length);
@@ -295,14 +314,6 @@
 }
 .bkm-info--tag:hover .bkm-info--fix-mark {
   border-bottom: 0.5em solid darkgray;
-}
-@media print {
-  header, footer, aside, nav {
-      display: var(--bkm-info-onprint);
-  }
-  .blockSpoiler, .blockSpoiler-content {
-    display: var(--bkm-info-onprint);
-  }
 }
 `
     )
@@ -598,7 +609,7 @@
       rootDiv.style.setProperty("--bkm-info-tag-length", tagLength);
     }
     if (isHideSemanticHtmlTagsOnPrinting != prevState.isHideSemanticHtmlTagsOnPrinting) {
-      rootDiv.style.setProperty("--bkm-info-onprint", onPrint);
+      document.body.style.setProperty("--bkm-info-onprint", onPrint);
     }
 
     const usedParentIdSet = new Set(bookmarkList.map(({ parentId }) => parentId))

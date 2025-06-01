@@ -231,6 +231,7 @@ const INTERNAL_VALUES = Object.fromEntries(
   // 'incoming-message.js/PAGE_EVENT',
   // 'init-extension',
   // 'memo',
+  // 'mergeFolders.js',
   // 'moveFolders.js',
   // 'moveOldDatedFolders.js',
   // 'orderBookmarks.js',
@@ -258,10 +259,11 @@ const logModuleMap = Object.fromEntries(
   isHashRequired: false,
   searchParamList: [
     '*id',
-    ['utm_*'],
+    ['any'],
     ['email_hash'],
-    ['sent_date'],
     ['pid=0'],
+    ['sent_date'],
+    ['utm_*'],
   ],
 }
 
@@ -1291,7 +1293,7 @@ function makeIsTitleMatch({ title, normalizeFn = (str) => str }) {
       const rest = normalizedTestTitle.slice(patternLength)
 
       return rest.split(' ').filter(Boolean)
-        .every((word) => word.startsWith('#'))
+        .every((word) => word.startsWith('#') || word.startsWith(':'))
     }
 
     return false
@@ -3217,6 +3219,18 @@ async function moveFolderIgnoreInController({ id, parentId, index }) {
   return await moveNodeIgnoreInController({ id, parentId, index })
 }
 
+// eslint-disable-next-line no-unused-vars
+async function moveFolderContentToEnd(fromFolderId, toFolderId) {
+  const nodeList = await browser.bookmarks.getChildren(fromFolderId)
+
+  await nodeList.reduce(
+    (promiseChain, node) => promiseChain.then(
+      () => moveNodeIgnoreInController({ id: node.id, parentId: toFolderId })
+    ),
+    Promise.resolve(),
+  );
+}
+
 async function moveFolderContentToStart(fromFolderId, toFolderId) {
   const nodeList = await browser.bookmarks.getChildren(fromFolderId)
   const reversedNodeList = nodeList.toReversed()
@@ -3491,6 +3505,23 @@ async function moveBookmarkIgnoreInController({ id, parentId, index }) {
   ignoreBkmControllerApiActionSet.addIgnoreMove(id)
 
   await browser.bookmarks.move(id, options)
+}
+
+async function updateBookmarkIgnoreInController({ id, title, url }) {
+  const options = {}
+  if (title != undefined) {
+    options.title = title
+  }
+  if (url != undefined) {
+    options.url = url
+  }
+  if (Object.keys(options).length == 0) {
+    return
+  }
+
+  ignoreBkmControllerApiActionSet.addIgnoreUpdate(id)
+
+  await browser.bookmarks.update(id, options)
 }
 
 async function removeBookmark(bkmId) {
@@ -4799,7 +4830,156 @@ async function traverseTreeRecursively({ onFolder }) {
   const [rootFolder] = await browser.bookmarks.getTree()
   await traverseFolderRecursively({ folder: rootFolder, onFolder, startLevel: 0 })
 }
-async function mergeSubFoldersLevelOne(parentId) {
+const logMRG = makeLogFunction({ module: 'mergeFolders.js' })
+
+function normalizeTitleForMerge (title) {
+  // logMRG('normalizeTitleForMerge 00', title)
+
+  const lowNotDashTitle = title.replaceAll('-', '').toLowerCase()
+  const partList = lowNotDashTitle.split(' ').filter(Boolean)
+  let directiveList = []
+
+  let i = partList.length - 1
+  while (-1 < i) {
+    const isDirective = partList[i].startsWith('#') || partList[i].startsWith(':')
+
+    if (isDirective) {
+      directiveList.push(partList[i])
+    } else {
+      break
+    }
+
+    i = i - 1
+  }
+
+  const wordList = partList.slice(0, i+1)
+  // logMRG('normalizeTitleForMerge 33', wordList)
+  const lastWord = wordList.at(-1)
+  const singularLastWord = singular(lastWord)
+  const normalizedWordList = wordList.with(-1, singularLastWord)
+  const normalizedTitle = normalizedWordList.join(' ')
+
+  return {
+    normalizedTitle,
+    directiveList,
+  }
+}
+
+function removeDirectives(title) {
+  const partList = title.split(' ').filter(Boolean)
+
+  let i = partList.length - 1
+  while (-1 < i) {
+    const isDirective = partList[i].startsWith('#') || partList[i].startsWith(':')
+
+    if (!isDirective) {
+      break
+    }
+
+    i = i - 1
+  }
+
+  return partList.slice(0, i+1).join(' ')
+}
+
+function addDirectives(title, directiveList) {
+  return `${removeDirectives(title)} ${directiveList.toSorted().join(' ')}`
+}
+
+async function addSubfolders({ parentId, nameSet }) {
+  logMRG('addSubfolders 00', parentId)
+  if (!parentId) {
+    return
+  }
+
+  const nodeList = await browser.bookmarks.getChildren(parentId)
+  const folderNodeList = nodeList.filter(({ url }) => !url)
+
+  for (const node of folderNodeList) {
+    const { normalizedTitle, directiveList } = normalizeTitleForMerge(node.title)
+
+    const w10 = directiveList.filter((str) => str.startsWith('#')).length
+    const w1 = directiveList.filter((str) => !str.startsWith('#')).length
+
+    const nodeData = Object.assign(
+      {},
+      node,
+      {
+        directiveList,
+        directiveWeight: w10*10 + w1,
+      },
+    )
+
+    if (!nameSet[normalizedTitle]) {
+      nameSet[normalizedTitle] = [nodeData]
+    } else {
+      nameSet[normalizedTitle].push(nodeData)
+    }
+  }
+}
+
+async function mergeRootSubFolders() {
+  logMRG('mergeRootSubFolders 00')
+
+  const nameSet = {}
+
+  await addSubfolders({ parentId: BOOKMARKS_BAR_FOLDER_ID, nameSet })
+  await addSubfolders({ parentId: BOOKMARKS_MENU_FOLDER_ID, nameSet })
+  await addSubfolders({ parentId: OTHER_BOOKMARKS_FOLDER_ID, nameSet })
+
+  const moveTaskList = []
+  const renameTaskList = []
+  const notUniqList = Object.entries(nameSet).filter(([, nodeList]) => nodeList.length > 1)
+
+  for (const [, nodeList] of notUniqList) {
+    const sortedList = nodeList.toSorted((a, b) => -(a.directiveWeight - b.directiveWeight) || -a.title.localeCompare(b.title))
+    const firstNode = sortedList[0]
+    const restNodeList = sortedList.slice(1)
+
+    for (const fromNode of restNodeList) {
+      moveTaskList.push({
+        fromNode,
+        toNode: firstNode,
+      })
+    }
+
+    const allDirectives = sortedList.flatMap(({directiveList}) => directiveList)
+    const uniqDirectives = Array.from(new Set(allDirectives))
+
+    if (firstNode.directiveList.length !== uniqDirectives.length) {
+      renameTaskList.push({
+        id: firstNode.id,
+        title: addDirectives(firstNode.title, uniqDirectives),
+      })
+    }
+  }
+
+  logMRG('renameTaskList', renameTaskList)
+  logMRG('moveTaskList', moveTaskList)
+
+  await renameTaskList.reduce(
+    (promiseChain, { id, title }) => promiseChain.then(
+      () => updateFolder({ id,  title })
+    ),
+    Promise.resolve(),
+  );
+
+  await moveTaskList.reduce(
+    (promiseChain, { fromNode, toNode }) => promiseChain.then(
+      () => moveFolderContentToStart(fromNode.id, toNode.id)
+    ),
+    Promise.resolve(),
+  );
+
+  await moveTaskList.reduce(
+    (promiseChain, { fromNode }) => promiseChain.then(
+      () => removeFolder(fromNode.id)
+    ),
+    Promise.resolve(),
+  );
+}
+
+async function mergeSubFoldersLevelOne(parentId) {
   if (!parentId) {
     return
   }
@@ -4851,32 +5031,14 @@ async function traverseTreeRecursively({ onFolder }) {
   );
 }
 
-async function mergeSubFoldersLevelOneAndTwo(parentId) {
-  if (!parentId) {
-    return
-  }
+async function mergeFolders() {
 
-  await mergeSubFoldersLevelOne(parentId)
+  await mergeRootSubFolders()
 
-  const mergeLevelTwoList = []
-  const [rootNode] = await browser.bookmarks.getSubTree(parentId)
-
-  for (const node of rootNode.children) {
-    if (!node.url) {
-      const childrenFolderList = node.children.filter(({ url }) => !url)
-
-      if (2 <= childrenFolderList.length) {
-        mergeLevelTwoList.push(node.id)
-      }
-    }
-  }
-
-  await mergeLevelTwoList.reduce(
-    (promiseChain, folderLevelOneId) => promiseChain.then(
-      () => mergeSubFoldersLevelOne(folderLevelOneId)
-    ),
-    Promise.resolve(),
-  );
+  const datedRootNewId = await folderCreator.findDatedRootNew()
+  const datedRootOldId = await folderCreator.findDatedRootOld()
+  await mergeSubFoldersLevelOne(datedRootNewId)
+  await mergeSubFoldersLevelOne(datedRootOldId)
 }
 async function moveNotDescriptiveFolders({ fromId }) {
   if (!fromId) {
@@ -5221,9 +5383,7 @@ async function orderBookmarks() {
   await moveNotDescriptiveFoldersToUnclassified()
 
   logOD('orderBookmarks() 33')
-  await mergeSubFoldersLevelOneAndTwo(BOOKMARKS_BAR_FOLDER_ID)
-  await mergeSubFoldersLevelOneAndTwo(BOOKMARKS_MENU_FOLDER_ID)
-  await mergeSubFoldersLevelOneAndTwo(OTHER_BOOKMARKS_FOLDER_ID)
+  await mergeFolders()
 
   logOD('orderBookmarks() 44')
   await sortFolders({ parentId: BOOKMARKS_BAR_FOLDER_ID })
@@ -5239,6 +5399,49 @@ async function orderBookmarks() {
   await removeDoubleBookmarks()
 
   logOD('orderBookmarks() 99')
+}
+async function getReplaceList({ originalHost, newHost }) {
+  const taskList = []
+
+  function onFolder({ bookmarkList }) {
+
+    bookmarkList.forEach(({ url, id }) => {
+      try {
+        const oUrl = new URL(url)
+
+        if (oUrl.hostname == originalHost) {
+          oUrl.hostname = newHost
+
+          taskList.push({
+            id,
+            newUrl: oUrl.toString(),
+          })
+        }
+
+      // eslint-disable-next-line no-empty
+      } finally {
+
+      }
+    })
+  }
+
+  await traverseTreeRecursively({ onFolder })
+
+  return taskList
+}
+
+// eslint-disable-next-line no-unused-vars
+async function replaceHostname() {
+  const originalHost = 'name1.xyz';
+  const newHost = 'name1.xy';
+  const replaceList = await getReplaceList({ originalHost, newHost })
+
+  await replaceList.reduce(
+    (promiseChain, { id, newUrl }) => promiseChain.then(
+      () => updateBookmarkIgnoreInController({ id, url: newUrl })
+    ),
+    Promise.resolve(),
+  );
 }
 
 function isOldDatedFolderTitle(str) {
@@ -5561,6 +5764,8 @@ async function getUrlFromUrl() {
   }
 
   await orderBookmarks()
+
+  // await replaceHostname()
 }
 async function toggleYoutubeHeader() {
   const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
@@ -5830,15 +6035,10 @@ function checkCommandShortcuts() {
     let missingShortcuts = [];
 
     for (let {name, shortcut} of commands) {
-      // console.log("COMMAND", name, shortcut)
       if (shortcut === '') {
         missingShortcuts.push(name);
       }
     }
-
-    // if (missingShortcuts.length > 0) {
-    //   console.log("NO SHORTCUTS FOR", missingShortcuts)
-    // }
   });
 }
 
@@ -5874,7 +6074,22 @@ const runtimeController = {
       debugCaller: 'runtime.onInstalled'
     });
 
+    const savedObj = await getOptions([
+      INTERNAL_VALUES.DATA_FORMAT,
+      USER_OPTION.USE_FLAT_FOLDER_STRUCTURE,
+    ]);
+
+    if (savedObj[INTERNAL_VALUES.DATA_FORMAT] !== DATA_FORMAT) {
+      await migration({ from: savedObj[INTERNAL_VALUES.DATA_FORMAT] })
+
+      if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
+        await orderBookmarks()
+      }
+    }
+
     checkCommandShortcuts()
+
+    //? browser.runtime.reload() to fix empty page options after update
   },
   async onMessage (message, sender) {
     logRC('runtime.onMessage message', message);
