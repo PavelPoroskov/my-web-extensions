@@ -39,6 +39,7 @@ async function onChangeFolder(task) {
 
   memo.bkmFolderById.delete(bookmarkId);
   await tagList.addTag({ parentId: node.id, parentTitle: node.title })
+  await afterUserCreatedFolderInGUI(node)
 
   folderCreator.clearCache(bookmarkId)
 }
