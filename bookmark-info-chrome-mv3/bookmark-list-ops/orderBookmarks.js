@@ -28,6 +28,9 @@ import {
 import {
   sortFolders,
 } from './sortFolders.js'
+// import {
+//   replaceHostname,
+// } from './replaceHostname.js'
 import {
   makeLogFunction,
 } from '../api-low/index.js';
@@ -36,6 +39,7 @@ const logOD = makeLogFunction({ module: 'orderBookmarks.js' })
 
 export async function orderBookmarks() {
   logOD('orderBookmarks() 00')
+  // await replaceHostname({ originalHostname: 'hostname1', newHostname: 'hostname2' })
 
   logOD('orderBookmarks() 11')
   await moveFolders()
