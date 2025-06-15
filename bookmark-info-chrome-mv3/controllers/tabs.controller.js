@@ -1,6 +1,6 @@
 import {
-  pageReady,
   updateActiveTab,
+  urlEvents,
   visitedUrls,
 } from '../api/index.js'
 import {
@@ -58,7 +58,7 @@ export const tabsController = {
     if (Tab.active && changeInfo?.status == 'complete') {
       memo.activeTabUrl = Tab.url
 
-      pageReady.clearUrlOnPageOpen({ tabId, url: Tab.url })
+      urlEvents.onPageReady({ tabId, url: Tab.url })
 
       updateActiveTab({
         tabId,
@@ -98,6 +98,7 @@ export const tabsController = {
         // QUESTION: on open windows with stored tabs. every tab is activated?
         // firefox: only one active tab
         visitedUrls.visitTab(tabId, memo.activeTabUrl, Tab.title)
+        urlEvents.onVisitUrl({ url: memo.activeTabUrl })
       }
     } catch (er) {
       logTC('tabs.onActivated. IGNORING. tab was deleted', er);

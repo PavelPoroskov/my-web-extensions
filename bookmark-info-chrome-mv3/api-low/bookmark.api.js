@@ -25,3 +25,26 @@ export async function getBookmarkListDirty(idList) {
     .filter(Boolean)
     .flat()
 }
+
+export async function getBookmarkListWithParent({ url }) {
+  const bookmarkList = await chrome.bookmarks.search({ url });
+
+  const parentIdList = bookmarkList.map(({ parentId }) => parentId).filter(Boolean)
+  const uniqueParentIdList = Array.from(new Set(parentIdList))
+  let parentFolderList = []
+
+  if (0 < uniqueParentIdList.length) {
+    parentFolderList = await getBookmarkListDirty(uniqueParentIdList)
+  }
+
+  const parentMap = Object.fromEntries(
+    parentFolderList
+      .map(({ id, title }) => [id, title])
+  )
+
+  const resultList = bookmarkList
+    .map((bookmark) => ({ parentTitle: parentMap[bookmark.parentId] || '', ...bookmark }))
+
+  return resultList
+}
+

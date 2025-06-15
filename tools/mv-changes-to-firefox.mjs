@@ -60,7 +60,7 @@ createFileForFirefox(
     'bookmark-controller-api/nodeTaskQueue.js',
 
     'api/visited-urls.js',
-    'api/pageReady.js',
+    'api/urlEvents.js',
     'api/init-extension.js',
 
     'api/get-bookmarks.api.js',

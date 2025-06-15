@@ -16,8 +16,8 @@ import {
   visitedUrls,
 } from './visited-urls.js'
 import {
-  pageReady,
-} from './pageReady.js'
+  urlEvents,
+} from './urlEvents.js'
 
 const logIX = makeLogFunction({ module: 'init-extension' })
 
@@ -91,8 +91,8 @@ async function initFromUserOptions() {
     visitedUrls.useSettings({
       isOn: userSettings[USER_OPTION.MARK_CLOSED_PAGE_AS_VISITED],
     }),
-    pageReady.useSettings({
-      isOn: userSettings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN],
+    urlEvents.useSettings({
+      userSettings,
     }),
   ])
 }

@@ -8,7 +8,7 @@ import {
 import {
   showAuthorBookmarksStep2,
   updateActiveTab,
-  pageReady,
+  urlEvents,
 } from '../api/index.js'
 import {
   EXTENSION_MSG_ID,
@@ -81,7 +81,7 @@ const OtherHandlers = {
     if (tabId === memo.activeTabId) {
       logIMT('runtime.onMessage TAB_IS_READY 11');
 
-      pageReady.clearUrlOnPageOpen({ tabId, url })
+      urlEvents.onPageReady({ tabId, url })
 
       updateActiveTab({
         tabId,

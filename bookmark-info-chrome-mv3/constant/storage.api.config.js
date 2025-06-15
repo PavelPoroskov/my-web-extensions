@@ -21,6 +21,23 @@ const USER_OPTION_META = {
   CLEAR_URL_ON_PAGE_OPEN: {
     default: true
   },
+  DELETE_BOOKMARK_ON_CREATING: {
+    default: false,
+  },
+  DELETE_BOOKMARK_ON_CREATING_LIST: {
+    default: [
+      'done -> todo',
+      'done @D -> todo',
+      'done dw -> todo dw*',
+      'done dw -> todo start dw*',
+    ],
+  },
+  DELETE_BOOKMARK_ON_VISITING: {
+    default: false,
+  },
+  DELETE_BOOKMARK_ON_VISITING_LIST: {
+    default: 'todo continue*',
+  },
   FONT_SIZE: {
     default: 14,
   },
