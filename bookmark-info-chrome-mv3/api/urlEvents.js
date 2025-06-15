@@ -22,7 +22,7 @@ function makeIsTitleMatchForEvents(patternList) {
     .forEach((pattern) => {
       const asteriskIndex = pattern.indexOf('*')
 
-      if (asteriskIndex == pattern.length - 1) {
+      if (asteriskIndex == pattern.length - 1 && 0 < asteriskIndex) {
         const start = pattern.slice(0, -1)
         isFnList.push((title) => title.startsWith(start))
       } else {
@@ -31,6 +31,21 @@ function makeIsTitleMatchForEvents(patternList) {
     })
 
   return (title) => isFnList.some((isFn) => isFn(title))
+}
+
+function isTitleMatchForEvents({ title, pattern }) {
+  let result = false
+
+  const asteriskIndex = pattern.indexOf('*')
+
+  if (asteriskIndex == pattern.length - 1 && 0 < asteriskIndex) {
+    const start = pattern.slice(0, -1)
+    result = title.startsWith(start)
+  } else {
+    result = (title == pattern)
+  }
+
+  return result
 }
 
 class UrlEvents {
@@ -68,12 +83,8 @@ class UrlEvents {
     }
   }
 
-  async onVisitUrl({ url }) {
-    if (!this.isOnVisit) {
-      return
-    }
-
-    if (this.deleteListOnVisit.length == 0) {
+  async _removeBookmarksByPatterns({ url, patternList }) {
+    if (patternList.length == 0) {
       return
     }
 
@@ -81,7 +92,7 @@ class UrlEvents {
     const bookmarkListWithParent = await getBookmarkListWithParent({ url: cleanUrl })
     const deleteList = []
 
-    const isTitleMatch = makeIsTitleMatchForEvents(this.deleteListOnVisit)
+    const isTitleMatch = makeIsTitleMatchForEvents(patternList)
 
     bookmarkListWithParent.forEach(({ id, parentTitle }) => {
       if (isTitleMatch(parentTitle)) {
@@ -97,7 +108,15 @@ class UrlEvents {
     );
   }
 
-  onCreateBookmark({ url }) {
+  async onVisitUrl({ url }) {
+    if (!this.isOnVisit) {
+      return
+    }
+
+    await this._removeBookmarksByPatterns({ url, patternList: this.deleteListOnVisit })
+  }
+
+  async onCreateBookmark({ url, parentTitle }) {
     if (!this.isOnCreateBookmark) {
       return
     }
@@ -106,6 +125,26 @@ class UrlEvents {
       return
     }
 
+    const createDeleteTemplateList = []
+
+    this.deleteListOnCreate
+      .filter(Boolean)
+      .map((template) => {
+        const parts = template.split('->')
+
+        if (parts.length == 2) {
+          createDeleteTemplateList.push({
+            createTemplate: parts[0].trim(),
+            deleteTemplate: parts[1].trim(),
+          })
+        }
+      })
+
+    const deleteTemplateList = createDeleteTemplateList
+      .filter(({ createTemplate }) => isTitleMatchForEvents({ title: parentTitle, pattern: createTemplate }))
+      .map(({ deleteTemplate }) => deleteTemplate)
+
+    await this._removeBookmarksByPatterns({ url, patternList: deleteTemplateList })
   }
 }
 

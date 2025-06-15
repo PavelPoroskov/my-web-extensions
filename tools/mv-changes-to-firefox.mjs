@@ -55,12 +55,14 @@ createFileForFirefox(
     'bookmark-controller-api/folderCreator.js',
     'bookmark-controller-api/bookmark-ignore.js',
     'bookmark-controller-api/bookmark-dated.js',
+
+    'api/urlEvents.js',
     'bookmark-controller-api/bookmark-create.js',
+
     'bookmark-controller-api/bookmark-visited.js',
     'bookmark-controller-api/nodeTaskQueue.js',
 
     'api/visited-urls.js',
-    'api/urlEvents.js',
     'api/init-extension.js',
 
     'api/get-bookmarks.api.js',

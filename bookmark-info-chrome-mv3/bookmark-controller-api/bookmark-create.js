@@ -2,6 +2,9 @@ import {
   tagList,
 } from '../api-mid/index.js';
 import {
+  urlEvents,
+} from '../api/urlEvents.js'
+import {
   isDatedFolderTemplate,
   isVisitedDatedTemplate,
 } from '../folder-api/index.js';
@@ -67,6 +70,8 @@ async function createBookmarkWithParentId({ parentId, url, title }) {
     await createBookmarkWithApi({ parentId, url, title })
     await tagList.addTag({ parentId, parentTitle })
   }
+
+  urlEvents.onCreateBookmark({ url, parentTitle })
 }
 
 export async function afterUserCreatedBookmarkInGUI({ parentId, id, url, index }) {
@@ -95,6 +100,8 @@ export async function afterUserCreatedBookmarkInGUI({ parentId, id, url, index }
 
     await tagList.addTag({ parentId, parentTitle })
   }
+
+  urlEvents.onCreateBookmark({ url, parentTitle })
 }
 
 export async function createBookmark({ parentId, parentTitle, url, title }) {
