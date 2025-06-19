@@ -9,6 +9,20 @@ const EXTENSION_MSG_ID = {
 
 const wait = ms => new Promise(res => setTimeout(res, ms));
 
+function debounce(func, timeout = 300){
+  let timer;
+
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(
+      () => {
+        func.apply(this, args);
+      },
+      timeout,
+    );
+  };
+}
+
 async function delegateSaveOptions(updateObj) {
   await browser.runtime.sendMessage({
     command: EXTENSION_MSG_ID.OPTIONS_ASKS_SAVE,
@@ -56,6 +70,23 @@ function makeSaveSelectHandler(optionId) {
       })
     }
   }
+}
+
+function makeSaveTextareaHandler(optionId) {
+  const saveTextareaHandler = async function saveTextareaHandler(event) {
+    event.preventDefault();
+
+    const element = document.querySelector(`#${optionId}`)
+    const value = element.value.split(/\n\r?/g)
+
+    if (element) {
+      await delegateSaveOptions({
+        [optionId]: value,
+      })
+    }
+  }
+
+  return debounce(saveTextareaHandler, 90)
 }
 
 function restoreOptions(settings) {
@@ -199,6 +230,31 @@ function restoreOptions(settings) {
   element = document.querySelector(domId)
   element.value = settings[optionId];
   element.addEventListener('change', makeSaveSelectHandler(optionId) );
+
+
+  optionId = USER_OPTION.DELETE_BOOKMARK_ON_CREATING;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.checked = settings[optionId];
+  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
+
+  optionId = USER_OPTION.DELETE_BOOKMARK_ON_CREATING_LIST;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.value = settings[optionId].join('\n');
+  element.addEventListener('change', makeSaveTextareaHandler(optionId) );
+
+  optionId = USER_OPTION.DELETE_BOOKMARK_ON_VISITING;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.checked = settings[optionId];
+  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
+
+  optionId = USER_OPTION.DELETE_BOOKMARK_ON_VISITING_LIST;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.value = settings[optionId].join('\n');
+  element.addEventListener('change', makeSaveTextareaHandler(optionId) );
 }
 
 let HOST_LIST_FOR_PAGE_OPTIONS

@@ -93,6 +93,25 @@ const USER_OPTION_META = {
   CLEAR_URL_ON_PAGE_OPEN: {
     default: true
   },
+  DELETE_BOOKMARK_ON_CREATING: {
+    default: false,
+  },
+  DELETE_BOOKMARK_ON_CREATING_LIST: {
+    default: [
+      'DONE -> TODO',
+      'DONE @D -> TODO',
+      'DONE DW -> todo dw*',
+      'DONE DW -> start dw',
+    ],
+  },
+  DELETE_BOOKMARK_ON_VISITING: {
+    default: false,
+  },
+  DELETE_BOOKMARK_ON_VISITING_LIST: {
+    default: [
+      'todo continue*',
+    ],
+  },
   FONT_SIZE: {
     default: 14,
   },
@@ -504,6 +523,32 @@ async function getBookmarkListDirty(idList) {
     .map((result) => result.value)
     .filter(Boolean)
     .flat()
+}
+
+async function getBookmarkListWithParent({ url }) {
+  if (url.startsWith('chrome:') || url.startsWith('about:')) {
+    return []
+  }
+
+  const bookmarkList = await browser.bookmarks.search({ url });
+
+  const parentIdList = bookmarkList.map(({ parentId }) => parentId).filter(Boolean)
+  const uniqueParentIdList = Array.from(new Set(parentIdList))
+  let parentFolderList = []
+
+  if (0 < uniqueParentIdList.length) {
+    parentFolderList = await getBookmarkListDirty(uniqueParentIdList)
+  }
+
+  const parentMap = Object.fromEntries(
+    parentFolderList
+      .map(({ id, title }) => [id, title])
+  )
+
+  const resultList = bookmarkList
+    .map((bookmark) => ({ parentTitle: parentMap[bookmark.parentId] || '', ...bookmark }))
+
+  return resultList
 }
 const MS_DIFF_FOR_SINGLE_BKM = 80
 
@@ -3533,27 +3578,10 @@ async function removeBookmark(bkmId) {
   {
   }
 }
-const logBDT = makeLogFunction({ module: 'bookmark-dated.js' })
+async function getDatedBookmarkList({ url, template }) {
+  const bookmarkListWithParent = await getBookmarkListWithParent({ url })
 
-async function getDatedBookmarkList({ url, template }) {
-  const bookmarkList = await browser.bookmarks.search({ url });
-  logBDT('getDatedBookmarkList () 00', bookmarkList)
-
-  const parentIdList = bookmarkList.map(({ parentId }) => parentId)
-  const uniqueParentIdList = Array.from(new Set(parentIdList))
-  if (uniqueParentIdList.length == 0) {
-    return []
-  }
-
-  const parentFolderList = await getBookmarkListDirty(uniqueParentIdList)
-
-  const parentMap = Object.fromEntries(
-    parentFolderList
-      .map(({ id, title}) => [id, title])
-  )
-
-  const selectedList = bookmarkList
-    .map(({ id, parentId }) => ({ id, parentTitle: parentMap[parentId] }))
+  const selectedList = bookmarkListWithParent
     .filter(({ parentTitle }) => isDatedTitleForTemplate({ title: parentTitle, template }))
 
   return selectedList
@@ -3586,6 +3614,172 @@ async function removeDatedBookmarksForTemplate({ url, template }) {
     )
   )
 }
+function makeIsTitleMatchForEvents(patternList) {
+  const isFnList = []
+
+  patternList
+    .filter(Boolean)
+    .map((pattern) => pattern.toLowerCase())
+    .forEach((pattern) => {
+      const asteriskIndex = pattern.indexOf('*')
+
+      if (asteriskIndex == pattern.length - 1 && 0 < asteriskIndex) {
+        const start = pattern.slice(0, -1)
+        isFnList.push((title) => title.startsWith(start))
+      } else {
+        isFnList.push((title) => title == pattern)
+      }
+    })
+
+  return (title) => {
+    const titleLow = title.toLowerCase()
+
+    return isFnList.some((isFn) => isFn(titleLow))
+  }
+}
+
+function isTitleMatchForEvents({ title, pattern }) {
+  let result = false
+  const titleLow = title.toLowerCase()
+  const patternLow = pattern.toLowerCase()
+
+  const asteriskIndex = patternLow.indexOf('*')
+
+  if (asteriskIndex == patternLow.length - 1 && 0 < asteriskIndex) {
+    const start = patternLow.slice(0, -1)
+    result = titleLow.startsWith(start)
+  } else {
+    result = (titleLow == patternLow)
+  }
+
+  return result
+}
+
+class UrlEvents {
+  constructor () {
+    this.isOnClearUrl = false
+
+    this.isOnCreateBookmark = false
+    this.deleteListOnCreate = []
+
+    this.isOnVisit = false
+    this.deleteListOnVisit = []
+  }
+
+  useSettings({ userSettings }) {
+    this.isOnClearUrl = userSettings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN],
+
+    this.isOnCreateBookmark = userSettings[USER_OPTION.DELETE_BOOKMARK_ON_CREATING]
+    this.deleteListOnCreate = userSettings[USER_OPTION.DELETE_BOOKMARK_ON_CREATING_LIST]
+
+    this.isOnVisit = userSettings[USER_OPTION.DELETE_BOOKMARK_ON_VISITING]
+    this.deleteListOnVisit = userSettings[USER_OPTION.DELETE_BOOKMARK_ON_VISITING_LIST]
+  }
+
+  async onPageReady({ tabId, url }) {
+    this.onVisitUrl({ url })
+
+    if (!this.isOnClearUrl) {
+      return
+    }
+
+    const cleanUrl = removeQueryParamsIfTarget(url);
+
+    if (url !== cleanUrl) {
+      await page.changeUrlInTab({ tabId, url: cleanUrl })
+    }
+  }
+
+  async _removeBookmarksByPatterns({ url, patternList }) {
+    // console.log('_removeBookmarksByPatterns() 00 ')
+    // console.log(url)
+    // console.log('patternList ', patternList)
+    if (patternList.length == 0) {
+      return
+    }
+
+    if (url.startsWith('chrome:') || url.startsWith('about:')) {
+      return
+    }
+
+    const cleanUrl = removeQueryParamsIfTarget(url);
+    const bookmarkListWithParent = await getBookmarkListWithParent({ url: cleanUrl })
+    const deleteList = []
+
+    const isTitleMatch = makeIsTitleMatchForEvents(patternList)
+
+    bookmarkListWithParent.forEach(({ id, parentTitle }) => {
+      const normalizedParentTitle = isDatedFolderTitle(parentTitle)
+        ? getDatedTemplate(parentTitle)
+        : parentTitle
+
+      if (isTitleMatch(normalizedParentTitle)) {
+        deleteList.push(id)
+      }
+    })
+
+    // console.log('deleteList ', deleteList)
+
+    await deleteList.reduce(
+      (promiseChain, bkmId) => promiseChain.then(
+        () => removeBookmark(bkmId)
+      ),
+      Promise.resolve(),
+    );
+  }
+
+  async onVisitUrl({ url }) {
+    if (!this.isOnVisit) {
+      return
+    }
+
+    await this._removeBookmarksByPatterns({ url, patternList: this.deleteListOnVisit })
+  }
+
+  async onCreateBookmark({ url, parentTitle }) {
+    // console.log('onCreateBookmark() 00')
+    // console.log(url)
+    // console.log('parentTitle ', parentTitle)
+    if (!this.isOnCreateBookmark) {
+      return
+    }
+
+    if (this.deleteListOnCreate.length == 0) {
+      return
+    }
+
+    const createDeleteTemplateList = []
+
+    this.deleteListOnCreate
+      .filter(Boolean)
+      .map((template) => {
+        const parts = template.split('->')
+
+        if (parts.length == 2) {
+          createDeleteTemplateList.push({
+            createTemplate: parts[0].trim(),
+            deleteTemplate: parts[1].trim(),
+          })
+        }
+      })
+
+    const normalizedParentTitle = isDatedFolderTitle(parentTitle)
+      ? getDatedTemplate(parentTitle)
+      : parentTitle
+
+    // console.log('normalizedParentTitle ', normalizedParentTitle)
+
+    const deleteTemplateList = createDeleteTemplateList
+      .filter(({ createTemplate }) => isTitleMatchForEvents({ title: normalizedParentTitle, pattern: createTemplate }))
+      .map(({ deleteTemplate }) => deleteTemplate)
+
+    // console.log('deleteTemplateList ', deleteTemplateList)
+
+    await this._removeBookmarksByPatterns({ url, patternList: deleteTemplateList })
+  }
+}
+
+const urlEvents = new UrlEvents()
 // import {
 //   makeLogFunction,
 // } from '../api-low/index.js'
@@ -3638,6 +3832,8 @@ async function createBookmarkWithParentId({ parentId, url, title }) {
     await createBookmarkWithApi({ parentId, url, title })
     await tagList.addTag({ parentId, parentTitle })
   }
+
+  urlEvents.onCreateBookmark({ url, parentTitle })
 }
 
 async function afterUserCreatedBookmarkInGUI({ parentId, id, url, index }) {
@@ -3666,6 +3862,8 @@ async function afterUserCreatedBookmarkInGUI({ parentId, id, url, index }) {
 
     await tagList.addTag({ parentId, parentTitle })
   }
+
+  urlEvents.onCreateBookmark({ url, parentTitle })
 }
 
 async function createBookmark({ parentId, parentTitle, url, title }) {
@@ -3947,34 +4145,6 @@ class VisitedUrls {
 }
 
 const visitedUrls = new VisitedUrls()
-// import {
-//   makeLogFunction,
-// } from '../api-low/index.js'
-// const logPR = makeLogFunction({ module: 'pageReady.js' })
-
-class PageReady {
-  constructor () {
-    this.isOn = false
-  }
-
-  async clearUrlOnPageOpen({ tabId, url }) {
-    if (!this.isOn) {
-      return
-    }
-
-    const cleanUrl = removeQueryParamsIfTarget(url);
-
-    if (url !== cleanUrl) {
-      await page.changeUrlInTab({ tabId, url: cleanUrl })
-    }
-  }
-
-  useSettings({ isOn }) {
-    this.isOn = isOn
-  }
-}
-
-const pageReady = new PageReady()
 const logIX = makeLogFunction({ module: 'init-extension' })
 
 async function createContextMenu(settings) {
@@ -4047,8 +4217,8 @@ async function initFromUserOptions() {
     visitedUrls.useSettings({
       isOn: userSettings[USER_OPTION.MARK_CLOSED_PAGE_AS_VISITED],
     }),
-    pageReady.useSettings({
-      isOn: userSettings[USER_OPTION.CLEAR_URL_ON_PAGE_OPEN],
+    urlEvents.useSettings({
+      userSettings,
     }),
   ])
 }
@@ -4742,6 +4912,7 @@ async function onChangeFolder(task) {
 
   memo.bkmFolderById.delete(bookmarkId);
   await tagList.addTag({ parentId: node.id, parentTitle: node.title })
+  // await afterUserCreatedFolderInGUI(node)
 
   folderCreator.clearCache(bookmarkId)
 }
@@ -5368,10 +5539,55 @@ async function removeDoubleBookmarks() {
     Promise.resolve(),
   );
 }
-const logOD = makeLogFunction({ module: 'orderBookmarks.js' })
+async function getReplaceList({ originalHostname, newHostname }) {
+  const taskList = []
+
+  function onFolder({ bookmarkList }) {
+
+    bookmarkList.forEach(({ url, id }) => {
+      try {
+        const oUrl = new URL(url)
+
+        if (oUrl.hostname == originalHostname) {
+          oUrl.hostname = newHostname
+
+          taskList.push({
+            id,
+            newUrl: oUrl.toString(),
+          })
+        }
+
+      // eslint-disable-next-line no-empty
+      } finally {
+
+      }
+    })
+  }
+
+  await traverseTreeRecursively({ onFolder })
+
+  return taskList
+}
+
+// eslint-disable-next-line no-unused-vars
+async function replaceHostname({ originalHostname, newHostname }) {
+  const replaceList = await getReplaceList({ originalHostname, newHostname })
+
+  await replaceList.reduce(
+    (promiseChain, { id, newUrl }) => promiseChain.then(
+      () => updateBookmarkIgnoreInController({ id, url: newUrl })
+    ),
+    Promise.resolve(),
+  );
+}
+// import {
+//   replaceHostname,
+// } from './replaceHostname.js'
+const logOD = makeLogFunction({ module: 'orderBookmarks.js' })
 
 async function orderBookmarks() {
   logOD('orderBookmarks() 00')
+  // await replaceHostname({ originalHostname: 'hostname1', newHostname: 'hostname2' })
 
   logOD('orderBookmarks() 11')
   await moveFolders()
@@ -5399,49 +5615,6 @@ async function orderBookmarks() {
   await removeDoubleBookmarks()
 
   logOD('orderBookmarks() 99')
-}
-async function getReplaceList({ originalHost, newHost }) {
-  const taskList = []
-
-  function onFolder({ bookmarkList }) {
-
-    bookmarkList.forEach(({ url, id }) => {
-      try {
-        const oUrl = new URL(url)
-
-        if (oUrl.hostname == originalHost) {
-          oUrl.hostname = newHost
-
-          taskList.push({
-            id,
-            newUrl: oUrl.toString(),
-          })
-        }
-
-      // eslint-disable-next-line no-empty
-      } finally {
-
-      }
-    })
-  }
-
-  await traverseTreeRecursively({ onFolder })
-
-  return taskList
-}
-
-// eslint-disable-next-line no-unused-vars
-async function replaceHostname() {
-  const originalHost = 'name1.xyz';
-  const newHost = 'name1.xy';
-  const replaceList = await getReplaceList({ originalHost, newHost })
-
-  await replaceList.reduce(
-    (promiseChain, { id, newUrl }) => promiseChain.then(
-      () => updateBookmarkIgnoreInController({ id, url: newUrl })
-    ),
-    Promise.resolve(),
-  );
 }
 
 function isOldDatedFolderTitle(str) {
@@ -5945,7 +6118,7 @@ const OtherHandlers = {
     if (tabId === memo.activeTabId) {
       logIMT('runtime.onMessage TAB_IS_READY 11');
 
-      pageReady.clearUrlOnPageOpen({ tabId, url })
+      urlEvents.onPageReady({ tabId, url })
 
       updateActiveTab({
         tabId,
@@ -6157,7 +6330,7 @@ const tabsController = {
     if (Tab.active && changeInfo?.status == 'complete') {
       memo.activeTabUrl = Tab.url
 
-      pageReady.clearUrlOnPageOpen({ tabId, url: Tab.url })
+      urlEvents.onPageReady({ tabId, url: Tab.url })
 
       updateActiveTab({
         tabId,
@@ -6197,6 +6370,7 @@ const tabsController = {
         // QUESTION: on open windows with stored tabs. every tab is activated?
         // firefox: only one active tab
         visitedUrls.visitTab(tabId, memo.activeTabUrl, Tab.title)
+        urlEvents.onVisitUrl({ url: memo.activeTabUrl })
       }
     } catch (er) {
       logTC('tabs.onActivated. IGNORING. tab was deleted', er);
