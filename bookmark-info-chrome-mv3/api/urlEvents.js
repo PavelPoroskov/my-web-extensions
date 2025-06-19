@@ -23,6 +23,7 @@ function makeIsTitleMatchForEvents(patternList) {
 
   patternList
     .filter(Boolean)
+    .map((pattern) => pattern.toLowerCase())
     .forEach((pattern) => {
       const asteriskIndex = pattern.indexOf('*')
 
@@ -34,19 +35,25 @@ function makeIsTitleMatchForEvents(patternList) {
       }
     })
 
-  return (title) => isFnList.some((isFn) => isFn(title))
+  return (title) => {
+    const titleLow = title.toLowerCase()
+
+    return isFnList.some((isFn) => isFn(titleLow))
+  }
 }
 
 function isTitleMatchForEvents({ title, pattern }) {
   let result = false
+  const titleLow = title.toLowerCase()
+  const patternLow = pattern.toLowerCase()
 
-  const asteriskIndex = pattern.indexOf('*')
+  const asteriskIndex = patternLow.indexOf('*')
 
-  if (asteriskIndex == pattern.length - 1 && 0 < asteriskIndex) {
-    const start = pattern.slice(0, -1)
-    result = title.startsWith(start)
+  if (asteriskIndex == patternLow.length - 1 && 0 < asteriskIndex) {
+    const start = patternLow.slice(0, -1)
+    result = titleLow.startsWith(start)
   } else {
-    result = (title == pattern)
+    result = (titleLow == patternLow)
   }
 
   return result
@@ -88,6 +95,9 @@ class UrlEvents {
   }
 
   async _removeBookmarksByPatterns({ url, patternList }) {
+    // console.log('_removeBookmarksByPatterns() 00 ')
+    // console.log(url)
+    // console.log('patternList ', patternList)
     if (patternList.length == 0) {
       return
     }
@@ -112,6 +122,8 @@ class UrlEvents {
       }
     })
 
+    // console.log('deleteList ', deleteList)
+
     await deleteList.reduce(
       (promiseChain, bkmId) => promiseChain.then(
         () => removeBookmark(bkmId)
@@ -129,6 +141,9 @@ class UrlEvents {
   }
 
   async onCreateBookmark({ url, parentTitle }) {
+    // console.log('onCreateBookmark() 00')
+    // console.log(url)
+    // console.log('parentTitle ', parentTitle)
     if (!this.isOnCreateBookmark) {
       return
     }
@@ -156,9 +171,13 @@ class UrlEvents {
       ? getDatedTemplate(parentTitle)
       : parentTitle
 
+    // console.log('normalizedParentTitle ', normalizedParentTitle)
+
     const deleteTemplateList = createDeleteTemplateList
       .filter(({ createTemplate }) => isTitleMatchForEvents({ title: normalizedParentTitle, pattern: createTemplate }))
       .map(({ deleteTemplate }) => deleteTemplate)
+
+    // console.log('deleteTemplateList ', deleteTemplateList)
 
     await this._removeBookmarksByPatterns({ url, patternList: deleteTemplateList })
   }

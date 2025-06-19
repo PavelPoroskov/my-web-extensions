@@ -26,10 +26,10 @@ const USER_OPTION_META = {
   },
   DELETE_BOOKMARK_ON_CREATING_LIST: {
     default: [
-      'done -> todo',
-      'done @D -> todo',
-      'done dw -> todo dw*',
-      'done dw -> todo start dw*',
+      'DONE -> TODO',
+      'DONE @D -> TODO',
+      'DONE DW -> todo dw*',
+      'DONE DW -> start dw',
     ],
   },
   DELETE_BOOKMARK_ON_VISITING: {
