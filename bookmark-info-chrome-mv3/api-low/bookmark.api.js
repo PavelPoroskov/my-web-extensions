@@ -27,6 +27,10 @@ export async function getBookmarkListDirty(idList) {
 }
 
 export async function getBookmarkListWithParent({ url }) {
+  if (url.startsWith('chrome:') || url.startsWith('about:')) {
+    return []
+  }
+
   const bookmarkList = await chrome.bookmarks.search({ url });
 
   const parentIdList = bookmarkList.map(({ parentId }) => parentId).filter(Boolean)

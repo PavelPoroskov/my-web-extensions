@@ -92,6 +92,10 @@ class UrlEvents {
       return
     }
 
+    if (url.startsWith('chrome:') || url.startsWith('about:')) {
+      return
+    }
+
     const cleanUrl = removeQueryParamsIfTarget(url);
     const bookmarkListWithParent = await getBookmarkListWithParent({ url: cleanUrl })
     const deleteList = []

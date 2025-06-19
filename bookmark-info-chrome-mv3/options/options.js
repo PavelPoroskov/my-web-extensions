@@ -242,7 +242,7 @@ function restoreOptions(settings) {
   optionId = USER_OPTION.DELETE_BOOKMARK_ON_CREATING_LIST;
   domId = `#${optionId}`
   element = document.querySelector(domId)
-  element.checked = settings[optionId].join('\n');
+  element.value = settings[optionId].join('\n');
   element.addEventListener('change', makeSaveTextareaHandler(optionId) );
 
   optionId = USER_OPTION.DELETE_BOOKMARK_ON_VISITING;
@@ -254,7 +254,7 @@ function restoreOptions(settings) {
   optionId = USER_OPTION.DELETE_BOOKMARK_ON_VISITING_LIST;
   domId = `#${optionId}`
   element = document.querySelector(domId)
-  element.checked = settings[optionId].join('\n');
+  element.value = settings[optionId].join('\n');
   element.addEventListener('change', makeSaveTextareaHandler(optionId) );
 }
 

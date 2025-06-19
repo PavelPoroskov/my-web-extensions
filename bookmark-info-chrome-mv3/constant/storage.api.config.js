@@ -36,7 +36,9 @@ const USER_OPTION_META = {
     default: false,
   },
   DELETE_BOOKMARK_ON_VISITING_LIST: {
-    default: 'todo continue*',
+    default: [
+      'todo continue*',
+    ],
   },
   FONT_SIZE: {
     default: 14,
