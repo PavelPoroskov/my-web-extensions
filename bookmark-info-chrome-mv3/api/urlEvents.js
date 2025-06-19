@@ -13,6 +13,10 @@ import {
 import {
   removeBookmark,
 } from '../bookmark-controller-api/bookmark-ignore.js'
+import {
+  isDatedFolderTitle,
+  getDatedTemplate,
+} from '../folder-api/index.js';
 
 function makeIsTitleMatchForEvents(patternList) {
   const isFnList = []
@@ -95,7 +99,11 @@ class UrlEvents {
     const isTitleMatch = makeIsTitleMatchForEvents(patternList)
 
     bookmarkListWithParent.forEach(({ id, parentTitle }) => {
-      if (isTitleMatch(parentTitle)) {
+      const normalizedParentTitle = isDatedFolderTitle(parentTitle)
+        ? getDatedTemplate(parentTitle)
+        : parentTitle
+
+      if (isTitleMatch(normalizedParentTitle)) {
         deleteList.push(id)
       }
     })
@@ -140,8 +148,12 @@ class UrlEvents {
         }
       })
 
+    const normalizedParentTitle = isDatedFolderTitle(parentTitle)
+      ? getDatedTemplate(parentTitle)
+      : parentTitle
+
     const deleteTemplateList = createDeleteTemplateList
-      .filter(({ createTemplate }) => isTitleMatchForEvents({ title: parentTitle, pattern: createTemplate }))
+      .filter(({ createTemplate }) => isTitleMatchForEvents({ title: normalizedParentTitle, pattern: createTemplate }))
       .map(({ deleteTemplate }) => deleteTemplate)
 
     await this._removeBookmarksByPatterns({ url, patternList: deleteTemplateList })
