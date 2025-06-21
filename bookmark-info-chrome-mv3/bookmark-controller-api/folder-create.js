@@ -2,13 +2,16 @@ import {
   makeLogFunction,
 } from '../api-low/index.js';
 import {
-  OTHER_BOOKMARKS_FOLDER_ID,
   findFolder,
   findSubFolderWithExactTitle,
   getDatedTitle,
-  isDatedFolderTemplate,
   getNewFolderRootId,
+  getTitleDetails,
+  getTitleWithDirectives,
+  isChangesInDirectives,
+  isDatedFolderTemplate,
   makeCompareDatedTitleWithFixed,
+  OTHER_BOOKMARKS_FOLDER_ID,
 } from '../folder-api/index.js';
 import {
   createFolderIgnoreInController,
@@ -18,7 +21,11 @@ import {
 const logFCR = makeLogFunction({ module: 'folder-create.js' })
 
 export async function _findOrCreateFolder(title) {
-  let folder = await findFolder(title)
+  const {
+    cleanTitle: newCleanTitle,
+    objDirectives: objNewDirectives,
+  } = getTitleDetails(title)
+  let folder = await findFolder(newCleanTitle)
 
   if (!folder) {
     const parentId = getNewFolderRootId(title)
@@ -50,6 +57,17 @@ export async function _findOrCreateFolder(title) {
     const newDashN = title.replace(/[^-]+/g,"").length
     if (newDashN < oldDashN) {
       await updateFolder({ id: folder.id, title })
+    }
+
+    const {
+      cleanTitle: oldCleanTitle,
+      objDirectives: objOldDirectives,
+    } = getTitleDetails(folder.title)
+
+    if (isChangesInDirectives(objOldDirectives, objNewDirectives)) {
+      const objSumDirectives = Object.assign({}, objOldDirectives, objNewDirectives)
+      const newTitle = getTitleWithDirectives({ title: oldCleanTitle, objDirectives: objSumDirectives })
+      await updateFolder({ id: folder.id, title: newTitle })
     }
   }
 
