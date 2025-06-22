@@ -17,7 +17,7 @@ import {
 } from './nodeTaskQueue.js'
 import {
   moveFolderAfterRename
-} from './folder-gui.js'
+} from './folder-move.js'
 
 const logFQ = makeLogFunction({ module: 'folderQueue.js' })
 

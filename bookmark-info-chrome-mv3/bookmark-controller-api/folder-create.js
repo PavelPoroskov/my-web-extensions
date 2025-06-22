@@ -19,7 +19,7 @@ import {
 } from './folder-ignore.js'
 import {
   moveFolderAfterRename
-} from './folder-gui.js'
+} from './folder-move.js'
 
 const logFCR = makeLogFunction({ module: 'folder-create.js' })
 
