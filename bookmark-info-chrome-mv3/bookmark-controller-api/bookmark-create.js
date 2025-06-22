@@ -17,6 +17,7 @@ import {
 import {
   createBookmarkIgnoreInController,
   moveBookmarkIgnoreInController,
+  removeBookmark,
 } from './bookmark-ignore.js'
 // import {
 //   makeLogFunction,
@@ -41,12 +42,22 @@ async function createBookmarkWithApi({
   lastCreatedBkmParentId = parentId
   lastCreatedBkmUrl = url
 
+  const bookmarkList = await chrome.bookmarks.search({ url })
+  const deleteList = bookmarkList.filter((bkm) => bkm.parentId == parentId)
+
   await createBookmarkIgnoreInController({
     parentId,
     index: 0,
     url,
     title,
   })
+
+  await deleteList.reduce(
+    (promiseChain, bkm) => promiseChain.then(
+      () => removeBookmark(bkm.id)
+    ),
+    Promise.resolve(),
+  );
 }
 
 async function createBookmarkWithParentId({ parentId, url, title }) {
