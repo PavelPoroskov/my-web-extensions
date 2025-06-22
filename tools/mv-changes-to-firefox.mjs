@@ -51,6 +51,7 @@ createFileForFirefox(
 
     'bookmark-controller-api/ignoreBkmControllerApiActionSet.js',
     'bookmark-controller-api/folder-ignore.js',
+    'bookmark-controller-api/folder-gui.js',
     'bookmark-controller-api/folder-create.js',
     'bookmark-controller-api/folderCreator.js',
     'bookmark-controller-api/bookmark-ignore.js',
@@ -71,7 +72,6 @@ createFileForFirefox(
     'api/updateTab.js',
     'api/index.js',
 
-    'bookmark-controller-api/folder-gui.js',
     'bookmark-controller-api/bookmarkQueue.js',
     'bookmark-controller-api/folderQueue.js',
     'bookmark-controller-api/index.js',

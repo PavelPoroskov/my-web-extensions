@@ -12,7 +12,7 @@ import {
   extensionSettings,
 } from '../api-mid/index.js'
 
-export async function afterUserCreatedFolderInGUI({ id, parentId, title }) {
+export async function moveFolderAfterRename({ id, parentId, title, index }) {
   const moveArgs = {}
   const settings = await extensionSettings.get()
 
@@ -30,7 +30,7 @@ export async function afterUserCreatedFolderInGUI({ id, parentId, title }) {
     const firstLevelNodeList = await chrome.bookmarks.getChildren(finalParentId)
     const findIndex = firstLevelNodeList.find((item) => title.localeCompare(item.title) < 0)
 
-    if (findIndex) {
+    if (index != findIndex) {
       moveArgs.index = findIndex.index
     }
   }

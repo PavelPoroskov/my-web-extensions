@@ -17,6 +17,9 @@ import {
   createFolderIgnoreInController,
   updateFolder,
 } from './folder-ignore.js'
+import {
+  moveFolderAfterRename
+} from './folder-gui.js'
 
 const logFCR = makeLogFunction({ module: 'folder-create.js' })
 
@@ -44,30 +47,35 @@ export async function _findOrCreateFolder(title) {
 
     folder = await createFolderIgnoreInController(folderParams)
   } else {
-    const oldBigLetterN = folder.title.replace(/[^A-Z]+/g, "").length
-    const newBigLetterN = title.replace(/[^A-Z]+/g, "").length
-    // const isAbbreviation = title.length == newBigLetterN
-    logFCR('findOrCreateFolder () 22', oldBigLetterN, newBigLetterN)
-
-    if (oldBigLetterN < newBigLetterN) {
-      await updateFolder({ id: folder.id, title })
-    }
-
-    const oldDashN = folder.title.replace(/[^-]+/g,"").length
-    const newDashN = title.replace(/[^-]+/g,"").length
-    if (newDashN < oldDashN) {
-      await updateFolder({ id: folder.id, title })
-    }
-
     const {
       cleanTitle: oldCleanTitle,
       objDirectives: objOldDirectives,
     } = getTitleDetails(folder.title)
 
-    if (isChangesInDirectives(objOldDirectives, objNewDirectives)) {
+    const oldBigLetterN = oldCleanTitle.replace(/[^A-Z]+/g, "").length
+    const newBigLetterN = newCleanTitle.replace(/[^A-Z]+/g, "").length
+    // const isAbbreviation = title.length == newBigLetterN
+    logFCR('findOrCreateFolder () 22', oldBigLetterN, newBigLetterN)
+
+    const oldDashN = oldCleanTitle.replace(/[^-]+/g,"").length
+    const newDashN = newCleanTitle.replace(/[^-]+/g,"").length
+
+    const isUseNewTitle = oldBigLetterN < newBigLetterN || newDashN < oldDashN
+    const hasChangesInDirectives = isChangesInDirectives(objOldDirectives, objNewDirectives)
+
+    let actualCleanTitle = isUseNewTitle ? newCleanTitle : oldCleanTitle
+
+    if (isUseNewTitle || hasChangesInDirectives) {
       const objSumDirectives = Object.assign({}, objOldDirectives, objNewDirectives)
-      const newTitle = getTitleWithDirectives({ title: oldCleanTitle, objDirectives: objSumDirectives })
+      const newTitle = getTitleWithDirectives({ title: actualCleanTitle, objDirectives: objSumDirectives })
+
       await updateFolder({ id: folder.id, title: newTitle })
+      await moveFolderAfterRename({
+        id: folder.id,
+        title: newTitle,
+        parentId: folder.parentId,
+        index: folder.index,
+      })
     }
   }
 
