@@ -25,6 +25,7 @@ createFileForFirefox(
     'api-low/index.js',
 
     'folder-api/folder-title.js',
+    'folder-api/folder-directives.js',
     'folder-api/special-folder.js',
     'folder-api/find-folder.js',
     'folder-api/folder-dated-title.js',

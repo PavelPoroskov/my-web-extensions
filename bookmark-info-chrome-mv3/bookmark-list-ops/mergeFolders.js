@@ -1,12 +1,12 @@
 import {
   BOOKMARKS_BAR_FOLDER_ID,
   BOOKMARKS_MENU_FOLDER_ID,
-  OTHER_BOOKMARKS_FOLDER_ID,
+  getTitleDetails,
+  getTitleWithDirectives,
+  isChangesInDirectives,
   normalizeTitle,
+  OTHER_BOOKMARKS_FOLDER_ID,
 } from '../folder-api/index.js'
-import {
-  singular,
-} from '../api-low/index.js'
 import {
   folderCreator,
   moveFolderContentToStart,
@@ -19,60 +19,6 @@ import {
 
 const logMRG = makeLogFunction({ module: 'mergeFolders.js' })
 
-function normalizeTitleForMerge (title) {
-  // logMRG('normalizeTitleForMerge 00', title)
-
-  const lowNotDashTitle = title.replaceAll('-', '').toLowerCase()
-  const partList = lowNotDashTitle.split(' ').filter(Boolean)
-  let directiveList = []
-
-  let i = partList.length - 1
-  while (-1 < i) {
-    const isDirective = partList[i].startsWith('#') || partList[i].startsWith(':')
-
-    if (isDirective) {
-      directiveList.push(partList[i])
-    } else {
-      break
-    }
-
-    i = i - 1
-  }
-
-  const wordList = partList.slice(0, i+1)
-  // logMRG('normalizeTitleForMerge 33', wordList)
-  const lastWord = wordList.at(-1)
-  const singularLastWord = singular(lastWord)
-  const normalizedWordList = wordList.with(-1, singularLastWord)
-  const normalizedTitle = normalizedWordList.join(' ')
-
-  return {
-    normalizedTitle,
-    directiveList,
-  }
-}
-
-function removeDirectives(title) {
-  const partList = title.split(' ').filter(Boolean)
-
-  let i = partList.length - 1
-  while (-1 < i) {
-    const isDirective = partList[i].startsWith('#') || partList[i].startsWith(':')
-
-    if (!isDirective) {
-      break
-    }
-
-    i = i - 1
-  }
-
-  return partList.slice(0, i+1).join(' ')
-}
-
-function addDirectives(title, directiveList) {
-  return `${removeDirectives(title)} ${directiveList.toSorted().join(' ')}`
-}
-
 async function addSubfolders({ parentId, nameSet }) {
   logMRG('addSubfolders 00', parentId)
   if (!parentId) {
@@ -83,8 +29,13 @@ async function addSubfolders({ parentId, nameSet }) {
   const folderNodeList = nodeList.filter(({ url }) => !url)
 
   for (const node of folderNodeList) {
-    const { normalizedTitle, directiveList } = normalizeTitleForMerge(node.title)
+    const {
+      onlyTitle,
+      objDirectives,
+    } = getTitleDetails(node.title)
+    const normalizedTitle = normalizeTitle(onlyTitle)
 
+    const directiveList = Object.keys(objDirectives)
     const w10 = directiveList.filter((str) => str.startsWith('#')).length
     const w1 = directiveList.filter((str) => !str.startsWith('#')).length
 
@@ -92,7 +43,8 @@ async function addSubfolders({ parentId, nameSet }) {
       {},
       node,
       {
-        directiveList,
+        onlyTitle,
+        objDirectives,
         directiveWeight: w10*10 + w1,
       },
     )
@@ -122,21 +74,25 @@ async function mergeRootSubFolders() {
     const sortedList = nodeList.toSorted((a, b) => -(a.directiveWeight - b.directiveWeight) || -a.title.localeCompare(b.title))
     const firstNode = sortedList[0]
     const restNodeList = sortedList.slice(1)
+    let objAllDirectives = {}
 
     for (const fromNode of restNodeList) {
       moveTaskList.push({
         fromNode,
         toNode: firstNode,
       })
+
+      objAllDirectives = Object.assign(objAllDirectives, fromNode.objDirectives)
     }
 
-    const allDirectives = sortedList.flatMap(({directiveList}) => directiveList)
-    const uniqDirectives = Array.from(new Set(allDirectives))
+    objAllDirectives = Object.assign(objAllDirectives, firstNode.objDirectives)
 
-    if (firstNode.directiveList.length !== uniqDirectives.length) {
+    if (isChangesInDirectives({ oldDirectives: firstNode.objDirectives, newDirectives: objAllDirectives })) {
+      const newTitle = getTitleWithDirectives({ onlyTitle: firstNode.onlyTitle, objDirectives: objAllDirectives })
+
       renameTaskList.push({
         id: firstNode.id,
-        title: addDirectives(firstNode.title, uniqDirectives),
+        title: newTitle,
       })
     }
   }
