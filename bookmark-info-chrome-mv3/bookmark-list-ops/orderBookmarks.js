@@ -26,6 +26,9 @@ import {
   removeDoubleBookmarks,
 } from './removeDoubleBookmarks.js'
 import {
+  removeDoubleDatedBookmarks,
+} from './removeDoubleDatedBookmarks.js'
+import {
   sortFolders,
 } from './sortFolders.js'
 // import {
@@ -65,6 +68,7 @@ export async function orderBookmarks() {
 
   logOD('orderBookmarks() 55')
   await removeDoubleBookmarks()
+  await removeDoubleDatedBookmarks()
 
   logOD('orderBookmarks() 99')
 }

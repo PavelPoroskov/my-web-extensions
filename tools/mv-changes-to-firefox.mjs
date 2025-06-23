@@ -84,6 +84,7 @@ createFileForFirefox(
     'bookmark-list-ops/moveFolders.js',
     'bookmark-list-ops/moveOldDatedFolders.js',
     'bookmark-list-ops/removeDoubleBookmarks.js',
+    'bookmark-list-ops/removeDoubleDatedBookmarks.js',
     'bookmark-list-ops/sortFolders.js',
     'bookmark-list-ops/replaceHostname.js',
     'bookmark-list-ops/orderBookmarks.js',

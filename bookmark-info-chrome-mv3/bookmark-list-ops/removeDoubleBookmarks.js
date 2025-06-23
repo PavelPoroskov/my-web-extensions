@@ -26,9 +26,9 @@ async function getDoubles() {
           titleToIdMap.concat(title, id)
         })
 
-        for (const idList of titleToIdMap.values()) {
-          if (1 < idList.length) {
-            idList
+        for (const idList2 of titleToIdMap.values()) {
+          if (1 < idList2.length) {
+            idList2
               .slice(1)
               .forEach(
                 (id) => doubleList.push(id)
