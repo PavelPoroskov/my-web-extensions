@@ -73,13 +73,16 @@
 }
 @media print {
   header, footer, aside, nav {
-      display: var(--bkm-info-onprint);
+    display: var(--bkm-info-onprint);
+  }
+  :is(main, article) :is(header, footer) {
+    display: initial;
   }
   #page article.article {
-      width: 100%;
+    width: 100%;
   }
   #page #sidebar.sidebar {
-      width: 0;
+    width: 0;
   }
   .blockSpoiler, .blockSpoiler-content {
     display: var(--bkm-info-onprint);
