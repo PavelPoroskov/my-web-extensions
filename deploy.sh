@@ -39,6 +39,10 @@ DISTRIBUTION_FF_FILE=bookmark_info-$VERSION.zip
 DISTRIBUTION_FF_PATH=~/.tmp/$DISTRIBUTION_FF_FILE
 rm -f $DISTRIBUTION_FF_PATH
 cp bookmark-info-firefox-mv2/web-ext-artifacts/$DISTRIBUTION_FF_FILE $DISTRIBUTION_FF_PATH
+
+DISTRIBUTION_FF_PATH_2=~/Documents/TMP-MANUAL/$DISTRIBUTION_FF_FILE
+cp bookmark-info-firefox-mv2/web-ext-artifacts/$DISTRIBUTION_FF_FILE $DISTRIBUTION_FF_PATH_2
+
 if [ $? -ne 0 ]; then
     echo "Command failed! cp bookmark-info-firefox-mv2/web-ext-artifacts/$DISTRIBUTION_FF_FILE $DISTRIBUTION_FF_PATH"
     exit 1

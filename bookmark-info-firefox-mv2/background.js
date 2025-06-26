@@ -1233,6 +1233,192 @@ class CacheWithLimit {
   }
 }
 
+function getTitleDetails(title) {
+  const partList = title
+    .split(' ')
+    .filter(Boolean)
+
+  const objDirectives = {}
+  let i = partList.length - 1
+
+  while (-1 < i) {
+    const lastWord = partList[i]
+    const isDirective = lastWord.startsWith('#') || lastWord.startsWith(':')
+
+    if (isDirective) {
+      let key = lastWord.toLowerCase()
+      let value = ''
+
+      if (key.startsWith('#') && key != '#top') {
+        key = '#color'
+        value = key.slice(1).toUpperCase()
+      }
+
+      objDirectives[key] = value;
+    } else {
+      break
+    }
+
+    i = i - 1
+  }
+
+  const wordList = partList.slice(0, i+1)
+  const onlyTitle = wordList.join(' ')
+
+  return {
+    onlyTitle,
+    objDirectives,
+  }
+}
+
+function getTitleWithDirectives({ onlyTitle, objDirectives }) {
+  const strDirectives = Object.entries(objDirectives)
+    .toSorted((a,b) => a[0].localeCompare(b[0]))
+    .map(([key,value]) => (key == '#color'
+      ? `#${value}`
+      : key
+    ))
+    .join(' ')
+
+    return [onlyTitle, strDirectives].filter(Boolean).join(' ')
+}
+
+function isChangesInDirectives({ oldDirectives, newDirectives }) {
+  for (const key in newDirectives) {
+    if (!(key in oldDirectives)) {
+      return true
+    }
+
+    if (oldDirectives[key] != newDirectives[key]) {
+      return true
+    }
+  }
+
+  return false
+}
+const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric'})
+const weekdayFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'short' })
+const futureDate = new Date('01/01/2125')
+const oneDayMs = 24*60*60*1000
+const weekdaySet = new Set(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
+
+const DATED_TEMPLATE_VISITED = 'visited @D'
+const DATED_TEMPLATE_OPENED = 'opened @D'
+
+const isWeekday = (str) => weekdaySet.has(str)
+
+const inRange = ({ n, from, to }) => {
+  if (!Number.isInteger(n)) {
+    return false
+  }
+
+  if (from != undefined && !(from <= n)) {
+    return false
+  }
+
+  if (to != undefined && !(n <= to)) {
+    return false
+  }
+
+  return true
+}
+
+const isDate = (str) => {
+  const partList = str.split('-')
+
+  if (!(partList.length == 3)) {
+    return false
+  }
+
+  const D = parseInt(partList.at(-3), 10)
+  const M = parseInt(partList.at(-2), 10)
+  const Y = parseInt(partList.at(-1), 10)
+
+  return inRange({ n: D, from: 1, to: 31 }) && inRange({ n: M, from: 1, to: 12 }) && inRange({ n: Y, from: 2025 })
+}
+
+function isDatedFolderTemplate(folderTitle) {
+  return folderTitle.endsWith(' @D') && 3 < folderTitle.length
+}
+
+function getDatedTitle(folderTitle) {
+  const fixedPart = folderTitle.slice(0, -3).trim()
+
+  const today = new Date()
+  const sToday = dateFormatter.format(today).replaceAll('/', '-')
+  const sWeekday = weekdayFormatter.format(today)
+
+  const days = Math.floor((futureDate - today)/oneDayMs)
+  const order = new Number(days).toString(36).padStart(3,'0')
+
+  return `${fixedPart} ${sToday} ${sWeekday} ${order}`
+}
+
+function compareDatedTitle(a,b) {
+  const orderA = a.slice(-3)
+  const restA = a.slice(0, -4)
+
+  const orderB = b.slice(-3)
+  const restB = b.slice(0, -4)
+
+  return (orderA || '').localeCompare(orderB || '') || (restA || '').localeCompare(restB || '')
+}
+
+function makeCompareDatedTitleWithFixed(a) {
+  const orderA = a.slice(-3)
+  const restA = a.slice(0, -4)
+
+  return function compareDatedTitleWithFixed(b) {
+    const orderB = b.slice(-3)
+    const restB = b.slice(0, -4)
+
+    return (orderA || '').localeCompare(orderB || '') || (restA || '').localeCompare(restB || '')
+  }
+}
+
+function isDatedFolderTitle(str) {
+  const partList = str.split(' ')
+
+  if (!(4 <= partList.length)) {
+    return false
+  }
+
+  const result = isWeekday(partList.at(-2)) && partList.at(-1).length == 3 && isDate(partList.at(-3)) && !!partList.at(-4)
+
+  return result
+}
+
+function isDatedTitleForTemplate({ title, template }) {
+  if (!isDatedFolderTemplate(template)) {
+    return false
+  }
+  if (!isDatedFolderTitle(title)) {
+    return false
+  }
+
+  const fixedPartFromTitle = title.split(' ').slice(0, -3).join(' ')
+  const fixedPartFromTemplate = template.slice(0, -3).trim()
+
+  return fixedPartFromTitle == fixedPartFromTemplate
+}
+
+function getDatedTemplate(title) {
+  const fixedPartFromTitle = title.split(' ').slice(0, -3).join(' ')
+
+  return `${fixedPartFromTitle} @D`
+}
+
+function isVisitedDatedTemplate(templateTitle) {
+  return templateTitle == DATED_TEMPLATE_VISITED
+    || templateTitle == DATED_TEMPLATE_OPENED
+}
+
+function isVisitedDatedTitle(title) {
+  return (
+    (title.startsWith('visited ') && isDatedTitleForTemplate({ title, template: DATED_TEMPLATE_VISITED }))
+    || (title.startsWith('opened ') && isDatedTitleForTemplate({ title, template: DATED_TEMPLATE_OPENED }))
+  )
+}
 const isDescriptiveFolderTitle = (title) => !!title
   && !(
     title.startsWith('New folder')
@@ -1267,6 +1453,18 @@ const trimLowSingular = (title) => {
 }
 
 const normalizeTitle = (title) => trimLowSingular(title.replaceAll('-', ''))
+
+const getTitleForPattern = (title) => {
+  let result
+
+  if (isDatedFolderTitle(title)) {
+    result = getDatedTemplate(title)
+  } else {
+    result = getTitleDetails(title).onlyTitle
+  }
+
+  return result
+}
 const ROOT_FOLDER_ID = IS_BROWSER_FIREFOX ? 'root________' : '0'
 const BOOKMARKS_BAR_FOLDER_ID = IS_BROWSER_FIREFOX ? 'toolbar_____' : '1'
 const BOOKMARKS_MENU_FOLDER_ID = IS_BROWSER_FIREFOX ? 'menu________' : undefined
@@ -1324,21 +1522,15 @@ async function findSubFolderWithExactTitle({ title, parentId }) {
 }
 
 function makeIsTitleMatch({ title, normalizeFn = (str) => str }) {
-  const pattern = normalizeFn(title)
-  const patternLength = pattern.length
+  const onlyTitlePattern = getTitleForPattern(title).onlyTitle
+  const normalizedPattern = normalizeFn(onlyTitlePattern)
 
   return function isTitleMatch(testTitle) {
-    const normalizedTestTitle = normalizeFn(testTitle)
+    const onlyTitleTestTitle = getTitleForPattern(testTitle).onlyTitle
+    const normalizedTestTitle = normalizeFn(onlyTitleTestTitle)
 
-    // if (normalizedTestTitle === pattern) {
-    //   return true
-    // }
-
-    if (normalizedTestTitle.startsWith(pattern)) {
-      const rest = normalizedTestTitle.slice(patternLength)
-
-      return rest.split(' ').filter(Boolean)
-        .every((word) => word.startsWith('#') || word.startsWith(':'))
+    if (normalizedTestTitle === normalizedPattern) {
+      return true
     }
 
     return false
@@ -1549,129 +1741,6 @@ async function findFolder(title) {
   }
 
   return foundItem
-}
-const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric'})
-const weekdayFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'short' })
-const futureDate = new Date('01/01/2125')
-const oneDayMs = 24*60*60*1000
-const weekdaySet = new Set(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
-
-const DATED_TEMPLATE_VISITED = 'visited @D'
-const DATED_TEMPLATE_OPENED = 'opened @D'
-
-const isWeekday = (str) => weekdaySet.has(str)
-
-const inRange = ({ n, from, to }) => {
-  if (!Number.isInteger(n)) {
-    return false
-  }
-
-  if (from != undefined && !(from <= n)) {
-    return false
-  }
-
-  if (to != undefined && !(n <= to)) {
-    return false
-  }
-
-  return true
-}
-
-const isDate = (str) => {
-  const partList = str.split('-')
-
-  if (!(partList.length == 3)) {
-    return false
-  }
-
-  const D = parseInt(partList.at(-3), 10)
-  const M = parseInt(partList.at(-2), 10)
-  const Y = parseInt(partList.at(-1), 10)
-
-  return inRange({ n: D, from: 1, to: 31 }) && inRange({ n: M, from: 1, to: 12 }) && inRange({ n: Y, from: 2025 })
-}
-
-function isDatedFolderTemplate(folderTitle) {
-  return folderTitle.endsWith(' @D') && 3 < folderTitle.length
-}
-
-function getDatedTitle(folderTitle) {
-  const fixedPart = folderTitle.slice(0, -3).trim()
-
-  const today = new Date()
-  const sToday = dateFormatter.format(today).replaceAll('/', '-')
-  const sWeekday = weekdayFormatter.format(today)
-
-  const days = Math.floor((futureDate - today)/oneDayMs)
-  const order = new Number(days).toString(36).padStart(3,'0')
-
-  return `${fixedPart} ${sToday} ${sWeekday} ${order}`
-}
-
-function compareDatedTitle(a,b) {
-  const orderA = a.slice(-3)
-  const restA = a.slice(0, -4)
-
-  const orderB = b.slice(-3)
-  const restB = b.slice(0, -4)
-
-  return (orderA || '').localeCompare(orderB || '') || (restA || '').localeCompare(restB || '')
-}
-
-function makeCompareDatedTitleWithFixed(a) {
-  const orderA = a.slice(-3)
-  const restA = a.slice(0, -4)
-
-  return function compareDatedTitleWithFixed(b) {
-    const orderB = b.slice(-3)
-    const restB = b.slice(0, -4)
-
-    return (orderA || '').localeCompare(orderB || '') || (restA || '').localeCompare(restB || '')
-  }
-}
-
-function isDatedFolderTitle(str) {
-  const partList = str.split(' ')
-
-  if (!(4 <= partList.length)) {
-    return false
-  }
-
-  const result = isWeekday(partList.at(-2)) && partList.at(-1).length == 3 && isDate(partList.at(-3)) && !!partList.at(-4)
-
-  return result
-}
-
-function isDatedTitleForTemplate({ title, template }) {
-  if (!isDatedFolderTemplate(template)) {
-    return false
-  }
-  if (!isDatedFolderTitle(title)) {
-    return false
-  }
-
-  const fixedPartFromTitle = title.split(' ').slice(0, -3).join(' ')
-  const fixedPartFromTemplate = template.slice(0, -3).trim()
-
-  return fixedPartFromTitle == fixedPartFromTemplate
-}
-
-function getDatedTemplate(title) {
-  const fixedPartFromTitle = title.split(' ').slice(0, -3).join(' ')
-
-  return `${fixedPartFromTitle} @D`
-}
-
-function isVisitedDatedTemplate(templateTitle) {
-  return templateTitle == DATED_TEMPLATE_VISITED
-    || templateTitle == DATED_TEMPLATE_OPENED
-}
-
-function isVisitedDatedTitle(title) {
-  return (
-    (title.startsWith('visited ') && isDatedTitleForTemplate({ title, template: DATED_TEMPLATE_VISITED }))
-    || (title.startsWith('opened ') && isDatedTitleForTemplate({ title, template: DATED_TEMPLATE_OPENED }))
-  )
 }
 function isTopFolder(folderName) {
   const name = folderName.trim().toLowerCase()
@@ -3300,10 +3369,44 @@ async function updateFolder({ id, title }) {
 async function removeFolder(bkmId) {
   await browser.bookmarks.remove(bkmId)
 }
+async function moveFolderAfterRename({ id, parentId, title, index }) {
+  const moveArgs = {}
+  const settings = await extensionSettings.get()
+
+  if (settings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
+    const correctParentId = getNewFolderRootId(title)
+
+    if (parentId != correctParentId) {
+      moveArgs.parentId = correctParentId
+    }
+  }
+
+  const finalParentId = moveArgs.parentId || parentId
+
+  if (finalParentId in BUILTIN_BROWSER_ROOT_FOLDER_MAP) {
+    const firstLevelNodeList = await browser.bookmarks.getChildren(finalParentId)
+    const findIndex = firstLevelNodeList.find((item) => title.localeCompare(item.title) < 0)
+
+    if (index != findIndex) {
+      moveArgs.index = findIndex.index
+    }
+  }
+
+  if (0 < Object.keys(moveArgs).length) {
+    moveFolderIgnoreInController({
+      id,
+      ...moveArgs,
+    })
+  }
+}
 const logFCR = makeLogFunction({ module: 'folder-create.js' })
 
 async function _findOrCreateFolder(title) {
-  let folder = await findFolder(title)
+  const {
+    onlyTitle: newOnlyTitle,
+    objDirectives: objNewDirectives,
+  } = getTitleDetails(title)
+  let folder = await findFolder(newOnlyTitle)
 
   if (!folder) {
     const parentId = getNewFolderRootId(title)
@@ -3322,19 +3425,35 @@ async function _findOrCreateFolder(title) {
 
     folder = await createFolderIgnoreInController(folderParams)
   } else {
-    const oldBigLetterN = folder.title.replace(/[^A-Z]+/g, "").length
-    const newBigLetterN = title.replace(/[^A-Z]+/g, "").length
+    const {
+      onlyTitle: oldOnlyTitle,
+      objDirectives: objOldDirectives,
+    } = getTitleDetails(folder.title)
+
+    const oldBigLetterN = oldOnlyTitle.replace(/[^A-Z]+/g, "").length
+    const newBigLetterN = newOnlyTitle.replace(/[^A-Z]+/g, "").length
     // const isAbbreviation = title.length == newBigLetterN
     logFCR('findOrCreateFolder () 22', oldBigLetterN, newBigLetterN)
 
-    if (oldBigLetterN < newBigLetterN) {
-      await updateFolder({ id: folder.id, title })
-    }
+    const oldDashN = oldOnlyTitle.replace(/[^-]+/g,"").length
+    const newDashN = newOnlyTitle.replace(/[^-]+/g,"").length
 
-    const oldDashN = folder.title.replace(/[^-]+/g,"").length
-    const newDashN = title.replace(/[^-]+/g,"").length
-    if (newDashN < oldDashN) {
-      await updateFolder({ id: folder.id, title })
+    const isUseNewTitle = oldBigLetterN < newBigLetterN || newDashN < oldDashN
+    const hasChangesInDirectives = isChangesInDirectives({ oldDirectives: objOldDirectives, newDirectives: objNewDirectives })
+
+    let actualOnlyTitle = isUseNewTitle ? newOnlyTitle : oldOnlyTitle
+
+    if (isUseNewTitle || hasChangesInDirectives) {
+      const objSumDirectives = Object.assign({}, objOldDirectives, objNewDirectives)
+      const newTitle = getTitleWithDirectives({ onlyTitle: actualOnlyTitle, objDirectives: objSumDirectives })
+
+      await updateFolder({ id: folder.id, title: newTitle })
+      await moveFolderAfterRename({
+        id: folder.id,
+        title: newTitle,
+        parentId: folder.parentId,
+        index: folder.index,
+      })
     }
   }
 
@@ -3709,9 +3828,7 @@ class UrlEvents {
     const isTitleMatch = makeIsTitleMatchForEvents(patternList)
 
     bookmarkListWithParent.forEach(({ id, parentTitle }) => {
-      const normalizedParentTitle = isDatedFolderTitle(parentTitle)
-        ? getDatedTemplate(parentTitle)
-        : parentTitle
+      const normalizedParentTitle = getTitleForPattern(parentTitle)
 
       if (isTitleMatch(normalizedParentTitle)) {
         deleteList.push(id)
@@ -3763,11 +3880,7 @@ class UrlEvents {
         }
       })
 
-    const normalizedParentTitle = isDatedFolderTitle(parentTitle)
-      ? getDatedTemplate(parentTitle)
-      : parentTitle
-
-    // console.log('normalizedParentTitle ', normalizedParentTitle)
+    const normalizedParentTitle = getTitleForPattern(parentTitle)
 
     const deleteTemplateList = createDeleteTemplateList
       .filter(({ createTemplate }) => isTitleMatchForEvents({ title: normalizedParentTitle, pattern: createTemplate }))
@@ -3803,12 +3916,22 @@ async function createBookmarkWithApi({
   lastCreatedBkmParentId = parentId
   lastCreatedBkmUrl = url
 
+  const bookmarkList = await browser.bookmarks.search({ url })
+  const deleteList = bookmarkList.filter((bkm) => bkm.parentId == parentId)
+
   await createBookmarkIgnoreInController({
     parentId,
     index: 0,
     url,
     title,
   })
+
+  await deleteList.reduce(
+    (promiseChain, bkm) => promiseChain.then(
+      () => removeBookmark(bkm.id)
+    ),
+    Promise.resolve(),
+  );
 }
 
 async function createBookmarkWithParentId({ parentId, url, title }) {
@@ -4765,36 +4888,6 @@ async function updateTabTask(options) {
 
 const updateActiveTab = debounce_leading3(updateTabTask, 50)
 
-async function afterUserCreatedFolderInGUI({ id, parentId, title }) {
-  const moveArgs = {}
-  const settings = await extensionSettings.get()
-
-  if (settings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
-    const correctParentId = getNewFolderRootId(title)
-
-    if (parentId != correctParentId) {
-      moveArgs.parentId = correctParentId
-    }
-  }
-
-  const finalParentId = moveArgs.parentId || parentId
-
-  if (finalParentId in BUILTIN_BROWSER_ROOT_FOLDER_MAP) {
-    const firstLevelNodeList = await browser.bookmarks.getChildren(finalParentId)
-    const findIndex = firstLevelNodeList.find((item) => title.localeCompare(item.title) < 0)
-
-    if (findIndex) {
-      moveArgs.index = findIndex.index
-    }
-  }
-
-  if (0 < Object.keys(moveArgs).length) {
-    moveFolderIgnoreInController({
-      id,
-      ...moveArgs,
-    })
-  }
-}
 const logBQ = makeLogFunction({ module: 'bookmarkQueue.js' })
 
 let lastCreatedBkmId
@@ -4899,7 +4992,7 @@ async function onCreateFolder(task) {
   logFQ('onCreateFolder () 00', node.title)
 
   await tagList.addTag({ parentId: node.id, parentTitle: node.title })
-  await afterUserCreatedFolderInGUI(node)
+  await moveFolderAfterRename(node)
 }
 
 async function onMoveFolder(task) {
@@ -5003,60 +5096,6 @@ async function traverseTreeRecursively({ onFolder }) {
 }
 const logMRG = makeLogFunction({ module: 'mergeFolders.js' })
 
-function normalizeTitleForMerge (title) {
-  // logMRG('normalizeTitleForMerge 00', title)
-
-  const lowNotDashTitle = title.replaceAll('-', '').toLowerCase()
-  const partList = lowNotDashTitle.split(' ').filter(Boolean)
-  let directiveList = []
-
-  let i = partList.length - 1
-  while (-1 < i) {
-    const isDirective = partList[i].startsWith('#') || partList[i].startsWith(':')
-
-    if (isDirective) {
-      directiveList.push(partList[i])
-    } else {
-      break
-    }
-
-    i = i - 1
-  }
-
-  const wordList = partList.slice(0, i+1)
-  // logMRG('normalizeTitleForMerge 33', wordList)
-  const lastWord = wordList.at(-1)
-  const singularLastWord = singular(lastWord)
-  const normalizedWordList = wordList.with(-1, singularLastWord)
-  const normalizedTitle = normalizedWordList.join(' ')
-
-  return {
-    normalizedTitle,
-    directiveList,
-  }
-}
-
-function removeDirectives(title) {
-  const partList = title.split(' ').filter(Boolean)
-
-  let i = partList.length - 1
-  while (-1 < i) {
-    const isDirective = partList[i].startsWith('#') || partList[i].startsWith(':')
-
-    if (!isDirective) {
-      break
-    }
-
-    i = i - 1
-  }
-
-  return partList.slice(0, i+1).join(' ')
-}
-
-function addDirectives(title, directiveList) {
-  return `${removeDirectives(title)} ${directiveList.toSorted().join(' ')}`
-}
-
 async function addSubfolders({ parentId, nameSet }) {
   logMRG('addSubfolders 00', parentId)
   if (!parentId) {
@@ -5067,8 +5106,13 @@ async function addSubfolders({ parentId, nameSet }) {
   const folderNodeList = nodeList.filter(({ url }) => !url)
 
   for (const node of folderNodeList) {
-    const { normalizedTitle, directiveList } = normalizeTitleForMerge(node.title)
+    const {
+      onlyTitle,
+      objDirectives,
+    } = getTitleDetails(node.title)
+    const normalizedTitle = normalizeTitle(onlyTitle)
 
+    const directiveList = Object.keys(objDirectives)
     const w10 = directiveList.filter((str) => str.startsWith('#')).length
     const w1 = directiveList.filter((str) => !str.startsWith('#')).length
 
@@ -5076,7 +5120,8 @@ async function addSubfolders({ parentId, nameSet }) {
       {},
       node,
       {
-        directiveList,
+        onlyTitle,
+        objDirectives,
         directiveWeight: w10*10 + w1,
       },
     )
@@ -5106,21 +5151,25 @@ async function mergeRootSubFolders() {
     const sortedList = nodeList.toSorted((a, b) => -(a.directiveWeight - b.directiveWeight) || -a.title.localeCompare(b.title))
     const firstNode = sortedList[0]
     const restNodeList = sortedList.slice(1)
+    let objAllDirectives = {}
 
     for (const fromNode of restNodeList) {
       moveTaskList.push({
         fromNode,
         toNode: firstNode,
       })
+
+      objAllDirectives = Object.assign(objAllDirectives, fromNode.objDirectives)
     }
 
-    const allDirectives = sortedList.flatMap(({directiveList}) => directiveList)
-    const uniqDirectives = Array.from(new Set(allDirectives))
+    objAllDirectives = Object.assign(objAllDirectives, firstNode.objDirectives)
 
-    if (firstNode.directiveList.length !== uniqDirectives.length) {
+    if (isChangesInDirectives({ oldDirectives: firstNode.objDirectives, newDirectives: objAllDirectives })) {
+      const newTitle = getTitleWithDirectives({ onlyTitle: firstNode.onlyTitle, objDirectives: objAllDirectives })
+
       renameTaskList.push({
         id: firstNode.id,
-        title: addDirectives(firstNode.title, uniqDirectives),
+        title: newTitle,
       })
     }
   }
@@ -5469,9 +5518,9 @@ async function moveOldDatedFolders() {
           titleToIdMap.concat(title, id)
         })
 
-        for (const idList of titleToIdMap.values()) {
-          if (1 < idList.length) {
-            idList
+        for (const idList2 of titleToIdMap.values()) {
+          if (1 < idList2.length) {
+            idList2
               .slice(1)
               .forEach(
                 (id) => doubleList.push(id)
@@ -5501,6 +5550,67 @@ async function removeDoubleBookmarks() {
   return {
     nRemovedDoubles: doubleList.length
   }
+}
+async function getDated() {
+  const datedList = []
+
+  function onFolder({ folder, bookmarkList }) {
+    if (isDatedFolderTitle(folder.title)) {
+      bookmarkList.forEach(({ url, id }) => {
+        datedList.push({ id, url, parentTitle: folder.title })
+      })
+    }
+  }
+
+  await traverseTreeRecursively({ onFolder })
+
+  return datedList
+}
+
+async function getDoubleDated() {
+  const datedList = await getDated()
+  const doubleList = []
+
+  const urlToIdMap = new ExtraMap()
+
+  datedList.forEach(({ url, id, parentTitle }) => {
+    urlToIdMap.concat(url, { id, parentTitle })
+  })
+
+  for (const idList of urlToIdMap.values()) {
+    if (1 < idList.length) {
+      const datedTemplateToIdMap = new ExtraMap()
+
+      idList.forEach(({ id, parentTitle }) => {
+        const datedTemplate = getDatedTemplate(parentTitle)
+        datedTemplateToIdMap.concat(datedTemplate, { id, parentTitle })
+      })
+
+      for (const idList2 of datedTemplateToIdMap.values()) {
+        if (1 < idList2.length) {
+          idList2
+            .toSorted((a,b) => compareDatedTitle(a.parentTitle, b.parentTitle))
+            .slice(1)
+            .forEach(
+              ({ id }) => doubleList.push(id)
+            )
+        }
+      }
+    }
+  }
+
+  return doubleList
+}
+
+async function removeDoubleDatedBookmarks() {
+  const doubleList = await getDoubleDated()
+
+  await doubleList.reduce(
+    (promiseChain, bkmId) => promiseChain.then(
+      () => removeBookmark(bkmId)
+    ),
+    Promise.resolve(),
+  );
 }
 async function sortFolders({ parentId, compare=(a,b)=> a.localeCompare(b) }) {
   if (!parentId) {
@@ -5613,6 +5723,7 @@ async function orderBookmarks() {
 
   logOD('orderBookmarks() 55')
   await removeDoubleBookmarks()
+  await removeDoubleDatedBookmarks()
 
   logOD('orderBookmarks() 99')
 }
