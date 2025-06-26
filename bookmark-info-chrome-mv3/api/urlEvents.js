@@ -14,8 +14,7 @@ import {
   removeBookmark,
 } from '../bookmark-controller-api/bookmark-ignore.js'
 import {
-  isDatedFolderTitle,
-  getDatedTemplate,
+  getTitleForPattern,
 } from '../folder-api/index.js';
 
 function makeIsTitleMatchForEvents(patternList) {
@@ -113,9 +112,7 @@ class UrlEvents {
     const isTitleMatch = makeIsTitleMatchForEvents(patternList)
 
     bookmarkListWithParent.forEach(({ id, parentTitle }) => {
-      const normalizedParentTitle = isDatedFolderTitle(parentTitle)
-        ? getDatedTemplate(parentTitle)
-        : parentTitle
+      const normalizedParentTitle = getTitleForPattern(parentTitle)
 
       if (isTitleMatch(normalizedParentTitle)) {
         deleteList.push(id)
@@ -167,11 +164,7 @@ class UrlEvents {
         }
       })
 
-    const normalizedParentTitle = isDatedFolderTitle(parentTitle)
-      ? getDatedTemplate(parentTitle)
-      : parentTitle
-
-    // console.log('normalizedParentTitle ', normalizedParentTitle)
+    const normalizedParentTitle = getTitleForPattern(parentTitle)
 
     const deleteTemplateList = createDeleteTemplateList
       .filter(({ createTemplate }) => isTitleMatchForEvents({ title: normalizedParentTitle, pattern: createTemplate }))

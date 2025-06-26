@@ -1,6 +1,13 @@
 import {
   singular,
 } from '../api-low/index.js';
+import {
+  getDatedTemplate,
+  isDatedFolderTitle,
+} from './folder-dated-title.js';
+import {
+  getTitleDetails,
+} from './folder-directives.js';
 
 export const isDescriptiveFolderTitle = (title) => !!title
   && !(
@@ -36,3 +43,15 @@ export const trimLowSingular = (title) => {
 }
 
 export const normalizeTitle = (title) => trimLowSingular(title.replaceAll('-', ''))
+
+export const getTitleForPattern = (title) => {
+  let result
+
+  if (isDatedFolderTitle(title)) {
+    result = getDatedTemplate(title)
+  } else {
+    result = getTitleDetails(title).onlyTitle
+  }
+
+  return result
+}

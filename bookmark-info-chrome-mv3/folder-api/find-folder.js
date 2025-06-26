@@ -7,6 +7,7 @@ import {
   trimLow,
   trimLowSingular,
   normalizeTitle,
+  getTitleForPattern,
 } from './folder-title.js';
 import {
   makeLogFunction,
@@ -29,21 +30,15 @@ export async function findSubFolderWithExactTitle({ title, parentId }) {
 }
 
 function makeIsTitleMatch({ title, normalizeFn = (str) => str }) {
-  const pattern = normalizeFn(title)
-  const patternLength = pattern.length
+  const onlyTitlePattern = getTitleForPattern(title).onlyTitle
+  const normalizedPattern = normalizeFn(onlyTitlePattern)
 
   return function isTitleMatch(testTitle) {
-    const normalizedTestTitle = normalizeFn(testTitle)
+    const onlyTitleTestTitle = getTitleForPattern(testTitle).onlyTitle
+    const normalizedTestTitle = normalizeFn(onlyTitleTestTitle)
 
-    // if (normalizedTestTitle === pattern) {
-    //   return true
-    // }
-
-    if (normalizedTestTitle.startsWith(pattern)) {
-      const rest = normalizedTestTitle.slice(patternLength)
-
-      return rest.split(' ').filter(Boolean)
-        .every((word) => word.startsWith('#') || word.startsWith(':'))
+    if (normalizedTestTitle === normalizedPattern) {
+      return true
     }
 
     return false
