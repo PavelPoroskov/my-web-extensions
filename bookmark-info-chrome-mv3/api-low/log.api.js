@@ -36,7 +36,8 @@ const makeLogWithPrefixAndTime = (prefix = '') => {
   }
 }
 
-export const makeLogFunction = ({ module }) => {
+// eslint-disable-next-line no-unused-vars
+const makeLogFunctionOn = ({ module }) => {
 
   const isLogging = logModuleMap[module] || false
 
@@ -55,3 +56,7 @@ export const makeLogFunction = ({ module }) => {
     console.log(...ar);
   }
 }
+
+// const makeLogFunction = makeLogFunctionOn
+// const makeLogFunction = () => () => {}
+export const makeLogFunction = makeLogFunctionOn

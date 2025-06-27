@@ -3,7 +3,7 @@ import {
   moveVersionToManifest,
 } from './create-file-for-firefox.mjs'
 
-createFileForFirefox(
+await createFileForFirefox(
   [
     'constant/browser-specific.js',
     'constant/message-id.js',
@@ -117,43 +117,43 @@ createFileForFirefox(
   'background.js',
 )
 
-createFileForFirefox(
+await createFileForFirefox(
   [
     'content-script.js',
   ],
   'content-script.js',
 )
 
-createFileForFirefox(
+await createFileForFirefox(
   [
     'options/options.html',
   ],
   'options/options.html',
 )
-createFileForFirefox(
+await createFileForFirefox(
   [
     'options/options.js',
   ],
   'options/options.js',
 )
-createFileForFirefox(
+await createFileForFirefox(
   [
     'popup/popup.html',
   ],
   'popup/popup.html',
 )
-createFileForFirefox(
+await createFileForFirefox(
   [
     'popup/popup.js',
   ],
   'popup/popup.js',
 )
 
-createFileForFirefox(
+await createFileForFirefox(
   [
     'README.md',
   ],
   'README.md',
 )
 
-moveVersionToManifest()
+await moveVersionToManifest()
