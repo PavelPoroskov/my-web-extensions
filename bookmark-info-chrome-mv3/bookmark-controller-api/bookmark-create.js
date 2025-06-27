@@ -19,11 +19,11 @@ import {
   moveBookmarkIgnoreInController,
   removeBookmark,
 } from './bookmark-ignore.js'
-// import {
-//   makeLogFunction,
-// } from '../api-low/index.js'
+import {
+  makeLogFunction,
+} from '../api-low/index.js'
 
-// const logCBK = makeLogFunction({ module: 'bookmark-create.js' })
+const logCBK = makeLogFunction({ module: 'bookmark-create.js' })
 
 
 let lastCreatedBkmParentId
@@ -60,10 +60,17 @@ async function createBookmarkWithApi({
   );
 }
 
-async function createBookmarkWithParentId({ parentId, url, title }) {
+async function createBookmarkWithParentId({ parentId, url, title, parentTitle: inParentTitle }) {
   // logCBK('createBookmarkWithParentId() 00', parentId, url)
-  const [parentNode] = await chrome.bookmarks.get(parentId)
-  const parentTitle = parentNode.title
+
+  // optional params
+  let parentTitle = inParentTitle
+
+  if (!parentTitle) {
+    const [parentNode] = await chrome.bookmarks.get(parentId)
+    parentTitle = parentNode.title
+  }
+
 
   const isDatedTemplate = isDatedFolderTemplate(parentTitle)
 
@@ -120,12 +127,15 @@ export async function createBookmark({ parentId, parentTitle, url, title }) {
   if (parentId) {
     await createBookmarkWithParentId({ parentId, url, title })
   } else if (parentTitle) {
+    logCBK('createBookmark 22 parentTitle', parentTitle)
     const parentId = await folderCreator.findOrCreateFolder(parentTitle)
+    logCBK('createBookmark 22 parentId', parentId)
 
     await createBookmarkWithParentId({
       parentId,
       url,
       title,
+      parentTitle,
     })
   } else {
     throw new Error('createBookmark() must use parentId or parentTitle')

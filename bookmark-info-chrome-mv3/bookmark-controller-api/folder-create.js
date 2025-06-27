@@ -24,6 +24,7 @@ import {
 const logFCR = makeLogFunction({ module: 'folder-create.js' })
 
 export async function _findOrCreateFolder(title) {
+  logFCR('_findOrCreateFolder 00 title', title)
   const {
     onlyTitle: newOnlyTitle,
     objDirectives: objNewDirectives,

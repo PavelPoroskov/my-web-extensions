@@ -30,11 +30,11 @@ export async function findSubFolderWithExactTitle({ title, parentId }) {
 }
 
 function makeIsTitleMatch({ title, normalizeFn = (str) => str }) {
-  const onlyTitlePattern = getTitleForPattern(title).onlyTitle
+  const onlyTitlePattern = getTitleForPattern(title)
   const normalizedPattern = normalizeFn(onlyTitlePattern)
 
   return function isTitleMatch(testTitle) {
-    const onlyTitleTestTitle = getTitleForPattern(testTitle).onlyTitle
+    const onlyTitleTestTitle = getTitleForPattern(testTitle)
     const normalizedTestTitle = normalizeFn(onlyTitleTestTitle)
 
     if (normalizedTestTitle === normalizedPattern) {
