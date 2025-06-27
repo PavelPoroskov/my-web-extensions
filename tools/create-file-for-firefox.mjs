@@ -1,13 +1,9 @@
 import { convertFileContent } from './convert-file.mjs'
 import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
-const BASE_DIR_CHROME = path.resolve(__dirname, '../bookmark-info-chrome-mv3');
-const BASE_DIR_FIREFOX = path.resolve(__dirname, '../bookmark-info-firefox-mv2');
+const BASE_DIR_CHROME = path.resolve(import.meta.dirname, '../bookmark-info-chrome-mv3');
+const BASE_DIR_FIREFOX = path.resolve(import.meta.dirname, '../bookmark-info-firefox-mv2');
 
 const convertFile = async (inFilePath) => {
   const fullFilePath = path.join(BASE_DIR_CHROME, inFilePath);
@@ -24,9 +20,10 @@ const convertFile = async (inFilePath) => {
     usedDependencies: usedDependencies
       .map((dep) => path.resolve(fileDir, dep))
       .map((dep) => dep.replace(`${BASE_DIR_CHROME}/`,''))
-      // for windows
-      .map((dep) => dep.replace(`${BASE_DIR_CHROME}\\`,''))
-      .map((dep) => dep.replace(`\\`,'/')),
+      // // for windows
+      // .map((dep) => dep.replace(`${BASE_DIR_CHROME}\\`,''))
+      // .map((dep) => dep.replace(`\\`,'/'))
+      ,
     filePath: inFilePath,
   }
 }

@@ -22,7 +22,9 @@ if [ -n "$WASERROR" ]; then
 fi
 
 DISTRIBUTION_FF_FILE=bookmark_info-${VERSION}.zip
-DISTRIBUTION_FF_PATH_2=~/Documents/TMP-MANUAL/bookmark_info-${VERSION}b.zip
+# DISTRIBUTION_FF_PATH_2=~/Documents/TMP-MANUAL/bookmark_info-${VERSION}b.zip
+DISTRIBUTION_FF_PATH_2=/shared-with-virt/bookmark_info-${VERSION}b.zip
+
 cp bookmark-info-firefox-mv2/web-ext-artifacts/$DISTRIBUTION_FF_FILE $DISTRIBUTION_FF_PATH_2
 
 if [ $? -ne 0 ]; then
