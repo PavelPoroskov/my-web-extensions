@@ -6,7 +6,8 @@
   "scripts": {
     "eslint": "eslint",
     "to-ff": "node tools/mv-changes-to-firefox.mjs",
-    "deploy": "./deploy.sh"
+    "deploy": "./deploy.sh",
+    "deploy-beta": "./deploy-beta.sh"
   },
   "keywords": [],
   "author": "",
