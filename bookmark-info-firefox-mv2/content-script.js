@@ -506,8 +506,10 @@
     }
   }
 
-  function filterTagList({ tagList, nAvailableRows, nUsedRows }) {
-    log('filterTagList ', tagList)
+  function filterTagList({ tagList, nAvailableRows, nUsedRows, usedTagSet }) {
+    // log('filterTagList 00', tagList)
+    // log('filterTagList 00 nAvailableRows', nAvailableRows )
+    // log('filterTagList 00 nUsedRows', nUsedRows )
     if (!nAvailableRows) {
       return tagList
     }
@@ -521,7 +523,7 @@
       return tagList
     }
 
-    const nFixedTags = tagList.filter(({ isFixed }) => isFixed).length
+    const nFixedTags = tagList.filter(({ isFixed, parentId }) => isFixed || usedTagSet.has(parentId)).length
     const nAvailableRecentTags = nAvailableTags - nFixedTags
 
     const resultList = []
@@ -533,7 +535,7 @@
       iWhile += 1
       const { isHighlight, parentTitle } = item
       // ageIndex: 0..m, 0 - the most recent
-      const isVisible = item.isFixed || item.ageIndex < nAvailableRecentTags
+      const isVisible = item.isFixed || usedTagSet.has(item.parentId) || item.ageIndex < nAvailableRecentTags
 
       if (!isVisible) {
         if (isHighlight) {
@@ -557,6 +559,7 @@
       resultList.push(newItem)
     }
 
+    // log('filterTagList 99', resultList)
     return resultList
   }
   function renderBookmarkInfo(input, prevState) {
@@ -667,10 +670,17 @@
       drawList.push({ type: 'separator' })
 
       if (isTagListOpen) {
+        const usedTagSet = new Set(
+          (input.bookmarkList || [])
+            .filter(({ optimisticAdd, optimisticDel }) => !(optimisticAdd || optimisticDel))
+            .map(({ parentId }) => parentId)
+        )
+
         const filteredTagList = filterTagList({
           tagList,
           nAvailableRows: nTagListAvailableRows,
           nUsedRows: drawList.length,
+          usedTagSet,
         })
 
         filteredTagList.forEach((tag) => {

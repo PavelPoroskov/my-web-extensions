@@ -226,28 +226,27 @@ const INTERNAL_VALUES = Object.fromEntries(
   Object.keys(INTERNAL_VALUES_META).map((key) => [key, key])
 )
 const logModuleList = [
-  // 'bookmarks.controller.js',
   // 'bookmark-create.js',
   // 'bookmark-ignore.js',
   // 'bookmarkQueue.js',
+  // 'bookmarks.controller.js',
   // 'browserStartTime',
   // 'cache',
   // 'clear-url.js',
   // 'clearUrlInActiveTab.js',
   // 'commands.controller',
   // 'contextMenu.controller',
-  // 'folderCreator.js',
   // 'extensionSettings.js',
-  // 'folderQueue.js',
-  // 'find-create.js',
   // 'find-folder.js',
   // 'folder-ignore.js',
+  // 'folderCreator.js',
+  // 'folderQueue.js',
   // 'get-bookmarks.api.js',
   // 'getUrlFromUrl',
   // 'history.api',
   // 'incoming-message.js',
-  // 'incoming-message.js/TAB_IS_READY',
   // 'incoming-message.js/PAGE_EVENT',
+  // 'incoming-message.js/TAB_IS_READY',
   // 'init-extension',
   // 'memo',
   // 'mergeFolders.js',
@@ -260,11 +259,11 @@ const INTERNAL_VALUES = Object.fromEntries(
   // 'showAuthorBookmarks.js',
   // 'storage.api.js',
   // 'storage.controller',
-  // 'updateTab.js',
   // 'tabs.controller.js',
   // 'tagList-getRecent.js',
   // 'tagList-highlight.js',
   // 'tagList.js',
+  // 'updateTab.js',
   // 'url-is.js',
   // 'url-search.js',
   // 'url-settings.js',
@@ -1043,7 +1042,8 @@ const makeLogWithPrefixAndTime = (prefix = '') => {
   }
 }
 
-const makeLogFunction = ({ module }) => {
+// eslint-disable-next-line no-unused-vars
+const makeLogFunctionOn = ({ module }) => {
 
   const isLogging = logModuleMap[module] || false
 
@@ -1062,6 +1062,10 @@ const makeLogFunction = ({ module }) => {
     console.log(...ar);
   }
 }
+
+// const makeLogFunction = makeLogFunctionOn
+// const makeLogFunction = () => () => {}
+const makeLogFunction = makeLogFunctionOn
 const logSA = makeLogFunction({ module: 'storage.api.js' })
 
 async function setOptions(obj) {
@@ -1522,11 +1526,11 @@ async function findSubFolderWithExactTitle({ title, parentId }) {
 }
 
 function makeIsTitleMatch({ title, normalizeFn = (str) => str }) {
-  const onlyTitlePattern = getTitleForPattern(title).onlyTitle
+  const onlyTitlePattern = getTitleForPattern(title)
   const normalizedPattern = normalizeFn(onlyTitlePattern)
 
   return function isTitleMatch(testTitle) {
-    const onlyTitleTestTitle = getTitleForPattern(testTitle).onlyTitle
+    const onlyTitleTestTitle = getTitleForPattern(testTitle)
     const normalizedTestTitle = normalizeFn(onlyTitleTestTitle)
 
     if (normalizedTestTitle === normalizedPattern) {
@@ -2280,11 +2284,9 @@ class TagList {
     this._recentTagObj = {}
     this._fixedTagObj = {}
 
-    this.recentListDesc = []
-    this.recentListLimit = []
-    this.tagList = []
-    this.tagListFormat = []
-    this.tagIdSet = new Set()
+    this._tagList = []
+    this._tagIdSet = new Set()
+    this._formattedTagList = []
   }
 
   async useSettings({ isOn, userSettings }) {
@@ -2299,6 +2301,29 @@ class TagList {
   }
   _markUpdates() {
     this.changeCount += 1
+  }
+  _updateList() {
+    if (this.changeProcessedCount !== this.changeCount) {
+      this.changeProcessedCount = this.changeCount
+      this._tagList = this._refillList()
+      this._tagIdSet = new Set(this._tagList.map(({ parentId }) => parentId))
+      this._formattedTagList = this._formatList(this._tagList)
+    }
+
+    return {
+      idSet: new Set(this._tagIdSet),
+      list: this._tagList.slice(),
+      formattedList: this._formattedTagList.slice()
+    }
+  }
+  get list() {
+    if (!this.isOn) {
+      return []
+    }
+
+    const { formattedList } = this._updateList()
+
+    return formattedList
   }
 
   async _readFromStorage({ userSettings }) {
@@ -2389,20 +2414,10 @@ class TagList {
     })
   }
   _formatList(list) {
-    // logTL('formatList () 00', list)
-
-    const inList = list.filter(({ parentTitle }) => !!parentTitle)
-
-    const lastTagList = this.recentListDesc
-      .slice(0, this.HIGHLIGHT_LAST)
-
-    const lastTagSet = new Set(
-      lastTagList.map(({ parentId }) => parentId)
-    )
-
     let resultList
+
     if (this.PINNED_TAGS_POSITION == TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.TOP) {
-      resultList = inList.sort((a, b) => -(+a.isFixed - b.isFixed) || a.parentTitle.localeCompare(b.parentTitle))
+      resultList = list.toSorted((a, b) => -(+a.isFixed - b.isFixed) || a.parentTitle.localeCompare(b.parentTitle))
 
       if (this.HIGHLIGHT_ALPHABET) {
         resultList = highlightAlphabet({
@@ -2411,7 +2426,7 @@ class TagList {
         })
       }
     } else {
-      resultList = inList.sort((a, b) => a.parentTitle.localeCompare(b.parentTitle))
+      resultList = list.toSorted((a, b) => a.parentTitle.localeCompare(b.parentTitle))
 
       if (this.HIGHLIGHT_ALPHABET) {
         resultList = highlightAlphabet({
@@ -2421,86 +2436,90 @@ class TagList {
       }
     }
 
-    return resultList.map((item) => ({
-      ...item,
-      isLast: lastTagSet.has(item.parentId),
-    }))
+    return resultList
   }
-  getListWithBookmarks(addTagList = []) {
-    if (!this.isOn) {
-      logTL('getListWithBookmarks () 00 RETURN ', 0)
-      return []
-    }
+  _refillList() {
+    const recentListSorted = Object.entries(this._recentTagObj)
+      .map(([parentId, { parentTitle, dateAdded }]) => ({ parentId, parentTitle, dateAdded }))
+      .sort((a, b) => -(a.dateAdded - b.dateAdded))
 
-    logTL('getListWithBookmarks () 00 this.isRestoringDone', this.isRestoringDone)
-    const changeCount = this.changeCount
-    if (this.changeProcessedCount < changeCount) {
-      // logTL('getListWithBookmarks () 11 this._recentTagObj length', Object.keys(this._recentTagObj).length )
-      // logTL('getListWithBookmarks () 11 this._fixedTagObj length', Object.keys(this._fixedTagObj).length )
+    const lastTagList = recentListSorted
+      .slice(0, this.HIGHLIGHT_LAST)
 
-      this.recentListDesc = Object.entries(this._recentTagObj)
-        .map(([parentId, { parentTitle, dateAdded }]) => ({ parentId, parentTitle, dateAdded }))
-        .sort((a, b) => -(a.dateAdded - b.dateAdded))
+    const lastTagSet = new Set(
+      lastTagList.map(({ parentId }) => parentId)
+    )
 
-      const recentTagLimit = Math.max(
-        this.AVAILABLE_ROWS - Object.keys(this._fixedTagObj).length,
-        0
-      )
+    const recentTagLimit = Math.max(
+      this.AVAILABLE_ROWS - Object.keys(this._fixedTagObj).length,
+      0
+    )
 
-      this.recentListLimit = this.recentListDesc
+    const tagList  = [].concat(
+      Object.entries(this._fixedTagObj)
+        .map(([parentId, parentTitle]) => ({
+          parentId,
+          parentTitle,
+          isFixed: true,
+          isLast: lastTagSet.has(parentId),
+        })),
+      recentListSorted
         .filter(({ parentId }) => !(parentId in this._fixedTagObj))
         .slice(0, recentTagLimit)
+        .map(({ parentId, parentTitle }, index) => ({
+          parentId,
+          parentTitle,
+          isFixed: false,
+          isLast: lastTagSet.has(parentId),
+          ageIndex: index,
+        })),
+    )
 
-      // logTL('getListWithBookmarks () 11 this.AVAILABLE_ROWS', this.AVAILABLE_ROWS )
-      // logTL('getListWithBookmarks () 11 recentTagLimit', recentTagLimit )
-      // logTL('getListWithBookmarks () 11 this.recentListDesc length', this.recentListDesc.length )
-      // logTL('getListWithBookmarks () 11 this.recentListLimit length', this.recentListLimit.length )
-
-      this.tagList  = [].concat(
-        Object.entries(this._fixedTagObj)
-          .map(([parentId, parentTitle]) => ({
-            parentId,
-            parentTitle,
-            isFixed: true,
-          })),
-        this.recentListLimit
-          .map(({ parentId, parentTitle }, index) => ({ parentId, parentTitle, isFixed: false, ageIndex: index })),
-      )
-
-
-      this.tagIdSet = new Set(this.tagList.map(({ parentId }) => parentId))
-
-      this.tagListFormat = this._formatList(this.tagList)
-      // logTL('getListWithBookmarks () 11 this.tagList length', this.tagList.length )
-      // logTL('getListWithBookmarks () 11 this.tagListFormat length', this.tagListFormat.length )
-
-      if (this.changeProcessedCount < changeCount) {
-        this.changeProcessedCount = changeCount
-      }
+    return tagList
+  }
+  getListWithBookmarks(addTagList) {
+    if (!this.isOn) {
+      return []
     }
+    logTL('getListWithBookmarks () 22 addTagList', addTagList)
 
+    const { list, formattedList, idSet } = this._updateList()
+    // logTL('getListWithBookmarks () 22 list', list)
+    // logTL('getListWithBookmarks () 22 idSet', idSet)
 
-    logTL('getListWithBookmarks () 22')
     const finalAddTagList = addTagList
-      .filter(({ parentId }) => !this.tagIdSet.has(parentId))
+      .filter(({ parentId }) => !idSet.has(parentId))
+    // logTL('getListWithBookmarks () 33 finalAddTagList', finalAddTagList)
 
     const requiredSlots = finalAddTagList.length
 
     if (requiredSlots === 0) {
-      logTL('getListWithBookmarks () 33 RETURN ', this.tagListFormat.length)
+      // logTL('getListWithBookmarks () 33 RETURN ', formattedList.length)
       // logTL(this.tagListFormat)
-      return this.tagListFormat
+      return formattedList
     }
 
-    logTL('getListWithBookmarks () 44 finalAddTagList', finalAddTagList)
     const addSet = new Set(addTagList.map(({ parentId }) => parentId))
 
-    const availableSlots = Math.max(0, this.AVAILABLE_ROWS - this.tagList.length)
+    const availableSlots = Math.max(0, this.AVAILABLE_ROWS - list.length)
     const replaceSlots = Math.max(0, requiredSlots - availableSlots)
     const replaceList = finalAddTagList.slice(0, replaceSlots)
     const connectList = finalAddTagList.slice(replaceSlots)
 
-    let resultList = this.tagList.slice()
+    // logTL('getListWithBookmarks () 44 availableSlots', availableSlots)
+    // logTL('getListWithBookmarks () 44 replaceSlots', replaceSlots)
+    // logTL('getListWithBookmarks () 44 replaceList', replaceList)
+    // logTL('getListWithBookmarks () 44 connectList', connectList)
+
+    let resultList = list.slice()
+    let ageIndex = 0
+    if (0 < resultList.length) {
+      const lastItem = resultList.at(-1)
+
+      if ('ageIndex' in lastItem) {
+        ageIndex = lastItem.ageIndex + 1
+      }
+    }
 
     if (0 < replaceList.length) {
 
@@ -2511,22 +2530,32 @@ class TagList {
         const item = resultList[iTo]
 
         if (!item.isFixed && !addSet.has(item.parentId)) {
-          resultList[iTo].parentId = replaceList[iFrom].parentId
-          resultList[iTo].parentTitle = replaceList[iFrom].parentTitle
+          resultList[iTo] = Object.assign({}, resultList[iTo], {
+            parentId: replaceList[iFrom].parentId,
+            parentTitle: replaceList[iFrom].parentTitle,
+            isLast: false,
+          })
           iFrom = iFrom - 1
         }
         iTo = iTo - 1
       }
     }
+
     if (0 < connectList.length) {
-      const ageIndex = this.recentListLimit.length
       resultList = resultList.concat(
-        connectList.map(({ parentId, parentTitle }) => ({ parentId, parentTitle, isFixed: false, ageIndex }))
+        connectList.map(({ parentId, parentTitle }) => ({
+          parentId,
+          parentTitle,
+          isFixed: false,
+          ageIndex,
+        }))
       )
     }
 
     const tagListFormatWith = this._formatList(resultList)
-    logTL('getListWithBookmarks () RETURN 99', tagListFormatWith.length)
+    // logTL('getListWithBookmarks () 99 resultList.length', resultList.length)
+    // logTL('getListWithBookmarks () 99 resultList', resultList)
+    // logTL('getListWithBookmarks () 99 tagListFormatWith', tagListFormatWith)
 
     return tagListFormatWith
   }
@@ -3402,6 +3431,7 @@ async function removeFolder(bkmId) {
 const logFCR = makeLogFunction({ module: 'folder-create.js' })
 
 async function _findOrCreateFolder(title) {
+  logFCR('_findOrCreateFolder 00 title', title)
   const {
     onlyTitle: newOnlyTitle,
     objDirectives: objNewDirectives,
@@ -3893,11 +3923,7 @@ class UrlEvents {
 }
 
 const urlEvents = new UrlEvents()
-// import {
-//   makeLogFunction,
-// } from '../api-low/index.js'
-
-// const logCBK = makeLogFunction({ module: 'bookmark-create.js' })
+const logCBK = makeLogFunction({ module: 'bookmark-create.js' })
 
 
 let lastCreatedBkmParentId
@@ -3934,10 +3960,17 @@ async function createBookmarkWithApi({
   );
 }
 
-async function createBookmarkWithParentId({ parentId, url, title }) {
+async function createBookmarkWithParentId({ parentId, url, title, parentTitle: inParentTitle }) {
   // logCBK('createBookmarkWithParentId() 00', parentId, url)
-  const [parentNode] = await browser.bookmarks.get(parentId)
-  const parentTitle = parentNode.title
+
+  // optional params
+  let parentTitle = inParentTitle
+
+  if (!parentTitle) {
+    const [parentNode] = await browser.bookmarks.get(parentId)
+    parentTitle = parentNode.title
+  }
+
 
   const isDatedTemplate = isDatedFolderTemplate(parentTitle)
 
@@ -3994,12 +4027,15 @@ async function createBookmark({ parentId, parentTitle, url, title }) {
   if (parentId) {
     await createBookmarkWithParentId({ parentId, url, title })
   } else if (parentTitle) {
+    logCBK('createBookmark 22 parentTitle', parentTitle)
     const parentId = await folderCreator.findOrCreateFolder(parentTitle)
+    logCBK('createBookmark 22 parentId', parentId)
 
     await createBookmarkWithParentId({
       parentId,
       url,
       title,
+      parentTitle,
     })
   } else {
     throw new Error('createBookmark() must use parentId or parentTitle')
@@ -4814,8 +4850,14 @@ async function updateTab({ tabId, url, debugCaller, useCache=false }) {
     }
   }
 
-  const tagFromBookmarkList = await bookmarkListToTagList(bookmarkInfo.bookmarkList)
-  const tagListList = tagList.getListWithBookmarks(tagFromBookmarkList)
+  let tagListList
+  if (bookmarkList.length == 0) {
+    tagListList = tagList.list
+  } else {
+    const tagFromBookmarkList = await bookmarkListToTagList(bookmarkList)
+    tagListList = tagList.getListWithBookmarks(tagFromBookmarkList)
+  }
+
   // logUTB('updateTab() tagListList', tagListList.length,'tagList.nAvailableRows', tagList.nAvailableRows)
   // logUTB(tagListList)
 
