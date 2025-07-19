@@ -109,8 +109,14 @@ async function updateTab({ tabId, url, debugCaller, useCache=false }) {
     }
   }
 
-  const tagFromBookmarkList = await bookmarkListToTagList(bookmarkInfo.bookmarkList)
-  const tagListList = tagList.getListWithBookmarks(tagFromBookmarkList)
+  let tagListList
+  if (bookmarkList.length == 0) {
+    tagListList = tagList.list
+  } else {
+    const tagFromBookmarkList = await bookmarkListToTagList(bookmarkList)
+    tagListList = tagList.getListWithBookmarks(tagFromBookmarkList)
+  }
+
   // logUTB('updateTab() tagListList', tagListList.length,'tagList.nAvailableRows', tagList.nAvailableRows)
   // logUTB(tagListList)
 

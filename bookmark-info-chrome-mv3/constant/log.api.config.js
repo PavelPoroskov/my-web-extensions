@@ -1,5 +1,5 @@
 const logModuleList = [
-  'bookmark-create.js',
+  // 'bookmark-create.js',
   // 'bookmark-ignore.js',
   // 'bookmarkQueue.js',
   // 'bookmarks.controller.js',
@@ -10,10 +10,9 @@ const logModuleList = [
   // 'commands.controller',
   // 'contextMenu.controller',
   // 'extensionSettings.js',
-  'find-create.js',
   // 'find-folder.js',
   // 'folder-ignore.js',
-  'folderCreator.js',
+  // 'folderCreator.js',
   // 'folderQueue.js',
   // 'get-bookmarks.api.js',
   // 'getUrlFromUrl',
