@@ -24,18 +24,20 @@ import {
 const logFCR = makeLogFunction({ module: 'folder-create.js' })
 
 export async function _findOrCreateFolder(title) {
-  logFCR('_findOrCreateFolder 00 title', title)
+  // logFCR('_findOrCreateFolder 00 1 title', title)
   const {
     onlyTitle: newOnlyTitle,
     objDirectives: objNewDirectives,
   } = getTitleDetails(title)
+  // logFCR('_findOrCreateFolder 00 2', newOnlyTitle)
   let folder = await findFolder(newOnlyTitle)
+  // logFCR('_findOrCreateFolder 00 3', folder)
 
   if (!folder) {
     const parentId = getNewFolderRootId(title)
     const firstLevelNodeList = await chrome.bookmarks.getChildren(parentId)
     const findIndex = firstLevelNodeList.find((node) => title.localeCompare(node.title) < 0)
-    logFCR('findOrCreateFolder 11 findIndex', findIndex?.index, findIndex?.title)
+    // logFCR('_findOrCreateFolder 11 findIndex', findIndex?.index, findIndex?.title)
 
     const folderParams = {
       parentId,
@@ -48,6 +50,7 @@ export async function _findOrCreateFolder(title) {
 
     folder = await createFolderIgnoreInController(folderParams)
   } else {
+    // logFCR('_findOrCreateFolder 22 1', folder.title)
     const {
       onlyTitle: oldOnlyTitle,
       objDirectives: objOldDirectives,
@@ -56,10 +59,11 @@ export async function _findOrCreateFolder(title) {
     const oldBigLetterN = oldOnlyTitle.replace(/[^A-Z]+/g, "").length
     const newBigLetterN = newOnlyTitle.replace(/[^A-Z]+/g, "").length
     // const isAbbreviation = title.length == newBigLetterN
-    logFCR('findOrCreateFolder () 22', oldBigLetterN, newBigLetterN)
+    // logFCR('_findOrCreateFolder 22 2', oldBigLetterN, newBigLetterN)
 
     const oldDashN = oldOnlyTitle.replace(/[^-]+/g,"").length
     const newDashN = newOnlyTitle.replace(/[^-]+/g,"").length
+    // logFCR('_findOrCreateFolder 22 3', oldDashN, newDashN)
 
     const isUseNewTitle = oldBigLetterN < newBigLetterN || newDashN < oldDashN
     const hasChangesInDirectives = isChangesInDirectives({ oldDirectives: objOldDirectives, newDirectives: objNewDirectives })
@@ -67,6 +71,7 @@ export async function _findOrCreateFolder(title) {
     let actualOnlyTitle = isUseNewTitle ? newOnlyTitle : oldOnlyTitle
 
     if (isUseNewTitle || hasChangesInDirectives) {
+      // logFCR('_findOrCreateFolder 22 33', isUseNewTitle, hasChangesInDirectives)
       const objSumDirectives = Object.assign({}, objOldDirectives, objNewDirectives)
       const newTitle = getTitleWithDirectives({ onlyTitle: actualOnlyTitle, objDirectives: objSumDirectives })
 

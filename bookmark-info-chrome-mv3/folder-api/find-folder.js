@@ -7,8 +7,10 @@ import {
   trimLow,
   trimLowSingular,
   normalizeTitle,
-  getTitleForPattern,
 } from './folder-title.js';
+import {
+  getTitleDetails,
+} from './folder-directives.js';
 import {
   makeLogFunction,
 } from '../api-low/index.js';
@@ -30,14 +32,16 @@ export async function findSubFolderWithExactTitle({ title, parentId }) {
 }
 
 function makeIsTitleMatch({ title, normalizeFn = (str) => str }) {
-  const onlyTitlePattern = getTitleForPattern(title)
+  const onlyTitlePattern = getTitleDetails(title).onlyTitle
   const normalizedPattern = normalizeFn(onlyTitlePattern)
+  // logFF('makeIsTitleMatch 00', title, onlyTitlePattern, normalizedPattern)
 
   return function isTitleMatch(testTitle) {
-    const onlyTitleTestTitle = getTitleForPattern(testTitle)
+    const onlyTitleTestTitle = getTitleDetails(testTitle).onlyTitle
     const normalizedTestTitle = normalizeFn(onlyTitleTestTitle)
 
     if (normalizedTestTitle === normalizedPattern) {
+      // logFF('isTitleMatch 00', testTitle, onlyTitleTestTitle, normalizedTestTitle)
       return true
     }
 
@@ -48,6 +52,8 @@ function makeIsTitleMatch({ title, normalizeFn = (str) => str }) {
 async function findByTitle({ title, normalizeFn }) {
   let foundItem
   const bookmarkList = await chrome.bookmarks.search(title);
+  // logFF('findByTitle 00', title)
+  // logFF('findByTitle 00', bookmarkList)
   const isTitleMatch = makeIsTitleMatch({ title, normalizeFn })
 
   let i = 0
@@ -55,6 +61,7 @@ async function findByTitle({ title, normalizeFn }) {
     const checkItem = bookmarkList[i]
     if (!checkItem.url && isTitleMatch(checkItem.title)) {
       foundItem = checkItem
+      // logFF('findByTitle 22', checkItem.title)
     }
     i += 1
   }

@@ -27,6 +27,10 @@ import {
 import {
   folderCreator,
 } from './folderCreator.js'
+import {
+  isDatedFolderTemplate,
+  isDatedFolderTitle,
+} from '../folder-api/index.js';
 
 const logBQ = makeLogFunction({ module: 'bookmarkQueue.js' })
 
@@ -88,15 +92,22 @@ async function onMoveBookmark(task) {
 }
 
 async function onDeleteBookmark(task) {
-  const { node } = task
-  const { parentId } = node
+  // logBQ('onDeleteBookmark 00')
+  const { parentId } = task
+  // logBQ('onDeleteBookmark 11', parentId)
   const [parentNode] = await chrome.bookmarks.get(parentId)
   const parentTitle = parentNode.title
 
+  if (isDatedFolderTemplate(parentTitle) || isDatedFolderTitle(parentTitle)) {
+    return
+  }
+
+  // logBQ('onDeleteBookmark 22', parentId, parentTitle)
   await tagList.addTag({ parentId, parentTitle })
 }
 
 async function bookmarkQueueRunner(task) {
+  // logBQ('bookmarkQueueRunner 00', task)
   let isCallUpdateActiveTab = true
 
   switch (task.action) {
@@ -119,6 +130,7 @@ async function bookmarkQueueRunner(task) {
       break
     }
     case NODE_ACTION.DELETE: {
+      // logBQ('bookmarkQueueRunner 00', task)
       await onDeleteBookmark(task)
       break
     }

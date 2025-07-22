@@ -55,15 +55,15 @@ export const bookmarksController = {
       folderQueue.enqueueChange({ bookmarkId, node, changeInfo })
     }
   },
-  async onRemoved(bookmarkId, { node }) {
+  async onRemoved(bookmarkId, removeInfo) {
     // if (ignoreBkmControllerApiActionSet.hasIgnoreRemove(bookmarkId)) {
     //   return
     // }
 
-    if (node.url) {
-      bookmarkQueue.enqueueDelete({ bookmarkId, node })
+    if (removeInfo.node.url) {
+      bookmarkQueue.enqueueDelete({ ...removeInfo, bookmarkId })
     } else {
-      folderQueue.enqueueDelete({ bookmarkId, node })
+      folderQueue.enqueueDelete({ ...removeInfo, bookmarkId })
     }
   },
 }

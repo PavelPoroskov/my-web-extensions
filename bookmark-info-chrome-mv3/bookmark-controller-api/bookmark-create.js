@@ -61,8 +61,6 @@ async function createBookmarkWithApi({
 }
 
 async function createBookmarkWithParentId({ parentId, url, title, parentTitle: inParentTitle }) {
-  // logCBK('createBookmarkWithParentId() 00', parentId, url)
-
   // optional params
   let parentTitle = inParentTitle
 
@@ -70,7 +68,7 @@ async function createBookmarkWithParentId({ parentId, url, title, parentTitle: i
     const [parentNode] = await chrome.bookmarks.get(parentId)
     parentTitle = parentNode.title
   }
-
+  // logCBK('createBookmarkWithParentId() 00', parentId, `"${parentTitle}"`, url)
 
   const isDatedTemplate = isDatedFolderTemplate(parentTitle)
 

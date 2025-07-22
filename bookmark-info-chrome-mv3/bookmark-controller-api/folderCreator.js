@@ -53,6 +53,7 @@ class FolderCreator {
     this.cacheTitleToId[key] = id
     this.mapIdToTitle[id] = key
 
+    // logDT('   _useCacheForCreate() 99 key', key, id)
     return id
   }
   async findOrCreateFolder(templateTitle) {
@@ -64,12 +65,14 @@ class FolderCreator {
       options: templateTitle,
     })
 
+    // logDT('   findOrCreateFolder() 99', templateTitle, id)
     return id
   }
   async findOrCreateDatedFolderId({ templateTitle, templateId }) {
-    logDT('findOrCreateDatedFolderWithCache() 00', templateTitle, templateId)
+    // logDT('findOrCreateDatedFolderId() 00', `"${templateTitle}"`, templateId)
 
     const parentId = await this.findOrCreateDatedRootNew()
+    // logDT('findOrCreateDatedFolderId() 11 parentId', parentId)
 
     const id = await this._useCacheForCreate({
       getKey: (options) => getDatedTitle(options.templateTitle),
@@ -77,6 +80,7 @@ class FolderCreator {
       options: { templateTitle, templateId },
     })
 
+    // logDT('findOrCreateDatedFolderId() 99', `"${templateTitle}"`, id)
     return id
   }
 
