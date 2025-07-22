@@ -523,7 +523,7 @@
       return tagList
     }
 
-    const nFixedTags = tagList.filter(({ isFixed, parentId }) => isFixed || usedTagSet.has(parentId)).length
+    const nFixedTags = tagList.filter(({ isFixed }) => isFixed).length
     const nAvailableRecentTags = nAvailableTags - nFixedTags
 
     const resultList = []
@@ -627,6 +627,7 @@
 
       if (rowHeight) {
         nTagListAvailableRows = Math.floor(viewportHeight / rowHeight)
+        // log('nTagListAvailableRows ', nTagListAvailableRows, 'viewportHeight', viewportHeight, 'rowHeight', rowHeight)
       }
     }
 
@@ -676,12 +677,15 @@
             .map(({ parentId }) => parentId)
         )
 
+        // log('filterTagList tagList.length', tagList.length, 'nAvailableRows', nTagListAvailableRows, 'nUsedRows', drawList.length)
+        // log('filterTagList usedTagSet', Array.from(usedTagSet.keys()))
         const filteredTagList = filterTagList({
           tagList,
           nAvailableRows: nTagListAvailableRows,
           nUsedRows: drawList.length,
           usedTagSet,
         })
+        // log('filterTagList after length', filteredTagList.length)
 
         filteredTagList.forEach((tag) => {
           drawList.push({
