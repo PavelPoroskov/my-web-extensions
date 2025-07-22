@@ -1,5 +1,6 @@
 import {
   memo,
+  tagList,
 } from '../api-mid/index.js'
 import {
   makeLogFunction,
@@ -86,32 +87,39 @@ async function onMoveBookmark(task) {
   lastMovedBkmId = bookmarkId
 }
 
+async function onDeleteBookmark(task) {
+  const { node } = task
+  const { parentId } = node
+  const [parentNode] = await chrome.bookmarks.get(parentId)
+  const parentTitle = parentNode.title
+
+  await tagList.addTag({ parentId, parentTitle })
+}
+
 async function bookmarkQueueRunner(task) {
-  let isCallUpdateActiveTab = false
+  let isCallUpdateActiveTab = true
 
   switch (task.action) {
     case NODE_ACTION.CREATE: {
       await onCreateBookmark(task)
-      isCallUpdateActiveTab = true
       break
     }
     case NODE_ACTION.MOVE: {
       const { moveInfo } = task
       const { oldParentId, parentId } = moveInfo
+      isCallUpdateActiveTab = (parentId !== oldParentId)
 
       if (parentId !== oldParentId) {
         await onMoveBookmark(task)
-        isCallUpdateActiveTab = true
       }
 
       break
     }
     case NODE_ACTION.CHANGE: {
-      isCallUpdateActiveTab = true
       break
     }
     case NODE_ACTION.DELETE: {
-      isCallUpdateActiveTab = true
+      await onDeleteBookmark(task)
       break
     }
   }
