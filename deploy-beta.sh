@@ -3,6 +3,13 @@
 VERSION=$(jq -r '.version' bookmark-info-chrome-mv3/manifest.json)
 WASERROR=
 
+node tools/turn-on-logging.mjs
+if [ $? -ne 0 ]; then
+    echo "Command failed! Turn on logging"
+    exit 1
+fi
+echo Turn on logging: Ok
+
 node tools/mv-changes-to-firefox.mjs
 if [ $? -ne 0 ]; then
     echo "Command failed! Move changes to Firefox"
