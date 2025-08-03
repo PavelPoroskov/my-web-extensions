@@ -4,6 +4,11 @@ import {
 import {
   isUrlMathPathnameAndSearchParams,
 } from './url-search-is.js'
+import {
+  makeLogFunction,
+} from '../api-low/index.js'
+
+const logUAU = makeLogFunction({ module: 'url-author.js' })
 
 export function getAuthorUrlFromPostUrl(url) {
   const oUrl = new URL(url)
@@ -26,7 +31,7 @@ export function getAuthorUrlFromPostUrl(url) {
 }
 
 export function getMatchedGetAuthor(url) {
-  // logUAU('getMatchedGetAuthor () 00', url)
+  logUAU('getMatchedGetAuthor () 00', url)
   const targetHostSettings = getHostSettings(url)
 
   if (!targetHostSettings?.getAuthor) {
@@ -36,6 +41,8 @@ export function getMatchedGetAuthor(url) {
   const getAuthorList = Array.isArray(targetHostSettings.getAuthor)
     ? targetHostSettings.getAuthor
     : [targetHostSettings.getAuthor]
+
+  logUAU('getMatchedGetAuthor () 11', getAuthorList)
 
   let matchedGetAuthor
   let iWhile = 0
@@ -48,6 +55,8 @@ export function getMatchedGetAuthor(url) {
 
     iWhile += 1
   }
+
+  logUAU('getMatchedGetAuthor () 99', matchedGetAuthor)
 
   return matchedGetAuthor
 }

@@ -114,6 +114,11 @@ const urlSettingsUse = {
       'itemName',
     ],
   },
+  'medium.com': {
+    getAuthor: {
+      pagePattern: '/:@author/:post',
+    }
+  },
   'stackoverflow.com': {
     removeAllSearchParamForPath: [
       '/questions/:questionNumber/:question',

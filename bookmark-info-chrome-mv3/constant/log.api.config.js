@@ -38,6 +38,7 @@ const logModuleList = [
   // 'tagList-highlight.js',
   // 'tagList.js',
   // 'updateTab.js',
+  // 'url-author.js',
   // 'url-is.js',
   // 'url-search.js',
   // 'url-settings.js',
