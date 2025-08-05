@@ -322,6 +322,41 @@
     )
   };
 
+  async function deleteBookmark({ parentId, bookmarkId: inBookmarkId }) {
+    let bookmarkId = inBookmarkId
+
+    const fullState = stateContainer.getState()
+    const bookmarkList = fullState.bookmarkList || []
+
+    if (parentId) {
+      const bkm = bookmarkList.find((item) => item.parentId === parentId)
+      bookmarkId = bkm?.id
+    }
+
+    if (!bookmarkId) {
+      return
+    }
+
+    // optimistic ui
+    const findIndex = bookmarkList.findIndex((item) => item.id == bookmarkId)
+
+    if (-1 < findIndex) {
+      const newBookmarkList = bookmarkList.with(findIndex, { optimisticDel: true })
+      const updateObj = { bookmarkList: newBookmarkList }
+
+      if (parentId) {
+        updateObj.optimisticDelFromTagList = fullState.optimisticDelFromTagList + 1
+      }
+
+      stateContainer.update(updateObj)
+    }
+
+    await chrome.runtime.sendMessage({
+      command: EXTENSION_MSG_ID.DELETE_BOOKMARK,
+      bookmarkId,
+    });
+  }
+
   function hideBookmarks() {
     const rootDiv = document.getElementById(bkmInfoRootId);
 
@@ -356,25 +391,7 @@
         break
       }
       case 'db': {
-        const bookmarkId = id
-        if (!bookmarkId) {
-          break
-        }
-
-        // optimistic ui
-        const fullState = stateContainer.getState()
-        const bookmarkList = fullState.bookmarkList || []
-
-        const findIndex = bookmarkList.findIndex((item) => item.id == bookmarkId)
-        if (-1 < findIndex) {
-          const newBookmarkList = bookmarkList.with(findIndex, { optimisticDel: true })
-          stateContainer.update({ bookmarkList: newBookmarkList })
-        }
-
-        await chrome.runtime.sendMessage({
-          command: EXTENSION_MSG_ID.DELETE_BOOKMARK,
-          bookmarkId,
-        });
+        await deleteBookmark({ bookmarkId: id })
         break
       }
       case 'h': {
@@ -440,28 +457,7 @@
         break
       }
       case 'ut': {
-        const parentId = id
-        const fullState = stateContainer.getState()
-        const bookmarkList = fullState.bookmarkList || []
-        const bkm = bookmarkList.find((item) => item.parentId === parentId)
-
-        if (bkm?.id) {
-          // epic error
-          // const findIndex = bookmarkList.findIndex((item) => item.id != bkm.id)
-          const findIndex = bookmarkList.findIndex((item) => item.id == bkm.id)
-          if (-1 < findIndex) {
-            const newBookmarkList = bookmarkList.with(findIndex, { optimisticDel: true })
-            stateContainer.update({
-              bookmarkList: newBookmarkList,
-              optimisticDelFromTagList: fullState.optimisticDelFromTagList + 1,
-            })
-          }
-
-          await chrome.runtime.sendMessage({
-            command: EXTENSION_MSG_ID.DELETE_BOOKMARK,
-            bookmarkId: bkm.id,
-          });
-        }
+        await deleteBookmark({ parentId: id })
         break
       }
       case 'fx': {
