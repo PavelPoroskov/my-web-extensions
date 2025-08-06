@@ -1,4 +1,4 @@
-# bookmark-info
+# bookmark-info  
 The extension improves the browser's capabilities for working with bookmarks. 
 
 * fast add bookmarks:
