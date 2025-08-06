@@ -15,18 +15,6 @@ import {
 
 const logRC = makeLogFunction({ module: 'runtime.controller' })
 
-function checkCommandShortcuts() {
-  chrome.commands.getAll((commands) => {
-    let missingShortcuts = [];
-
-    for (let {name, shortcut} of commands) {
-      if (shortcut === '') {
-        missingShortcuts.push(name);
-      }
-    }
-  });
-}
-
 export const runtimeController = {
   async onStartup() {
     logRC('runtime.onStartup');
@@ -48,8 +36,6 @@ export const runtimeController = {
     if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
       await orderBookmarks()
     }
-
-    checkCommandShortcuts()
   },
   async onInstalled () {
     logRC('runtime.onInstalled');
@@ -71,8 +57,6 @@ export const runtimeController = {
         await orderBookmarks()
       }
     }
-
-    checkCommandShortcuts()
 
     //? chrome.runtime.reload() to fix empty page options after update
   },

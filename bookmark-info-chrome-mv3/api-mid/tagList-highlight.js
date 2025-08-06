@@ -1,10 +1,3 @@
-import {
-  ExtraMap,
-  makeLogFunction,
-} from '../api-low/index.js'
-
-const logTH = makeLogFunction({ module: 'tagList-highlight.js' })
-
 const ALLOWED_DISTANCE = 3
 
 function getIsConditionFromUp(letterList, iTest) {
@@ -52,7 +45,6 @@ function getIsConditionFromDown(letterList, iTest) {
 }
 
 function markItemInList(letterList) {
-  logTH('markItemInList () 00')
   let distanceFromUp = 0
   let i = 0
 
@@ -65,14 +57,11 @@ function markItemInList(letterList) {
     if (letterList[i].isHighlight) {
       distanceFromUp = 0
     } else if (ALLOWED_DISTANCE <= distanceFromUp) {
-      logTH('markItemInList () 11 ALLOWED_DISTANCE <= distanceFromUp', letterList[i].letter)
       const isConditionFromDown = getIsConditionFromDown(letterList, i)
-      logTH('markItemInList () 11 isConditionFromDown', letterList[i].letter, isConditionFromDown)
 
       if (isConditionFromDown) {
         letterList[i].isHighlight = true
         distanceFromUp = 0
-        logTH('markItemInList () 11 add', letterList[i].letter)
       }
     }
 
@@ -81,14 +70,12 @@ function markItemInList(letterList) {
 }
 
 function getHighlightSet(letterList = []) {
-  logTH('getHighlightSet () 00', letterList)
   if (letterList.length == 0) {
     return new Set()
   }
 
-  letterList.forEach(({ letter, n }, index, arr) => {
+  letterList.forEach(({ n }, index, arr) => {
     if (ALLOWED_DISTANCE <= n) {
-      logTH('getHighlightSet () 11 ALLOW_DISTANCE <= n', letter, n)
       arr[index].isHighlight = true
     }
   })
@@ -120,13 +107,13 @@ function getHighlightSet(letterList = []) {
 }
 
 function getGroupedLetterList(resultList) {
-  const letterToNMap = new ExtraMap()
+  const letterToNMap = {}
 
   resultList.forEach(({ letter }) => {
-    letterToNMap.sum(letter, 1)
+    letterToNMap[letter] = (letterToNMap[letter] || 0) + 1
   })
 
-  const letterList = Array.from(letterToNMap.entries())
+  const letterList = Object.entries(letterToNMap)
     .map(([letter, n]) => ({ letter, n }))
     .toSorted((a, b) => a.letter.localeCompare(b.letter))
 

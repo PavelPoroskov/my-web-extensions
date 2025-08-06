@@ -112,12 +112,3 @@ export async function filterRecentTagObj(obj = {}, isFlatStructure) {
     ])
   )
 }
-
-export async function filterFixedTagObj(obj = {}, isFlatStructure) {
-  logRA('filterFixedTagObj () 00')
-  const filteredFolderList = await filterFolders(Object.keys(obj), isFlatStructure)
-
-  return Object.fromEntries(
-    filteredFolderList.map(({ id, title }) => [id, title])
-  )
-}

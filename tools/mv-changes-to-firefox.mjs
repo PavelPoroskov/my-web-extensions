@@ -91,6 +91,7 @@ await createFileForFirefox(
     'bookmark-list-ops/index.js',
 
     'migration/migration20250520.js',
+    'migration/migration20250706.js',
     'migration/migration.js',
     'migration/index.js',
 

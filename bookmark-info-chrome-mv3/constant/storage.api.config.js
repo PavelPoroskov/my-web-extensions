@@ -61,9 +61,6 @@ const USER_OPTION_META = {
   TAG_LIST_HIGHLIGHT_LAST: {
     default: 7
   },
-  TAG_LIST_HIGHLIGHT_ALPHABET: {
-    default: true,
-  },
   TAG_LIST_OPEN_MODE: {
     default: TAG_LIST_OPEN_MODE_OPTIONS.PER_PAGE,
   },
@@ -94,7 +91,7 @@ const USER_OPTION_META = {
 }
 
 // used for migrations
-export const DATA_FORMAT = 20250520;
+export const DATA_FORMAT = 20250706;
 
 const INTERNAL_VALUES_META = {
   TAG_LIST_IS_OPEN: {

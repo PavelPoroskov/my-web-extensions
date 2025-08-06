@@ -322,15 +322,181 @@
     )
   };
 
-  async function deleteBookmark({ parentId, bookmarkId: inBookmarkId }) {
+  const TAG_LIST_PINNED_TAGS_POSITION_OPTIONS = {
+    TOP: 'TOP',
+    WITH_RECENT: 'WITH_RECENT',
+  }
+  const ALLOWED_DISTANCE = 3
+
+  function getIsConditionFromUp(letterList, iTest) {
+    let distanceFromUp = 0
+    let i = iTest - 1
+
+    while (-1 < i) {
+      distanceFromUp += letterList[i].n
+
+      if (ALLOWED_DISTANCE <= distanceFromUp) {
+        return true
+      }
+
+      if (letterList[i].isHighlight) {
+        return false
+      }
+
+      i = i - 1
+    }
+
+    return i == -1
+  }
+
+  function getIsConditionFromDown(letterList, iTest) {
+    let distanceFromDown = 0
+    let i = iTest + 1
+
+    while (i < letterList.length) {
+      distanceFromDown += letterList[i - 1].n
+
+      if (ALLOWED_DISTANCE <= distanceFromDown) {
+        return true
+      }
+
+      if (letterList[i].isHighlight) {
+        return false
+      }
+
+      // epic error
+      // i =+ 1
+      i = i + 1
+    }
+
+    return i == letterList.length
+  }
+
+  function markItemInList(letterList) {
+    let distanceFromUp = 0
+    let i = 0
+
+    while (i < letterList.length) {
+      distanceFromUp = distanceFromUp + (i == 0
+        ? ALLOWED_DISTANCE
+        : letterList[i - 1].n
+      )
+
+      if (letterList[i].isHighlight) {
+        distanceFromUp = 0
+      } else if (ALLOWED_DISTANCE <= distanceFromUp) {
+        const isConditionFromDown = getIsConditionFromDown(letterList, i)
+
+        if (isConditionFromDown) {
+          letterList[i].isHighlight = true
+          distanceFromUp = 0
+        }
+      }
+
+      i = i + 1
+    }
+  }
+
+  function getHighlightSet(letterList = []) {
+    if (letterList.length == 0) {
+      return new Set()
+    }
+
+    letterList.forEach(({ n }, index, arr) => {
+      if (ALLOWED_DISTANCE <= n) {
+        arr[index].isHighlight = true
+      }
+    })
+
+    const priorityCheckList = letterList
+      .map(({ letter, n }, index) => ({ letter, n, index }))
+      .filter(({ n }) => 1 < n && n < ALLOWED_DISTANCE)
+      .toSorted((a, b) => -(a.n - b.n) || a.index - b.index)
+
+    priorityCheckList.forEach(({ index }) => {
+      const isConditionFromUp = getIsConditionFromUp(letterList, index)
+
+      if (isConditionFromUp) {
+        const isConditionFromDown = getIsConditionFromDown(letterList, index)
+
+        if (isConditionFromDown) {
+          letterList[index].isHighlight = true
+        }
+      }
+    })
+
+    markItemInList(letterList)
+
+    return new Set(
+      letterList
+        .filter(({ isHighlight }) => isHighlight)
+        .map(({ letter }) => letter)
+    )
+  }
+
+  function getGroupedLetterList(resultList) {
+    const letterToNMap = {}
+
+    resultList.forEach(({ letter }) => {
+      letterToNMap[letter] = (letterToNMap[letter] || 0) + 1
+    })
+
+    const letterList = Object.entries(letterToNMap)
+      .map(([letter, n]) => ({ letter, n }))
+      .toSorted((a, b) => a.letter.localeCompare(b.letter))
+
+    return letterList
+  }
+
+  function getFirstLetter(title) {
+    return new Intl.Segmenter().segment(title).containing(0).segment.toUpperCase()
+  }
+
+  function highlightAlphabet({
+    list = [],
+    fnGetFirstLetter = ({ title }) => getFirstLetter(title),
+  }) {
+    const midList = list.map((item) => ({
+      ...item,
+      letter: fnGetFirstLetter(item),
+    }))
+
+    const highlightSet = getHighlightSet(
+      getGroupedLetterList(midList)
+    )
+    const resultList = []
+
+    midList.forEach(({ letter, ...rest }) => {
+      if (highlightSet.has(letter)) {
+        resultList.push({
+          ...rest,
+          isHighlight: 1,
+        })
+        highlightSet.delete(letter)
+      } else {
+        resultList.push(rest)
+      }
+    })
+
+    return resultList
+  }
+  async function deleteBookmark({ parentId: inParentId, bookmarkId: inBookmarkId }) {
+    let parentId = inParentId
     let bookmarkId = inBookmarkId
+
+    // if (!(parentId || bookmarkId)) {
+    //   return
+    // }
 
     const fullState = stateContainer.getState()
     const bookmarkList = fullState.bookmarkList || []
+    const updateObj = {}
 
     if (parentId) {
-      const bkm = bookmarkList.find((item) => item.parentId === parentId)
-      bookmarkId = bkm?.id
+      const bookmark = bookmarkList.find((item) => item.parentId === parentId)
+      bookmarkId = bookmark?.id
+
+      updateObj.optimisticDelFromTagList = fullState.optimisticDelFromTagList + 1
     }
 
     if (!bookmarkId) {
@@ -342,11 +508,12 @@
 
     if (-1 < findIndex) {
       const newBookmarkList = bookmarkList.with(findIndex, { optimisticDel: true })
-      const updateObj = { bookmarkList: newBookmarkList }
+      updateObj.bookmarkList = newBookmarkList
 
-      if (parentId) {
-        updateObj.optimisticDelFromTagList = fullState.optimisticDelFromTagList + 1
-      }
+      const bookmark = bookmarkList[findIndex]
+      const deletedTagList = fullState.deletedTagList || []
+      deletedTagList.push(Object.assign({}, bookmark))
+      updateObj.deletedTagList = deletedTagList
 
       stateContainer.update(updateObj)
     }
@@ -469,7 +636,7 @@
         const findIndex = tagList.findIndex((item) => item.parentId == parentId)
         if (-1 < findIndex) {
           tag = tagList[findIndex]
-          const newTagList = tagList.with(findIndex, { ...tag, isFixed: true })
+          const newTagList = tagList.with(findIndex, { ...tag, isFixed: 1 })
           stateContainer.update({ tagList: newTagList })
         }
 
@@ -489,7 +656,7 @@
         const findIndex = tagList.findIndex((item) => item.parentId == parentId)
         if (-1 < findIndex) {
           tag = tagList[findIndex]
-          const newTagList = tagList.with(findIndex, { ...tag, isFixed: false, ageIndex: 0 })
+          const newTagList = tagList.with(findIndex, { dateAdded: Date.now(), ...tag, isFixed: 0 })
           stateContainer.update({ tagList: newTagList })
         }
 
@@ -502,61 +669,115 @@
     }
   }
 
-  function filterTagList({ tagList, nAvailableRows, nUsedRows, usedTagSet }) {
-    // log('filterTagList 00', tagList)
-    // log('filterTagList 00 nAvailableRows', nAvailableRows )
-    // log('filterTagList 00 nUsedRows', nUsedRows )
-    if (!nAvailableRows) {
-      return tagList
+  function getAddList({ tagList, usedTagObj, deletedTagList }) {
+
+    const deletedTagObj = Object.fromEntries(
+      (deletedTagList || [])
+        .filter(({ parentId, isInternal }) => parentId && !isInternal)
+        .map(({ parentId, parentTitle, templateId, templateTitle }) => ({
+          parentId: templateId || parentId,
+          parentTitle: templateTitle || parentTitle,
+        }))
+        .map(({ parentId, parentTitle }) => [parentId, parentTitle])
+    )
+    const addTagObj = Object.assign({}, deletedTagObj, usedTagObj)
+    const addTagSet = new Set(Object.keys(addTagObj))
+
+    if (addTagSet.size == 0) {
+      return []
     }
 
-    const nAvailableTags = Math.max(0, nAvailableRows - nUsedRows)
+    const tagSet = new Set(
+      tagList.map(({ parentId }) => parentId)
+    )
+    const onlyAddTagSet = addTagSet.difference(tagSet)
+
+    if (onlyAddTagSet.size == 0) {
+      return []
+    }
+
+    return Array.from(onlyAddTagSet)
+      .map((parentId) => ({
+        parentId,
+        parentTitle: addTagObj[parentId],
+      }))
+  }
+
+  function formatTagList({ tagList, pinnedTagPosition }) {
+    let resultList
+
+    if (pinnedTagPosition == TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.TOP) {
+      resultList = tagList.toSorted((a, b) => -((a.isFixed || 0) - (b.isFixed || 0)) || a.parentTitle.localeCompare(b.parentTitle))
+
+      resultList = highlightAlphabet({
+        list: resultList,
+        fnGetFirstLetter: ({ isFixed, parentTitle }) => `${isFixed ? 'F': 'R'}#${getFirstLetter(parentTitle)}`
+      })
+    } else {
+      resultList = tagList.toSorted((a, b) => a.parentTitle.localeCompare(b.parentTitle))
+
+      resultList = highlightAlphabet({
+        list: resultList,
+        fnGetFirstLetter: ({ parentTitle }) => getFirstLetter(parentTitle),
+      })
+    }
+
+    return resultList
+  }
+
+  function mergeTagList({ tagList, nAvailableTags,
+    usedTagList, deletedTagList,
+    pinnedTagPosition,
+  }) {
     if (nAvailableTags == 0) {
       return []
     }
 
-    if (tagList.length <= nAvailableTags) {
-      return tagList
+    const usedTagObj = Object.fromEntries(
+      (usedTagList || [])
+        .filter(({ parentId, isInternal }) => parentId && !isInternal)
+        .map(({ parentId, parentTitle, templateId, templateTitle }) => ({
+          parentId: templateId || parentId,
+          parentTitle: templateTitle || parentTitle,
+        }))
+        .map(({ parentId, parentTitle }) => [parentId, parentTitle])
+    )
+    const usedTagSet = new Set(Object.keys(usedTagObj))
+
+    const addTagList = getAddList({
+      tagList,
+      usedTagObj,
+      deletedTagList,
+    })
+
+    let resultList = []
+
+    if (addTagList.length == 0 && tagList.length <= nAvailableTags) {
+      resultList = tagList
+    } else {
+
+      const addUsedTagList = addTagList.filter(({ parentId }) => usedTagSet.has(parentId))
+      const addDeletedTagList = addTagList.filter(({ parentId }) => !usedTagSet.has(parentId))
+
+      const fixedTagList = tagList.filter(({ isFixed }) => isFixed)
+      const notFixedTagList = tagList
+          .filter(({ isFixed }) => !isFixed)
+          .sort((a, b) => -(a.dateAdded - b.dateAdded))
+
+      resultList = []
+        .concat(fixedTagList, addUsedTagList, addDeletedTagList, notFixedTagList)
+        .slice(0, nAvailableTags)
+
+      // format
+      resultList = formatTagList({ tagList: resultList, pinnedTagPosition })
     }
 
-    const nFixedTags = tagList.filter(({ isFixed }) => isFixed).length
-    const nAvailableRecentTags = nAvailableTags - nFixedTags
-
-    const resultList = []
-    let lostHighlight
-    let nVisible = 0
-    let iWhile = 0
-    while (nVisible < nAvailableTags && iWhile < tagList.length) {
-      const item = tagList[iWhile]
-      iWhile += 1
-      const { isHighlight, parentTitle } = item
-      // ageIndex: 0..m, 0 - the most recent
-      const isVisible = item.isFixed || usedTagSet.has(item.parentId) || item.ageIndex < nAvailableRecentTags
-
-      if (!isVisible) {
-        if (isHighlight) {
-          lostHighlight = new Intl.Segmenter().segment(parentTitle).containing(0).segment.toUpperCase()
-        }
-        continue
-      }
-
-      nVisible += 1
-      let isMoveHighlight = false
-      if (lostHighlight) {
-        const currentLetter = new Intl.Segmenter().segment(parentTitle).containing(0).segment.toUpperCase()
-        isMoveHighlight = currentLetter == lostHighlight
-        lostHighlight = undefined
-      }
-
-      const newItem = Object.assign({}, item)
-      if (isMoveHighlight) {
-        Object.assign(newItem, { isHighlight: 1 })
-      }
-      resultList.push(newItem)
-    }
-
-    // log('filterTagList 99', resultList)
-    return resultList
+    return resultList.map(
+      (obj) => (usedTagSet.has(obj.parentId)
+        ? Object.assign({}, obj, { isUsed: 1 })
+        : obj
+      )
+    )
   }
   function renderBookmarkInfo(input, prevState) {
     log('renderBookmarkInfo 00');
@@ -614,7 +835,7 @@
       document.body.style.setProperty("--bkm-info-onprint", onPrint);
     }
 
-    const usedParentIdSet = new Set(bookmarkList.map(({ parentId }) => parentId))
+    // const usedParentIdSet = new Set(bookmarkList.map(({ parentId }) => parentId))
     let nTagListAvailableRows = input.nTagListAvailableRows
     if (rootDiv.firstChild) {
       const viewportHeight = window.visualViewport.height || window.innerHeight
@@ -667,30 +888,20 @@
       drawList.push({ type: 'separator' })
 
       if (isTagListOpen) {
-        const usedTagSet = new Set(
-          (input.bookmarkList || [])
-            .filter(({ optimisticAdd, optimisticDel }) => !(optimisticAdd || optimisticDel))
-            .map(({ parentId }) => parentId)
-        )
+        const nAvailableRows = nTagListAvailableRows
+        const nUsedRows = drawList.length
+        const nAvailableTags = Math.max(0, nAvailableRows - nUsedRows)
 
-        // log('filterTagList tagList.length', tagList.length, 'nAvailableRows', nTagListAvailableRows, 'nUsedRows', drawList.length)
-        // log('filterTagList usedTagSet', Array.from(usedTagSet.keys()))
-        const filteredTagList = filterTagList({
+        const filteredTagList = mergeTagList({
           tagList,
-          nAvailableRows: nTagListAvailableRows,
-          nUsedRows: drawList.length,
-          usedTagSet,
+          nAvailableTags,
+          usedTagList: input.bookmarkList,
+          deletedTagList: input.deletedTagList,
+          pinnedTagPosition: input.pinnedTagPosition,
         })
-        // log('filterTagList after length', filteredTagList.length)
 
         filteredTagList.forEach((tag) => {
-          drawList.push({
-            type: 'tag',
-            value: {
-              ...tag,
-              isUsed: usedParentIdSet.has(tag.parentId)
-            },
-          })
+          drawList.push({ type: 'tag', value: tag })
         })
       }
     }
@@ -845,13 +1056,17 @@
           divLabel.classList.add('bkm-info--tag');
 
           if (isUsed) {
-            divLabel.setAttribute('data-id', `ut#${parentId}`);
+            if (parentTitle.endsWith(' @D')) {
+              divLabel.setAttribute('data-id', `t#${parentId}`);
+            } else {
+              divLabel.setAttribute('data-id', `ut#${parentId}`);
+            }
           } else {
             divLabel.setAttribute('data-id', `t#${parentId}`);
           }
 
-          divLabel.classList.toggle('bkm-info--used-tag', isUsed);
-          divLabel.classList.toggle('bkm-info--last-tag', isLast);
+          divLabel.classList.toggle('bkm-info--used-tag', Boolean(isUsed));
+          divLabel.classList.toggle('bkm-info--last-tag', Boolean(isLast));
 
           if (isFixed) {
             const divTri = document.createElement('div');
@@ -1426,6 +1641,7 @@
         optimisticAddFromTagList: 0,
         optimisticToStorageDel: 0,
         optimisticToStorageAdd: 0,
+        deletedTagList: [],
       }
 
       if (tagListOpenMode && tagListOpenMode != TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL

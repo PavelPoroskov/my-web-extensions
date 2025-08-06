@@ -168,12 +168,6 @@ function restoreOptions(settings) {
   element.value = settings[optionId];
   element.addEventListener('change', makeSaveSelectHandler(optionId) );
 
-  optionId = USER_OPTION.TAG_LIST_HIGHLIGHT_ALPHABET;
-  domId = `#${optionId}`
-  element = document.querySelector(domId)
-  element.checked = settings[optionId];
-  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
-
   optionId = 'FLAT_BOOKMARKS';
   domId = `#${optionId}`
   element = document.querySelector(domId)

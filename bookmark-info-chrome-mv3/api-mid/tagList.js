@@ -9,7 +9,6 @@ import {
   TAG_LIST_PINNED_TAGS_POSITION_OPTIONS,
 } from '../constant/index.js'
 import {
-  filterFixedTagObj,
   filterRecentTagObj,
   getRecentTagObj,
 } from './tagList-getRecent.js'
@@ -34,8 +33,7 @@ class TagList {
     this.isFlatStructure = false
     this.AVAILABLE_ROWS = 0
     this.MAX_AVAILABLE_ROWS = 0
-    this.HIGHLIGHT_LAST = false
-    this.HIGHLIGHT_ALPHABET = false
+    this.HIGHLIGHT_LAST = 0
     this.PINNED_TAGS_POSITION = undefined
 
     this.isOpenGlobal = false
@@ -93,7 +91,6 @@ class TagList {
 
     this.isFlatStructure = userSettings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]
     this.HIGHLIGHT_LAST = userSettings[USER_OPTION.TAG_LIST_HIGHLIGHT_LAST]
-    this.HIGHLIGHT_ALPHABET = userSettings[USER_OPTION.TAG_LIST_HIGHLIGHT_ALPHABET]
     this.PINNED_TAGS_POSITION = userSettings[USER_OPTION.TAG_LIST_PINNED_TAGS_POSITION]
 
     const savedObj = await getOptions([
@@ -123,7 +120,7 @@ class TagList {
     }
 
     this._recentTagObj = await filterRecentTagObj(this._recentTagObj, this.isFlatStructure)
-    this._fixedTagObj = await filterFixedTagObj(this._fixedTagObj, this.isFlatStructure)
+    this._fixedTagObj = await filterRecentTagObj(this._fixedTagObj, this.isFlatStructure)
 
     this._markUpdates()
     await setOptions({
@@ -176,26 +173,24 @@ class TagList {
     })
   }
   _formatList(list) {
+    logTL('_formatList 00', list)
     let resultList
 
     if (this.PINNED_TAGS_POSITION == TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.TOP) {
-      resultList = list.toSorted((a, b) => -(+a.isFixed - b.isFixed) || a.parentTitle.localeCompare(b.parentTitle))
+      logTL('_formatList 11')
+      resultList = list.toSorted((a, b) => -((a.isFixed || 0 ) - (b.isFixed || 0)) || a.parentTitle.localeCompare(b.parentTitle))
 
-      if (this.HIGHLIGHT_ALPHABET) {
-        resultList = highlightAlphabet({
-          list: resultList,
-          fnGetFirstLetter: ({ isFixed, parentTitle }) => `${isFixed ? 'F': 'R'}#${getFirstLetter(parentTitle)}`
-        })
-      }
+      resultList = highlightAlphabet({
+        list: resultList,
+        fnGetFirstLetter: ({ isFixed, parentTitle }) => `${isFixed ? 'F': 'R'}#${getFirstLetter(parentTitle)}`
+      })
     } else {
       resultList = list.toSorted((a, b) => a.parentTitle.localeCompare(b.parentTitle))
 
-      if (this.HIGHLIGHT_ALPHABET) {
-        resultList = highlightAlphabet({
-          list: resultList,
-          fnGetFirstLetter: ({ parentTitle }) => getFirstLetter(parentTitle),
-        })
-      }
+      resultList = highlightAlphabet({
+        list: resultList,
+        fnGetFirstLetter: ({ parentTitle }) => getFirstLetter(parentTitle),
+      })
     }
 
     return resultList
@@ -219,107 +214,28 @@ class TagList {
 
     const tagList  = [].concat(
       Object.entries(this._fixedTagObj)
-        .map(([parentId, parentTitle]) => ({
+      .map(([parentId, { parentTitle, dateAdded }]) => ({
           parentId,
           parentTitle,
-          isFixed: true,
-          isLast: lastTagSet.has(parentId),
+          dateAdded,
+          isFixed: 1,
         })),
       recentListSorted
         .filter(({ parentId }) => !(parentId in this._fixedTagObj))
         .slice(0, recentTagLimit)
-        .map(({ parentId, parentTitle }, index) => ({
+        .map(({ parentId, parentTitle, dateAdded }) => ({
           parentId,
           parentTitle,
-          isFixed: false,
-          isLast: lastTagSet.has(parentId),
-          ageIndex: index,
+          dateAdded,
         })),
     )
 
-    return tagList
-  }
-  getListWithBookmarks(addTagList) {
-    if (!this.isOn) {
-      return []
-    }
-    logTL('getListWithBookmarks () 22 addTagList', addTagList)
-
-    const { list, formattedList, idSet } = this._updateList()
-    // logTL('getListWithBookmarks () 22 list', list)
-    // logTL('getListWithBookmarks () 22 idSet', idSet)
-
-    const finalAddTagList = addTagList
-      .filter(({ parentId }) => !idSet.has(parentId))
-    // logTL('getListWithBookmarks () 33 finalAddTagList', finalAddTagList)
-
-    const requiredSlots = finalAddTagList.length
-
-    if (requiredSlots === 0) {
-      // logTL('getListWithBookmarks () 33 RETURN ', formattedList.length)
-      // logTL(this.tagListFormat)
-      return formattedList
-    }
-
-    const addSet = new Set(addTagList.map(({ parentId }) => parentId))
-
-    const availableSlots = Math.max(0, this.AVAILABLE_ROWS - list.length)
-    const replaceSlots = Math.max(0, requiredSlots - availableSlots)
-    const replaceList = finalAddTagList.slice(0, replaceSlots)
-    const connectList = finalAddTagList.slice(replaceSlots)
-
-    // logTL('getListWithBookmarks () 44 availableSlots', availableSlots)
-    // logTL('getListWithBookmarks () 44 replaceSlots', replaceSlots)
-    // logTL('getListWithBookmarks () 44 replaceList', replaceList)
-    // logTL('getListWithBookmarks () 44 connectList', connectList)
-
-    let resultList = list.slice()
-    let ageIndex = 0
-    if (0 < resultList.length) {
-      const lastItem = resultList.at(-1)
-
-      if ('ageIndex' in lastItem) {
-        ageIndex = lastItem.ageIndex + 1
-      }
-    }
-
-    if (0 < replaceList.length) {
-
-      let iTo = resultList.length - 1
-      let iFrom = replaceList.length - 1
-
-      while (-1 < iFrom && -1 < iTo) {
-        const item = resultList[iTo]
-
-        if (!item.isFixed && !addSet.has(item.parentId)) {
-          resultList[iTo] = Object.assign({}, resultList[iTo], {
-            parentId: replaceList[iFrom].parentId,
-            parentTitle: replaceList[iFrom].parentTitle,
-            isLast: false,
-          })
-          iFrom = iFrom - 1
-        }
-        iTo = iTo - 1
-      }
-    }
-
-    if (0 < connectList.length) {
-      resultList = resultList.concat(
-        connectList.map(({ parentId, parentTitle }) => ({
-          parentId,
-          parentTitle,
-          isFixed: false,
-          ageIndex,
-        }))
+    return tagList.map(
+      (obj) => (lastTagSet.has(obj.parentId)
+        ? Object.assign({}, obj, { isLast: 1 })
+        : obj
       )
-    }
-
-    const tagListFormatWith = this._formatList(resultList)
-    // logTL('getListWithBookmarks () 99 resultList.length', resultList.length)
-    // logTL('getListWithBookmarks () 99 resultList', resultList)
-    // logTL('getListWithBookmarks () 99 tagListFormatWith', tagListFormatWith)
-
-    return tagListFormatWith
+    )
   }
   async addTag({ parentId, parentTitle }) {
     if (!this.isOn) {
@@ -346,14 +262,18 @@ class TagList {
       return
     }
 
+    const dateAdded = Date.now()
     this._recentTagObj[parentId] = {
-      dateAdded: Date.now(),
       parentTitle,
+      dateAdded,
     }
 
     let fixedTagUpdate
     if (parentId in this._fixedTagObj) {
-      this._fixedTagObj[parentId] = parentTitle
+      this._fixedTagObj[parentId] = {
+        parentTitle,
+        dateAdded,
+      }
       fixedTagUpdate = {
         [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
       }
@@ -419,14 +339,15 @@ class TagList {
       return
     }
 
-    if (!(parentId in this._fixedTagObj)) {
-      this._fixedTagObj[parentId] = parentTitle
-
-      this._markUpdates()
-      await setOptions({
-        [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
-      })
+    this._fixedTagObj[parentId] = {
+      dateAdded: this._recentTagObj[parentId]?.dateAdded || Date.now(),
+      parentTitle,
     }
+
+    this._markUpdates()
+    await setOptions({
+      [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: this._fixedTagObj
+    })
   }
   async unfixTag(parentId) {
     if (!this.isOn) {
