@@ -669,40 +669,6 @@
     }
   }
 
-  function getAddList({ tagList, usedTagObj, deletedTagList }) {
-
-    const deletedTagObj = Object.fromEntries(
-      (deletedTagList || [])
-        .filter(({ parentId, isInternal }) => parentId && !isInternal)
-        .map(({ parentId, parentTitle, templateId, templateTitle }) => ({
-          parentId: templateId || parentId,
-          parentTitle: templateTitle || parentTitle,
-        }))
-        .map(({ parentId, parentTitle }) => [parentId, parentTitle])
-    )
-    const addTagObj = Object.assign({}, deletedTagObj, usedTagObj)
-    const addTagSet = new Set(Object.keys(addTagObj))
-
-    if (addTagSet.size == 0) {
-      return []
-    }
-
-    const tagSet = new Set(
-      tagList.map(({ parentId }) => parentId)
-    )
-    const onlyAddTagSet = addTagSet.difference(tagSet)
-
-    if (onlyAddTagSet.size == 0) {
-      return []
-    }
-
-    return Array.from(onlyAddTagSet)
-      .map((parentId) => ({
-        parentId,
-        parentTitle: addTagObj[parentId],
-      }))
-  }
-
   function formatTagList({ tagList, pinnedTagPosition }) {
     let resultList
 
@@ -742,35 +708,55 @@
         }))
         .map(({ parentId, parentTitle }) => [parentId, parentTitle])
     )
+    const deletedTagObj = Object.fromEntries(
+      (deletedTagList || [])
+        .filter(({ parentId, isInternal }) => parentId && !isInternal)
+        .map(({ parentId, parentTitle, templateId, templateTitle }) => ({
+          parentId: templateId || parentId,
+          parentTitle: templateTitle || parentTitle,
+        }))
+        .map(({ parentId, parentTitle }) => [parentId, parentTitle])
+    )
+    const addTagObj = Object.assign({}, deletedTagObj, usedTagObj)
+
+    if (Object.keys(addTagObj).length == 0 && tagList.length <= nAvailableTags) {
+      return tagList
+    }
+
+    const tagSet = new Set(
+      tagList.map(({ parentId }) => parentId)
+    )
+    const addTagSet = new Set(Object.keys(addTagObj))
+    const onlyAddTagSet = addTagSet.difference(tagSet)
+
+    if (onlyAddTagSet.size == 0 && tagList.length <= nAvailableTags) {
+      return tagList
+    }
+
     const usedTagSet = new Set(Object.keys(usedTagObj))
 
-    const addTagList = getAddList({
-      tagList,
-      usedTagObj,
-      deletedTagList,
-    })
+    const fixedTagList = tagList.filter(({ isFixed }) => isFixed)
+    const fixedTagSet = new Set(
+      fixedTagList.map(({ parentId }) => parentId)
+    )
+    const addTagList = Array.from(addTagSet.difference(fixedTagSet))
+      .map((parentId) => ({
+        parentId,
+        parentTitle: addTagObj[parentId],
+      }))
+    const addUsedTagList = addTagList.filter(({ parentId }) => usedTagSet.has(parentId))
+    const addDeletedTagList = addTagList.filter(({ parentId }) => !usedTagSet.has(parentId))
+
+    const notFixedTagList = tagList
+        .filter(({ isFixed, parentId }) => !isFixed && !addTagSet.has(parentId))
+        .sort((a, b) => -(a.dateAdded - b.dateAdded))
 
     let resultList = []
+      .concat(fixedTagList, addUsedTagList, addDeletedTagList, notFixedTagList)
+      .slice(0, nAvailableTags)
 
-    if (addTagList.length == 0 && tagList.length <= nAvailableTags) {
-      resultList = tagList
-    } else {
-
-      const addUsedTagList = addTagList.filter(({ parentId }) => usedTagSet.has(parentId))
-      const addDeletedTagList = addTagList.filter(({ parentId }) => !usedTagSet.has(parentId))
-
-      const fixedTagList = tagList.filter(({ isFixed }) => isFixed)
-      const notFixedTagList = tagList
-          .filter(({ isFixed }) => !isFixed)
-          .sort((a, b) => -(a.dateAdded - b.dateAdded))
-
-      resultList = []
-        .concat(fixedTagList, addUsedTagList, addDeletedTagList, notFixedTagList)
-        .slice(0, nAvailableTags)
-
-      // format
-      resultList = formatTagList({ tagList: resultList, pinnedTagPosition })
-    }
+    // format
+    resultList = formatTagList({ tagList: resultList, pinnedTagPosition })
 
     return resultList.map(
       (obj) => (usedTagSet.has(obj.parentId)
