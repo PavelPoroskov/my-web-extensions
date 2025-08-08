@@ -59,4 +59,4 @@ const makeLogFunctionOn = ({ module }) => {
 
 // const makeLogFunction = makeLogFunctionOn
 // const makeLogFunction = () => () => {}
-export const makeLogFunction = makeLogFunctionOn
+export const makeLogFunction = () => () => {}

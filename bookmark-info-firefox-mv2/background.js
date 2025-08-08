@@ -1069,7 +1069,7 @@ const makeLogFunctionOn = ({ module }) => {
 
 // const makeLogFunction = makeLogFunctionOn
 // const makeLogFunction = () => () => {}
-const makeLogFunction = makeLogFunctionOn
+const makeLogFunction = () => () => {}
 const logSA = makeLogFunction({ module: 'storage.api.js' })
 
 async function setOptions(obj) {
