@@ -733,37 +733,43 @@
       return tagList
     }
 
-    const usedTagSet = new Set(Object.keys(usedTagObj))
-
     const fixedTagList = tagList.filter(({ isFixed }) => isFixed)
-    const fixedTagSet = new Set(
-      fixedTagList.map(({ parentId }) => parentId)
-    )
-    const addTagList = Array.from(addTagSet.difference(fixedTagSet))
+    const addTagList = Array.from(addTagSet)
       .map((parentId) => ({
         parentId,
         parentTitle: addTagObj[parentId],
       }))
+    const usedTagSet = new Set(Object.keys(usedTagObj))
     const addUsedTagList = addTagList.filter(({ parentId }) => usedTagSet.has(parentId))
     const addDeletedTagList = addTagList.filter(({ parentId }) => !usedTagSet.has(parentId))
 
     const notFixedTagList = tagList
-        .filter(({ isFixed, parentId }) => !isFixed && !addTagSet.has(parentId))
+        .filter(({ isFixed }) => !isFixed)
         .sort((a, b) => -(a.dateAdded - b.dateAdded))
 
-    let resultList = []
+    const longList = []
       .concat(fixedTagList, addUsedTagList, addDeletedTagList, notFixedTagList)
+
+
+    const noDoublesList = []
+    const inListSet = new Set()
+    for (const tag of longList) {
+      if (inListSet.has(tag.parentId)) {
+        continue
+      }
+
+      noDoublesList.push(tag)
+      inListSet.add(tag.parentId)
+    }
+
+    const resultList = noDoublesList
       .slice(0, nAvailableTags)
+      .map((obj) => (usedTagSet.has(obj.parentId)
+          ? Object.assign({}, obj, { isUsed: 1 })
+          : obj
+      ))
 
-    // format
-    resultList = formatTagList({ tagList: resultList, pinnedTagPosition })
-
-    return resultList.map(
-      (obj) => (usedTagSet.has(obj.parentId)
-        ? Object.assign({}, obj, { isUsed: 1 })
-        : obj
-      )
-    )
+    return formatTagList({ tagList: resultList, pinnedTagPosition })
   }
   function renderBookmarkInfo(input, prevState) {
     log('renderBookmarkInfo 00');
