@@ -42,12 +42,13 @@ if [ -n "$WASERROR" ]; then
 fi
 
 # DISTRIBUTION_FF_FILE=$(ls bookmark-info-firefox-mv2/web-ext-artifacts | sort | tail -1)
-DISTRIBUTION_FF_FILE=bookmark_info-$VERSION.zip
+DISTRIBUTION_FF_FILE_DEFAULT=bookmark_info-$VERSION.zip
+DISTRIBUTION_FF_FILE=bookmark_info-firefox-mv2-v$VERSION.zip
 DISTRIBUTION_FF_PATH=~/.tmp/$DISTRIBUTION_FF_FILE
 rm -f $DISTRIBUTION_FF_PATH
-cp bookmark-info-firefox-mv2/web-ext-artifacts/$DISTRIBUTION_FF_FILE $DISTRIBUTION_FF_PATH
+cp bookmark-info-firefox-mv2/web-ext-artifacts/$DISTRIBUTION_FF_FILE_DEFAULT $DISTRIBUTION_FF_PATH
 if [ $? -ne 0 ]; then
-    echo "Command failed! cp bookmark-info-firefox-mv2/web-ext-artifacts/$DISTRIBUTION_FF_FILE $DISTRIBUTION_FF_PATH"
+    echo "Command failed! cp bookmark-info-firefox-mv2/web-ext-artifacts/$DISTRIBUTION_FF_FILE_DEFAULT $DISTRIBUTION_FF_PATH"
     exit 1
 fi
 
