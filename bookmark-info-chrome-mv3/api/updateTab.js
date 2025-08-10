@@ -17,7 +17,7 @@ import {
   isVisitedDatedTemplate,
 } from '../folder-api/index.js'
 import {
-  getBookmarkInfoUni,
+  getBookmarkList,
   getPartialBookmarkList,
 } from './get-bookmarks.api.js'
 import {
@@ -104,15 +104,15 @@ async function addTemplateInfo(bookmarkList) {
   return resultList
 }
 
-async function updateTab({ tabId, url, debugCaller, useCache=false }) {
+async function updateTab({ tabId, url, debugCaller }) {
   logUTB(`UPDATE-TAB () 00 <- ${debugCaller}`, tabId);
   logUTB('UPDATE-TAB () 11', url);
 
   const userSettings = await extensionSettings.get()
   const isShowTitle = userSettings[USER_OPTION.SHOW_BOOKMARK_TITLE]
-  const bookmarkInfo = await getBookmarkInfoUni({ url, useCache, isShowTitle })
+  const bookmarkList0 = await getBookmarkList({ url, isShowTitle })
 
-  let bookmarkList = await addTemplateInfo(bookmarkInfo.bookmarkList)
+  let bookmarkList = await addTemplateInfo(bookmarkList0)
   if (userSettings[USER_OPTION.SHOW_VISITED] === SHOW_VISITED_OPTIONS.IF_NO_OTHER) {
     const testBookmarkList = bookmarkList.filter(({ templateTitle }) => !isVisitedDatedTemplate(templateTitle))
 
@@ -146,7 +146,7 @@ async function updateTab({ tabId, url, debugCaller, useCache=false }) {
     tabId,
     url,
     userSettings,
-    exactBkmIdList: bookmarkInfo.bookmarkList.map(({ id }) => id)
+    exactBkmIdList: bookmarkList0.map(({ id }) => id)
   })
 }
 

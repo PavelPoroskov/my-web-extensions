@@ -6,10 +6,6 @@ import {
   makeLogFunction,
 } from '../api-low/index.js'
 import {
-  SOURCE,
-} from '../constant/index.js'
-import {
-  isSupportedProtocol,
   startPartialUrlSearch,
 } from '../url-api/index.js'
 
@@ -86,7 +82,7 @@ async function addBookmarkParentInfo({ bookmarkList, folderByIdMap, isFullPath =
   }
 }
 
-async function getBookmarkInfo({ url, isShowTitle, isShowUrl }) {
+export async function getBookmarkList({ url, isShowTitle, isShowUrl }) {
   logGB('getBookmarkInfo () 00', url)
   const bookmarkList = await chrome.bookmarks.search({ url });
   logGB('getBookmarkInfo () 11 search({ url })', bookmarkList.length, bookmarkList)
@@ -109,38 +105,8 @@ async function getBookmarkInfo({ url, isShowTitle, isShowUrl }) {
         parentId: bookmarkItem.parentId,
         parentTitle: fullPathList.at(-1),
         path: fullPathList.slice(0, -1).concat('').join('/ '),
-        source: bookmarkItem.source,
       }
     });
-}
-
-export async function getBookmarkInfoUni({ url, useCache=false, isShowTitle, isShowUrl }) {
-  if (!url || !isSupportedProtocol(url)) {
-    return;
-  }
-
-  let bookmarkList;
-  let source;
-
-  if (useCache) {
-    bookmarkList = memo.cacheUrlToInfo.get(url);
-
-    if (bookmarkList) {
-      source = SOURCE.CACHE;
-      logGB('getBookmarkInfoUni OPTIMIZATION: from cache bookmarkInfo')
-    }
-  }
-
-  if (!bookmarkList) {
-    bookmarkList = await getBookmarkInfo({ url, isShowTitle, isShowUrl });
-    source = SOURCE.ACTUAL;
-    memo.cacheUrlToInfo.add(url, bookmarkList);
-  }
-
-  return {
-    bookmarkList,
-    source,
-  };
 }
 
 export async function getPartialBookmarkList({ url, exactBkmIdList = [], pathnamePattern }) {
