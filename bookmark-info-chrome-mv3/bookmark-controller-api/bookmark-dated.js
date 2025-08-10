@@ -1,6 +1,6 @@
 import {
   getBookmarkListWithParent,
-} from '../api-low/index.js';
+} from '../bookmark-list-api/bookmark-list-with-parent.js';
 import {
   isDatedTitleForTemplate,
   compareDatedTitle,
@@ -10,7 +10,7 @@ import {
 } from './bookmark-ignore.js';
 
 export async function getDatedBookmarkList({ url, template }) {
-  const bookmarkListWithParent = await getBookmarkListWithParent({ url })
+  const bookmarkListWithParent = await getBookmarkListWithParent(url)
 
   const selectedList = bookmarkListWithParent
     .filter(({ parentTitle }) => isDatedTitleForTemplate({ title: parentTitle, template }))

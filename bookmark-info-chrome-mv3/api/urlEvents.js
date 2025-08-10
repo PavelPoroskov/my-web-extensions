@@ -6,7 +6,7 @@ import {
 } from '../api-mid/index.js'
 import {
   getBookmarkListWithParent,
-} from '../api-low/index.js';
+} from '../bookmark-list-api/bookmark-list-with-parent.js';
 import {
   removeQueryParamsIfTarget,
 } from '../url-api/index.js'
@@ -106,7 +106,7 @@ class UrlEvents {
     }
 
     const cleanUrl = removeQueryParamsIfTarget(url);
-    const bookmarkListWithParent = await getBookmarkListWithParent({ url: cleanUrl })
+    const bookmarkListWithParent = await getBookmarkListWithParent(cleanUrl)
     const deleteList = []
 
     const isTitleMatch = makeIsTitleMatchForEvents(patternList)

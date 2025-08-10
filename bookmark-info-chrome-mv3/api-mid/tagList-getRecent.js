@@ -7,7 +7,9 @@ import {
   isVisitedDatedTemplate,
 } from '../folder-api/index.js'
 import {
-  getBookmarkListDirty,
+  getBookmarkNodeList,
+} from '../bookmark-list-api/bookmark-list.js'
+import {
   makeLogFunction,
 } from '../api-low/index.js'
 
@@ -41,12 +43,10 @@ async function getRecentList(nItems) {
     .filter(([, { isSourceFolder }]) => !isSourceFolder)
     .map(([id]) => id)
 
-  if (unknownIdList.length > 0) {
-    const unknownFolderList = await getBookmarkListDirty(unknownIdList)
-    unknownFolderList.forEach(({ id, title }) => {
-      folderByIdMap[id].title = title
-    })
-  }
+  const unknownFolderList = await getBookmarkNodeList(unknownIdList)
+  unknownFolderList.forEach(({ id, title }) => {
+    folderByIdMap[id].title = title
+  })
 
   return Object.entries(folderByIdMap)
     .map(([parentId, { title, dateAdded }]) => ({ parentId, parentTitle: title, dateAdded }))
@@ -75,7 +75,7 @@ async function filterFolders(idList, isFlatStructure) {
     return []
   }
 
-  const folderList = await getBookmarkListDirty(idList)
+  const folderList = await getBookmarkNodeList(idList)
   logRA('filterFolders () 22', 'folderList', folderList.length, folderList)
   let filteredFolderList = folderList
     .filter(({ title }) => !!title)

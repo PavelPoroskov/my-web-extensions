@@ -1,6 +1,6 @@
 import {
   getPartialBookmarkList,
-} from './get-bookmarks.api.js'
+} from '../bookmark-list-api/bookmark-list-partial.js'
 import {
   getAuthorUrlFromPostUrl,
   getMatchedGetAuthor,
@@ -16,6 +16,7 @@ import {
 
 const logSHA = makeLogFunction({ module: 'showAuthorBookmarks.js' })
 
+// TODO clear logic
 export async function showAuthorBookmarksStep2({ tabId, url, authorUrl }) {
   logSHA('showAuthorBookmarksStep2 () 00', tabId, authorUrl, url)
   let authorBookmarkList = []

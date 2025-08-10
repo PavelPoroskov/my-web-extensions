@@ -11,15 +11,9 @@ import {
   isSupportedProtocol,
 } from '../url-api/index.js'
 import {
-  getDatedTemplate,
-  isDatedFolderTitle,
   isVisitedDatedTitle,
   isVisitedDatedTemplate,
 } from '../folder-api/index.js'
-import {
-  getBookmarkList,
-  getPartialBookmarkList,
-} from './get-bookmarks.api.js'
 import {
   getHistoryInfo,
 } from './history.api.js'
@@ -31,8 +25,9 @@ import {
   showAuthorBookmarks,
 } from './showAuthorBookmarks.js'
 import {
-  folderCreator,
-} from '../bookmark-controller-api/folderCreator.js';
+  getBookmarkListWithTemplate,
+  getPartialBookmarkList,
+} from '../bookmark-list-api/index.js';
 import { initExtension } from './init-extension.js'
 
 const logUTB = makeLogFunction({ module: 'updateTab.js' })
@@ -70,62 +65,40 @@ async function showExtra({ tabId, url, userSettings, exactBkmIdList }) {
   ])
 }
 
-async function addTemplateInfo(bookmarkList) {
-  let resultList = bookmarkList.map((obj) => (isDatedFolderTitle(obj.parentTitle)
-    ? Object.assign({}, obj, { templateTitle: getDatedTemplate(obj.parentTitle) })
-    : obj
-  ))
-
-  const templateTitleList = Array.from(
-    new Set(
-      resultList
-        .map(({ templateTitle }) => templateTitle)
-        .filter(Boolean)
-    )
-  )
-
-  const templateInfoList = await Promise.all(templateTitleList.map(
-    (templateTitle) => folderCreator.findOrCreateFolder(templateTitle)
-      .then((templateId) => ({ templateId, templateTitle }))
-  ))
-
-  const templateTitleMap = Object.fromEntries(
-    templateInfoList.map(({ templateId, templateTitle }) => [templateTitle, templateId])
-  )
-
-  resultList = resultList.map((obj) => (obj.templateTitle
-    ? Object.assign({}, obj, {
-      templateId: templateTitleMap[obj.templateTitle],
-      isInternal: isVisitedDatedTemplate(obj.templateTitle)
-    })
-    : obj
-  ))
-
-  return resultList
-}
-
 async function updateTab({ tabId, url, debugCaller }) {
   logUTB(`UPDATE-TAB () 00 <- ${debugCaller}`, tabId);
   logUTB('UPDATE-TAB () 11', url);
 
   const userSettings = await extensionSettings.get()
-  const isShowTitle = userSettings[USER_OPTION.SHOW_BOOKMARK_TITLE]
-  const bookmarkList0 = await getBookmarkList({ url, isShowTitle })
+  const bookmarkList = await getBookmarkListWithTemplate(url)
 
-  let bookmarkList = await addTemplateInfo(bookmarkList0)
+  let filteredBookmarkList = bookmarkList
   if (userSettings[USER_OPTION.SHOW_VISITED] === SHOW_VISITED_OPTIONS.IF_NO_OTHER) {
     const testBookmarkList = bookmarkList.filter(({ templateTitle }) => !isVisitedDatedTemplate(templateTitle))
 
     if (0 < testBookmarkList.length) {
-      bookmarkList = testBookmarkList
+      filteredBookmarkList = testBookmarkList
     }
   }
+
+  const isShowTitle = userSettings[USER_OPTION.SHOW_BOOKMARK_TITLE]
+  const selectedBookmarkList = filteredBookmarkList
+    .map((bookmark) => {
+
+      return {
+        id: bookmark.id,
+        ...(isShowTitle ? { title: bookmark.title } : {}),
+        parentId: bookmark.parentId,
+        parentTitle: bookmark.parentTitle,
+        path: bookmark.path,
+      }
+    });
 
   // logUTB('updateTab() tagListList', tagListList.length,'tagList.nAvailableRows', tagList.nAvailableRows)
   // logUTB(tagListList)
 
   const data = {
-    bookmarkList,
+    bookmarkList: selectedBookmarkList,
     fontSize: userSettings[USER_OPTION.FONT_SIZE],
     isShowTitle: userSettings[USER_OPTION.SHOW_BOOKMARK_TITLE],
 
@@ -146,7 +119,7 @@ async function updateTab({ tabId, url, debugCaller }) {
     tabId,
     url,
     userSettings,
-    exactBkmIdList: bookmarkList0.map(({ id }) => id)
+    exactBkmIdList: bookmarkList.map(({ id }) => id)
   })
 }
 
