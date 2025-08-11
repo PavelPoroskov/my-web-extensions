@@ -197,10 +197,10 @@ class VisitedUrls {
 
     if (this.cacheVisitedUrls.has(url)) {
       logVU("closeTab 44", title)
-      this._markUrl({ url, title, mark: URL_MARK_OPTIONS.VISITED })
+      await this._markUrl({ url, title, mark: URL_MARK_OPTIONS.VISITED })
     } else {
       logVU("closeTab 55", title)
-      this._markUrl({ url, title, mark: URL_MARK_OPTIONS.OPENED })
+      await this._markUrl({ url, title, mark: URL_MARK_OPTIONS.OPENED })
     }
 
     this.cacheTabId.delete(tabId)

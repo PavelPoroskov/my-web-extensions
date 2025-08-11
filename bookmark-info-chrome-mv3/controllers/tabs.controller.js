@@ -110,6 +110,6 @@ export const tabsController = {
     // 2) manually close not active tab
     // 3) close tab on close window = 1)
 
-    visitedUrls.closeTab(tabId)
+    await visitedUrls.closeTab(tabId)
   }
 }
