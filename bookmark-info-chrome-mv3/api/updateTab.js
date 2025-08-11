@@ -84,18 +84,12 @@ async function updateTab({ tabId, url, debugCaller }) {
   const isShowTitle = userSettings[USER_OPTION.SHOW_BOOKMARK_TITLE]
   const selectedBookmarkList = filteredBookmarkList
     .map((bookmark) => {
-
-      return {
-        id: bookmark.id,
-        ...(isShowTitle ? { title: bookmark.title } : {}),
-        parentId: bookmark.parentId,
-        parentTitle: bookmark.parentTitle,
-        path: bookmark.path,
+      if (!isShowTitle) {
+        delete bookmark.title
       }
-    });
 
-  // logUTB('updateTab() tagListList', tagListList.length,'tagList.nAvailableRows', tagList.nAvailableRows)
-  // logUTB(tagListList)
+      return bookmark
+    });
 
   const data = {
     bookmarkList: selectedBookmarkList,

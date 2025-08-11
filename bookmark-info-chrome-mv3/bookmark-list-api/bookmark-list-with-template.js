@@ -54,5 +54,17 @@ export async function getBookmarkListWithTemplate(url) {
   // add { templateId, templateTitle }
   const listWithTemplate = await addBookmarkTemplateInfo(listWithPath)
 
-  return listWithTemplate
+  const selectedBookmarkList = listWithTemplate
+    .map((bookmark) => ({
+        id: bookmark.id,
+        title: bookmark.title,
+        parentId: bookmark.parentId,
+        parentTitle: bookmark.parentTitle,
+        path: bookmark.path,
+        templateId: bookmark.templateId,
+        templateTitle: bookmark.templateTitle,
+        isInternal: bookmark.isInternal,
+      }));
+
+  return selectedBookmarkList
 }

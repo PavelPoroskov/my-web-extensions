@@ -25,6 +25,7 @@ export async function addBookmarkParentInfo(bookmarkList) {
 
 export async function getBookmarkListWithParent(url) {
   const bookmarkList = await getBookmarkList(url)
+  // add { parentTitle }
   const listWithParent = await addBookmarkParentInfo(bookmarkList)
 
   return listWithParent

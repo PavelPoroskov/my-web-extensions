@@ -43,6 +43,7 @@ export async function getPartialBookmarkList({ url, exactBkmIdList = [], pathnam
     }
   })
 
+
   const listWithParent = await addBookmarkParentInfo(partialBookmarkList)
 
   return listWithParent

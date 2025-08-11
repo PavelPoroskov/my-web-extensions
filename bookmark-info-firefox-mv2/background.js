@@ -66,10 +66,6 @@ const KEYBOARD_CMD_ID = {
   ADD_BOOKMARK_FROM_INPUT_KBD: `ADD_BOOKMARK_FROM_INPUT_KBD`,
   ADD_BOOKMARK_FROM_SELECTION_KBD: `ADD_BOOKMARK_FROM_SELECTION_KBD`,
 };
-const SOURCE = {
-  CACHE: 'CACHE',
-  ACTUAL: 'ACTUAL',
-};
 const STORAGE_TYPE = {
   LOCAL: 'LOCAL',
   SESSION: 'SESSION',
@@ -501,58 +497,6 @@ const HOST_URL_SETTINGS_SHORT = Object.assign(
   urlSettingsEnt,
 )
 
-// async function getBookmarkList(idList) {
-//   if (!(Array.isArray(idList) && idList.length > 0)) {
-//     return []
-//   }
-
-//   const list = await browser.bookmarks.get(idList)
-
-//   return list
-// }
-
-async function getBookmarkListDirty(idList) {
-  if (!(Array.isArray(idList) && idList.length > 0)) {
-    return []
-  }
-
-  const resultList = await Promise.allSettled(
-    idList.map(
-      (id) => browser.bookmarks.get(id)
-    )
-  )
-
-  return resultList
-    .map((result) => result.value)
-    .filter(Boolean)
-    .flat()
-}
-
-async function getBookmarkListWithParent({ url }) {
-  if (url.startsWith('chrome:') || url.startsWith('about:')) {
-    return []
-  }
-
-  const bookmarkList = await browser.bookmarks.search({ url });
-
-  const parentIdList = bookmarkList.map(({ parentId }) => parentId).filter(Boolean)
-  const uniqueParentIdList = Array.from(new Set(parentIdList))
-  let parentFolderList = []
-
-  if (0 < uniqueParentIdList.length) {
-    parentFolderList = await getBookmarkListDirty(uniqueParentIdList)
-  }
-
-  const parentMap = Object.fromEntries(
-    parentFolderList
-      .map(({ id, title }) => [id, title])
-  )
-
-  const resultList = bookmarkList
-    .map((bookmark) => ({ parentTitle: parentMap[bookmark.parentId] || '', ...bookmark }))
-
-  return resultList
-}
 const MS_DIFF_FOR_SINGLE_BKM = 80
 
 function debounce(func, timeout = 300){
@@ -1998,6 +1942,42 @@ class BrowserStartTime {
 }
 
 const browserStartTime = new BrowserStartTime()
+// async function getBookmarkNodeList0(idList) {
+//   if (!(Array.isArray(idList) && idList.length > 0)) {
+//     return []
+//   }
+
+//   const list = await browser.bookmarks.get(idList)
+
+//   return list
+// }
+
+async function getBookmarkNodeList(idList) {
+  if (!(Array.isArray(idList) && idList.length > 0)) {
+    return []
+  }
+
+  const resultList = await Promise.allSettled(
+    idList.map(
+      (id) => browser.bookmarks.get(id)
+    )
+  )
+
+  return resultList
+    .map((result) => result.value)
+    .filter(Boolean)
+    .flat()
+}
+
+async function getBookmarkList(url) {
+  if (url.startsWith('chrome:') || url.startsWith('about:')) {
+    return []
+  }
+
+  const bookmarkList = await browser.bookmarks.search({ url });
+
+  return bookmarkList
+}
 const logRA = makeLogFunction({ module: 'tagList-getRecent.js' })
 
 async function getRecentList(nItems) {
@@ -2028,12 +2008,10 @@ async function getRecentList(nItems) {
     .filter(([, { isSourceFolder }]) => !isSourceFolder)
     .map(([id]) => id)
 
-  if (unknownIdList.length > 0) {
-    const unknownFolderList = await getBookmarkListDirty(unknownIdList)
-    unknownFolderList.forEach(({ id, title }) => {
-      folderByIdMap[id].title = title
-    })
-  }
+  const unknownFolderList = await getBookmarkNodeList(unknownIdList)
+  unknownFolderList.forEach(({ id, title }) => {
+    folderByIdMap[id].title = title
+  })
 
   return Object.entries(folderByIdMap)
     .map(([parentId, { title, dateAdded }]) => ({ parentId, parentTitle: title, dateAdded }))
@@ -2062,7 +2040,7 @@ async function filterFolders(idList, isFlatStructure) {
     return []
   }
 
-  const folderList = await getBookmarkListDirty(idList)
+  const folderList = await getBookmarkNodeList(idList)
   logRA('filterFolders () 22', 'folderList', folderList.length, folderList)
   let filteredFolderList = folderList
     .filter(({ title }) => !!title)
@@ -3660,8 +3638,35 @@ async function removeBookmark(bkmId) {
   {
   }
 }
+async function addBookmarkParentInfo(bookmarkList) {
+
+  const parentIdList = bookmarkList.map(({ parentId }) => parentId).filter(Boolean)
+  const uniqueParentIdList = Array.from(new Set(parentIdList))
+  const parentFolderList = await getBookmarkNodeList(uniqueParentIdList)
+
+  const parentMap = Object.fromEntries(
+    parentFolderList
+      .map(({ id, title }) => [id, title])
+  )
+
+  const resultList = bookmarkList
+    .map((bookmark) => ({
+      parentTitle: parentMap[bookmark.parentId] || '',
+      ...bookmark
+    }))
+
+  return resultList
+}
+
+async function getBookmarkListWithParent(url) {
+  const bookmarkList = await getBookmarkList(url)
+  // add { parentTitle }
+  const listWithParent = await addBookmarkParentInfo(bookmarkList)
+
+  return listWithParent
+}
 async function getDatedBookmarkList({ url, template }) {
-  const bookmarkListWithParent = await getBookmarkListWithParent({ url })
+  const bookmarkListWithParent = await getBookmarkListWithParent(url)
 
   const selectedList = bookmarkListWithParent
     .filter(({ parentTitle }) => isDatedTitleForTemplate({ title: parentTitle, template }))
@@ -3785,7 +3790,7 @@ class UrlEvents {
     }
 
     const cleanUrl = removeQueryParamsIfTarget(url);
-    const bookmarkListWithParent = await getBookmarkListWithParent({ url: cleanUrl })
+    const bookmarkListWithParent = await getBookmarkListWithParent(cleanUrl)
     const deleteList = []
 
     const isTitleMatch = makeIsTitleMatchForEvents(patternList)
@@ -4329,182 +4334,6 @@ async function initExtension({ debugCaller='' }) {
     logIX('initExtension() end')
   }
 }
-const logGB = makeLogFunction({ module: 'get-bookmarks.api.js' })
-
-const getParentIdList = (bookmarkList = []) => {
-  const parentIdList = bookmarkList
-    .map((bookmarkItem) => bookmarkItem.parentId)
-    .filter(Boolean)
-
-  return Array.from(new Set(parentIdList))
-}
-
-const getFullPath = (id, bkmFolderById) => {
-  const path = [];
-
-  let currentId = id;
-  while (currentId) {
-    const folder = bkmFolderById.get(currentId);
-
-    if (folder) {
-      path.push(folder.title);
-    }
-
-    currentId = folder?.parentId;
-  }
-
-  return path.filter(Boolean).toReversed()
-}
-
-async function addBookmarkParentInfo({ bookmarkList, folderByIdMap, isFullPath = true }) {
-  // parentIdList.length <= bookmarkList.length
-  // for root folders parentIdList=[]
-  const parentIdList = getParentIdList(bookmarkList)
-
-  if (parentIdList.length === 0) {
-    return
-  }
-
-  const knownParentIdList = [];
-  const unknownParentIdList = [];
-
-  parentIdList.forEach((id) => {
-    if (folderByIdMap.has(id)) {
-      knownParentIdList.push(id)
-    } else {
-      unknownParentIdList.push(id)
-    }
-  })
-
-  const knownFolderList = knownParentIdList.map((id) => folderByIdMap.get(id))
-
-  if (unknownParentIdList.length > 0) {
-    const unknownFolderList = await getBookmarkListDirty(unknownParentIdList)
-
-    unknownFolderList.forEach((folder) => {
-      folderByIdMap.add(
-        folder.id,
-        {
-          title: folder.title,
-          parentId: folder.parentId,
-        }
-      )
-      knownFolderList.push(folder)
-    })
-  }
-
-  if (isFullPath) {
-    return await addBookmarkParentInfo({
-      bookmarkList: knownFolderList,
-      folderByIdMap,
-      isFullPath,
-    })
-  }
-}
-
-async function getBookmarkInfo({ url, isShowTitle, isShowUrl }) {
-  logGB('getBookmarkInfo () 00', url)
-  const bookmarkList = await browser.bookmarks.search({ url });
-  logGB('getBookmarkInfo () 11 search({ url })', bookmarkList.length, bookmarkList)
-
-  await addBookmarkParentInfo({
-    bookmarkList,
-    folderByIdMap: memo.bkmFolderById,
-    isFullPath: true,
-  })
-
-  logGB('getBookmarkInfo () 99 bookmarkList', bookmarkList.length, bookmarkList)
-  return bookmarkList
-    .map((bookmarkItem) => {
-      const fullPathList = getFullPath(bookmarkItem.parentId, memo.bkmFolderById)
-
-      return {
-        id: bookmarkItem.id,
-        ...(isShowUrl ? { url: bookmarkItem.url } : {}),
-        ...(isShowTitle ? { title: bookmarkItem.title } : {}),
-        parentId: bookmarkItem.parentId,
-        parentTitle: fullPathList.at(-1),
-        path: fullPathList.slice(0, -1).concat('').join('/ '),
-        source: bookmarkItem.source,
-      }
-    });
-}
-
-async function getBookmarkInfoUni({ url, useCache=false, isShowTitle, isShowUrl }) {
-  if (!url || !isSupportedProtocol(url)) {
-    return;
-  }
-
-  let bookmarkList;
-  let source;
-
-  if (useCache) {
-    bookmarkList = memo.cacheUrlToInfo.get(url);
-
-    if (bookmarkList) {
-      source = SOURCE.CACHE;
-      logGB('getBookmarkInfoUni OPTIMIZATION: from cache bookmarkInfo')
-    }
-  }
-
-  if (!bookmarkList) {
-    bookmarkList = await getBookmarkInfo({ url, isShowTitle, isShowUrl });
-    source = SOURCE.ACTUAL;
-    memo.cacheUrlToInfo.add(url, bookmarkList);
-  }
-
-  return {
-    bookmarkList,
-    source,
-  };
-}
-
-async function getPartialBookmarkList({ url, exactBkmIdList = [], pathnamePattern }) {
-  // 1 < pathname.length : it is not root path
-  //    for https://www.youtube.com/watch?v=qqqqq other conditions than 1 < pathname.length
-  // urlForSearch !== url : original url has search params, ending /, index[.xxxx]
-  //  original url can be normalized yet, but I want get url with search params, ending /, index[.xxxx]
-
-  const {
-    isSearchAvailable,
-    urlForSearch,
-    isUrlMatchToPartialUrlSearch,
-  } = await startPartialUrlSearch({ url, pathnamePattern })
-  logGB('getPartialBookmarkList () 22 startPartialUrlSearch', { isSearchAvailable, urlForSearch })
-
-  if (!isSearchAvailable) {
-    return []
-  }
-
-  const bkmListForSubstring = await browser.bookmarks.search(urlForSearch);
-  logGB('getPartialBookmarkList () 33 search(normalizedUrl)', bkmListForSubstring.length, bkmListForSubstring)
-
-  const yetSet = new Set(exactBkmIdList)
-  const partialBookmarkList = []
-  bkmListForSubstring.forEach((bkm) => {
-    if (bkm.url && isUrlMatchToPartialUrlSearch(bkm.url) && !yetSet.has(bkm.id)) {
-      partialBookmarkList.push(bkm)
-    }
-  })
-
-  await addBookmarkParentInfo({
-    bookmarkList: partialBookmarkList,
-    folderByIdMap: memo.bkmFolderById,
-    isFullPath: false,
-  })
-
-  return partialBookmarkList
-    .map((bookmarkItem) => {
-      const folder = memo.bkmFolderById.get(bookmarkItem.parentId);
-
-      return {
-        id: bookmarkItem.id,
-        url: bookmarkItem.url,
-        parentId: bookmarkItem.parentId,
-        parentTitle: folder?.title,
-      }
-    });
-}
 const logHA = makeLogFunction({ module: 'history.api' })
 
 const dayMS = 86400000;
@@ -4657,8 +4486,58 @@ async function getHistoryInfo({ url }) {
     visitString
   };
 }
+const logBLP = makeLogFunction({ module: 'bookmark-list-partial.js' })
+
+// TODO clear logic
+//  showPartialBookmarks(
+//    const bookmarkList = await getPartialBookmarkList ({ url, exactBkmIdList })
+//  showAuthorBookmarksStep2(
+//    getPartialBookmarkList({ url: cleanedAuthorUrl, pathnamePattern: matchedGetAuthor?.authorPattern })
+async function getPartialBookmarkList({ url, exactBkmIdList = [], pathnamePattern }) {
+  // 1 < pathname.length : it is not root path
+  //    for https://www.youtube.com/watch?v=qqqqq other conditions than 1 < pathname.length
+  // urlForSearch !== url : original url has search params, ending /, index[.xxxx]
+  //  original url can be normalized yet, but I want get url with search params, ending /, index[.xxxx]
+
+  const {
+    isSearchAvailable,
+    urlForSearch,
+    isUrlMatchToPartialUrlSearch,
+  } = await startPartialUrlSearch({ url, pathnamePattern })
+  logBLP('getPartialBookmarkList () 22 startPartialUrlSearch', { isSearchAvailable, urlForSearch })
+
+  if (!isSearchAvailable) {
+    return []
+  }
+
+  const bkmListForSubstring = await browser.bookmarks.search(urlForSearch);
+  logBLP('getPartialBookmarkList () 33 search(normalizedUrl)', bkmListForSubstring.length, bkmListForSubstring)
+
+  const yetSet = new Set(exactBkmIdList)
+  const partialBookmarkList = []
+  bkmListForSubstring.forEach((bkm) => {
+    if (bkm.url && isUrlMatchToPartialUrlSearch(bkm.url) && !yetSet.has(bkm.id)) {
+      partialBookmarkList.push(bkm)
+    }
+  })
+
+
+  const listWithParent = await addBookmarkParentInfo(partialBookmarkList)
+
+  return listWithParent
+    .map((bookmark) => {
+
+      return {
+        id: bookmark.id,
+        url: bookmark.url,
+        parentId: bookmark.parentId,
+        parentTitle: bookmark.parentTitle,
+      }
+    });
+}
 const logSHA = makeLogFunction({ module: 'showAuthorBookmarks.js' })
 
+// TODO clear logic
 async function showAuthorBookmarksStep2({ tabId, url, authorUrl }) {
   logSHA('showAuthorBookmarksStep2 () 00', tabId, authorUrl, url)
   let authorBookmarkList = []
@@ -4706,6 +4585,148 @@ async function showAuthorBookmarks({ tabId, url }) {
       showAuthorBookmarksStep2({ tabId })
   }
 }
+const getParentIdList = (bookmarkList = []) => {
+  const parentIdList = bookmarkList
+    .map(({ parentId }) => parentId)
+    .filter(Boolean)
+
+  return Array.from(new Set(parentIdList))
+}
+
+const getFullPath = (id, bkmFolderById) => {
+  const path = [];
+
+  let currentId = id;
+  while (currentId) {
+    const folder = bkmFolderById.get(currentId);
+
+    if (folder) {
+      path.push(folder.title);
+    }
+
+    currentId = folder?.parentId;
+  }
+
+  return path.filter(Boolean).toReversed()
+}
+
+async function getFolderInfoRecursively({ bookmarkList, folderByIdMap }) {
+  // parentIdList.length <= bookmarkList.length
+  // for root folders parentIdList=[]
+  const parentIdList = getParentIdList(bookmarkList)
+
+  if (parentIdList.length === 0) {
+    return
+  }
+
+  const knownParentIdList = [];
+  const unknownParentIdList = [];
+
+  parentIdList.forEach((id) => {
+    if (folderByIdMap.has(id)) {
+      knownParentIdList.push(id)
+    } else {
+      unknownParentIdList.push(id)
+    }
+  })
+
+  const knownFolderList = knownParentIdList.map((id) => folderByIdMap.get(id))
+
+  const unknownFolderList = await getBookmarkNodeList(unknownParentIdList)
+
+  unknownFolderList.forEach((folder) => {
+    folderByIdMap.add(
+      folder.id,
+      {
+        title: folder.title,
+        parentId: folder.parentId,
+      }
+    )
+
+    knownFolderList.push(folder)
+  })
+
+  await getFolderInfoRecursively({
+    bookmarkList: knownFolderList,
+    folderByIdMap,
+  })
+}
+
+async function addBookmarkPathInfo(bookmarkList) {
+
+  await getFolderInfoRecursively({
+    bookmarkList,
+    folderByIdMap: memo.bkmFolderById,
+  })
+
+  const listWithPath = bookmarkList
+    .map((bookmark) => {
+      const fullPathList = getFullPath(bookmark.parentId, memo.bkmFolderById)
+
+      return {
+        ...bookmark,
+        parentTitle: fullPathList.at(-1),
+        path: fullPathList.slice(0, -1).concat('').join('/ '),
+      }
+    });
+
+  return listWithPath
+}
+async function addBookmarkTemplateInfo(bookmarkList) {
+  let resultList = bookmarkList.map((obj) => (isDatedFolderTitle(obj.parentTitle)
+    ? Object.assign({}, obj, { templateTitle: getDatedTemplate(obj.parentTitle) })
+    : obj
+  ))
+
+  const templateTitleList = Array.from(
+    new Set(
+      resultList
+        .map(({ templateTitle }) => templateTitle)
+        .filter(Boolean)
+    )
+  )
+
+  const templateInfoList = await Promise.all(templateTitleList.map(
+    (templateTitle) => folderCreator.findOrCreateFolder(templateTitle)
+      .then((templateId) => ({ templateId, templateTitle }))
+  ))
+
+  const templateTitleMap = Object.fromEntries(
+    templateInfoList.map(({ templateId, templateTitle }) => [templateTitle, templateId])
+  )
+
+  resultList = resultList.map((obj) => (obj.templateTitle
+    ? Object.assign({}, obj, {
+      templateId: templateTitleMap[obj.templateTitle],
+      isInternal: isVisitedDatedTemplate(obj.templateTitle)
+    })
+    : obj
+  ))
+
+  return resultList
+}
+
+async function getBookmarkListWithTemplate(url) {
+  const bookmarkList = await getBookmarkList(url)
+  // add { parentTitle, path }
+  const listWithPath = await addBookmarkPathInfo(bookmarkList)
+  // add { templateId, templateTitle }
+  const listWithTemplate = await addBookmarkTemplateInfo(listWithPath)
+
+  const selectedBookmarkList = listWithTemplate
+    .map((bookmark) => ({
+        id: bookmark.id,
+        title: bookmark.title,
+        parentId: bookmark.parentId,
+        parentTitle: bookmark.parentTitle,
+        path: bookmark.path,
+        templateId: bookmark.templateId,
+        templateTitle: bookmark.templateTitle,
+      }));
+
+  return selectedBookmarkList
+}
+
 const logUTB = makeLogFunction({ module: 'updateTab.js' })
 
 async function showVisits({ tabId, url }) {
@@ -4741,62 +4762,34 @@ async function showExtra({ tabId, url, userSettings, exactBkmIdList }) {
   ])
 }
 
-async function addTemplateInfo(bookmarkList) {
-  let resultList = bookmarkList.map((obj) => (isDatedFolderTitle(obj.parentTitle)
-    ? Object.assign({}, obj, { templateTitle: getDatedTemplate(obj.parentTitle) })
-    : obj
-  ))
-
-  const templateTitleList = Array.from(
-    new Set(
-      resultList
-        .map(({ templateTitle }) => templateTitle)
-        .filter(Boolean)
-    )
-  )
-
-  const templateInfoList = await Promise.all(templateTitleList.map(
-    (templateTitle) => folderCreator.findOrCreateFolder(templateTitle)
-      .then((templateId) => ({ templateId, templateTitle }))
-  ))
-
-  const templateTitleMap = Object.fromEntries(
-    templateInfoList.map(({ templateId, templateTitle }) => [templateTitle, templateId])
-  )
-
-  resultList = resultList.map((obj) => (obj.templateTitle
-    ? Object.assign({}, obj, {
-      templateId: templateTitleMap[obj.templateTitle],
-      isInternal: isVisitedDatedTemplate(obj.templateTitle)
-    })
-    : obj
-  ))
-
-  return resultList
-}
-
-async function updateTab({ tabId, url, debugCaller, useCache=false }) {
+async function updateTab({ tabId, url, debugCaller }) {
   logUTB(`UPDATE-TAB () 00 <- ${debugCaller}`, tabId);
   logUTB('UPDATE-TAB () 11', url);
 
   const userSettings = await extensionSettings.get()
-  const isShowTitle = userSettings[USER_OPTION.SHOW_BOOKMARK_TITLE]
-  const bookmarkInfo = await getBookmarkInfoUni({ url, useCache, isShowTitle })
+  const bookmarkList = await getBookmarkListWithTemplate(url)
 
-  let bookmarkList = await addTemplateInfo(bookmarkInfo.bookmarkList)
+  let filteredBookmarkList = bookmarkList
   if (userSettings[USER_OPTION.SHOW_VISITED] === SHOW_VISITED_OPTIONS.IF_NO_OTHER) {
     const testBookmarkList = bookmarkList.filter(({ templateTitle }) => !isVisitedDatedTemplate(templateTitle))
 
     if (0 < testBookmarkList.length) {
-      bookmarkList = testBookmarkList
+      filteredBookmarkList = testBookmarkList
     }
   }
 
-  // logUTB('updateTab() tagListList', tagListList.length,'tagList.nAvailableRows', tagList.nAvailableRows)
-  // logUTB(tagListList)
+  const isShowTitle = userSettings[USER_OPTION.SHOW_BOOKMARK_TITLE]
+  const selectedBookmarkList = filteredBookmarkList
+    .map((bookmark) => {
+      if (!isShowTitle) {
+        delete bookmark.title
+      }
+
+      return bookmark
+    });
 
   const data = {
-    bookmarkList,
+    bookmarkList: selectedBookmarkList,
     fontSize: userSettings[USER_OPTION.FONT_SIZE],
     isShowTitle: userSettings[USER_OPTION.SHOW_BOOKMARK_TITLE],
 
@@ -4817,7 +4810,7 @@ async function updateTab({ tabId, url, debugCaller, useCache=false }) {
     tabId,
     url,
     userSettings,
-    exactBkmIdList: bookmarkInfo.bookmarkList.map(({ id }) => id)
+    exactBkmIdList: bookmarkList.map(({ id }) => id)
   })
 }
 
