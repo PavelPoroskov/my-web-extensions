@@ -19,11 +19,16 @@ export function makeIsSearchParamItemMatch(patternList) {
     switch (true) {
       case asteriskIndex < 0: {
         const equalIndex = pattern.indexOf('=')
+        const questionIndex = pattern.indexOf('?')
         const fullPattern = pattern
 
         if (0 < equalIndex) {
           const [paramName, paramValue] = pattern.split('=')
           isFnList.push(({ key, value }) => key == paramName && value == paramValue)
+          logUIS('makeIsSearchParamItemMatch () 11', '({k,v}) => k == k1 && v == v1', fullPattern)
+        } else if (0 < questionIndex) {
+          const [paramName, param2] = pattern.split('?')
+          isFnList.push(({ key, oSearchParams }) => key == paramName && !oSearchParams.get(param2))
           logUIS('makeIsSearchParamItemMatch () 11', '({k,v}) => k == k1 && v == v1', fullPattern)
         } else {
           isFnList.push(({ key }) => key == fullPattern)
@@ -60,7 +65,7 @@ export function makeIsSearchParamItemMatch(patternList) {
   })
 
   logUIS('makeIsSearchParamItemMatch () 99', 'isFnList.length', isFnList.length)
-  return ({ key, value }) => isFnList.some((isFn) => isFn({ key, value }))
+  return ({ key, value, oSearchParams }) => isFnList.some((isFn) => isFn({ key, value, oSearchParams }))
 }
 
 export const isPathnameMatchForPatternExactly = (pathname, pattern) => {

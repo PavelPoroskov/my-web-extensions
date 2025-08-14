@@ -38,7 +38,7 @@ export const removeQueryParamsIfTarget = (url) => {
 
         const matchedParamList = []
         for (const [key, value] of oSearchParams) {
-          if (isSearchParamItemMatch({ key, value })) {
+          if (isSearchParamItemMatch({ key, value, oSearchParams })) {
             matchedParamList.push(key)
           }
         }

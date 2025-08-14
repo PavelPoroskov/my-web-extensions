@@ -7,6 +7,7 @@ export const DEFAULT_HOST_SETTINGS = {
     ['pid=0'],
     ['sent_date'],
     ['utm_*'],
+    ['tags?id'],
   ],
 }
 
@@ -200,11 +201,14 @@ const urlSettingsRu = {
     ],
   },
   'rabota.ru': {
+    removeAllSearchParamForPath: [
+      '/vacancy/:vacancyId/',
+    ],
     searchParamList: [
-      ['recommendationId'],
       ['methodRecommendationId'],
-      ['methodRecommendationType'],
       ['methodRecommendationName'],
+      ['methodRecommendationType'],
+      ['recommendationId'],
     ],
   },
   'web.telegram.org': {

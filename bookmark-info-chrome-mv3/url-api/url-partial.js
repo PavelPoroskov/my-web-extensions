@@ -56,8 +56,8 @@ export const isPathPartMathToPatternPart = ({ patternPart, pathPart }) => {
 }
 
 export const getPathnamePart = ({ pathname, pattern }) => {
-  const patternAsList = pathToList(pattern)
   const pathAsList = pathToList(pathname)
+  const patternAsList = pathToList(pattern)
   const resultPartList = []
 
   let isOk = patternAsList.length <= pathAsList.length

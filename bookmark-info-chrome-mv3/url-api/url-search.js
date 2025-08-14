@@ -28,7 +28,6 @@ function isSearchParamListMatchForPartialSearch(searchParams, requiredSearchPara
     .every(([key, value]) => searchParams.get(key) === value)
 }
 
-// ?TODO /posts == /posts?page=1 OR clean on open /posts?page=1 TO /posts IF page EQ 1
 export async function startPartialUrlSearch({ url, pathnamePattern }) {
   logUS('startPartialUrlSearch () 00', url)
 
