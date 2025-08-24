@@ -277,6 +277,7 @@ const logModuleMap = Object.fromEntries(
     ['pid=0'],
     ['sent_date'],
     ['utm_*'],
+    ['tags?id'],
   ],
 }
 
@@ -470,11 +471,14 @@ const urlSettingsRu = {
     ],
   },
   'rabota.ru': {
+    removeAllSearchParamForPath: [
+      '/vacancy/:vacancyId/',
+    ],
     searchParamList: [
-      ['recommendationId'],
       ['methodRecommendationId'],
-      ['methodRecommendationType'],
       ['methodRecommendationName'],
+      ['methodRecommendationType'],
+      ['recommendationId'],
     ],
   },
   'web.telegram.org': {
@@ -1013,7 +1017,7 @@ const makeLogFunctionOn = ({ module }) => {
 
 // const makeLogFunction = makeLogFunctionOn
 // const makeLogFunction = () => () => {}
-const makeLogFunction = () => () => {}
+const makeLogFunction = makeLogFunctionOn
 const logSA = makeLogFunction({ module: 'storage.api.js' })
 
 async function setOptions(obj) {
@@ -2738,8 +2742,8 @@ const isPathPartMathToPatternPart = ({ patternPart, pathPart }) => {
 }
 
 const getPathnamePart = ({ pathname, pattern }) => {
-  const patternAsList = pathToList(pattern)
   const pathAsList = pathToList(pathname)
+  const patternAsList = pathToList(pattern)
   const resultPartList = []
 
   let isOk = patternAsList.length <= pathAsList.length
@@ -2772,11 +2776,16 @@ function makeIsSearchParamItemMatch(patternList) {
     switch (true) {
       case asteriskIndex < 0: {
         const equalIndex = pattern.indexOf('=')
+        const questionIndex = pattern.indexOf('?')
         const fullPattern = pattern
 
         if (0 < equalIndex) {
           const [paramName, paramValue] = pattern.split('=')
           isFnList.push(({ key, value }) => key == paramName && value == paramValue)
+          logUIS('makeIsSearchParamItemMatch () 11', '({k,v}) => k == k1 && v == v1', fullPattern)
+        } else if (0 < questionIndex) {
+          const [paramName, param2] = pattern.split('?')
+          isFnList.push(({ key, oSearchParams }) => key == paramName && !oSearchParams.get(param2))
           logUIS('makeIsSearchParamItemMatch () 11', '({k,v}) => k == k1 && v == v1', fullPattern)
         } else {
           isFnList.push(({ key }) => key == fullPattern)
@@ -2813,7 +2822,7 @@ function makeIsSearchParamItemMatch(patternList) {
   })
 
   logUIS('makeIsSearchParamItemMatch () 99', 'isFnList.length', isFnList.length)
-  return ({ key, value }) => isFnList.some((isFn) => isFn({ key, value }))
+  return ({ key, value, oSearchParams }) => isFnList.some((isFn) => isFn({ key, value, oSearchParams }))
 }
 
 const isPathnameMatchForPatternExactly = (pathname, pattern) => {
@@ -2889,7 +2898,6 @@ function isSearchParamListMatchForPartialSearch(searchParams, requiredSearchPara
     .every(([key, value]) => searchParams.get(key) === value)
 }
 
-// ?TODO /posts == /posts?page=1 OR clean on open /posts?page=1 TO /posts IF page EQ 1
 async function startPartialUrlSearch({ url, pathnamePattern }) {
   logUS('startPartialUrlSearch () 00', url)
 
@@ -3015,7 +3023,7 @@ const removeQueryParamsIfTarget = (url) => {
 
         const matchedParamList = []
         for (const [key, value] of oSearchParams) {
-          if (isSearchParamItemMatch({ key, value })) {
+          if (isSearchParamItemMatch({ key, value, oSearchParams })) {
             matchedParamList.push(key)
           }
         }
@@ -4228,10 +4236,10 @@ class VisitedUrls {
 
     if (this.cacheVisitedUrls.has(url)) {
       logVU("closeTab 44", title)
-      this._markUrl({ url, title, mark: URL_MARK_OPTIONS.VISITED })
+      await this._markUrl({ url, title, mark: URL_MARK_OPTIONS.VISITED })
     } else {
       logVU("closeTab 55", title)
-      this._markUrl({ url, title, mark: URL_MARK_OPTIONS.OPENED })
+      await this._markUrl({ url, title, mark: URL_MARK_OPTIONS.OPENED })
     }
 
     this.cacheTabId.delete(tabId)
@@ -4722,6 +4730,7 @@ async function getBookmarkListWithTemplate(url) {
         path: bookmark.path,
         templateId: bookmark.templateId,
         templateTitle: bookmark.templateTitle,
+        isInternal: bookmark.isInternal,
       }));
 
   return selectedBookmarkList
@@ -6483,7 +6492,7 @@ const tabsController = {
     // 2) manually close not active tab
     // 3) close tab on close window = 1)
 
-    visitedUrls.closeTab(tabId)
+    await visitedUrls.closeTab(tabId)
   }
 }
 const logWC = makeLogFunction({ module: 'windows.controller' })
