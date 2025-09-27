@@ -1,29 +1,29 @@
 
-// export async function getBookmarkNodeList0(idList) {
-//   if (!(Array.isArray(idList) && idList.length > 0)) {
-//     return []
-//   }
-
-//   const list = await chrome.bookmarks.get(idList)
-
-//   return list
-// }
-
 export async function getBookmarkNodeList(idList) {
   if (!(Array.isArray(idList) && idList.length > 0)) {
     return []
   }
 
-  const resultList = await Promise.allSettled(
-    idList.map(
-      (id) => chrome.bookmarks.get(id)
+  let resultList
+
+  try {
+    resultList = await chrome.bookmarks.get(idList)
+
+  // eslint-disable-next-line no-unused-vars
+  } catch (_er) {
+    const resultListByOne = await Promise.allSettled(
+      idList.map(
+        (id) => chrome.bookmarks.get(id)
+      )
     )
-  )
+
+    resultList = resultListByOne
+      .map((result) => result.value)
+      .filter(Boolean)
+      .flat()
+  }
 
   return resultList
-    .map((result) => result.value)
-    .filter(Boolean)
-    .flat()
 }
 
 export async function getBookmarkList(url) {
