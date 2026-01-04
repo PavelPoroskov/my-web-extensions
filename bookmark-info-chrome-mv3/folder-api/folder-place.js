@@ -1,7 +1,6 @@
 import {
-  BOOKMARKS_BAR_FOLDER_ID,
-  OTHER_BOOKMARKS_FOLDER_ID,
-} from './special-folder.js';
+  rootFolders,
+} from './root-folders.js';
 
 export function isTopFolder(folderName) {
   const name = folderName.trim().toLowerCase()
@@ -14,8 +13,8 @@ export function isTopFolder(folderName) {
 
 export function getNewFolderRootId(folderName) {
   if (isTopFolder(folderName)) {
-    return BOOKMARKS_BAR_FOLDER_ID
+    return rootFolders.BOOKMARKS_BAR_FOLDER_ID
   }
 
-  return OTHER_BOOKMARKS_FOLDER_ID
+  return rootFolders.OTHER_BOOKMARKS_FOLDER_ID
 }

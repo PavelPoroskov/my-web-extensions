@@ -1,11 +1,9 @@
 import {
-  BOOKMARKS_BAR_FOLDER_ID,
-  BOOKMARKS_MENU_FOLDER_ID,
   getTitleDetails,
   getTitleWithDirectives,
   isChangesInDirectives,
   normalizeTitle,
-  OTHER_BOOKMARKS_FOLDER_ID,
+  rootFolders,
 } from '../folder-api/index.js'
 import {
   folderCreator,
@@ -62,9 +60,9 @@ async function mergeRootSubFolders() {
 
   const nameSet = {}
 
-  await addSubfolders({ parentId: BOOKMARKS_BAR_FOLDER_ID, nameSet })
-  await addSubfolders({ parentId: BOOKMARKS_MENU_FOLDER_ID, nameSet })
-  await addSubfolders({ parentId: OTHER_BOOKMARKS_FOLDER_ID, nameSet })
+  await addSubfolders({ parentId: rootFolders.BOOKMARKS_BAR_FOLDER_ID, nameSet })
+  await addSubfolders({ parentId: rootFolders.BOOKMARKS_MENU_FOLDER_ID, nameSet })
+  await addSubfolders({ parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID, nameSet })
 
   const moveTaskList = []
   const renameTaskList = []

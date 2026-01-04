@@ -1,5 +1,5 @@
 import {
-  OTHER_BOOKMARKS_FOLDER_ID,
+  rootFolders,
 } from '../folder-api/index.js';
 import {
   moveBookmarkIgnoreInController,
@@ -38,5 +38,5 @@ export async function moveRootBookmarksToUnclassified() {
 
   // await moveRootBookmarks({ fromId: BOOKMARKS_BAR_FOLDER_ID, unclassifiedId })
   // await moveRootBookmarks({ fromId: BOOKMARKS_MENU_FOLDER_ID, unclassifiedId })
-  await moveRootBookmarks({ fromId: OTHER_BOOKMARKS_FOLDER_ID })
+  await moveRootBookmarks({ fromId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
 }

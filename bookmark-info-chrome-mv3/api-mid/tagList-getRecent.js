@@ -1,6 +1,5 @@
 import {
-  OTHER_BOOKMARKS_FOLDER_ID,
-  BOOKMARKS_BAR_FOLDER_ID,
+  rootFolders,
   isSpecialFolderTitle,
   isDatedFolderTitle,
   isDescriptiveFolderTitle,
@@ -87,7 +86,7 @@ async function filterFolders(idList, isFlatStructure) {
   if (isFlatStructure) {
     filteredFolderList = filteredFolderList
       .filter(
-        ({ parentId }) => parentId === OTHER_BOOKMARKS_FOLDER_ID || parentId === BOOKMARKS_BAR_FOLDER_ID
+        ({ parentId }) => parentId === rootFolders.OTHER_BOOKMARKS_FOLDER_ID || parentId === rootFolders.BOOKMARKS_BAR_FOLDER_ID
       )
       .filter(
         ({ title }) => !isSpecialFolderTitle(title)

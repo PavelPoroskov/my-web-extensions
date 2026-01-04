@@ -2,7 +2,7 @@ import {
   USER_OPTION,
 } from '../constant/index.js'
 import {
-  BUILTIN_BROWSER_ROOT_FOLDER_MAP,
+  rootFolders,
   getNewFolderRootId,
 } from '../folder-api/index.js'
 import {
@@ -26,7 +26,7 @@ export async function moveFolderAfterRename({ id, parentId, title, index }) {
 
   const finalParentId = moveArgs.parentId || parentId
 
-  if (finalParentId in BUILTIN_BROWSER_ROOT_FOLDER_MAP) {
+  if (finalParentId in rootFolders.IdMap) {
     const firstLevelNodeList = await chrome.bookmarks.getChildren(finalParentId)
     const findIndex = firstLevelNodeList.find((item) => title.localeCompare(item.title) < 0)
 

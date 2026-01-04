@@ -1,7 +1,6 @@
 import {
-  BOOKMARKS_BAR_FOLDER_ID,
-  OTHER_BOOKMARKS_FOLDER_ID,
-} from './special-folder.js';
+  rootFolders,
+} from './root-folders.js';
 import {
   trimTitle,
   trimLow,
@@ -246,12 +245,12 @@ export async function findFolder(title) {
   }
 
   if (!foundItem) {
-    foundItem = await findFolderInSubtree({ title, parentId: OTHER_BOOKMARKS_FOLDER_ID })
+    foundItem = await findFolderInSubtree({ title, parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
     logFF('findFolderInSubtree OTHER_BOOKMARKS_FOLDER_ID', foundItem)
   }
 
   if (!foundItem) {
-    foundItem = await findFolderInSubtree({ title, parentId: BOOKMARKS_BAR_FOLDER_ID })
+    foundItem = await findFolderInSubtree({ title, parentId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
     logFF('findFolderInSubtree BOOKMARKS_BAR_FOLDER_ID', foundItem)
   }
 

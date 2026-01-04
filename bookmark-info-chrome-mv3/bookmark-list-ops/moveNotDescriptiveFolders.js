@@ -1,7 +1,6 @@
 import {
   isDescriptiveFolderTitle,
-  BOOKMARKS_BAR_FOLDER_ID,
-  OTHER_BOOKMARKS_FOLDER_ID,
+  rootFolders,
 } from '../folder-api/index.js'
 import {
   moveFolderContentToStart,
@@ -42,6 +41,6 @@ async function moveNotDescriptiveFolders({ fromId }) {
 
 export async function moveNotDescriptiveFoldersToUnclassified() {
 
-  await moveNotDescriptiveFolders({ fromId: BOOKMARKS_BAR_FOLDER_ID })
-  await moveNotDescriptiveFolders({ fromId: OTHER_BOOKMARKS_FOLDER_ID })
+  await moveNotDescriptiveFolders({ fromId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
+  await moveNotDescriptiveFolders({ fromId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
 }

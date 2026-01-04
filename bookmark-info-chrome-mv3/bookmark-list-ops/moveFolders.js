@@ -1,6 +1,5 @@
 import {
-  BOOKMARKS_BAR_FOLDER_ID,
-  OTHER_BOOKMARKS_FOLDER_ID,
+  rootFolders,
   isTopFolder,
   isDatedFolderTitle,
   trimTitle,
@@ -21,11 +20,11 @@ import {
 const logMF = makeLogFunction({ module: 'moveFolders.js' })
 
 async function getFolderCorrectParentIdByTitle(title) {
-  let parentId = OTHER_BOOKMARKS_FOLDER_ID
+  let parentId = rootFolders.OTHER_BOOKMARKS_FOLDER_ID
   let secondParentId
 
   if (isTopFolder(title)) {
-    parentId = BOOKMARKS_BAR_FOLDER_ID
+    parentId = rootFolders.BOOKMARKS_BAR_FOLDER_ID
   }
 
   if (isDatedFolderTitle(title)) {
@@ -46,7 +45,7 @@ async function getFolderMovements() {
   const renameList = []
 
   async function onFolder({ folder, level, bookmarkList, folderListLength }) {
-    logMF('onFolder() 00', folder.title)
+    logMF('onFolder() 00', folder.title, folder.id)
 
     // level 0: ROOT_FOLDER_ID
     // level 1: BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID

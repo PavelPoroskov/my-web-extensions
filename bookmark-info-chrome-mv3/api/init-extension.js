@@ -18,6 +18,9 @@ import {
 import {
   urlEvents,
 } from './urlEvents.js'
+import {
+  rootFolders,
+} from '../folder-api/root-folders.js'
 
 const logIX = makeLogFunction({ module: 'init-extension' })
 
@@ -104,6 +107,7 @@ export async function initExtension({ debugCaller='' }) {
   }
 
   await Promise.all([
+    !rootFolders.isActual() && rootFolders.init(),
     !browserStartTime.isActual() && browserStartTime.init(),
     !extensionSettings.isActual() && initFromUserOptions(),
     !memo.activeTabId && setFirstActiveTab({ debugCaller: `initExtension() <- ${debugCaller}` }),

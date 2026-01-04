@@ -1,7 +1,5 @@
 import {
-  BOOKMARKS_BAR_FOLDER_ID,
-  BOOKMARKS_MENU_FOLDER_ID,
-  OTHER_BOOKMARKS_FOLDER_ID,
+  rootFolders,
   compareDatedTitle,
 } from '../folder-api/index.js'
 import {
@@ -57,9 +55,9 @@ export async function orderBookmarks() {
   await mergeFolders()
 
   logOD('orderBookmarks() 44')
-  await sortFolders({ parentId: BOOKMARKS_BAR_FOLDER_ID })
-  await sortFolders({ parentId: BOOKMARKS_MENU_FOLDER_ID })
-  await sortFolders({ parentId: OTHER_BOOKMARKS_FOLDER_ID })
+  await sortFolders({ parentId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
+  await sortFolders({ parentId: rootFolders.BOOKMARKS_MENU_FOLDER_ID })
+  await sortFolders({ parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
 
   const datedRootNewId = await folderCreator.findDatedRootNew()
   const datedRootOldId = await folderCreator.findDatedRootOld()

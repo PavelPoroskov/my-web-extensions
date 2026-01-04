@@ -26,6 +26,7 @@ await createFileForFirefox(
     'folder-api/folder-dated-title.js',
     'folder-api/folder-title.js',
     'folder-api/special-folder.js',
+    'folder-api/root-folders.js',
     'folder-api/find-folder.js',
     'folder-api/folder-place.js',
     'folder-api/index.js',

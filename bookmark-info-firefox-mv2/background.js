@@ -1421,34 +1421,7 @@ const getTitleForPattern = (title) => {
 
   return result
 }
-const ROOT_FOLDER_ID = IS_BROWSER_FIREFOX ? 'root________' : '0'
-const BOOKMARKS_BAR_FOLDER_ID = IS_BROWSER_FIREFOX ? 'toolbar_____' : '1'
-const BOOKMARKS_MENU_FOLDER_ID = IS_BROWSER_FIREFOX ? 'menu________' : undefined
-const OTHER_BOOKMARKS_FOLDER_ID = IS_BROWSER_FIREFOX ? 'unfiled_____' : '2'
-const MOBILE_BOOKMARKS_FOLDER_ID = IS_BROWSER_FIREFOX ? 'mobile______' : undefined
-
-// eslint-disable-next-line no-unused-vars
-const BUILTIN_BROWSER_FOLDER_MAP = Object.fromEntries(
-  [
-    ROOT_FOLDER_ID,
-    BOOKMARKS_BAR_FOLDER_ID,
-    OTHER_BOOKMARKS_FOLDER_ID,
-
-    BOOKMARKS_MENU_FOLDER_ID,
-    MOBILE_BOOKMARKS_FOLDER_ID,
-  ].filter(Boolean)
-    .map((id) => [id, true])
-)
-const BUILTIN_BROWSER_ROOT_FOLDER_MAP = Object.fromEntries(
-  [
-    BOOKMARKS_BAR_FOLDER_ID,
-    BOOKMARKS_MENU_FOLDER_ID,
-    OTHER_BOOKMARKS_FOLDER_ID
-  ].filter(Boolean)
-    .map((id) => [id, true])
-)
-
-const DATED_ROOT_NEW = '@D new'
+const DATED_ROOT_NEW = '@D new'
 const DATED_ROOT_OLD = '@D old'
 const UNCLASSIFIED_TITLE = 'zz-bookmark-info--unclassified'
 
@@ -1461,6 +1434,86 @@ const mapSpecialTitle = new Set([
 function isSpecialFolderTitle(title) {
   return mapSpecialTitle.has(title)
 }
+class RootFolders {
+  BOOKMARKS_BAR_FOLDER_ID = 'toolbar_____'
+  BOOKMARKS_MENU_FOLDER_ID = 'menu________'
+  OTHER_BOOKMARKS_FOLDER_ID = 'unfiled_____'
+
+  IdList = [
+    this.BOOKMARKS_BAR_FOLDER_ID,
+    this.BOOKMARKS_MENU_FOLDER_ID,
+    this.OTHER_BOOKMARKS_FOLDER_ID
+  ]
+  IdMap = Object.fromEntries(
+    this.IdList
+      .filter(Boolean)
+      .map((id) => [id, true])
+  )
+
+  _isActual = IS_BROWSER_FIREFOX ? true : false
+  isActual() {
+    return this._isActual
+  }
+
+  async init() {
+    this.BOOKMARKS_BAR_FOLDER_ID = undefined
+    this.BOOKMARKS_MENU_FOLDER_ID = undefined
+    this.OTHER_BOOKMARKS_FOLDER_ID = undefined
+    this.IdList = []
+
+    const [rootFolder] = await browser.bookmarks.getTree()
+
+    for (const rootSubfolder of rootFolder.children) {
+      if (rootSubfolder.url) {
+        continue
+      }
+
+      let addToList = true
+      switch (rootSubfolder.title) {
+        // Chrome
+        case 'Bookmarks bar': {
+          this.BOOKMARKS_BAR_FOLDER_ID = rootSubfolder.id
+          break
+        }
+        case 'Other bookmarks': {
+          this.OTHER_BOOKMARKS_FOLDER_ID = rootSubfolder.id
+          break
+        }
+
+        // // Firefox
+        // case 'Bookmarks Toolbar': {
+        //   this.BOOKMARKS_BAR_FOLDER_ID = rootSubfolder.id
+        //   break
+        // }
+        // case 'Bookmarks Menu': {
+        //   this.BOOKMARKS_MENU_FOLDER_ID = rootSubfolder.id
+        //   break
+        // }
+        // case 'Other Bookmarks': {
+        //   this.OTHER_BOOKMARKS_FOLDER_ID = rootSubfolder.id
+        //   break
+        // }
+        default: {
+          addToList = false
+        }
+      }
+
+      if (addToList) {
+        this.IdList.push(rootSubfolder.id)
+      }
+    }
+
+    this.IdMap = Object.fromEntries(
+      this.IdList
+        .filter(Boolean)
+        .map((id) => [id, true])
+    )
+
+    this._isActual = true
+  }
+}
+
+const rootFolders = new RootFolders()
 const logFF = makeLogFunction({ module: 'find-folder.js' })
 
 async function findFolderWithExactTitle(title) {
@@ -1692,12 +1745,12 @@ async function findFolder(title) {
   }
 
   if (!foundItem) {
-    foundItem = await findFolderInSubtree({ title, parentId: OTHER_BOOKMARKS_FOLDER_ID })
+    foundItem = await findFolderInSubtree({ title, parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
     logFF('findFolderInSubtree OTHER_BOOKMARKS_FOLDER_ID', foundItem)
   }
 
   if (!foundItem) {
-    foundItem = await findFolderInSubtree({ title, parentId: BOOKMARKS_BAR_FOLDER_ID })
+    foundItem = await findFolderInSubtree({ title, parentId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
     logFF('findFolderInSubtree BOOKMARKS_BAR_FOLDER_ID', foundItem)
   }
 
@@ -1714,10 +1767,10 @@ async function findFolder(title) {
 
 function getNewFolderRootId(folderName) {
   if (isTopFolder(folderName)) {
-    return BOOKMARKS_BAR_FOLDER_ID
+    return rootFolders.BOOKMARKS_BAR_FOLDER_ID
   }
 
-  return OTHER_BOOKMARKS_FOLDER_ID
+  return rootFolders.OTHER_BOOKMARKS_FOLDER_ID
 }
 
 const logES = makeLogFunction({ module: 'extensionSettings.js' })
@@ -1946,31 +1999,31 @@ class BrowserStartTime {
 }
 
 const browserStartTime = new BrowserStartTime()
-// async function getBookmarkNodeList0(idList) {
-//   if (!(Array.isArray(idList) && idList.length > 0)) {
-//     return []
-//   }
-
-//   const list = await browser.bookmarks.get(idList)
-
-//   return list
-// }
-
-async function getBookmarkNodeList(idList) {
+async function getBookmarkNodeList(idList) {
   if (!(Array.isArray(idList) && idList.length > 0)) {
     return []
   }
 
-  const resultList = await Promise.allSettled(
-    idList.map(
-      (id) => browser.bookmarks.get(id)
+  let resultList
+
+  try {
+    resultList = await browser.bookmarks.get(idList)
+
+  // eslint-disable-next-line no-unused-vars
+  } catch (_er) {
+    const resultListByOne = await Promise.allSettled(
+      idList.map(
+        (id) => browser.bookmarks.get(id)
+      )
     )
-  )
+
+    resultList = resultListByOne
+      .map((result) => result.value)
+      .filter(Boolean)
+      .flat()
+  }
 
   return resultList
-    .map((result) => result.value)
-    .filter(Boolean)
-    .flat()
 }
 
 async function getBookmarkList(url) {
@@ -2056,7 +2109,7 @@ async function filterFolders(idList, isFlatStructure) {
   if (isFlatStructure) {
     filteredFolderList = filteredFolderList
       .filter(
-        ({ parentId }) => parentId === OTHER_BOOKMARKS_FOLDER_ID || parentId === BOOKMARKS_BAR_FOLDER_ID
+        ({ parentId }) => parentId === rootFolders.OTHER_BOOKMARKS_FOLDER_ID || parentId === rootFolders.BOOKMARKS_BAR_FOLDER_ID
       )
       .filter(
         ({ title }) => !isSpecialFolderTitle(title)
@@ -3322,7 +3375,7 @@ async function removeFolder(bkmId) {
 
   const finalParentId = moveArgs.parentId || parentId
 
-  if (finalParentId in BUILTIN_BROWSER_ROOT_FOLDER_MAP) {
+  if (finalParentId in rootFolders.IdMap) {
     const firstLevelNodeList = await browser.bookmarks.getChildren(finalParentId)
     const findIndex = firstLevelNodeList.find((item) => title.localeCompare(item.title) < 0)
 
@@ -3438,7 +3491,7 @@ async function _findOrCreateDatedFolder({ templateTitle, parentId }) {
 
 async function _findFolder(title) {
   // const folder = await findFolder(title)
-  const folder = await findSubFolderWithExactTitle({ title, parentId: OTHER_BOOKMARKS_FOLDER_ID })
+  const folder = await findSubFolderWithExactTitle({ title, parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
 
   if (folder) {
     return folder.id
@@ -4333,6 +4386,7 @@ async function initExtension({ debugCaller='' }) {
   }
 
   await Promise.all([
+    !rootFolders.isActual() && rootFolders.init(),
     !browserStartTime.isActual() && browserStartTime.init(),
     !extensionSettings.isActual() && initFromUserOptions(),
     !memo.activeTabId && setFirstActiveTab({ debugCaller: `initExtension() <- ${debugCaller}` }),
@@ -5115,9 +5169,9 @@ async function mergeRootSubFolders() {
 
   const nameSet = {}
 
-  await addSubfolders({ parentId: BOOKMARKS_BAR_FOLDER_ID, nameSet })
-  await addSubfolders({ parentId: BOOKMARKS_MENU_FOLDER_ID, nameSet })
-  await addSubfolders({ parentId: OTHER_BOOKMARKS_FOLDER_ID, nameSet })
+  await addSubfolders({ parentId: rootFolders.BOOKMARKS_BAR_FOLDER_ID, nameSet })
+  await addSubfolders({ parentId: rootFolders.BOOKMARKS_MENU_FOLDER_ID, nameSet })
+  await addSubfolders({ parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID, nameSet })
 
   const moveTaskList = []
   const renameTaskList = []
@@ -5269,8 +5323,8 @@ async function mergeFolders() {
 
 async function moveNotDescriptiveFoldersToUnclassified() {
 
-  await moveNotDescriptiveFolders({ fromId: BOOKMARKS_BAR_FOLDER_ID })
-  await moveNotDescriptiveFolders({ fromId: OTHER_BOOKMARKS_FOLDER_ID })
+  await moveNotDescriptiveFolders({ fromId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
+  await moveNotDescriptiveFolders({ fromId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
 }
 async function moveRootBookmarks({ fromId }) {
   if (!fromId) {
@@ -5304,16 +5358,16 @@ async function moveRootBookmarksToUnclassified() {
 
   // await moveRootBookmarks({ fromId: BOOKMARKS_BAR_FOLDER_ID, unclassifiedId })
   // await moveRootBookmarks({ fromId: BOOKMARKS_MENU_FOLDER_ID, unclassifiedId })
-  await moveRootBookmarks({ fromId: OTHER_BOOKMARKS_FOLDER_ID })
+  await moveRootBookmarks({ fromId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
 }
 const logMF = makeLogFunction({ module: 'moveFolders.js' })
 
 async function getFolderCorrectParentIdByTitle(title) {
-  let parentId = OTHER_BOOKMARKS_FOLDER_ID
+  let parentId = rootFolders.OTHER_BOOKMARKS_FOLDER_ID
   let secondParentId
 
   if (isTopFolder(title)) {
-    parentId = BOOKMARKS_BAR_FOLDER_ID
+    parentId = rootFolders.BOOKMARKS_BAR_FOLDER_ID
   }
 
   if (isDatedFolderTitle(title)) {
@@ -5334,7 +5388,7 @@ async function getFolderMovements() {
   const renameList = []
 
   async function onFolder({ folder, level, bookmarkList, folderListLength }) {
-    logMF('onFolder() 00', folder.title)
+    logMF('onFolder() 00', folder.title, folder.id)
 
     // level 0: ROOT_FOLDER_ID
     // level 1: BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID
@@ -5688,9 +5742,9 @@ async function orderBookmarks() {
   await mergeFolders()
 
   logOD('orderBookmarks() 44')
-  await sortFolders({ parentId: BOOKMARKS_BAR_FOLDER_ID })
-  await sortFolders({ parentId: BOOKMARKS_MENU_FOLDER_ID })
-  await sortFolders({ parentId: OTHER_BOOKMARKS_FOLDER_ID })
+  await sortFolders({ parentId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
+  await sortFolders({ parentId: rootFolders.BOOKMARKS_MENU_FOLDER_ID })
+  await sortFolders({ parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
 
   const datedRootNewId = await folderCreator.findDatedRootNew()
   const datedRootOldId = await folderCreator.findDatedRootOld()

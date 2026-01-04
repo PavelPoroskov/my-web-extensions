@@ -11,7 +11,7 @@ import {
   isChangesInDirectives,
   isDatedFolderTemplate,
   makeCompareDatedTitleWithFixed,
-  OTHER_BOOKMARKS_FOLDER_ID,
+  rootFolders,
 } from '../folder-api/index.js';
 import {
   createFolderIgnoreInController,
@@ -121,7 +121,7 @@ export async function _findOrCreateDatedFolder({ templateTitle, parentId }) {
 
 export async function _findFolder(title) {
   // const folder = await findFolder(title)
-  const folder = await findSubFolderWithExactTitle({ title, parentId: OTHER_BOOKMARKS_FOLDER_ID })
+  const folder = await findSubFolderWithExactTitle({ title, parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
 
   if (folder) {
     return folder.id
