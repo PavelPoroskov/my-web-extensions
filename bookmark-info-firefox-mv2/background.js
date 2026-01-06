@@ -159,7 +159,7 @@ const USER_OPTION_META = {
 }
 
 // used for migrations
-const DATA_FORMAT = 20250706;
+const DATA_FORMAT = 20260105;
 
 const INTERNAL_VALUES_META = {
   TAG_LIST_IS_OPEN: {
@@ -1189,7 +1189,40 @@ class CacheWithLimit {
   }
 }
 
-function getTitleDetails(title) {
+const hexDigitSet = new Set('0123456789abcdef')
+const letterSet = new Set('abcdefghijklmnopqrstuvwxy')
+
+function isLettersOnly(str) {
+  if (!(str.length < 25)) {
+    return false
+  }
+
+  const strLow = str.toLowerCase()
+
+  return Array.from(strLow)
+    .every(letter =>  letterSet.has(letter))
+}
+
+function isHexColorValue(str) {
+  if (!(str.length === 6)) {
+    return false
+  }
+
+  const strLow = str.toLowerCase()
+
+  return Array.from(strLow)
+    .every(letter => hexDigitSet.has(letter))
+}
+
+function isCorrectColorValue(str) {
+  if (!str) {
+    return false
+  }
+
+  return isLettersOnly(str) || isHexColorValue(str)
+}
+
+function getTitleDetails(title) {
   const partList = title
     .split(' ')
     .filter(Boolean)
@@ -1199,18 +1232,44 @@ class CacheWithLimit {
 
   while (-1 < i) {
     const lastWord = partList[i]
-    const isDirective = lastWord.startsWith('#') || lastWord.startsWith(':')
+    const isDirective = lastWord.startsWith('#')
 
     if (isDirective) {
-      let key = lastWord.toLowerCase()
-      let value = ''
+      const directive = lastWord.slice(1)
+      const [directiveName, directiveValue] = directive.split(':')
 
-      if (key.startsWith('#') && key != '#top') {
-        key = '#color'
-        value = key.slice(1).toUpperCase()
+      const directiveNameLow = directiveName !== undefined ? directiveName.toLowerCase() : undefined
+
+      let value
+
+      switch (directiveNameLow) {
+        case 'top': {
+          value = ''
+          break
+        }
+        case 'c':
+        case 'color': {
+          if (isCorrectColorValue(directiveValue)) {
+            value = directiveValue
+          }
+          break
+        }
+        case 'o':
+        case 'order': {
+          value = directiveValue
+          break
+        }
+        case 'g':
+        case 'group': {
+          value = directiveValue
+          break
+        }
       }
 
-      objDirectives[key] = value;
+      if (directiveNameLow !== undefined && value !== undefined) {
+        objDirectives[directiveNameLow] = value;
+      }
+
     } else {
       break
     }
@@ -1228,19 +1287,32 @@ class CacheWithLimit {
 }
 
 function getTitleWithDirectives({ onlyTitle, objDirectives }) {
-  const strDirectives = Object.entries(objDirectives)
+
+  const objFilteredDirectives = Object.assign({}, objDirectives)
+  const keyList = Object.keys(objFilteredDirectives)
+  keyList.forEach(key => {
+    const keyLow = key.toLowerCase()
+    if (key !== keyLow) {
+      objFilteredDirectives[keyLow] = objFilteredDirectives[key];
+      delete objFilteredDirectives[key]
+    }
+  })
+
+  const orderValue = objFilteredDirectives['o']
+  delete objFilteredDirectives['o']
+  const orderStr = orderValue && `#o:${orderValue}`
+
+  const strDirectives = Object.entries(objFilteredDirectives)
     .toSorted((a,b) => a[0].localeCompare(b[0]))
-    .map(([key,value]) => (key == '#color'
-      ? `#${value}`
-      : key
-    ))
+    .map(([key,value]) => (value ? `#${key}:${value}` : `#${key}`))
     .join(' ')
 
-    return [onlyTitle, strDirectives].filter(Boolean).join(' ')
+    return [onlyTitle, orderStr, strDirectives].filter(Boolean).join(' ')
 }
 
 function isChangesInDirectives({ oldDirectives, newDirectives }) {
   for (const key in newDirectives) {
+
     if (!(key in oldDirectives)) {
       return true
     }
@@ -1294,11 +1366,14 @@ const isDate = (str) => {
 }
 
 function isDatedFolderTemplate(folderTitle) {
-  return folderTitle.endsWith(' @D') && 3 < folderTitle.length
+  const { onlyTitle }  = getTitleDetails(folderTitle)
+
+  return onlyTitle.endsWith(' @D') && 3 < folderTitle.length
 }
 
 function getDatedTitle(folderTitle) {
-  const fixedPart = folderTitle.slice(0, -3).trim()
+  const { onlyTitle, objDirectives }  = getTitleDetails(folderTitle)
+  const fixedPart = onlyTitle.slice(0, -3).trim()
 
   const today = new Date()
   const sToday = dateFormatter.format(today).replaceAll('/', '-')
@@ -1307,39 +1382,46 @@ function getDatedTitle(folderTitle) {
   const days = Math.floor((futureDate - today)/oneDayMs)
   const order = new Number(days).toString(36).padStart(3,'0')
 
-  return `${fixedPart} ${sToday} ${sWeekday} ${order}`
+  objDirectives['o'] = order
+
+  return getTitleWithDirectives({
+    onlyTitle: `${fixedPart} ${sToday} ${sWeekday}`,
+    objDirectives
+  })
 }
 
 function compareDatedTitle(a,b) {
-  const orderA = a.slice(-3)
-  const restA = a.slice(0, -4)
+  const { onlyTitle: onlyTitleA, objDirectives: objDirectivesA }  = getTitleDetails(a)
+  const orderA = objDirectivesA['o']
 
-  const orderB = b.slice(-3)
-  const restB = b.slice(0, -4)
+  const { onlyTitle: onlyTitleB, objDirectives: objDirectivesB }  = getTitleDetails(b)
+  const orderB = objDirectivesB['o']
 
-  return (orderA || '').localeCompare(orderB || '') || (restA || '').localeCompare(restB || '')
+  return (orderA || '').localeCompare(orderB || '') || (onlyTitleA || '').localeCompare(onlyTitleB || '')
 }
 
 function makeCompareDatedTitleWithFixed(a) {
-  const orderA = a.slice(-3)
-  const restA = a.slice(0, -4)
+  const { onlyTitle: onlyTitleA, objDirectives: objDirectivesA }  = getTitleDetails(a)
+  const orderA = objDirectivesA['o']
 
   return function compareDatedTitleWithFixed(b) {
-    const orderB = b.slice(-3)
-    const restB = b.slice(0, -4)
+    const { onlyTitle: onlyTitleB, objDirectives: objDirectivesB }  = getTitleDetails(b)
+    const orderB = objDirectivesB['o']
 
-    return (orderA || '').localeCompare(orderB || '') || (restA || '').localeCompare(restB || '')
+    return (orderA || '').localeCompare(orderB || '') || (onlyTitleA || '').localeCompare(onlyTitleB || '')
   }
 }
 
 function isDatedFolderTitle(str) {
-  const partList = str.split(' ')
+  const { onlyTitle, objDirectives }  = getTitleDetails(str)
 
-  if (!(4 <= partList.length)) {
+  const partList = onlyTitle.split(' ')
+
+  if (objDirectives['o'] && !(3 <= partList.length)) {
     return false
   }
 
-  const result = isWeekday(partList.at(-2)) && partList.at(-1).length == 3 && isDate(partList.at(-3)) && !!partList.at(-4)
+  const result = isWeekday(partList.at(-1)) && isDate(partList.at(-2)) && !!partList.at(-3)
 
   return result
 }
@@ -1352,14 +1434,18 @@ function isDatedTitleForTemplate({ title, template }) {
     return false
   }
 
-  const fixedPartFromTitle = title.split(' ').slice(0, -3).join(' ')
-  const fixedPartFromTemplate = template.slice(0, -3).trim()
+  const { onlyTitle: onlyTitleTitle }  = getTitleDetails(title)
+  const fixedPartFromTitle = onlyTitleTitle.split(' ').slice(0, -2).join(' ')
+
+  const { onlyTitle: onlyTitleTemplate }  = getTitleDetails(title)
+  const fixedPartFromTemplate = onlyTitleTemplate.slice(0, -3).trim()
 
   return fixedPartFromTitle == fixedPartFromTemplate
 }
 
 function getDatedTemplate(title) {
-  const fixedPartFromTitle = title.split(' ').slice(0, -3).join(' ')
+  const { onlyTitle }  = getTitleDetails(title)
+  const fixedPartFromTitle = onlyTitle.split(' ').slice(0, -2).join(' ')
 
   return `${fixedPartFromTitle} @D`
 }
@@ -1523,13 +1609,6 @@ async function findFolderWithExactTitle(title) {
   return foundItem
 }
 
-async function findSubFolderWithExactTitle({ title, parentId }) {
-  const nodeList = await browser.bookmarks.search({ title });
-  const foundItem = nodeList.find((node) => !node.url && node.parentId == parentId)
-
-  return foundItem
-}
-
 function makeIsTitleMatch({ title, normalizeFn = (str) => str }) {
   const onlyTitlePattern = getTitleDetails(title).onlyTitle
   const normalizedPattern = normalizeFn(onlyTitlePattern)
@@ -1568,6 +1647,26 @@ async function findByTitle({ title, normalizeFn }) {
   return foundItem
 }
 
+async function findSubFolderWithExactTitle({ title, parentId }) {
+  const onlyTitle = getTitleDetails(title).onlyTitle
+  const bookmarkList = await browser.bookmarks.search(onlyTitle);
+  // logFF('findByTitle 00', title)
+  // logFF('findByTitle 00', bookmarkList)
+  const isTitleMatch = makeIsTitleMatch({ title: onlyTitle })
+
+  let foundItem
+  let i = 0
+  while (!foundItem && i < bookmarkList.length) {
+    const checkItem = bookmarkList[i]
+    if (!checkItem.url && checkItem.parentId == parentId && isTitleMatch(checkItem.title)) {
+      foundItem = checkItem
+      // logFF('findByTitle 22', checkItem.title)
+    }
+    i += 1
+  }
+
+  return foundItem
+}
 // example1: node.js -> NodeJS
 async function findTitleEndsWithJS(title) {
   const lowTitle = trimLow(title)
@@ -1757,12 +1856,10 @@ async function findFolder(title) {
   return foundItem
 }
 function isTopFolder(folderName) {
-  const name = folderName.trim().toLowerCase()
+  const wordList = folderName.trim().toLowerCase().split(' ').filter(Boolean)
+  const wordSet = new Set(wordList)
 
-  return name.startsWith('todo')
-    || name.startsWith('source')
-    || name.startsWith('list') || name.endsWith('list')
-    || name.endsWith('#top')
+  return wordSet.has('#top')
 }
 
 function getNewFolderRootId(folderName) {
@@ -3468,6 +3565,7 @@ async function _findOrCreateDatedFolder({ templateTitle, parentId }) {
   const datedTitle = getDatedTitle(templateTitle)
   logFCR('_findOrCreateDatedFolder () 11', 'datedTitle', datedTitle)
   let foundFolder = await findSubFolderWithExactTitle({ title: datedTitle, parentId })
+  logFCR('_findOrCreateDatedFolder () 22', 'foundFolder', foundFolder)
 
   if (!foundFolder) {
     const firstLevelNodeList = await browser.bookmarks.getChildren(parentId)
@@ -3483,7 +3581,16 @@ async function _findOrCreateDatedFolder({ templateTitle, parentId }) {
       folderParams.index = findIndex.index
     }
 
+    logFCR('_findOrCreateDatedFolder () 33', 'create')
     foundFolder = await createFolderIgnoreInController(folderParams)
+  } else {
+    logFCR('_findOrCreateDatedFolder () 44', 'use existed')
+    if (foundFolder.title !== datedTitle) {
+      await updateFolder({
+        id: foundFolder.id,
+        title: datedTitle
+      })
+    }
   }
 
   return foundFolder.id
@@ -4672,6 +4779,12 @@ const getFullPath = (id, bkmFolderById) => {
   return path.filter(Boolean).toReversed()
 }
 
+const getColor = (id, bkmFolderById) => {
+   const folder = bkmFolderById.get(id);
+
+  return folder?.color
+}
+
 async function getFolderInfoRecursively({ bookmarkList, folderByIdMap }) {
   // parentIdList.length <= bookmarkList.length
   // for root folders parentIdList=[]
@@ -4697,10 +4810,16 @@ async function getFolderInfoRecursively({ bookmarkList, folderByIdMap }) {
   const unknownFolderList = await getBookmarkNodeList(unknownParentIdList)
 
   unknownFolderList.forEach((folder) => {
+    const {
+      onlyTitle,
+      objDirectives,
+    } = getTitleDetails(folder.title)
+
     folderByIdMap.add(
       folder.id,
       {
-        title: folder.title,
+        title: onlyTitle,
+        color: objDirectives['color'] || objDirectives['c'],
         parentId: folder.parentId,
       }
     )
@@ -4728,6 +4847,7 @@ async function addBookmarkPathInfo(bookmarkList) {
       return {
         ...bookmark,
         parentTitle: fullPathList.at(-1),
+        parentColor: getColor(bookmark.parentId, memo.bkmFolderById),
         path: fullPathList.slice(0, -1).concat('').join('/ '),
       }
     });
@@ -4781,6 +4901,7 @@ async function getBookmarkListWithTemplate(url) {
         title: bookmark.title,
         parentId: bookmark.parentId,
         parentTitle: bookmark.parentTitle,
+        parentColor: bookmark.parentColor,
         path: bookmark.path,
         templateId: bookmark.templateId,
         templateTitle: bookmark.templateTitle,
@@ -5142,17 +5263,13 @@ async function addSubfolders({ parentId, nameSet }) {
     } = getTitleDetails(node.title)
     const normalizedTitle = normalizeTitle(onlyTitle)
 
-    const directiveList = Object.keys(objDirectives)
-    const w10 = directiveList.filter((str) => str.startsWith('#')).length
-    const w1 = directiveList.filter((str) => !str.startsWith('#')).length
-
     const nodeData = Object.assign(
       {},
       node,
       {
         onlyTitle,
         objDirectives,
-        directiveWeight: w10*10 + w1,
+        directiveWeight: Object.keys(objDirectives).length,
       },
     )
 
@@ -5837,6 +5954,107 @@ async function migration20250706() {
     [INTERNAL_VALUES.TAG_LIST_FIXED_MAP]: newFixedTagObject,
   })
 }
+function isOldTopFolder(folderName) {
+  const name = folderName.trim().toLowerCase()
+
+  return name.startsWith('todo')
+    || name.startsWith('source')
+    || name.startsWith('list') || name.endsWith('list')
+    // || name.endsWith('#top')
+}
+
+function fromOldTopFolderToNew(title) {
+  const {
+    onlyTitle,
+    objDirectives,
+  } = getTitleDetails(title)
+
+  objDirectives['top'] = ''
+
+  return getTitleWithDirectives({ onlyTitle, objDirectives })
+}
+
+async function migration20260104() {
+  // dated folder new format: #o:
+
+  const renameList = []
+
+  async function onFolder({ folder, level }) {
+    if (level < 2) {
+      return
+    }
+
+    if (isOldTopFolder(folder.title)) {
+      renameList.push({
+        id: folder.id,
+        title: fromOldTopFolderToNew(folder.title),
+      })
+    }
+  }
+
+  await traverseTreeRecursively({ onFolder })
+
+  await renameList.reduce(
+    (promiseChain, { id, title }) => promiseChain.then(
+      () => updateFolderIgnoreInController({ id,  title })
+    ),
+    Promise.resolve(),
+  );
+}
+function isOldDatedFolderTitleNoDirective(str) {
+  const partList = str.split(' ')
+
+  if (!(4 <= partList.length)) {
+    return false
+  }
+
+  const result = isWeekday(partList.at(-2)) && partList.at(-1).length == 3 && isDate(partList.at(-3)) && !!partList.at(-4)
+
+  return result
+}
+
+function fromOldTitleToNewTitleWithDirective(str) {
+  const partList = str.split(' ')
+
+  if (!(4 <= partList.length)) {
+    return false
+  }
+
+  const weekday = partList.at(-2)
+  const date = partList.at(-3)
+  const order = partList.at(-1)
+  const fixed = partList.slice(0, -3).join(' ')
+
+  return `${fixed} ${date} ${weekday} #o:${order}`
+}
+
+async function migration20260105() {
+  // dated folder new format: #o:
+
+  const renameList = []
+
+  async function onFolder({ folder, level }) {
+    if (level < 2) {
+      return
+    }
+
+    if (isOldDatedFolderTitleNoDirective(folder.title)) {
+      renameList.push({
+        id: folder.id,
+        title: fromOldTitleToNewTitleWithDirective(folder.title),
+      })
+    }
+  }
+
+  await traverseTreeRecursively({ onFolder })
+
+  await renameList.reduce(
+    (promiseChain, { id, title }) => promiseChain.then(
+      () => updateFolderIgnoreInController({ id,  title })
+    ),
+    Promise.resolve(),
+  );
+}
 async function migration({ from }) {
   let actualFormat
   let stepFormat
@@ -5856,6 +6074,26 @@ async function migration20250706() {
   stepFormat = 20250706
   if (actualFormat < stepFormat) {
     await migration20250706()
+
+    actualFormat = stepFormat
+    await setOptions({
+      [INTERNAL_VALUES.DATA_FORMAT]: actualFormat,
+    })
+  }
+
+  stepFormat = 20260104
+  if (actualFormat < stepFormat) {
+    await migration20260104()
+
+    actualFormat = stepFormat
+    await setOptions({
+      [INTERNAL_VALUES.DATA_FORMAT]: actualFormat,
+    })
+  }
+
+  stepFormat = 20260105
+  if (actualFormat < stepFormat) {
+    await migration20260105()
 
     actualFormat = stepFormat
     await setOptions({
@@ -6586,5 +6824,6 @@ browser.commands.onCommand.addListener(commandsController.onCommand);
 browser.menus.onClicked.addListener(contextMenusController.onClicked);
 
 browser.runtime.onStartup.addListener(runtimeController.onStartup)
+// runtimeController.onStartup()
 browser.runtime.onInstalled.addListener(runtimeController.onInstalled);
 browser.runtime.onMessage.addListener(runtimeController.onMessage);
