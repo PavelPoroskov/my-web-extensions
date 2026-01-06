@@ -33,17 +33,13 @@ async function addSubfolders({ parentId, nameSet }) {
     } = getTitleDetails(node.title)
     const normalizedTitle = normalizeTitle(onlyTitle)
 
-    const directiveList = Object.keys(objDirectives)
-    const w10 = directiveList.filter((str) => str.startsWith('#')).length
-    const w1 = directiveList.filter((str) => !str.startsWith('#')).length
-
     const nodeData = Object.assign(
       {},
       node,
       {
         onlyTitle,
         objDirectives,
-        directiveWeight: w10*10 + w1,
+        directiveWeight: Object.keys(objDirectives).length,
       },
     )
 

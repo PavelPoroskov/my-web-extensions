@@ -1,3 +1,8 @@
+import {
+  getTitleDetails,
+  getTitleWithDirectives,
+} from './folder-directives.js'
+
 const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric'})
 const weekdayFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'short' })
 const futureDate = new Date('01/01/2125')
@@ -40,11 +45,14 @@ export const isDate = (str) => {
 }
 
 export function isDatedFolderTemplate(folderTitle) {
-  return folderTitle.endsWith(' @D') && 3 < folderTitle.length
+  const { onlyTitle }  = getTitleDetails(folderTitle)
+
+  return onlyTitle.endsWith(' @D') && 3 < folderTitle.length
 }
 
 export function getDatedTitle(folderTitle) {
-  const fixedPart = folderTitle.slice(0, -3).trim()
+  const { onlyTitle, objDirectives }  = getTitleDetails(folderTitle)
+  const fixedPart = onlyTitle.slice(0, -3).trim()
 
   const today = new Date()
   const sToday = dateFormatter.format(today).replaceAll('/', '-')
@@ -53,39 +61,46 @@ export function getDatedTitle(folderTitle) {
   const days = Math.floor((futureDate - today)/oneDayMs)
   const order = new Number(days).toString(36).padStart(3,'0')
 
-  return `${fixedPart} ${sToday} ${sWeekday} ${order}`
+  objDirectives['o'] = order
+
+  return getTitleWithDirectives({
+    onlyTitle: `${fixedPart} ${sToday} ${sWeekday}`,
+    objDirectives
+  })
 }
 
 export function compareDatedTitle(a,b) {
-  const orderA = a.slice(-3)
-  const restA = a.slice(0, -4)
+  const { onlyTitle: onlyTitleA, objDirectives: objDirectivesA }  = getTitleDetails(a)
+  const orderA = objDirectivesA['o']
 
-  const orderB = b.slice(-3)
-  const restB = b.slice(0, -4)
+  const { onlyTitle: onlyTitleB, objDirectives: objDirectivesB }  = getTitleDetails(b)
+  const orderB = objDirectivesB['o']
 
-  return (orderA || '').localeCompare(orderB || '') || (restA || '').localeCompare(restB || '')
+  return (orderA || '').localeCompare(orderB || '') || (onlyTitleA || '').localeCompare(onlyTitleB || '')
 }
 
 export function makeCompareDatedTitleWithFixed(a) {
-  const orderA = a.slice(-3)
-  const restA = a.slice(0, -4)
+  const { onlyTitle: onlyTitleA, objDirectives: objDirectivesA }  = getTitleDetails(a)
+  const orderA = objDirectivesA['o']
 
   return function compareDatedTitleWithFixed(b) {
-    const orderB = b.slice(-3)
-    const restB = b.slice(0, -4)
+    const { onlyTitle: onlyTitleB, objDirectives: objDirectivesB }  = getTitleDetails(b)
+    const orderB = objDirectivesB['o']
 
-    return (orderA || '').localeCompare(orderB || '') || (restA || '').localeCompare(restB || '')
+    return (orderA || '').localeCompare(orderB || '') || (onlyTitleA || '').localeCompare(onlyTitleB || '')
   }
 }
 
 export function isDatedFolderTitle(str) {
-  const partList = str.split(' ')
+  const { onlyTitle, objDirectives }  = getTitleDetails(str)
 
-  if (!(4 <= partList.length)) {
+  const partList = onlyTitle.split(' ')
+
+  if (objDirectives['o'] && !(3 <= partList.length)) {
     return false
   }
 
-  const result = isWeekday(partList.at(-2)) && partList.at(-1).length == 3 && isDate(partList.at(-3)) && !!partList.at(-4)
+  const result = isWeekday(partList.at(-1)) && isDate(partList.at(-2)) && !!partList.at(-3)
 
   return result
 }
@@ -98,14 +113,18 @@ export function isDatedTitleForTemplate({ title, template }) {
     return false
   }
 
-  const fixedPartFromTitle = title.split(' ').slice(0, -3).join(' ')
-  const fixedPartFromTemplate = template.slice(0, -3).trim()
+  const { onlyTitle: onlyTitleTitle }  = getTitleDetails(title)
+  const fixedPartFromTitle = onlyTitleTitle.split(' ').slice(0, -2).join(' ')
+
+  const { onlyTitle: onlyTitleTemplate }  = getTitleDetails(title)
+  const fixedPartFromTemplate = onlyTitleTemplate.slice(0, -3).trim()
 
   return fixedPartFromTitle == fixedPartFromTemplate
 }
 
 export function getDatedTemplate(title) {
-  const fixedPartFromTitle = title.split(' ').slice(0, -3).join(' ')
+  const { onlyTitle }  = getTitleDetails(title)
+  const fixedPartFromTitle = onlyTitle.split(' ').slice(0, -2).join(' ')
 
   return `${fixedPartFromTitle} @D`
 }

@@ -4,6 +4,9 @@ import {
 import {
   getBookmarkNodeList,
 } from './bookmark-list.js'
+import {
+  getTitleDetails
+} from '../folder-api/folder-directives.js'
 
 const getParentIdList = (bookmarkList = []) => {
   const parentIdList = bookmarkList
@@ -28,6 +31,12 @@ const getFullPath = (id, bkmFolderById) => {
   }
 
   return path.filter(Boolean).toReversed()
+}
+
+const getColor = (id, bkmFolderById) => {
+   const folder = bkmFolderById.get(id);
+
+  return folder?.color
 }
 
 async function getFolderInfoRecursively({ bookmarkList, folderByIdMap }) {
@@ -55,10 +64,16 @@ async function getFolderInfoRecursively({ bookmarkList, folderByIdMap }) {
   const unknownFolderList = await getBookmarkNodeList(unknownParentIdList)
 
   unknownFolderList.forEach((folder) => {
+    const {
+      onlyTitle,
+      objDirectives,
+    } = getTitleDetails(folder.title)
+
     folderByIdMap.add(
       folder.id,
       {
-        title: folder.title,
+        title: onlyTitle,
+        color: objDirectives['color'] || objDirectives['c'],
         parentId: folder.parentId,
       }
     )
@@ -86,6 +101,7 @@ export async function addBookmarkPathInfo(bookmarkList) {
       return {
         ...bookmark,
         parentTitle: fullPathList.at(-1),
+        parentColor: getColor(bookmark.parentId, memo.bkmFolderById),
         path: fullPathList.slice(0, -1).concat('').join('/ '),
       }
     });

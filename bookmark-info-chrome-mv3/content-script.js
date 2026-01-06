@@ -51,6 +51,7 @@
     }
   }
   const BROWSER = BROWSER_OPTIONS.CHROME;
+  const IS_BROWSER_FIREFOX = BROWSER === BROWSER_OPTIONS.FIREFOX;
   const BROWSER_SPECIFIC = Object.fromEntries(
     Object.entries(BROWSER_SPECIFIC_OPTIONS)
       .map(([option, obj]) => [option, obj[BROWSER]])
@@ -906,13 +907,22 @@
 
       switch (type) {
         case 'bookmark': {
-          const { id, path, parentTitle } = value
+          const { id, path, parentTitle, parentColor } = value
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
           const textNode = document.createTextNode(parentTitle);
           divLabel.appendChild(textNode);
           divLabel.setAttribute('data-restpath', path);
+
+          if (parentColor) {
+            divLabel.style.backgroundColor = `${parentColor}`
+            divLabel.style.color = `oklch(from ${parentColor} calc(l + .60) c h)`;
+
+            if (IS_BROWSER_FIREFOX) {
+              divLabel.style.color = `contrast-color(${parentColor})`;
+            }
+          }
 
           // TODO sanitize: remove ",<,>
           // const sanitizedFullPath = fullPath

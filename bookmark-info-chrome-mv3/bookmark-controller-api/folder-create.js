@@ -98,6 +98,7 @@ export async function _findOrCreateDatedFolder({ templateTitle, parentId }) {
   const datedTitle = getDatedTitle(templateTitle)
   logFCR('_findOrCreateDatedFolder () 11', 'datedTitle', datedTitle)
   let foundFolder = await findSubFolderWithExactTitle({ title: datedTitle, parentId })
+  logFCR('_findOrCreateDatedFolder () 22', 'foundFolder', foundFolder)
 
   if (!foundFolder) {
     const firstLevelNodeList = await chrome.bookmarks.getChildren(parentId)
@@ -113,7 +114,16 @@ export async function _findOrCreateDatedFolder({ templateTitle, parentId }) {
       folderParams.index = findIndex.index
     }
 
+    logFCR('_findOrCreateDatedFolder () 33', 'create')
     foundFolder = await createFolderIgnoreInController(folderParams)
+  } else {
+    logFCR('_findOrCreateDatedFolder () 44', 'use existed')
+    if (foundFolder.title !== datedTitle) {
+      await updateFolder({
+        id: foundFolder.id,
+        title: datedTitle
+      })
+    }
   }
 
   return foundFolder.id

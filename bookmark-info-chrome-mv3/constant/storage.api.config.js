@@ -91,7 +91,7 @@ const USER_OPTION_META = {
 }
 
 // used for migrations
-export const DATA_FORMAT = 20250706;
+export const DATA_FORMAT = 20260105;
 
 const INTERNAL_VALUES_META = {
   TAG_LIST_IS_OPEN: {

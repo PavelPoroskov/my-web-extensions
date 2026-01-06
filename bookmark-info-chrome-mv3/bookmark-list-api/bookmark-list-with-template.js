@@ -60,6 +60,7 @@ export async function getBookmarkListWithTemplate(url) {
         title: bookmark.title,
         parentId: bookmark.parentId,
         parentTitle: bookmark.parentTitle,
+        parentColor: bookmark.parentColor,
         path: bookmark.path,
         templateId: bookmark.templateId,
         templateTitle: bookmark.templateTitle,

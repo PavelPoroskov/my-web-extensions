@@ -96,6 +96,8 @@ await createFileForFirefox(
 
     'migration/migration20250520.js',
     'migration/migration20250706.js',
+    'migration/migration20260104.js',
+    'migration/migration20260105.js',
     'migration/migration.js',
     'migration/index.js',
 

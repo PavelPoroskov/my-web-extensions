@@ -1,3 +1,37 @@
+
+const hexDigitSet = new Set('0123456789abcdef')
+const letterSet = new Set('abcdefghijklmnopqrstuvwxy')
+
+function isLettersOnly(str) {
+  if (!(str.length < 25)) {
+    return false
+  }
+
+  const strLow = str.toLowerCase()
+
+  return Array.from(strLow)
+    .every(letter =>  letterSet.has(letter))
+}
+
+function isHexColorValue(str) {
+  if (!(str.length === 6)) {
+    return false
+  }
+
+  const strLow = str.toLowerCase()
+
+  return Array.from(strLow)
+    .every(letter => hexDigitSet.has(letter))
+}
+
+function isCorrectColorValue(str) {
+  if (!str) {
+    return false
+  }
+
+  return isLettersOnly(str) || isHexColorValue(str)
+}
+
 export function getTitleDetails(title) {
   const partList = title
     .split(' ')
@@ -8,18 +42,44 @@ export function getTitleDetails(title) {
 
   while (-1 < i) {
     const lastWord = partList[i]
-    const isDirective = lastWord.startsWith('#') || lastWord.startsWith(':')
+    const isDirective = lastWord.startsWith('#')
 
     if (isDirective) {
-      let key = lastWord.toLowerCase()
-      let value = ''
+      const directive = lastWord.slice(1)
+      const [directiveName, directiveValue] = directive.split(':')
 
-      if (key.startsWith('#') && key != '#top') {
-        key = '#color'
-        value = key.slice(1).toUpperCase()
+      const directiveNameLow = directiveName !== undefined ? directiveName.toLowerCase() : undefined
+
+      let value
+
+      switch (directiveNameLow) {
+        case 'top': {
+          value = ''
+          break
+        }
+        case 'c':
+        case 'color': {
+          if (isCorrectColorValue(directiveValue)) {
+            value = directiveValue
+          }
+          break
+        }
+        case 'o':
+        case 'order': {
+          value = directiveValue
+          break
+        }
+        case 'g':
+        case 'group': {
+          value = directiveValue
+          break
+        }
       }
 
-      objDirectives[key] = value;
+      if (directiveNameLow !== undefined && value !== undefined) {
+        objDirectives[directiveNameLow] = value;
+      }
+
     } else {
       break
     }
@@ -37,19 +97,32 @@ export function getTitleDetails(title) {
 }
 
 export function getTitleWithDirectives({ onlyTitle, objDirectives }) {
-  const strDirectives = Object.entries(objDirectives)
+
+  const objFilteredDirectives = Object.assign({}, objDirectives)
+  const keyList = Object.keys(objFilteredDirectives)
+  keyList.forEach(key => {
+    const keyLow = key.toLowerCase()
+    if (key !== keyLow) {
+      objFilteredDirectives[keyLow] = objFilteredDirectives[key];
+      delete objFilteredDirectives[key]
+    }
+  })
+
+  const orderValue = objFilteredDirectives['o']
+  delete objFilteredDirectives['o']
+  const orderStr = orderValue && `#o:${orderValue}`
+
+  const strDirectives = Object.entries(objFilteredDirectives)
     .toSorted((a,b) => a[0].localeCompare(b[0]))
-    .map(([key,value]) => (key == '#color'
-      ? `#${value}`
-      : key
-    ))
+    .map(([key,value]) => (value ? `#${key}:${value}` : `#${key}`))
     .join(' ')
 
-    return [onlyTitle, strDirectives].filter(Boolean).join(' ')
+    return [onlyTitle, orderStr, strDirectives].filter(Boolean).join(' ')
 }
 
 export function isChangesInDirectives({ oldDirectives, newDirectives }) {
   for (const key in newDirectives) {
+
     if (!(key in oldDirectives)) {
       return true
     }

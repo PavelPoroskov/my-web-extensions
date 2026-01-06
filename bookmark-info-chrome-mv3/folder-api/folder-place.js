@@ -3,12 +3,10 @@ import {
 } from './root-folders.js';
 
 export function isTopFolder(folderName) {
-  const name = folderName.trim().toLowerCase()
+  const wordList = folderName.trim().toLowerCase().split(' ').filter(Boolean)
+  const wordSet = new Set(wordList)
 
-  return name.startsWith('todo')
-    || name.startsWith('source')
-    || name.startsWith('list') || name.endsWith('list')
-    || name.endsWith('#top')
+  return wordSet.has('#top')
 }
 
 export function getNewFolderRootId(folderName) {

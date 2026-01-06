@@ -27,5 +27,6 @@ chrome.commands.onCommand.addListener(commandsController.onCommand);
 chrome.contextMenus.onClicked.addListener(contextMenusController.onClicked);
 
 chrome.runtime.onStartup.addListener(runtimeController.onStartup)
+// runtimeController.onStartup()
 chrome.runtime.onInstalled.addListener(runtimeController.onInstalled);
 chrome.runtime.onMessage.addListener(runtimeController.onMessage);
