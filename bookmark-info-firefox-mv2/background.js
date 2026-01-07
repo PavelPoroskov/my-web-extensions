@@ -1437,7 +1437,7 @@ function isDatedTitleForTemplate({ title, template }) {
   const { onlyTitle: onlyTitleTitle }  = getTitleDetails(title)
   const fixedPartFromTitle = onlyTitleTitle.split(' ').slice(0, -2).join(' ')
 
-  const { onlyTitle: onlyTitleTemplate }  = getTitleDetails(title)
+  const { onlyTitle: onlyTitleTemplate }  = getTitleDetails(template)
   const fixedPartFromTemplate = onlyTitleTemplate.slice(0, -3).trim()
 
   return fixedPartFromTitle == fixedPartFromTemplate
