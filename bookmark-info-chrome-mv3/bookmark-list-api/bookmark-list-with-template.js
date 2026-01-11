@@ -29,16 +29,17 @@ async function addBookmarkTemplateInfo(bookmarkList) {
 
   const templateInfoList = await Promise.all(templateTitleList.map(
     (templateTitle) => folderCreator.findOrCreateFolder(templateTitle)
-      .then((templateId) => ({ templateId, templateTitle }))
+      .then(({ id: templateId, color: templateColor }) => ({ templateId, templateTitle, templateColor }))
   ))
 
   const templateTitleMap = Object.fromEntries(
-    templateInfoList.map(({ templateId, templateTitle }) => [templateTitle, templateId])
+    templateInfoList.map(({ templateId, templateTitle, templateColor }) => [templateTitle, { templateId, templateColor }])
   )
 
   resultList = resultList.map((obj) => (obj.templateTitle
     ? Object.assign({}, obj, {
-      templateId: templateTitleMap[obj.templateTitle],
+      templateId: templateTitleMap[obj.templateTitle].templateId,
+      templateColor: templateTitleMap[obj.templateTitle].templateColor,
       isInternal: isVisitedDatedTemplate(obj.templateTitle)
     })
     : obj
@@ -60,7 +61,7 @@ export async function getBookmarkListWithTemplate(url) {
         title: bookmark.title,
         parentId: bookmark.parentId,
         parentTitle: bookmark.parentTitle,
-        parentColor: bookmark.parentColor,
+        parentColor: bookmark.templateColor || bookmark.parentColor,
         path: bookmark.path,
         templateId: bookmark.templateId,
         templateTitle: bookmark.templateTitle,

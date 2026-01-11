@@ -73,7 +73,6 @@ async function createBookmarkWithParentId({ parentId, url, title, parentTitle: i
   const isDatedTemplate = isDatedFolderTemplate(parentTitle)
 
   if (isDatedTemplate) {
-    // logCBK('createBookmarkWithParentId() 11 before get findOrCreateDatedFolderId')
     const datedFolderId = await folderCreator.findOrCreateDatedFolderId({ templateTitle: parentTitle, templateId: parentId })
     // logCBK('createBookmarkWithParentId() 22 datedFolderId', datedFolderId)
     await createBookmarkWithApi({ parentId: datedFolderId, url, title })
@@ -126,7 +125,7 @@ export async function createBookmark({ parentId, parentTitle, url, title }) {
     await createBookmarkWithParentId({ parentId, url, title })
   } else if (parentTitle) {
     logCBK('createBookmark 22 parentTitle', parentTitle)
-    const parentId = await folderCreator.findOrCreateFolder(parentTitle)
+    const { id: parentId } = await folderCreator.findOrCreateFolder(parentTitle)
     logCBK('createBookmark 22 parentId', parentId)
 
     await createBookmarkWithParentId({

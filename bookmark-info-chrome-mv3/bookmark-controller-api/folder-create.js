@@ -11,20 +11,22 @@ import {
   isChangesInDirectives,
   isDatedFolderTemplate,
   makeCompareDatedTitleWithFixed,
-  rootFolders,
+  // rootFolders,
 } from '../folder-api/index.js';
 import {
   createFolderIgnoreInController,
   updateFolder,
 } from './folder-ignore.js'
-import {
-  moveFolderAfterRename
-} from './folder-move.js'
+// import {
+//   moveFolderAfterRename
+// } from './folder-move.js'
 
 const logFCR = makeLogFunction({ module: 'folder-create.js' })
 
 export async function _findOrCreateFolder(title) {
   // logFCR('_findOrCreateFolder 00 1 title', title)
+  let objSumDirectives
+
   const {
     onlyTitle: newOnlyTitle,
     objDirectives: objNewDirectives,
@@ -56,36 +58,37 @@ export async function _findOrCreateFolder(title) {
       objDirectives: objOldDirectives,
     } = getTitleDetails(folder.title)
 
-    const oldBigLetterN = oldOnlyTitle.replace(/[^A-Z]+/g, "").length
-    const newBigLetterN = newOnlyTitle.replace(/[^A-Z]+/g, "").length
-    // const isAbbreviation = title.length == newBigLetterN
-    // logFCR('_findOrCreateFolder 22 2', oldBigLetterN, newBigLetterN)
+    // const oldBigLetterN = oldOnlyTitle.replace(/[^A-Z]+/g, "").length
+    // const newBigLetterN = newOnlyTitle.replace(/[^A-Z]+/g, "").length
 
-    const oldDashN = oldOnlyTitle.replace(/[^-]+/g,"").length
-    const newDashN = newOnlyTitle.replace(/[^-]+/g,"").length
-    // logFCR('_findOrCreateFolder 22 3', oldDashN, newDashN)
+    // const oldDashN = oldOnlyTitle.replace(/[^-]+/g,"").length
+    // const newDashN = newOnlyTitle.replace(/[^-]+/g,"").length
 
-    const isUseNewTitle = oldBigLetterN < newBigLetterN || newDashN < oldDashN
+    // const isUseNewTitle = oldBigLetterN < newBigLetterN || newDashN < oldDashN
     const hasChangesInDirectives = isChangesInDirectives({ oldDirectives: objOldDirectives, newDirectives: objNewDirectives })
 
-    let actualOnlyTitle = isUseNewTitle ? newOnlyTitle : oldOnlyTitle
-
-    if (isUseNewTitle || hasChangesInDirectives) {
+    // let actualOnlyTitle = isUseNewTitle ? newOnlyTitle : oldOnlyTitle
+    // if (isUseNewTitle || hasChangesInDirectives) {
+      // const newTitle = getTitleWithDirectives({ onlyTitle: actualOnlyTitle, objDirectives: objSumDirectives })
+    if (hasChangesInDirectives) {
       // logFCR('_findOrCreateFolder 22 33', isUseNewTitle, hasChangesInDirectives)
-      const objSumDirectives = Object.assign({}, objOldDirectives, objNewDirectives)
-      const newTitle = getTitleWithDirectives({ onlyTitle: actualOnlyTitle, objDirectives: objSumDirectives })
+      objSumDirectives = Object.assign({}, objOldDirectives, objNewDirectives)
+      const newTitle = getTitleWithDirectives({ onlyTitle: oldOnlyTitle, objDirectives: objSumDirectives })
 
       await updateFolder({ id: folder.id, title: newTitle })
-      await moveFolderAfterRename({
-        id: folder.id,
-        title: newTitle,
-        parentId: folder.parentId,
-        index: folder.index,
-      })
+      // await moveFolderAfterRename({
+      //   id: folder.id,
+      //   title: newTitle,
+      //   parentId: folder.parentId,
+      //   index: folder.index,
+      // })
     }
   }
 
-  return folder.id
+  return {
+    id: folder.id,
+    objDirectives: objSumDirectives || objNewDirectives,
+  }
 }
 
 // folderTitle = 'DONE @D' 'selected @D' 'BEST @D'
@@ -98,7 +101,6 @@ export async function _findOrCreateDatedFolder({ templateTitle, parentId }) {
   const datedTitle = getDatedTitle(templateTitle)
   logFCR('_findOrCreateDatedFolder () 11', 'datedTitle', datedTitle)
   let foundFolder = await findSubFolderWithExactTitle({ title: datedTitle, parentId })
-  logFCR('_findOrCreateDatedFolder () 22', 'foundFolder', foundFolder)
 
   if (!foundFolder) {
     const firstLevelNodeList = await chrome.bookmarks.getChildren(parentId)
@@ -114,26 +116,17 @@ export async function _findOrCreateDatedFolder({ templateTitle, parentId }) {
       folderParams.index = findIndex.index
     }
 
-    logFCR('_findOrCreateDatedFolder () 33', 'create')
     foundFolder = await createFolderIgnoreInController(folderParams)
-  } else {
-    logFCR('_findOrCreateDatedFolder () 44', 'use existed')
-    if (foundFolder.title !== datedTitle) {
-      await updateFolder({
-        id: foundFolder.id,
-        title: datedTitle
-      })
-    }
   }
 
-  return foundFolder.id
+  return { id: foundFolder.id }
 }
 
 export async function _findFolder(title) {
-  // const folder = await findFolder(title)
-  const folder = await findSubFolderWithExactTitle({ title, parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
+  const folder = await findFolder(title)
+  // const folder = await findSubFolderWithExactTitle({ title, parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
 
   if (folder) {
-    return folder.id
+    return { id: folder.id }
   }
 }

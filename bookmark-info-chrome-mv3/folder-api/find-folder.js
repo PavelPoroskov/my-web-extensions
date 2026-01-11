@@ -23,6 +23,13 @@ async function findFolderWithExactTitle(title) {
   return foundItem
 }
 
+export async function findSubFolderWithExactTitle({ title, parentId }) {
+  const nodeList = await chrome.bookmarks.search({ title });
+  const foundItem = nodeList.find((node) => !node.url && node.parentId == parentId)
+
+  return foundItem
+}
+
 function makeIsTitleMatch({ title, normalizeFn = (str) => str }) {
   const onlyTitlePattern = getTitleDetails(title).onlyTitle
   const normalizedPattern = normalizeFn(onlyTitlePattern)
@@ -61,26 +68,6 @@ async function findByTitle({ title, normalizeFn }) {
   return foundItem
 }
 
-export async function findSubFolderWithExactTitle({ title, parentId }) {
-  const onlyTitle = getTitleDetails(title).onlyTitle
-  const bookmarkList = await chrome.bookmarks.search(onlyTitle);
-  // logFF('findByTitle 00', title)
-  // logFF('findByTitle 00', bookmarkList)
-  const isTitleMatch = makeIsTitleMatch({ title: onlyTitle })
-
-  let foundItem
-  let i = 0
-  while (!foundItem && i < bookmarkList.length) {
-    const checkItem = bookmarkList[i]
-    if (!checkItem.url && checkItem.parentId == parentId && isTitleMatch(checkItem.title)) {
-      foundItem = checkItem
-      // logFF('findByTitle 22', checkItem.title)
-    }
-    i += 1
-  }
-
-  return foundItem
-}
 // example1: node.js -> NodeJS
 async function findTitleEndsWithJS(title) {
   const lowTitle = trimLow(title)

@@ -44,44 +44,42 @@ export function getTitleDetails(title) {
     const lastWord = partList[i]
     const isDirective = lastWord.startsWith('#')
 
-    if (isDirective) {
-      const directive = lastWord.slice(1)
-      const [directiveName, directiveValue] = directive.split(':')
-
-      const directiveNameLow = directiveName !== undefined ? directiveName.toLowerCase() : undefined
-
-      let value
-
-      switch (directiveNameLow) {
-        case 'top': {
-          value = ''
-          break
-        }
-        case 'c':
-        case 'color': {
-          if (isCorrectColorValue(directiveValue)) {
-            value = directiveValue
-          }
-          break
-        }
-        case 'o':
-        case 'order': {
-          value = directiveValue
-          break
-        }
-        case 'g':
-        case 'group': {
-          value = directiveValue
-          break
-        }
-      }
-
-      if (directiveNameLow !== undefined && value !== undefined) {
-        objDirectives[directiveNameLow] = value;
-      }
-
-    } else {
+    if (!isDirective) {
       break
+    }
+
+    const directive = lastWord.slice(1)
+    const [directiveName, directiveValue] = directive.split(':')
+    const directiveNameLow = directiveName !== undefined ? directiveName.toLowerCase() : undefined
+
+    let value
+
+    switch (directiveNameLow) {
+      case 'top': {
+        value = ''
+        break
+      }
+      case 'c':
+      case 'color': {
+        if (isCorrectColorValue(directiveValue)) {
+          value = directiveValue
+        }
+        break
+      }
+      case 'o':
+      case 'order': {
+        value = directiveValue
+        break
+      }
+      case 'g':
+      case 'group': {
+        value = directiveValue
+        break
+      }
+    }
+
+    if (directiveNameLow !== undefined && value !== undefined) {
+      objDirectives[directiveNameLow] = value;
     }
 
     i = i - 1
@@ -97,7 +95,6 @@ export function getTitleDetails(title) {
 }
 
 export function getTitleWithDirectives({ onlyTitle, objDirectives }) {
-
   const objFilteredDirectives = Object.assign({}, objDirectives)
   const keyList = Object.keys(objFilteredDirectives)
   keyList.forEach(key => {
@@ -117,7 +114,7 @@ export function getTitleWithDirectives({ onlyTitle, objDirectives }) {
     .map(([key,value]) => (value ? `#${key}:${value}` : `#${key}`))
     .join(' ')
 
-    return [onlyTitle, orderStr, strDirectives].filter(Boolean).join(' ')
+  return [onlyTitle, orderStr, strDirectives].filter(Boolean).join(' ')
 }
 
 export function isChangesInDirectives({ oldDirectives, newDirectives }) {

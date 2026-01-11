@@ -50,8 +50,8 @@ export function isDatedFolderTemplate(folderTitle) {
   return onlyTitle.endsWith(' @D') && 3 < folderTitle.length
 }
 
-export function getDatedTitle(folderTitle) {
-  const { onlyTitle, objDirectives }  = getTitleDetails(folderTitle)
+export function getDatedTitle(datedTemplate) {
+  const { onlyTitle }  = getTitleDetails(datedTemplate)
   const fixedPart = onlyTitle.slice(0, -3).trim()
 
   const today = new Date()
@@ -61,7 +61,7 @@ export function getDatedTitle(folderTitle) {
   const days = Math.floor((futureDate - today)/oneDayMs)
   const order = new Number(days).toString(36).padStart(3,'0')
 
-  objDirectives['o'] = order
+  const objDirectives = { o: order }
 
   return getTitleWithDirectives({
     onlyTitle: `${fixedPart} ${sToday} ${sWeekday}`,
@@ -93,14 +93,13 @@ export function makeCompareDatedTitleWithFixed(a) {
 
 export function isDatedFolderTitle(str) {
   const { onlyTitle, objDirectives }  = getTitleDetails(str)
-
   const partList = onlyTitle.split(' ')
 
-  if (objDirectives['o'] && !(3 <= partList.length)) {
+  if (!!objDirectives['o'] && !(3 <= partList.length)) {
     return false
   }
 
-  const result = isWeekday(partList.at(-1)) && isDate(partList.at(-2)) && !!partList.at(-3)
+  const result = isWeekday(partList.at(-1)) && isDate(partList.at(-2))
 
   return result
 }

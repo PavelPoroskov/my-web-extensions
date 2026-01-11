@@ -48,7 +48,8 @@ export const getTitleForPattern = (title) => {
   let result
 
   if (isDatedFolderTitle(title)) {
-    result = getDatedTemplate(title)
+    const datedTemplate = getDatedTemplate(title)
+    result = getTitleDetails(datedTemplate).onlyTitle
   } else {
     result = getTitleDetails(title).onlyTitle
   }
