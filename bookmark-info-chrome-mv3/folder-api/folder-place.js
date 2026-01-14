@@ -1,18 +1,54 @@
 import {
-  rootFolders,
-} from './root-folders.js';
+  BOOKMARKS_BAR_FOLDER_TITLE,
+  OTHER_BOOKMARKS_FOLDER_TITLE,
+  DATED_ROOT_NEW_FOLDER_TITLE,
+  DATED_ROOT_OLD_FOLDER_TITLE,
+  DATED_ROOT_SERVICE_FOLDER_TITLE,
+  DATED_TEMPLATE_VISITED,
+  DATED_TEMPLATE_OPENED,
+  DATED_TEMPLATE_DONE,
+} from './special-folder.js';
+import {
+  isDatedFolderTitle,
+  getDatedTemplate,
+} from './folder-dated-title.js';
 
-export function isTopFolder(folderName) {
-  const wordList = folderName.trim().toLowerCase().split(' ').filter(Boolean)
-  const wordSet = new Set(wordList)
+const datedTemplatesInDatedRootServiceSet = new Set([
+  DATED_TEMPLATE_VISITED,
+  DATED_TEMPLATE_OPENED,
+  DATED_TEMPLATE_DONE
+])
 
-  return wordSet.has('#top')
-}
+// getFolderPlaceTitleByTitle
+export function getNewFolderPlaceParentTitle(folderTitle) {
+  const isTopFolder = folderTitle.includes(' #top')
 
-export function getNewFolderRootId(folderName) {
-  if (isTopFolder(folderName)) {
-    return rootFolders.BOOKMARKS_BAR_FOLDER_ID
+  if (isTopFolder) {
+    return BOOKMARKS_BAR_FOLDER_TITLE
   }
 
-  return rootFolders.OTHER_BOOKMARKS_FOLDER_ID
+  if (isDatedFolderTitle(folderTitle)) {
+    const datedTemplate = getDatedTemplate(folderTitle)
+
+    if (datedTemplatesInDatedRootServiceSet.has(datedTemplate)) {
+      return DATED_ROOT_SERVICE_FOLDER_TITLE
+    }
+
+    return DATED_ROOT_NEW_FOLDER_TITLE
+  }
+
+  return OTHER_BOOKMARKS_FOLDER_TITLE
+}
+
+export function getExistingFolderPlaceParentTitleList(folderTitle) {
+  const parentTitle = getNewFolderPlaceParentTitle(folderTitle)
+
+  if (parentTitle == DATED_ROOT_NEW_FOLDER_TITLE) {
+    return [
+      DATED_ROOT_NEW_FOLDER_TITLE,
+      DATED_ROOT_OLD_FOLDER_TITLE,
+    ]
+  }
+
+  return [parentTitle]
 }

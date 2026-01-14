@@ -1,5 +1,6 @@
 import {
   isDatedFolderTitle,
+  getDateFromDatedTitle,
 } from '../folder-api/index.js'
 import {
   folderCreator,
@@ -23,18 +24,12 @@ export async function moveOldDatedFolders() {
   logMOD('moveOldDatedFolders 00')
   const childrenList = await chrome.bookmarks.getChildren(fromId)
 
-  const getDate = (str) => {
-    const partList = str.split(' ')
-    const strDDMMYYYY = partList.at(-3)
-
-    return strDDMMYYYY.split('-').toReversed().join('')
-  }
   const datedFolderList = childrenList
     .filter(({ url, title }) => !url && isDatedFolderTitle(title))
     .map(({ title, id }) => ({
         id,
         title,
-        date: getDate(title),
+        date: getDateFromDatedTitle(title),
     }))
 
   const groupedObj = Object.groupBy(datedFolderList, ({ date }) => date)

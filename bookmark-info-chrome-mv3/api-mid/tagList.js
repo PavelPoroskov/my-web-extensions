@@ -1,5 +1,5 @@
 import {
-  isSpecialFolderTitle,
+  isIgnoreInRecentList,
   isDescriptiveFolderTitle,
   isDatedFolderTitle,
 } from '../folder-api/index.js'
@@ -249,7 +249,7 @@ class TagList {
       //   return
       // }
 
-      if (isSpecialFolderTitle(parentTitle)) {
+      if (isIgnoreInRecentList(parentTitle)) {
         return
       }
     }

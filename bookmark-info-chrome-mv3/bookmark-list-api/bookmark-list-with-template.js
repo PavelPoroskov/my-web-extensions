@@ -28,7 +28,7 @@ async function addBookmarkTemplateInfo(bookmarkList) {
   )
 
   const templateInfoList = await Promise.all(templateTitleList.map(
-    (templateTitle) => folderCreator.findOrCreateFolder(templateTitle)
+    (templateTitle) => folderCreator.createFolder(templateTitle)
       .then(({ id: templateId, color: templateColor }) => ({ templateId, templateTitle, templateColor }))
   ))
 

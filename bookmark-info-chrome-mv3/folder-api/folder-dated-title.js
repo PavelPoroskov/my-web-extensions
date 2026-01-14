@@ -9,9 +9,6 @@ const futureDate = new Date('01/01/2125')
 const oneDayMs = 24*60*60*1000
 const weekdaySet = new Set(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
 
-export const DATED_TEMPLATE_VISITED = 'visited @D'
-export const DATED_TEMPLATE_OPENED = 'opened @D'
-
 export const isWeekday = (str) => weekdaySet.has(str)
 
 const inRange = ({ n, from, to }) => {
@@ -67,6 +64,14 @@ export function getDatedTitle(datedTemplate) {
     onlyTitle: `${fixedPart} ${sToday} ${sWeekday}`,
     objDirectives
   })
+}
+
+export const getDateFromDatedTitle = (title) => {
+  const { onlyTitle }  = getTitleDetails(title)
+  const partList = onlyTitle.split(' ')
+  const strDDMMYYYY = partList.at(-2)
+
+  return strDDMMYYYY.split('-').toReversed().join('')
 }
 
 export function compareDatedTitle(a,b) {
@@ -126,16 +131,4 @@ export function getDatedTemplate(title) {
   const fixedPartFromTitle = onlyTitle.split(' ').slice(0, -2).join(' ')
 
   return `${fixedPartFromTitle} @D`
-}
-
-export function isVisitedDatedTemplate(templateTitle) {
-  return templateTitle == DATED_TEMPLATE_VISITED
-    || templateTitle == DATED_TEMPLATE_OPENED
-}
-
-export function isVisitedDatedTitle(title) {
-  return (
-    (title.startsWith('visited ') && isDatedTitleForTemplate({ title, template: DATED_TEMPLATE_VISITED }))
-    || (title.startsWith('opened ') && isDatedTitleForTemplate({ title, template: DATED_TEMPLATE_OPENED }))
-  )
 }

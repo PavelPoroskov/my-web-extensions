@@ -1,6 +1,6 @@
 import {
   rootFolders,
-  isSpecialFolderTitle,
+  isIgnoreInRecentList,
   isDatedFolderTitle,
   isDescriptiveFolderTitle,
   isVisitedDatedTemplate,
@@ -89,7 +89,7 @@ async function filterFolders(idList, isFlatStructure) {
         ({ parentId }) => parentId === rootFolders.OTHER_BOOKMARKS_FOLDER_ID || parentId === rootFolders.BOOKMARKS_BAR_FOLDER_ID
       )
       .filter(
-        ({ title }) => !isSpecialFolderTitle(title)
+        ({ title }) => !isIgnoreInRecentList(title)
       )
   }
   logRA('filterFolders () 33', 'filteredFolderList', filteredFolderList.length, filteredFolderList)

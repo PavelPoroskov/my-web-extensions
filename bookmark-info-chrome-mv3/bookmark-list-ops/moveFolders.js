@@ -1,6 +1,4 @@
 import {
-  rootFolders,
-  isTopFolder,
   isDatedFolderTitle,
   trimTitle,
 } from '../folder-api/index.js';
@@ -18,25 +16,6 @@ import {
 } from './traverseFolder.js'
 
 const logMF = makeLogFunction({ module: 'moveFolders.js' })
-
-async function getFolderCorrectParentIdByTitle(title) {
-  let parentId = rootFolders.OTHER_BOOKMARKS_FOLDER_ID
-  let secondParentId
-
-  if (isTopFolder(title)) {
-    parentId = rootFolders.BOOKMARKS_BAR_FOLDER_ID
-  }
-
-  if (isDatedFolderTitle(title)) {
-    parentId = await folderCreator.findOrCreateDatedRootNew()
-    secondParentId = await folderCreator.findDatedRootOld()
-  }
-
-  return {
-    parentId,
-    secondParentId,
-  }
-}
 
 async function getFolderMovements() {
 
@@ -61,25 +40,16 @@ async function getFolderMovements() {
     // logMF('orderChildren() 11 folder')
     // logMF(folder)
     logMF('onFolder() 11')
-    const correct = await getFolderCorrectParentIdByTitle(folder.title)
-    logMF('onFolder() 22', correct)
+    const parentIdList = await folderCreator.getExistingFolderPlaceParentIdList(folder.title)
 
-    let correctParentId = correct.parentId
-    let isCorrect = folder.parentId == correctParentId
-    if (!isCorrect && correct.secondParentId) {
-      correctParentId = correct.secondParentId
-      isCorrect = folder.parentId == correctParentId
-    }
-    if (!isCorrect) {
+    if (!parentIdList.includes(folder.parentId)) {
       logMF('onFolder() 33')
-      logMF(correct)
       moveList.push({
         id: folder.id,
-        parentId: correctParentId,
+        parentId: parentIdList[0],
         level,
       })
     }
-
 
     const trimmedTitle = trimTitle(folder.title)
 

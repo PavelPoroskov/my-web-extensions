@@ -3,11 +3,13 @@ import {
 } from '../constant/index.js'
 import {
   rootFolders,
-  getNewFolderRootId,
 } from '../folder-api/index.js'
 import {
   moveFolderIgnoreInController,
 } from './folder-ignore.js'
+import {
+  folderCreator,
+} from './folderCreator.js'
 import {
   extensionSettings,
 } from '../api-mid/index.js'
@@ -17,10 +19,10 @@ export async function moveFolderAfterRename({ id, parentId, title, index }) {
   const settings = await extensionSettings.get()
 
   if (settings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
-    const correctParentId = getNewFolderRootId(title)
+    const parentIdList = await folderCreator.getExistingFolderPlaceParentIdList(title)
 
-    if (parentId != correctParentId) {
-      moveArgs.parentId = correctParentId
+    if (!parentIdList.includes(parentId)) {
+      moveArgs.parentId = parentIdList[0]
     }
   }
 
