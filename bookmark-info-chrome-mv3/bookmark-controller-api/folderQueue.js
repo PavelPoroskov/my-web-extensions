@@ -14,7 +14,7 @@ import {
 import {
   NODE_ACTION,
   NodeTaskQueue
-} from './nodeTaskQueue.js'
+} from '../api-low/nodeTaskQueue.js'
 import {
   moveFolderAfterRename
 } from './folder-move.js'
