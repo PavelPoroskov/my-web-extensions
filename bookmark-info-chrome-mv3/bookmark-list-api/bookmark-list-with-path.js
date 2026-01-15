@@ -73,7 +73,7 @@ async function getFolderInfoRecursively({ bookmarkList, folderByIdMap }) {
       folder.id,
       {
         title: onlyTitle,
-        color: objDirectives['color'] || objDirectives['c'],
+        color: objDirectives['#c'],
         parentId: folder.parentId,
       }
     )

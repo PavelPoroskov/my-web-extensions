@@ -42,44 +42,51 @@ export function getTitleDetails(title) {
 
   while (-1 < i) {
     const lastWord = partList[i]
-    const isDirective = lastWord.startsWith('#')
+    const isDirective = lastWord.startsWith('#') || lastWord.startsWith('@')
 
     if (!isDirective) {
       break
     }
 
-    const directive = lastWord.slice(1)
+    const directive = lastWord
     const [directiveName, directiveValue] = directive.split(':')
-    const directiveNameLow = directiveName !== undefined ? directiveName.toLowerCase() : undefined
 
     let value
 
-    switch (directiveNameLow) {
-      case 'top': {
+    switch (directiveName) {
+      case '@D': {
         value = ''
         break
       }
-      case 'c':
-      case 'color': {
+      case '@Q': {
+        value = ''
+        break
+      }
+      case '#top': {
+        value = ''
+        break
+      }
+      // case '#color':
+      case '#c': {
         if (isCorrectColorValue(directiveValue)) {
           value = directiveValue
         }
         break
       }
-      case 'o':
-      case 'order': {
+      // case '#order':
+      case '#o': {
         value = directiveValue
         break
       }
-      case 'g':
-      case 'group': {
-        value = directiveValue
-        break
-      }
+      // case 'g':
+      // case 'group': {
+      //   value = directiveValue
+      //   break
+      // }
     }
 
-    if (directiveNameLow !== undefined && value !== undefined) {
-      objDirectives[directiveNameLow] = value;
+    if (directiveName !== undefined && value !== undefined) {
+      objDirectives[directiveName] = value;
     }
 
     i = i - 1
@@ -96,25 +103,23 @@ export function getTitleDetails(title) {
 
 export function getTitleWithDirectives({ onlyTitle, objDirectives }) {
   const objFilteredDirectives = Object.assign({}, objDirectives)
-  const keyList = Object.keys(objFilteredDirectives)
-  keyList.forEach(key => {
-    const keyLow = key.toLowerCase()
-    if (key !== keyLow) {
-      objFilteredDirectives[keyLow] = objFilteredDirectives[key];
-      delete objFilteredDirectives[key]
-    }
-  })
 
-  const orderValue = objFilteredDirectives['o']
-  delete objFilteredDirectives['o']
+  const statsDateStr = objFilteredDirectives['@D'] !== undefined ? `@D` : undefined
+  delete objFilteredDirectives['@D']
+
+  const statsQuantityStr = objFilteredDirectives['@Q'] !== undefined ? `@Q` : undefined
+  delete objFilteredDirectives['@Q']
+
+  const orderValue = objFilteredDirectives['#o']
+  delete objFilteredDirectives['#o']
   const orderStr = orderValue && `#o:${orderValue}`
 
   const strDirectives = Object.entries(objFilteredDirectives)
     .toSorted((a,b) => a[0].localeCompare(b[0]))
-    .map(([key,value]) => (value ? `#${key}:${value}` : `#${key}`))
+    .map(([key,value]) => (value ? `${key}:${value}` : `${key}`))
     .join(' ')
 
-  return [onlyTitle, orderStr, strDirectives].filter(Boolean).join(' ')
+  return [onlyTitle, statsDateStr, statsQuantityStr, orderStr, strDirectives].filter(Boolean).join(' ')
 }
 
 export function isChangesInDirectives({ oldDirectives, newDirectives }) {

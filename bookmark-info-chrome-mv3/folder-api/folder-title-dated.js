@@ -42,14 +42,16 @@ export const isDate = (str) => {
 }
 
 export function isDatedFolderTemplate(folderTitle) {
-  const { onlyTitle }  = getTitleDetails(folderTitle)
+  const { onlyTitle, objDirectives }  = getTitleDetails(folderTitle)
 
-  return onlyTitle.endsWith(' @D') && 3 < folderTitle.length
+  // return onlyTitle.endsWith(' @D') && 3 < folderTitle.length
+  return objDirectives['@D'] !== undefined && 3 < onlyTitle.length
 }
 
 export function getDatedTitle(datedTemplate) {
   const { onlyTitle }  = getTitleDetails(datedTemplate)
-  const fixedPart = onlyTitle.slice(0, -3).trim()
+  // const fixedPart = onlyTitle.slice(0, -3).trim()
+  const fixedPart = onlyTitle
 
   const today = new Date()
   const sToday = dateFormatter.format(today).replaceAll('/', '-')
@@ -58,7 +60,7 @@ export function getDatedTitle(datedTemplate) {
   const days = Math.floor((futureDate - today)/oneDayMs)
   const order = new Number(days).toString(36).padStart(3,'0')
 
-  const objDirectives = { o: order }
+  const objDirectives = { '#o': order }
 
   return getTitleWithDirectives({
     onlyTitle: `${fixedPart} ${sToday} ${sWeekday}`,
@@ -76,21 +78,21 @@ export const getDateFromDatedTitle = (title) => {
 
 export function compareDatedTitle(a,b) {
   const { onlyTitle: onlyTitleA, objDirectives: objDirectivesA }  = getTitleDetails(a)
-  const orderA = objDirectivesA['o']
+  const orderA = objDirectivesA['#o']
 
   const { onlyTitle: onlyTitleB, objDirectives: objDirectivesB }  = getTitleDetails(b)
-  const orderB = objDirectivesB['o']
+  const orderB = objDirectivesB['#o']
 
   return (orderA || '').localeCompare(orderB || '') || (onlyTitleA || '').localeCompare(onlyTitleB || '')
 }
 
 export function makeCompareDatedTitleWithFixed(a) {
   const { onlyTitle: onlyTitleA, objDirectives: objDirectivesA }  = getTitleDetails(a)
-  const orderA = objDirectivesA['o']
+  const orderA = objDirectivesA['#o']
 
   return function compareDatedTitleWithFixed(b) {
     const { onlyTitle: onlyTitleB, objDirectives: objDirectivesB }  = getTitleDetails(b)
-    const orderB = objDirectivesB['o']
+    const orderB = objDirectivesB['#o']
 
     return (orderA || '').localeCompare(orderB || '') || (onlyTitleA || '').localeCompare(onlyTitleB || '')
   }
@@ -100,7 +102,7 @@ export function isDatedFolderTitle(str) {
   const { onlyTitle, objDirectives }  = getTitleDetails(str)
   const partList = onlyTitle.split(' ')
 
-  if (!!objDirectives['o'] && !(3 <= partList.length)) {
+  if (!!objDirectives['#o'] && !(3 <= partList.length)) {
     return false
   }
 
@@ -121,7 +123,8 @@ export function isDatedTitleForTemplate({ title, template }) {
   const fixedPartFromTitle = onlyTitleTitle.split(' ').slice(0, -2).join(' ')
 
   const { onlyTitle: onlyTitleTemplate }  = getTitleDetails(template)
-  const fixedPartFromTemplate = onlyTitleTemplate.slice(0, -3).trim()
+  // const fixedPartFromTemplate = onlyTitleTemplate.slice(0, -3).trim()
+  const fixedPartFromTemplate = onlyTitleTemplate
 
   return fixedPartFromTitle == fixedPartFromTemplate
 }
