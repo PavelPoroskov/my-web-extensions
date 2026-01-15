@@ -10,7 +10,7 @@ import {
 } from '../api/index.js'
 import {
   folderCreator,
-} from './folderCreator.js'
+} from '../folder-creator-api/index.js'
 import {
   NODE_ACTION,
   NodeTaskQueue

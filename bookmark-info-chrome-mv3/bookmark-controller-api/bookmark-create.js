@@ -6,12 +6,12 @@ import {
 } from '../api/urlEvents.js'
 import {
   isDatedFolderTemplate,
-  isVisitedDatedTemplate,
   getDatedTitle,
 } from '../folder-api/index.js';
 import {
   folderCreator,
-} from './folderCreator.js';
+  isVisitedDatedTemplate,
+} from '../folder-creator-api/index.js';
 import {
   removePreviousDatedBookmarks,
 } from './bookmark-dated.js';

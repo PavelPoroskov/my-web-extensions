@@ -6,10 +6,10 @@ import {
 } from '../folder-api/index.js';
 import {
   updateFolder,
-} from './folder-ignore.js'
+} from '../bookmark-controller-api/folder-ignore.js'
 import {
   moveFolderAfterRename
-} from './folder-move.js'
+} from '../bookmark-controller-api/folder-move.js'
 
 async function mergeFolderTitle({ oldTitle, newTitle }) {
   const {

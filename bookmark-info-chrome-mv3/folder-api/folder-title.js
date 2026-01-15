@@ -4,10 +4,10 @@ import {
 import {
   getDatedTemplate,
   isDatedFolderTitle,
-} from './folder-dated-title.js';
+} from './folder-title-dated.js';
 import {
   getTitleDetails,
-} from './folder-directives.js';
+} from './folder-title-directives.js';
 
 export const isDescriptiveFolderTitle = (title) => !!title
   && !(

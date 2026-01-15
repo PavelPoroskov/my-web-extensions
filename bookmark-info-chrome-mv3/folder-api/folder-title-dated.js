@@ -1,7 +1,7 @@
 import {
   getTitleDetails,
   getTitleWithDirectives,
-} from './folder-directives.js'
+} from './folder-title-directives.js'
 
 const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric'})
 const weekdayFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'short' })

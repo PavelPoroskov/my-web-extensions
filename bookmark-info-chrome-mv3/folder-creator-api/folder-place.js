@@ -11,7 +11,7 @@ import {
 import {
   isDatedFolderTitle,
   getDatedTemplate,
-} from './folder-dated-title.js';
+} from '../folder-api/index.js';
 
 const datedTemplatesInDatedRootServiceSet = new Set([
   DATED_TEMPLATE_VISITED,

@@ -1,5 +1,5 @@
 
-import { isDatedTitleForTemplate } from './folder-dated-title.js'
+import { isDatedTitleForTemplate } from '../folder-api/index.js'
 
 export const BOOKMARKS_BAR_FOLDER_TITLE = 'Bookmarks bar' // Chrome
 export const BOOKMARKS_MENU_FOLDER_TITLE = 'Bookmarks Menu' // Firefox

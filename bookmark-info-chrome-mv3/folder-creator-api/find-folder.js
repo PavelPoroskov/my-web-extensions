@@ -2,14 +2,12 @@ import {
   rootFolders,
 } from './root-folders.js';
 import {
-  trimTitle,
+  getTitleDetails,
+  normalizeTitle,
   trimLow,
   trimLowSingular,
-  normalizeTitle,
-} from './folder-title.js';
-import {
-  getTitleDetails,
-} from './folder-directives.js';
+  trimTitle,
+} from '../folder-api/index.js';
 import {
   makeLogFunction,
 } from '../api-low/index.js';

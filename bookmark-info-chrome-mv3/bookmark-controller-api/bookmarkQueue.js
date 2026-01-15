@@ -25,7 +25,7 @@ import {
 } from '../api-low/nodeTaskQueue.js'
 import {
   folderCreator,
-} from './folderCreator.js'
+} from '../folder-creator-api/index.js'
 
 const logBQ = makeLogFunction({ module: 'bookmarkQueue.js' })
 

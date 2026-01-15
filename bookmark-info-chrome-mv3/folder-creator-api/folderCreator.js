@@ -1,22 +1,28 @@
 import {
-  BOOKMARKS_BAR_FOLDER_TITLE,
-  DATED_ROOT_NEW,
-  DATED_ROOT_OLD,
-  getExistingFolderPlaceParentTitleList,
-  getNewFolderPlaceParentTitle,
   getTitleDetails,
   isDatedFolderTitle,
   makeCompareDatedTitleWithFixed,
-  OTHER_BOOKMARKS_FOLDER_TITLE,
-  rootFolders,
-  UNCLASSIFIED_TITLE,
 } from '../folder-api/index.js';
+import {
+  BOOKMARKS_BAR_FOLDER_TITLE,
+  DATED_ROOT_NEW,
+  DATED_ROOT_OLD,
+  OTHER_BOOKMARKS_FOLDER_TITLE,
+  UNCLASSIFIED_TITLE,
+} from './special-folders.js';
+import {
+  getExistingFolderPlaceParentTitleList,
+  getNewFolderPlaceParentTitle,
+} from './folder-place.js';
 import {
   findFolderInBookmarks,
 } from './folder-create.js';
 import {
+  rootFolders,
+} from './root-folders.js';
+import {
   createFolderIgnoreInController,
-} from './folder-ignore.js';
+} from '../bookmark-controller-api/folder-ignore.js';
 
 class FolderCreator {
   mapTitleToInfo = {}
@@ -31,6 +37,9 @@ class FolderCreator {
     }
   }
 
+  getRootFolderIdMap() {
+    return rootFolders.IdMap
+  }
   async _parentTitleToParentId(parentTitle) {
     let parentId
 
