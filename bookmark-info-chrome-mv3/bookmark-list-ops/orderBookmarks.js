@@ -1,10 +1,10 @@
 import {
-  rootFolders,
   compareDatedTitle,
 } from '../folder-api/index.js'
 import {
+  rootFolders,
   folderCreator,
-} from '../bookmark-controller-api/index.js'
+} from '../folder-creator-api/index.js'
 import {
   moveFolders,
 } from './moveFolders.js'

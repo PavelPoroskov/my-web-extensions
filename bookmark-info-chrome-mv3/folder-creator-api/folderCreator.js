@@ -10,18 +10,17 @@ import {
   updateFolder,
 } from '../bookmark-controller-api/folder-ignore.js';
 import {
+  BOOKMARKS_BAR_FOLDER_TITLE,
+  OTHER_BOOKMARKS_FOLDER_TITLE,
+  DATED_ROOT_NEW_FOLDER_TITLE,
+  DATED_ROOT_OLD_FOLDER_TITLE,
+  UNCLASSIFIED_TITLE,
+
   getTitleDetails,
   isDatedFolderTitle,
   makeCompareDatedTitleWithFixed,
   mergeFolderTitle,
 } from '../folder-api/index.js';
-import {
-  BOOKMARKS_BAR_FOLDER_TITLE,
-  DATED_ROOT_NEW,
-  DATED_ROOT_OLD,
-  OTHER_BOOKMARKS_FOLDER_TITLE,
-  UNCLASSIFIED_TITLE,
-} from './special-folders.js';
 import {
   rootFolders,
 } from './root-folders.js';
@@ -192,20 +191,23 @@ class FolderCreator {
   async _findFolder({ title, isCreate=false }) {
     let result
 
+    if (this.mapTitleToInfo[title] === undefined) {
+      this.mapTitleToInfo[title] = {}
+    }
+
     // 1. get from cache
     result = this.mapTitleToInfo[title]?.data
     if (result) {
-      delete this.mapPromise[title]['findPromise']
-      delete this.mapPromise[title]['createPromise']
+      delete this.mapTitleToInfo[title]['findPromise']
+      delete this.mapTitleToInfo[title]['createPromise']
       return result
     } else if (result === null && isCreate === false) {
-      delete this.mapPromise[title]['findPromise']
+      delete this.mapTitleToInfo[title]['findPromise']
       return null
     }
 
     const findPromise = this.mapTitleToInfo[title]?.findPromise
     if (!findPromise) {
-      this.mapTitleToInfo[title] = this.mapTitleToInfo[title] || {}
       this.mapTitleToInfo[title].findPromise = this.findFolderInBookmarks(title)
       result = await this.mapTitleToInfo[title].findPromise
     } else {
@@ -235,7 +237,6 @@ class FolderCreator {
 
       const createPromise = this.mapTitleToInfo[title]?.createPromise
       if (!createPromise) {
-        this.mapTitleToInfo[title] = this.mapTitleToInfo[title] || {}
         this.mapTitleToInfo[title].createPromise = this.createFolderInBookmarks(title)
         result = await this.mapTitleToInfo[title].createPromise
       } else {
@@ -261,20 +262,20 @@ class FolderCreator {
   }
 
   async findOrCreateDatedRootNew() {
-    const result = await this.createFolder(DATED_ROOT_NEW)
+    const result = await this.createFolder(DATED_ROOT_NEW_FOLDER_TITLE)
     return result.id
   }
   async findDatedRootNew() {
-    const result = await this.findFolder(DATED_ROOT_NEW)
+    const result = await this.findFolder(DATED_ROOT_NEW_FOLDER_TITLE)
     return result?.id
   }
 
   async findOrCreateDatedRootOld() {
-    const result = await this.createFolder(DATED_ROOT_OLD)
+    const result = await this.createFolder(DATED_ROOT_OLD_FOLDER_TITLE)
     return result.id
   }
   async findDatedRootOld() {
-    const result = await this.findFolder(DATED_ROOT_OLD)
+    const result = await this.findFolder(DATED_ROOT_OLD_FOLDER_TITLE)
     return result?.id
   }
 

@@ -3,11 +3,11 @@ import {
 } from '../api-low/index.js';
 import {
   getDatedTemplate,
-  getTitleWithDirectives,
-  isChangesInDirectives,
   isDatedFolderTitle,
 } from './folder-title-dated.js';
 import {
+  getTitleWithDirectives,
+  isChangesInDirectives,
   getTitleDetails,
 } from './folder-title-directives.js';
 
@@ -59,7 +59,7 @@ export const getTitleForPattern = (title) => {
   return result
 }
 
-export async function mergeFolderTitle({ oldTitle, newTitle }) {
+export function mergeFolderTitle({ oldTitle, newTitle }) {
   const {
     onlyTitle: oldOnlyTitle,
     objDirectives: objOldDirectives,

@@ -1,10 +1,10 @@
 import {
-  rootFolders,
-} from '../folder-api/index.js';
-import {
   moveBookmarkIgnoreInController,
-  folderCreator,
 } from '../bookmark-controller-api/index.js'
+import {
+  folderCreator,
+  rootFolders,
+} from '../folder-creator-api/index.js'
 
 async function moveRootBookmarks({ fromId }) {
   if (!fromId) {

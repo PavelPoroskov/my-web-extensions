@@ -3,12 +3,14 @@ import {
   getDateFromDatedTitle,
 } from '../folder-api/index.js'
 import {
-  folderCreator,
   moveFolderIgnoreInController,
 } from '../bookmark-controller-api/index.js'
 import {
+  folderCreator,
+} from '../folder-creator-api/index.js'
+import {
   makeLogFunction,
-} from '../api-low/index.js';
+} from '../api-low/index.js'
 
 const logMOD = makeLogFunction({ module: 'moveOldDatedFolders.js' })
 

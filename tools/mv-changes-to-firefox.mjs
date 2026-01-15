@@ -26,6 +26,7 @@ await createFileForFirefox(
     'folder-api/folder-title-directives.js',
     'folder-api/folder-title-dated.js',
     'folder-api/folder-title.js',
+    'folder-api/special-folders.js',
     'folder-api/index.js',
 
     'api-mid/extensionSettings.js', // dependencies: storage.api.js, log.api.js
@@ -33,6 +34,7 @@ await createFileForFirefox(
     'api-mid/memo.js',
     'api-mid/browserStartTime.js',
       'bookmark-list-api/bookmark-list.js',
+      'folder-creator-api/root-folders.js',
     'api-mid/tagList-getRecent.js',
     'api-mid/tagList-highlight.js',
     'api-mid/tagList.js',
@@ -50,8 +52,6 @@ await createFileForFirefox(
     'bookmark-controller-api/ignoreBkmControllerApiActionSet.js',
     'bookmark-controller-api/folder-ignore.js',
 
-    'folder-creator-api/special-folders.js',
-    'folder-creator-api/root-folders.js',
     'folder-creator-api/find-folder.js',
     'folder-creator-api/folder-place.js',
     'folder-creator-api/folderCreator.js',

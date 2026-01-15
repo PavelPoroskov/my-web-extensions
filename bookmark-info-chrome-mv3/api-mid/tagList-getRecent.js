@@ -1,10 +1,12 @@
 import {
-  rootFolders,
   isIgnoreInRecentList,
   isDatedFolderTitle,
   isDescriptiveFolderTitle,
   isVisitedDatedTemplate,
 } from '../folder-api/index.js'
+import {
+  rootFolders,
+} from '../folder-creator-api/root-folders.js'
 import {
   getBookmarkNodeList,
 } from '../bookmark-list-api/bookmark-list.js'

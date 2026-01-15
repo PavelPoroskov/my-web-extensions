@@ -7,8 +7,7 @@ import {
   DATED_TEMPLATE_VISITED,
   DATED_TEMPLATE_OPENED,
   DATED_TEMPLATE_DONE,
-} from './special-folders.js';
-import {
+
   isDatedFolderTitle,
   getDatedTemplate,
 } from '../folder-api/index.js';

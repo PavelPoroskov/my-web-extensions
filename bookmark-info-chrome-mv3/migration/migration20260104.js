@@ -1,7 +1,8 @@
 import {
   getTitleDetails,
   getTitleWithDirectives,
-} from '../folder-api/index.js';import {
+} from '../folder-api/index.js';
+import {
   updateFolderIgnoreInController,
 } from '../bookmark-controller-api/index.js'
 import {

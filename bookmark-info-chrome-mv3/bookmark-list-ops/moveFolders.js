@@ -1,16 +1,18 @@
 import {
   isDatedFolderTitle,
   trimTitle,
-} from '../folder-api/index.js';
+} from '../folder-api/index.js'
 import {
   moveFolderIgnoreInController,
   removeFolder,
   updateFolder,
+} from '../bookmark-controller-api/index.js'
+import {
   folderCreator,
-} from '../bookmark-controller-api/index.js';
+} from '../folder-creator-api/index.js'
 import {
   makeLogFunction,
-} from '../api-low/index.js';
+} from '../api-low/index.js'
 import {
   traverseTreeRecursively,
 } from './traverseFolder.js'

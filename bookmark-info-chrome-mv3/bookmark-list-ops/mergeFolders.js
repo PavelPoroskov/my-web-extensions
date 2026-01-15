@@ -3,17 +3,19 @@ import {
   getTitleWithDirectives,
   isChangesInDirectives,
   normalizeTitle,
-  rootFolders,
 } from '../folder-api/index.js'
 import {
-  folderCreator,
   moveFolderContentToStart,
   removeFolder,
   updateFolder
 } from '../bookmark-controller-api/index.js'
 import {
+  rootFolders,
+  folderCreator,
+} from '../folder-creator-api/index.js'
+import {
   makeLogFunction,
-} from '../api-low/index.js';
+} from '../api-low/index.js'
 
 const logMRG = makeLogFunction({ module: 'mergeFolders.js' })
 

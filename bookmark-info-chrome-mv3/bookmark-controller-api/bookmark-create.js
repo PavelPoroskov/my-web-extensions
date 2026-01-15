@@ -7,10 +7,10 @@ import {
 import {
   isDatedFolderTemplate,
   getDatedTitle,
+  isVisitedDatedTemplate,
 } from '../folder-api/index.js';
 import {
   folderCreator,
-  isVisitedDatedTemplate,
 } from '../folder-creator-api/index.js';
 import {
   removePreviousDatedBookmarks,
