@@ -57,7 +57,7 @@ class FolderCreator {
         parentId = rootFolders.BOOKMARKS_BAR_FOLDER_ID
         break
       default: {
-        const parentFolder = await this.findFolder({ title: parentTitle, isCreate: true })
+        const parentFolder = await this._findFolder({ title: parentTitle, isCreate: true })
         parentId = parentFolder.id
       }
     }
