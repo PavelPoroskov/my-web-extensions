@@ -1,4 +1,7 @@
 import {
+  formatColor,
+} from '../api-low/color.js'
+import {
   getDatedTemplate,
   isDatedFolderTitle,
   isVisitedDatedTemplate,
@@ -61,7 +64,7 @@ export async function getBookmarkListWithTemplate(url) {
         title: bookmark.title,
         parentId: bookmark.parentId,
         parentTitle: bookmark.parentTitle,
-        parentColor: bookmark.templateColor || bookmark.parentColor,
+        parentColor: formatColor(bookmark.templateColor || bookmark.parentColor),
         path: bookmark.path,
         templateId: bookmark.templateId,
         templateTitle: bookmark.templateTitle,

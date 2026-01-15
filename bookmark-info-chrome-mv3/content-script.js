@@ -958,7 +958,7 @@
         }
         case 'partial-bookmark': {
           // TODO? go to original bookmark
-          const { id, parentTitle, url } = value
+          const { id, parentTitle, url, parentColor } = value
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
@@ -967,6 +967,15 @@
           divLabel.appendChild(textNode);
           divLabel.setAttribute('data-restpath', `url*: ${url}`);
           divLabel.setAttribute('data-id', `pb#${id}`);
+
+          if (parentColor) {
+            divLabel.style.backgroundColor = `${parentColor}`
+            divLabel.style.color = `oklch(from ${parentColor} calc(l + .60) c h)`;
+
+            if (IS_BROWSER_FIREFOX) {
+              divLabel.style.color = `contrast-color(${parentColor})`;
+            }
+          }
 
           const divLabelContainer = document.createElement('div');
           divLabelContainer.classList.add('bkm-info--label-container');
@@ -979,7 +988,7 @@
           break
         }
         case 'author-bookmark': {
-          const { id, parentTitle, url } = value
+          const { id, parentTitle, url, parentColor } = value
 
           const divLabel = document.createElement('div');
           divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', 'bkm-info--author');
@@ -988,6 +997,15 @@
           divLabel.appendChild(textNode);
           divLabel.setAttribute('data-restpath', url);
           divLabel.setAttribute('data-id', `h#${id}`);
+
+          if (parentColor) {
+            divLabel.style.backgroundColor = `${parentColor}`
+            divLabel.style.color = `oklch(from ${parentColor} calc(l + .60) c h)`;
+
+            if (IS_BROWSER_FIREFOX) {
+              divLabel.style.color = `contrast-color(${parentColor})`;
+            }
+          }
 
           const divLabelContainer = document.createElement('div');
           divLabelContainer.classList.add('bkm-info--label-container');

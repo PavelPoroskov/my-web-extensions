@@ -1,4 +1,5 @@
 export * from './cache.js'
+export * from './color.js'
 export * from './common.js'
 export * from './extraMap.js'
 export * from './log.api.js'

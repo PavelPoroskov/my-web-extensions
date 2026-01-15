@@ -20,12 +20,6 @@ import {
   moveBookmarkIgnoreInController,
   removeBookmark,
 } from './bookmark-ignore.js'
-import {
-  makeLogFunction,
-} from '../api-low/index.js'
-
-const logCBK = makeLogFunction({ module: 'bookmark-create.js' })
-
 
 let lastCreatedBkmParentId
 let lastCreatedBkmUrl
@@ -76,7 +70,6 @@ async function createBookmarkWithParentId({ parentId, url, title, parentTitle: i
   if (isDatedTemplate) {
     const datedTitle = getDatedTitle(parentTitle)
     const datedFolder = await folderCreator.createFolder(datedTitle)
-    // logCBK('createBookmarkWithParentId() 22 datedFolderId', datedFolderId)
     await createBookmarkWithApi({ parentId: datedFolder.id, url, title })
     await removePreviousDatedBookmarks({ url, template: parentTitle })
 
@@ -127,9 +120,7 @@ export async function createBookmark({ parentId, parentTitle, url, title }) {
   if (parentId) {
     await createBookmarkWithParentId({ parentId, url, title })
   } else if (parentTitle) {
-    logCBK('createBookmark 22 parentTitle', parentTitle)
     const { id: parentId } = await folderCreator.createFolder(parentTitle)
-    logCBK('createBookmark 22 parentId', parentId)
 
     await createBookmarkWithParentId({
       parentId,

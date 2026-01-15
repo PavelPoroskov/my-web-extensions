@@ -6,7 +6,11 @@ import {
 } from './bookmark-list-with-parent.js'
 import {
   makeLogFunction,
+  formatColor,
 } from '../api-low/index.js'
+import {
+  getTitleDetails
+} from '../folder-api/folder-title-directives.js'
 
 const logBLP = makeLogFunction({ module: 'bookmark-list-partial.js' })
 
@@ -49,11 +53,17 @@ export async function getPartialBookmarkList({ url, exactBkmIdList = [], pathnam
   return listWithParent
     .map((bookmark) => {
 
+    const {
+      onlyTitle,
+      objDirectives,
+    } = getTitleDetails(bookmark.parentTitle)
+
       return {
         id: bookmark.id,
         url: bookmark.url,
         parentId: bookmark.parentId,
-        parentTitle: bookmark.parentTitle,
+        parentTitle: onlyTitle,
+        parentColor: formatColor(objDirectives['#c']),
       }
     });
 }

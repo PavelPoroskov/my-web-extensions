@@ -21,6 +21,7 @@ await createFileForFirefox(
     'api-low/cache.js',
     'api-low/extraMap.js',
     'api-low/nodeTaskQueue.js',
+    'api-low/color.js',
     'api-low/index.js',
 
     'folder-api/folder-title-directives.js',
