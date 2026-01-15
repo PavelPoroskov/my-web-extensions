@@ -20,7 +20,7 @@ import {
 } from './urlEvents.js'
 import {
   rootFolders,
-} from '../folder-api/root-folders.js'
+} from '../folder-creator-api/root-folders.js'
 
 const logIX = makeLogFunction({ module: 'init-extension' })
 

@@ -20,15 +20,12 @@ await createFileForFirefox(
     'api-low/storage.api.js',
     'api-low/cache.js',
     'api-low/extraMap.js',
+    'api-low/nodeTaskQueue.js',
     'api-low/index.js',
 
-    'folder-api/folder-directives.js',
-    'folder-api/folder-dated-title.js',
+    'folder-api/folder-title-directives.js',
+    'folder-api/folder-title-dated.js',
     'folder-api/folder-title.js',
-    'folder-api/special-folder.js',
-    'folder-api/root-folders.js',
-    'folder-api/find-folder.js',
-    'folder-api/folder-place.js',
     'folder-api/index.js',
 
     'api-mid/extensionSettings.js', // dependencies: storage.api.js, log.api.js
@@ -52,18 +49,21 @@ await createFileForFirefox(
 
     'bookmark-controller-api/ignoreBkmControllerApiActionSet.js',
     'bookmark-controller-api/folder-ignore.js',
-    'bookmark-controller-api/folder-move.js',
-    'bookmark-controller-api/folder-create.js',
-    'bookmark-controller-api/folderCreator.js',
+
+    'folder-creator-api/special-folders.js',
+    'folder-creator-api/root-folders.js',
+    'folder-creator-api/find-folder.js',
+    'folder-creator-api/folder-place.js',
+    'folder-creator-api/folderCreator.js',
+    'folder-creator-api/index.js',
+
     'bookmark-controller-api/bookmark-ignore.js',
       'bookmark-list-api/bookmark-list-with-parent.js',
     'bookmark-controller-api/bookmark-dated.js',
 
     'api/urlEvents.js',
     'bookmark-controller-api/bookmark-create.js',
-
     'bookmark-controller-api/bookmark-visited.js',
-    'bookmark-controller-api/nodeTaskQueue.js',
 
     'api/visited-urls.js',
     'api/init-extension.js',

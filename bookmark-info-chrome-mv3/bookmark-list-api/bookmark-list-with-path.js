@@ -6,7 +6,7 @@ import {
 } from './bookmark-list.js'
 import {
   getTitleDetails
-} from '../folder-api/folder-directives.js'
+} from '../folder-api/folder-title-directives.js'
 
 const getParentIdList = (bookmarkList = []) => {
   const parentIdList = bookmarkList

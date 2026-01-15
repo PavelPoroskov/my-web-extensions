@@ -15,9 +15,6 @@ import {
   NODE_ACTION,
   NodeTaskQueue
 } from '../api-low/nodeTaskQueue.js'
-import {
-  moveFolderAfterRename
-} from './folder-move.js'
 
 const logFQ = makeLogFunction({ module: 'folderQueue.js' })
 
@@ -26,7 +23,7 @@ async function onCreateFolder(task) {
   logFQ('onCreateFolder () 00', node.title)
 
   await tagList.addTag({ parentId: node.id, parentTitle: node.title })
-  await moveFolderAfterRename(node)
+  await folderCreator.moveFolderAfterRename(node)
 }
 
 async function onMoveFolder(task) {

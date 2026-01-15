@@ -203,7 +203,7 @@ async function findFolderInSubtree({ title, parentId }) {
   return foundItem
 }
 
-export async function findFolder(title) {
+export async function findFolderMultiWay(title) {
   logFF('findFolder 00 title', title)
   let foundItem
 

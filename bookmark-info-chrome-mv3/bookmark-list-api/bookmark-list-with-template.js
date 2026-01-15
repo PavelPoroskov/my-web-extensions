@@ -5,7 +5,7 @@ import {
 } from '../folder-api/index.js'
 import {
   folderCreator,
-} from '../bookmark-controller-api/folderCreator.js';
+} from '../folder-creator-api/folderCreator.js';
 import {
   getBookmarkList,
 } from './bookmark-list.js'

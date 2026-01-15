@@ -3,6 +3,8 @@ import {
 } from '../api-low/index.js';
 import {
   getDatedTemplate,
+  getTitleWithDirectives,
+  isChangesInDirectives,
   isDatedFolderTitle,
 } from './folder-title-dated.js';
 import {
@@ -55,4 +57,34 @@ export const getTitleForPattern = (title) => {
   }
 
   return result
+}
+
+export async function mergeFolderTitle({ oldTitle, newTitle }) {
+  const {
+    onlyTitle: oldOnlyTitle,
+    objDirectives: objOldDirectives,
+  } = getTitleDetails(oldTitle)
+
+  const {
+    onlyTitle: newOnlyTitle,
+    objDirectives: objNewDirectives,
+  } = getTitleDetails(newTitle)
+
+  const oldBigLetterN = oldOnlyTitle.replace(/[^A-Z]+/g, "").length
+  const newBigLetterN = newOnlyTitle.replace(/[^A-Z]+/g, "").length
+
+  const oldDashN = oldOnlyTitle.replace(/[^-]+/g,"").length
+  const newDashN = newOnlyTitle.replace(/[^-]+/g,"").length
+
+  const isUseNewTitle = oldBigLetterN < newBigLetterN || newDashN < oldDashN
+  const actualOnlyTitle = isUseNewTitle ? newOnlyTitle : oldOnlyTitle
+
+  const hasChangesInDirectives = isChangesInDirectives({ oldDirectives: objOldDirectives, newDirectives: objNewDirectives })
+
+  if (hasChangesInDirectives || isUseNewTitle) {
+    const objSumDirectives = Object.assign({}, objOldDirectives, objNewDirectives)
+    const mergedTitle = getTitleWithDirectives({ onlyTitle: actualOnlyTitle, objDirectives: objSumDirectives })
+
+    return mergedTitle
+  }
 }

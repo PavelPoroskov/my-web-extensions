@@ -1,7 +1,19 @@
 import {
+  USER_OPTION,
+} from '../constant/index.js'
+import {
+  extensionSettings,
+} from '../api-mid/index.js'
+import {
+  createFolderIgnoreInController,
+  moveFolderIgnoreInController,
+  updateFolder,
+} from '../bookmark-controller-api/folder-ignore.js';
+import {
   getTitleDetails,
   isDatedFolderTitle,
   makeCompareDatedTitleWithFixed,
+  mergeFolderTitle,
 } from '../folder-api/index.js';
 import {
   BOOKMARKS_BAR_FOLDER_TITLE,
@@ -11,18 +23,16 @@ import {
   UNCLASSIFIED_TITLE,
 } from './special-folders.js';
 import {
+  rootFolders,
+} from './root-folders.js';
+import {
   getExistingFolderPlaceParentTitleList,
   getNewFolderPlaceParentTitle,
 } from './folder-place.js';
 import {
-  findFolderInBookmarks,
-} from './folder-create.js';
-import {
-  rootFolders,
-} from './root-folders.js';
-import {
-  createFolderIgnoreInController,
-} from '../bookmark-controller-api/folder-ignore.js';
+  findFolderMultiWay,
+} from './find-folder.js';
+
 
 class FolderCreator {
   mapTitleToInfo = {}
@@ -37,9 +47,6 @@ class FolderCreator {
     }
   }
 
-  getRootFolderIdMap() {
-    return rootFolders.IdMap
-  }
   async _parentTitleToParentId(parentTitle) {
     let parentId
 
@@ -74,6 +81,77 @@ class FolderCreator {
     )
 
     return parentIdList
+  }
+
+  async moveFolderAfterRename({ id, parentId, title, index }) {
+    const moveArgs = {}
+    const settings = await extensionSettings.get()
+
+    if (settings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
+      const correctParentIdList = await this.getExistingFolderPlaceParentIdList(title)
+
+      if (!correctParentIdList.includes(parentId)) {
+        moveArgs.parentId = correctParentIdList[0]
+      }
+    }
+
+    const finalParentId = moveArgs.parentId || parentId
+
+    if (finalParentId in rootFolders.IdMap) {
+      const firstLevelNodeList = await chrome.bookmarks.getChildren(finalParentId)
+      const findIndex = firstLevelNodeList.find((item) => title.localeCompare(item.title) < 0)
+
+      if (index != findIndex) {
+        moveArgs.index = findIndex.index
+      }
+    }
+
+    if (0 < Object.keys(moveArgs).length) {
+      moveFolderIgnoreInController({
+        id,
+        ...moveArgs,
+      })
+    }
+  }
+  async mergeFolderTitleToNode({ folder, newTitle }) {
+    const mergedTitle = mergeFolderTitle({ oldTitle: folder.title, newTitle })
+
+    if (mergedTitle) {
+      await updateFolder({ id: folder.id, title: mergedTitle })
+      await this.moveFolderAfterRename({
+        id: folder.id,
+        title: mergedTitle,
+        parentId: folder.parentId,
+        index: folder.index,
+      })
+
+      return mergedTitle
+    }
+
+    return folder.title
+  }
+
+  async findFolderInBookmarks(title) {
+    const folder = await findFolderMultiWay(title)
+
+    if (folder) {
+      const mergedTitle = await this.mergeFolderTitleToNode({
+        folder,
+        newTitle: title,
+      })
+
+      const {
+        objDirectives
+      } = getTitleDetails(mergedTitle)
+
+      return {
+        id: folder.id,
+        ...(Object.keys(objDirectives || {}).length > 0
+          ? { objDirectives: objDirectives }
+          : undefined
+        )
+      }
+    }
   }
   async createFolderInBookmarks(title) {
     const parentId = await this.getNewFolderPlaceParentId(title)
@@ -128,7 +206,7 @@ class FolderCreator {
     const findPromise = this.mapTitleToInfo[title]?.findPromise
     if (!findPromise) {
       this.mapTitleToInfo[title] = this.mapTitleToInfo[title] || {}
-      this.mapTitleToInfo[title].findPromise = findFolderInBookmarks(title)
+      this.mapTitleToInfo[title].findPromise = this.findFolderInBookmarks(title)
       result = await this.mapTitleToInfo[title].findPromise
     } else {
       result = await findPromise
