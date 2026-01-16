@@ -1,4 +1,5 @@
 import {
+  getTitleDetails,
   isIgnoreInRecentList,
   isDescriptiveFolderTitle,
   isDatedFolderTitle,
@@ -172,8 +173,13 @@ class TagList {
       [INTERNAL_VALUES.TAG_LIST_IS_OPEN]: isOpen
     })
   }
-  _formatList(list) {
-    logTL('_formatList 00', list)
+  _formatList(inList) {
+    logTL('_formatList 00', inList)
+
+    const list = inList.map((obj) => ({
+      ...obj,
+      parentTitle: getTitleDetails(obj.parentTitle).onlyTitle,
+    }))
     let resultList
 
     if (this.PINNED_TAGS_POSITION == TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.TOP) {
