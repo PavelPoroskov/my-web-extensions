@@ -6,7 +6,7 @@ import {
   getDatedTemplate,
   getTitleDetails,
   isDatedFolderTitle,
-} from '../folder-api/folder-title-directives.js'
+} from '../folder-api/index.js'
 import {
   folderCreator,
 } from '../folder-creator-api/folderCreator.js';
