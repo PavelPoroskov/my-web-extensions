@@ -1237,7 +1237,6 @@ class NodeTaskQueue {
     this.enqueue({ ...task, action: NODE_ACTION.DELETE });
   }
 }
-
 const hexDigitSet = new Set('0123456789abcdef')
 const letterSet = new Set('abcdefghijklmnopqrstuvwxy')
 
@@ -1253,6 +1252,10 @@ function isLettersOnly(str) {
 }
 
 function isHexColorValue(str) {
+  if (!str) {
+    return str
+  }
+
   if (!(str.length === 6)) {
     return false
   }
@@ -1271,7 +1274,13 @@ function isCorrectColorValue(str) {
   return isLettersOnly(str) || isHexColorValue(str)
 }
 
-function getTitleDetails(title) {
+function formatColor(str) {
+  return isHexColorValue(str)
+    ? `#${str}`
+    : str
+}
+
+function getTitleDetails(title) {
   const partList = title
     .split(' ')
     .filter(Boolean)
@@ -1281,44 +1290,51 @@ function getTitleDetails(title) {
 
   while (-1 < i) {
     const lastWord = partList[i]
-    const isDirective = lastWord.startsWith('#')
+    const isDirective = lastWord.startsWith('#') || lastWord.startsWith('@')
 
     if (!isDirective) {
       break
     }
 
-    const directive = lastWord.slice(1)
+    const directive = lastWord
     const [directiveName, directiveValue] = directive.split(':')
-    const directiveNameLow = directiveName !== undefined ? directiveName.toLowerCase() : undefined
 
     let value
 
-    switch (directiveNameLow) {
-      case 'top': {
+    switch (directiveName) {
+      case '@D': {
         value = ''
         break
       }
-      case 'c':
-      case 'color': {
+      case '@Q': {
+        value = ''
+        break
+      }
+      case '#top': {
+        value = ''
+        break
+      }
+      // case '#color':
+      case '#c': {
         if (isCorrectColorValue(directiveValue)) {
           value = directiveValue
         }
         break
       }
-      case 'o':
-      case 'order': {
+      // case '#order':
+      case '#o': {
         value = directiveValue
         break
       }
-      case 'g':
-      case 'group': {
-        value = directiveValue
-        break
-      }
+      // case 'g':
+      // case 'group': {
+      //   value = directiveValue
+      //   break
+      // }
     }
 
-    if (directiveNameLow !== undefined && value !== undefined) {
-      objDirectives[directiveNameLow] = value;
+    if (directiveName !== undefined && value !== undefined) {
+      objDirectives[directiveName] = value;
     }
 
     i = i - 1
@@ -1335,25 +1351,23 @@ function getTitleDetails(title) {
 
 function getTitleWithDirectives({ onlyTitle, objDirectives }) {
   const objFilteredDirectives = Object.assign({}, objDirectives)
-  const keyList = Object.keys(objFilteredDirectives)
-  keyList.forEach(key => {
-    const keyLow = key.toLowerCase()
-    if (key !== keyLow) {
-      objFilteredDirectives[keyLow] = objFilteredDirectives[key];
-      delete objFilteredDirectives[key]
-    }
-  })
 
-  const orderValue = objFilteredDirectives['o']
-  delete objFilteredDirectives['o']
+  const statsDateStr = objFilteredDirectives['@D'] !== undefined ? `@D` : undefined
+  delete objFilteredDirectives['@D']
+
+  const statsQuantityStr = objFilteredDirectives['@Q'] !== undefined ? `@Q` : undefined
+  delete objFilteredDirectives['@Q']
+
+  const orderValue = objFilteredDirectives['#o']
+  delete objFilteredDirectives['#o']
   const orderStr = orderValue && `#o:${orderValue}`
 
   const strDirectives = Object.entries(objFilteredDirectives)
     .toSorted((a,b) => a[0].localeCompare(b[0]))
-    .map(([key,value]) => (value ? `#${key}:${value}` : `#${key}`))
+    .map(([key,value]) => (value ? `${key}:${value}` : `${key}`))
     .join(' ')
 
-  return [onlyTitle, orderStr, strDirectives].filter(Boolean).join(' ')
+  return [onlyTitle, statsDateStr, statsQuantityStr, orderStr, strDirectives].filter(Boolean).join(' ')
 }
 
 function isChangesInDirectives({ oldDirectives, newDirectives }) {
@@ -1409,14 +1423,16 @@ const isDate = (str) => {
 }
 
 function isDatedFolderTemplate(folderTitle) {
-  const { onlyTitle }  = getTitleDetails(folderTitle)
+  const { onlyTitle, objDirectives }  = getTitleDetails(folderTitle)
 
-  return onlyTitle.endsWith(' @D') && 3 < folderTitle.length
+  // return onlyTitle.endsWith(' @D') && 3 < folderTitle.length
+  return objDirectives['@D'] !== undefined && 3 < onlyTitle.length
 }
 
 function getDatedTitle(datedTemplate) {
   const { onlyTitle }  = getTitleDetails(datedTemplate)
-  const fixedPart = onlyTitle.slice(0, -3).trim()
+  // const fixedPart = onlyTitle.slice(0, -3).trim()
+  const fixedPart = onlyTitle
 
   const today = new Date()
   const sToday = dateFormatter.format(today).replaceAll('/', '-')
@@ -1425,7 +1441,7 @@ function getDatedTitle(datedTemplate) {
   const days = Math.floor((futureDate - today)/oneDayMs)
   const order = new Number(days).toString(36).padStart(3,'0')
 
-  const objDirectives = { o: order }
+  const objDirectives = { '#o': order }
 
   return getTitleWithDirectives({
     onlyTitle: `${fixedPart} ${sToday} ${sWeekday}`,
@@ -1443,21 +1459,21 @@ const getDateFromDatedTitle = (title) => {
 
 function compareDatedTitle(a,b) {
   const { onlyTitle: onlyTitleA, objDirectives: objDirectivesA }  = getTitleDetails(a)
-  const orderA = objDirectivesA['o']
+  const orderA = objDirectivesA['#o']
 
   const { onlyTitle: onlyTitleB, objDirectives: objDirectivesB }  = getTitleDetails(b)
-  const orderB = objDirectivesB['o']
+  const orderB = objDirectivesB['#o']
 
   return (orderA || '').localeCompare(orderB || '') || (onlyTitleA || '').localeCompare(onlyTitleB || '')
 }
 
 function makeCompareDatedTitleWithFixed(a) {
   const { onlyTitle: onlyTitleA, objDirectives: objDirectivesA }  = getTitleDetails(a)
-  const orderA = objDirectivesA['o']
+  const orderA = objDirectivesA['#o']
 
   return function compareDatedTitleWithFixed(b) {
     const { onlyTitle: onlyTitleB, objDirectives: objDirectivesB }  = getTitleDetails(b)
-    const orderB = objDirectivesB['o']
+    const orderB = objDirectivesB['#o']
 
     return (orderA || '').localeCompare(orderB || '') || (onlyTitleA || '').localeCompare(onlyTitleB || '')
   }
@@ -1467,7 +1483,7 @@ function isDatedFolderTitle(str) {
   const { onlyTitle, objDirectives }  = getTitleDetails(str)
   const partList = onlyTitle.split(' ')
 
-  if (!!objDirectives['o'] && !(3 <= partList.length)) {
+  if (!!objDirectives['#o'] && !(3 <= partList.length)) {
     return false
   }
 
@@ -1488,7 +1504,8 @@ function isDatedTitleForTemplate({ title, template }) {
   const fixedPartFromTitle = onlyTitleTitle.split(' ').slice(0, -2).join(' ')
 
   const { onlyTitle: onlyTitleTemplate }  = getTitleDetails(template)
-  const fixedPartFromTemplate = onlyTitleTemplate.slice(0, -3).trim()
+  // const fixedPartFromTemplate = onlyTitleTemplate.slice(0, -3).trim()
+  const fixedPartFromTemplate = onlyTitleTemplate
 
   return fixedPartFromTitle == fixedPartFromTemplate
 }
@@ -1577,18 +1594,18 @@ function mergeFolderTitle({ oldTitle, newTitle }) {
   }
 }
 const BOOKMARKS_BAR_FOLDER_TITLE = 'Bookmarks bar' // Chrome
-const BOOKMARKS_MENU_FOLDER_TITLE = 'Bookmarks Menu' // Firefox
+// const BOOKMARKS_MENU_FOLDER_TITLE = 'Bookmarks Menu' // Firefox
 const OTHER_BOOKMARKS_FOLDER_TITLE = 'Other bookmarks' // Chrome
 
 const DATED_ROOT_NEW_FOLDER_TITLE = '@D new'
 const DATED_ROOT_OLD_FOLDER_TITLE = '@D old'
 const DATED_ROOT_SERVICE_FOLDER_TITLE = '@D service'
 const UNCLASSIFIED_TITLE = 'zz-bookmark-info--unclassified'
-const CONTINUE_TITLE = 'continue'
+// const CONTINUE_TITLE = 'continue'
 
 const DATED_TEMPLATE_OPENED = 'opened @D'
 const DATED_TEMPLATE_VISITED = 'visited @D'
-const DATED_TEMPLATE_SELECTED = 'selected @D'
+// const DATED_TEMPLATE_SELECTED = 'selected @D'
 const DATED_TEMPLATE_DONE = 'DONE @D'
 
 const IgnoreInRecentListSet = new Set([
@@ -2359,8 +2376,13 @@ class TagList {
       [INTERNAL_VALUES.TAG_LIST_IS_OPEN]: isOpen
     })
   }
-  _formatList(list) {
-    logTL('_formatList 00', list)
+  _formatList(inList) {
+    logTL('_formatList 00', inList)
+
+    const list = inList.map((obj) => ({
+      ...obj,
+      parentTitle: getTitleDetails(obj.parentTitle).onlyTitle,
+    }))
     let resultList
 
     if (this.PINNED_TAGS_POSITION == TAG_LIST_PINNED_TAGS_POSITION_OPTIONS.TOP) {
@@ -3587,7 +3609,7 @@ function getExistingFolderPlaceParentTitleList(folderTitle) {
         parentId = rootFolders.BOOKMARKS_BAR_FOLDER_ID
         break
       default: {
-        const parentFolder = await this.findFolder({ title: parentTitle, isCreate: true })
+        const parentFolder = await this._findFolder({ title: parentTitle, isCreate: true })
         parentId = parentFolder.id
       }
     }
@@ -3787,7 +3809,7 @@ function getExistingFolderPlaceParentTitleList(folderTitle) {
 
     return {
       ...result,
-      color: result.objDirectives?.['c']
+      color: result.objDirectives?.['#c']
     }
   }
 
@@ -3899,6 +3921,47 @@ async function removeBookmark(bkmId) {
     .map((bookmark) => ({
       parentTitle: parentMap[bookmark.parentId] || '',
       ...bookmark
+    }))
+
+  return resultList
+}
+
+async function addBookmarkColorInfo(bookmarkList) {
+  const bkmListWithTemplate = bookmarkList.map((obj) => {
+    const {
+      onlyTitle,
+      objDirectives,
+    } = getTitleDetails(obj.parentTitle)
+
+    return {
+      ...obj,
+      parentTitle: onlyTitle,
+      parentColor: objDirectives['#c'],
+      templateTitle: isDatedFolderTitle(obj.parentTitle) ? getDatedTemplate(obj.parentTitle) : undefined,
+    }
+  })
+
+  const templateTitleList = Array.from(
+    new Set(
+      bkmListWithTemplate
+        .map(({ templateTitle }) => templateTitle)
+        .filter(Boolean)
+    )
+  )
+
+  const templateInfoList = await Promise.all(templateTitleList.map(
+    (templateTitle) => folderCreator.createFolder(templateTitle)
+      .then(({ color }) => ({ templateTitle, color }))
+  ))
+
+  const templateTitleMap = Object.fromEntries(
+    templateInfoList.map(({ templateTitle, color }) => [templateTitle, color])
+  )
+
+  const resultList = bkmListWithTemplate
+    .map((bookmark) => ({
+      ...bookmark,
+      templateColor: bookmark.templateTitle ? templateTitleMap[bookmark.templateTitle] : undefined,
     }))
 
   return resultList
@@ -4107,10 +4170,7 @@ class UrlEvents {
 }
 
 const urlEvents = new UrlEvents()
-const logCBK = makeLogFunction({ module: 'bookmark-create.js' })
-
-
-let lastCreatedBkmParentId
+let lastCreatedBkmParentId
 let lastCreatedBkmUrl
 
 function isBookmarkCreatedWithApi({ parentId, url }) {
@@ -4159,7 +4219,6 @@ async function createBookmarkWithParentId({ parentId, url, title, parentTitle: i
   if (isDatedTemplate) {
     const datedTitle = getDatedTitle(parentTitle)
     const datedFolder = await folderCreator.createFolder(datedTitle)
-    // logCBK('createBookmarkWithParentId() 22 datedFolderId', datedFolderId)
     await createBookmarkWithApi({ parentId: datedFolder.id, url, title })
     await removePreviousDatedBookmarks({ url, template: parentTitle })
 
@@ -4210,9 +4269,7 @@ async function createBookmark({ parentId, parentTitle, url, title }) {
   if (parentId) {
     await createBookmarkWithParentId({ parentId, url, title })
   } else if (parentTitle) {
-    logCBK('createBookmark 22 parentTitle', parentTitle)
     const { id: parentId } = await folderCreator.createFolder(parentTitle)
-    logCBK('createBookmark 22 parentId', parentId)
 
     await createBookmarkWithParentId({
       parentId,
@@ -4720,19 +4777,17 @@ async function getPartialBookmarkList({ url, exactBkmIdList = [], pathnamePatter
     }
   })
 
-
   const listWithParent = await addBookmarkParentInfo(partialBookmarkList)
+  const listWithParent2 = await addBookmarkColorInfo(listWithParent)
 
-  return listWithParent
-    .map((bookmark) => {
-
-      return {
+  return listWithParent2
+    .map((bookmark) => ({
         id: bookmark.id,
         url: bookmark.url,
         parentId: bookmark.parentId,
         parentTitle: bookmark.parentTitle,
-      }
-    });
+        parentColor: formatColor(bookmark.templateColor || bookmark.parentColor),
+    }));
 }
 const logSHA = makeLogFunction({ module: 'showAuthorBookmarks.js' })
 
@@ -4849,7 +4904,7 @@ async function getFolderInfoRecursively({ bookmarkList, folderByIdMap }) {
       folder.id,
       {
         title: onlyTitle,
-        color: objDirectives['color'] || objDirectives['c'],
+        color: objDirectives['#c'],
         parentId: folder.parentId,
       }
     )
@@ -4932,7 +4987,7 @@ async function getBookmarkListWithTemplate(url) {
         title: bookmark.title,
         parentId: bookmark.parentId,
         parentTitle: bookmark.parentTitle,
-        parentColor: bookmark.templateColor || bookmark.parentColor,
+        parentColor: formatColor(bookmark.templateColor || bookmark.parentColor),
         path: bookmark.path,
         templateId: bookmark.templateId,
         templateTitle: bookmark.templateTitle,
