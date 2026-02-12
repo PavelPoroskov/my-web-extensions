@@ -27,7 +27,7 @@ function isHexColorValue(str) {
     .every(letter => hexDigitSet.has(letter))
 }
 
-export function isCorrectColorValue(str) {
+function isCorrectColorValue(str) {
   if (!str) {
     return false
   }
@@ -35,8 +35,34 @@ export function isCorrectColorValue(str) {
   return isLettersOnly(str) || isHexColorValue(str)
 }
 
-export function formatColor(str) {
+export function isCorrectColorDirectiveValue(str) {
+  if (!str) {
+    return false
+  }
+
+  const [bgColor, textColor] = str.split(':')
+
+  return isCorrectColorValue(bgColor) && (textColor
+    ?  isCorrectColorValue(textColor)
+    : true
+  )
+}
+
+function formatColor(str) {
   return isHexColorValue(str)
     ? `#${str}`
     : str
+}
+
+export function formatColorDirectiveValue(str) {
+  if (!str) {
+    return ''
+  }
+
+  const [bgColor, textColor] = str.split(':')
+  const formattedBgColor = formatColor(bgColor)
+
+  return textColor
+    ? `${formattedBgColor}:${formatColor(textColor)}`
+    : formattedBgColor
 }

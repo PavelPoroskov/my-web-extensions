@@ -1,5 +1,5 @@
 import {
-  formatColor,
+  formatColorDirectiveValue,
 } from '../api-low/color.js'
 import {
   getDatedTemplate,
@@ -51,6 +51,7 @@ async function addBookmarkTemplateInfo(bookmarkList) {
   return resultList
 }
 
+// used in: updateTab()
 export async function getBookmarkListWithTemplate(url) {
   const bookmarkList = await getBookmarkList(url)
   // add { parentTitle, path }
@@ -64,7 +65,7 @@ export async function getBookmarkListWithTemplate(url) {
         title: bookmark.title,
         parentId: bookmark.parentId,
         parentTitle: bookmark.parentTitle,
-        parentColor: formatColor(bookmark.templateColor || bookmark.parentColor),
+        parentColor: formatColorDirectiveValue(bookmark.templateColor || bookmark.parentColor),
         path: bookmark.path,
         templateId: bookmark.templateId,
         templateTitle: bookmark.templateTitle,

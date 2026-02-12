@@ -7,7 +7,7 @@ import {
 } from './bookmark-list-with-parent.js'
 import {
   makeLogFunction,
-  formatColor,
+  formatColorDirectiveValue,
 } from '../api-low/index.js'
 
 const logBLP = makeLogFunction({ module: 'bookmark-list-partial.js' })
@@ -54,6 +54,6 @@ export async function getPartialBookmarkList({ url, exactBkmIdList = [], pathnam
         url: bookmark.url,
         parentId: bookmark.parentId,
         parentTitle: bookmark.parentTitle,
-        parentColor: formatColor(bookmark.templateColor || bookmark.parentColor),
+        parentColor: formatColorDirectiveValue(bookmark.templateColor || bookmark.parentColor),
     }));
 }

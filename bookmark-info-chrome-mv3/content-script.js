@@ -329,6 +329,12 @@
   }
   const ALLOWED_DISTANCE = 3
 
+  function contrastColor(bgColor) {
+    return (IS_BROWSER_FIREFOX
+      ? `contrast-color(${bgColor})`
+      : `oklch(from ${bgColor} calc(l + .60) c h)`)
+  }
+
   function getIsConditionFromUp(letterList, iTest) {
     let distanceFromUp = 0
     let i = iTest - 1
@@ -916,12 +922,9 @@
           divLabel.setAttribute('data-restpath', path);
 
           if (parentColor) {
-            divLabel.style.backgroundColor = `${parentColor}`
-            divLabel.style.color = `oklch(from ${parentColor} calc(l + .60) c h)`;
-
-            if (IS_BROWSER_FIREFOX) {
-              divLabel.style.color = `contrast-color(${parentColor})`;
-            }
+            const [bgColor, textColor] = parentColor.split(':')
+            divLabel.style.backgroundColor = bgColor
+            divLabel.style.color = textColor || contrastColor(bgColor)
           }
 
           // TODO sanitize: remove ",<,>
@@ -969,12 +972,9 @@
           divLabel.setAttribute('data-id', `pb#${id}`);
 
           if (parentColor) {
-            divLabel.style.backgroundColor = `${parentColor}`
-            divLabel.style.color = `oklch(from ${parentColor} calc(l + .60) c h)`;
-
-            if (IS_BROWSER_FIREFOX) {
-              divLabel.style.color = `contrast-color(${parentColor})`;
-            }
+            const [bgColor, textColor] = parentColor.split(':')
+            divLabel.style.backgroundColor = bgColor
+            divLabel.style.color = textColor || contrastColor(bgColor)
           }
 
           const divLabelContainer = document.createElement('div');
@@ -999,12 +999,9 @@
           divLabel.setAttribute('data-id', `h#${id}`);
 
           if (parentColor) {
-            divLabel.style.backgroundColor = `${parentColor}`
-            divLabel.style.color = `oklch(from ${parentColor} calc(l + .60) c h)`;
-
-            if (IS_BROWSER_FIREFOX) {
-              divLabel.style.color = `contrast-color(${parentColor})`;
-            }
+            const [bgColor, textColor] = parentColor.split(':')
+            divLabel.style.backgroundColor = bgColor
+            divLabel.style.color = textColor || contrastColor(bgColor)
           }
 
           const divLabelContainer = document.createElement('div');
