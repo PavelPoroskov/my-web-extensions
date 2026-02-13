@@ -21,12 +21,12 @@ async function findFolderWithExactTitle(title) {
   return foundItem
 }
 
-export async function findSubFolderWithExactTitle({ title, parentId }) {
-  const nodeList = await chrome.bookmarks.search({ title });
-  const foundItem = nodeList.find((node) => !node.url && node.parentId == parentId)
+// export async function findSubFolderWithExactTitle({ title, parentId }) {
+//   const nodeList = await chrome.bookmarks.search({ title });
+//   const foundItem = nodeList.find((node) => !node.url && node.parentId == parentId)
 
-  return foundItem
-}
+//   return foundItem
+// }
 
 function makeIsTitleMatch({ title, normalizeFn = (str) => str }) {
   const onlyTitlePattern = getTitleDetails(title).onlyTitle

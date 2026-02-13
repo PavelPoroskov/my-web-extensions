@@ -2,9 +2,8 @@ import {
   startPartialUrlSearch,
 } from '../url-api/index.js'
 import {
-  addBookmarkParentInfo,
-  addBookmarkColorInfo,
-} from './bookmark-list-with-parent.js'
+  addFieldsToBookmarkList,
+} from './bookmark-list-add-fields.js'
 import {
   makeLogFunction,
   formatColorDirectiveValue,
@@ -45,15 +44,14 @@ export async function getPartialBookmarkList({ url, exactBkmIdList = [], pathnam
     }
   })
 
-  const listWithParent = await addBookmarkParentInfo(partialBookmarkList)
-  const listWithParent2 = await addBookmarkColorInfo(listWithParent)
+  const listWithParent = await addFieldsToBookmarkList(partialBookmarkList)
 
-  return listWithParent2
+  return listWithParent
     .map((bookmark) => ({
         id: bookmark.id,
         url: bookmark.url,
         parentId: bookmark.parentId,
         parentTitle: bookmark.parentTitle,
-        parentColor: formatColorDirectiveValue(bookmark.templateColor || bookmark.parentColor),
+        parentColor: formatColorDirectiveValue(bookmark.color),
     }));
 }

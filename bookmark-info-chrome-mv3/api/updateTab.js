@@ -25,7 +25,7 @@ import {
   showAuthorBookmarks,
 } from './showAuthorBookmarks.js'
 import {
-  getBookmarkListWithTemplate,
+  getDirectBookmarkList,
   getPartialBookmarkList,
 } from '../bookmark-list-api/index.js';
 import { initExtension } from './init-extension.js'
@@ -70,7 +70,7 @@ async function updateTab({ tabId, url, debugCaller }) {
   logUTB('UPDATE-TAB () 11', url);
 
   const userSettings = await extensionSettings.get()
-  const bookmarkList = await getBookmarkListWithTemplate(url)
+  const bookmarkList = await getDirectBookmarkList(url)
 
   let filteredBookmarkList = bookmarkList
   if (userSettings[USER_OPTION.SHOW_VISITED] === SHOW_VISITED_OPTIONS.IF_NO_OTHER) {

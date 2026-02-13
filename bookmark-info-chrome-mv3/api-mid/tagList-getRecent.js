@@ -9,7 +9,7 @@ import {
 } from '../folder-creator-api/root-folders.js'
 import {
   getBookmarkNodeList,
-} from '../bookmark-list-api/bookmark-list.js'
+} from '../bookmark-list-api/bookmark-list-nodes.js'
 import {
   makeLogFunction,
 } from '../api-low/index.js'
