@@ -17,7 +17,8 @@ export function getTitleDetails(title) {
     }
 
     const directive = lastWord
-    const [directiveName, directiveValue] = directive.split(':')
+    const [directiveName, ...restDirectiveValue] = directive.split(':')
+    const directiveValue = restDirectiveValue.join(':')
 
     let value
 
