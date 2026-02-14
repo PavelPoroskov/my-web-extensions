@@ -27,7 +27,7 @@ const getFullPath = (id) => {
 
   let currentId = id;
   while (currentId) {
-    const folder = memo.folderByIdMap.get(currentId);
+    const folder = memo.bkmFolderById.get(currentId);
 
     if (folder) {
       path.push(folder.title);
@@ -40,7 +40,7 @@ const getFullPath = (id) => {
 }
 
 const getColor = (id) => {
-   const folder = memo.folderByIdMap.get(id);
+   const folder = memo.bkmFolderById.get(id);
 
   return folder?.color
 }
@@ -51,21 +51,21 @@ async function getParentFolderList(bookmarkList) {
   const parentIdList = getParentIdList(bookmarkList)
 
   if (parentIdList.length === 0) {
-    return
+    return []
   }
 
   const knownParentIdList = [];
   const unknownParentIdList = [];
 
   parentIdList.forEach((id) => {
-    if (memo.folderByIdMap.has(id)) {
+    if (memo.bkmFolderById.has(id)) {
       knownParentIdList.push(id)
     } else {
       unknownParentIdList.push(id)
     }
   })
 
-  const knownFolderList = knownParentIdList.map((id) => memo.folderByIdMap.get(id))
+  const knownFolderList = knownParentIdList.map((id) => memo.bkmFolderById.get(id))
 
   const unknownFolderList = await getBookmarkNodeList(unknownParentIdList)
 
@@ -75,22 +75,27 @@ async function getParentFolderList(bookmarkList) {
       objDirectives,
     } = getTitleDetails(folder.title)
 
-    memo.folderByIdMap.add(
+    memo.bkmFolderById.add(
       folder.id,
       {
         title: onlyTitle,
         color: objDirectives['#c'],
         parentId: folder.parentId,
+        id: folder.id,
       }
     )
 
     knownFolderList.push(folder)
   })
 
-  return unknownFolderList
+  return knownFolderList
 }
 
 async function getParentInfoRecursively(bookmarkList) {
+  if (bookmarkList.length == 0) {
+    return
+  }
+
   const parentFolderList = await getParentFolderList(bookmarkList)
   await getParentInfoRecursively(parentFolderList)
 }
@@ -105,12 +110,10 @@ export async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
   const isAddFieldPath = addFieldMap['path']
 
   let resultBookmarkList = bookmarkList.map(bookmark => ({ ...bookmark }))
-  let parentNodeList = []
-  let parentMap = {}
 
-  parentNodeList = await getParentFolderList(resultBookmarkList)
+  const parentNodeList = await getParentFolderList(resultBookmarkList)
 
-  parentMap = Object.fromEntries(
+  const parentMap = Object.fromEntries(
     parentNodeList.map(
       (folder) => [folder.id, folder]
     )
