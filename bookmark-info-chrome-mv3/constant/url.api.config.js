@@ -2,6 +2,10 @@ export const DEFAULT_HOST_SETTINGS = {
   isHashRequired: false,
   searchParamList: [
     '*id',
+    'text', // translate.google.com
+    'q', // www.google.com
+    'search',
+    's',
     ['any'],
     ['email_hash'],
     ['pid=0'],
