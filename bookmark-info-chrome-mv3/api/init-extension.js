@@ -52,11 +52,6 @@ async function createContextMenu(settings) {
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'close duplicate tabs',
   });
-  chrome.contextMenus.create({
-    id: CONTEXT_MENU_CMD_ID.CLOSE_BOOKMARKED,
-    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'close bookmarked tabs',
-  });
 
   if (settings[USER_OPTION.YOUTUBE_HIDE_PAGE_HEADER]) {
     chrome.contextMenus.create({

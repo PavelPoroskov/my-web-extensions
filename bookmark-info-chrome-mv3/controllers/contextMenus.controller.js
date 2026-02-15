@@ -3,7 +3,6 @@ import {
 } from '../constant/index.js';
 import {
   removeFromUrlHashAndSearchParamsInActiveTab,
-  closeBookmarkedTabs,
   closeDuplicateTabs,
   startAddBookmarkFromInput,
   startAddBookmarkFromSelection,
@@ -31,10 +30,6 @@ export const contextMenusController = {
       }
       case CONTEXT_MENU_CMD_ID.CLOSE_DUPLICATE: {
         closeDuplicateTabs();
-        break;
-      }
-      case CONTEXT_MENU_CMD_ID.CLOSE_BOOKMARKED: {
-        closeBookmarkedTabs();
         break;
       }
       case CONTEXT_MENU_CMD_ID.CLEAR_URL: {

@@ -1,6 +1,5 @@
 export * from './addBookmark.js'
 export * from './clearUrlInActiveTab.js'
-export * from './closeBookmarkedTabs.js'
 export * from './closeDuplicateTabs.js'
 export * from './getUrlFromUrl.js'
 export * from './moveToFlatFolderStructure.js'

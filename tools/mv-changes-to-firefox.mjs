@@ -104,7 +104,6 @@ await createFileForFirefox(
 
     'command/addBookmark.js',
     'command/clearUrlInActiveTab.js',
-    'command/closeBookmarkedTabs.js',
     'command/closeDuplicateTabs.js',
     'command/getUrlFromUrl.js',
     'command/moveToFlatFolderStructure.js',
