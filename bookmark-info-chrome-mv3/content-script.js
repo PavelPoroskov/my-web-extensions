@@ -849,7 +849,9 @@
 
     const drawList = []
     let prevTitle
-    bookmarkList.forEach((value, index) => {
+
+    let colorIndex = 0
+    bookmarkList.forEach((value) => {
       const { title } = value
 
       if (isShowTitle && title) {
@@ -859,10 +861,16 @@
         }
       }
 
-      drawList.push({ type: 'bookmark', value, bkmIndex: index })
+      if (value.parentColor) {
+        drawList.push({ type: 'bookmark', value })
+      } else {
+        drawList.push({ type: 'bookmark', value, colorIndex: colorIndex % 2 + 1 })
+        colorIndex = colorIndex + 1
+      }
     })
-    partialBookmarkList.forEach((value, index) => {
-      drawList.push({ type: 'partial-bookmark', value, bkmIndex: index + bookmarkList.length })
+    partialBookmarkList.forEach((value) => {
+      drawList.push({ type: 'partial-bookmark', value, colorIndex: colorIndex % 2 + 1 })
+      colorIndex = colorIndex + 1
     })
     authorBookmarkList.forEach((value) => {
       drawList.push({ type: 'author-bookmark', value })
@@ -908,7 +916,7 @@
     const rawNodeList = rootDiv.childNodes;
     const beforeRawLength = rawNodeList.length;
 
-    drawList.forEach(({ type, value, bkmIndex }, index) => {
+    drawList.forEach(({ type, value, colorIndex }, index) => {
       let divRow
 
       switch (type) {
@@ -916,7 +924,12 @@
           const { id, path, parentTitle, parentColor } = value
 
           const divLabel = document.createElement('div');
-          divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
+          const bkmCssClasses = [
+            'bkm-info--label',
+            'bkm-info--bkm',
+            colorIndex && `bkm-info--bkm-${colorIndex}`
+          ].filter(Boolean)
+          divLabel.classList.add(...bkmCssClasses);
           const textNode = document.createTextNode(parentTitle);
           divLabel.appendChild(textNode);
           divLabel.setAttribute('data-restpath', path);
@@ -964,7 +977,12 @@
           const { id, parentTitle, url, parentColor } = value
 
           const divLabel = document.createElement('div');
-          divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
+          const bkmCssClasses = [
+            'bkm-info--label',
+            'bkm-info--bkm',
+            colorIndex && `bkm-info--bkm-${colorIndex}`
+          ].filter(Boolean)
+          divLabel.classList.add(...bkmCssClasses);
 
           const textNode = document.createTextNode(`url*: ${parentTitle}`);
           divLabel.appendChild(textNode);
