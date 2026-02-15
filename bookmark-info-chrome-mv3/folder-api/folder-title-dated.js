@@ -4,12 +4,12 @@ import {
 } from './folder-title-directives.js'
 
 const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric'})
-const weekdayFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'short' })
 const futureDate = new Date('01/01/2125')
 const oneDayMs = 24*60*60*1000
-const weekdaySet = new Set(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
 
-export const isWeekday = (str) => weekdaySet.has(str)
+// const weekdayFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'short' })
+// const weekdaySet = new Set(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
+// export const isWeekday = (str) => weekdaySet.has(str)
 
 const inRange = ({ n, from, to }) => {
   if (!Number.isInteger(n)) {
@@ -44,18 +44,15 @@ export const isDate = (str) => {
 export function isDatedFolderTemplate(folderTitle) {
   const { onlyTitle, objDirectives }  = getTitleDetails(folderTitle)
 
-  // return onlyTitle.endsWith(' @D') && 3 < folderTitle.length
-  return objDirectives['@D'] !== undefined && 3 < onlyTitle.length
+  return objDirectives['@D'] !== undefined && 0 < onlyTitle.length
 }
 
 export function getDatedTitle(datedTemplate) {
   const { onlyTitle }  = getTitleDetails(datedTemplate)
-  // const fixedPart = onlyTitle.slice(0, -3).trim()
   const fixedPart = onlyTitle
 
   const today = new Date()
   const sToday = dateFormatter.format(today).replaceAll('/', '-')
-  const sWeekday = weekdayFormatter.format(today)
 
   const days = Math.floor((futureDate - today)/oneDayMs)
   const order = new Number(days).toString(36).padStart(3,'0')
@@ -63,7 +60,7 @@ export function getDatedTitle(datedTemplate) {
   const objDirectives = { '#o': order }
 
   return getTitleWithDirectives({
-    onlyTitle: `${fixedPart} ${sToday} ${sWeekday}`,
+    onlyTitle: `${fixedPart} ${sToday}`,
     objDirectives
   })
 }
@@ -71,7 +68,7 @@ export function getDatedTitle(datedTemplate) {
 export const getDateFromDatedTitle = (title) => {
   const { onlyTitle }  = getTitleDetails(title)
   const partList = onlyTitle.split(' ')
-  const strDDMMYYYY = partList.at(-2)
+  const strDDMMYYYY = partList.at(-1)
 
   return strDDMMYYYY.split('-').toReversed().join('')
 }
@@ -102,13 +99,11 @@ export function isDatedFolderTitle(str) {
   const { onlyTitle, objDirectives }  = getTitleDetails(str)
   const partList = onlyTitle.split(' ')
 
-  if (!!objDirectives['#o'] && !(3 <= partList.length)) {
+  if (!!objDirectives['#o'] && !(2 <= partList.length)) {
     return false
   }
 
-  const result = isWeekday(partList.at(-1)) && isDate(partList.at(-2))
-
-  return result
+  return isDate(partList.at(-1))
 }
 
 export function isDatedTitleForTemplate({ title, template }) {
@@ -120,10 +115,9 @@ export function isDatedTitleForTemplate({ title, template }) {
   }
 
   const { onlyTitle: onlyTitleTitle }  = getTitleDetails(title)
-  const fixedPartFromTitle = onlyTitleTitle.split(' ').slice(0, -2).join(' ')
+  const fixedPartFromTitle = onlyTitleTitle.split(' ').slice(0, -1).join(' ')
 
   const { onlyTitle: onlyTitleTemplate }  = getTitleDetails(template)
-  // const fixedPartFromTemplate = onlyTitleTemplate.slice(0, -3).trim()
   const fixedPartFromTemplate = onlyTitleTemplate
 
   return fixedPartFromTitle == fixedPartFromTemplate
@@ -131,7 +125,7 @@ export function isDatedTitleForTemplate({ title, template }) {
 
 export function getDatedTemplate(title) {
   const { onlyTitle }  = getTitleDetails(title)
-  const fixedPartFromTitle = onlyTitle.split(' ').slice(0, -2).join(' ')
+  const fixedPartFromTitle = onlyTitle.split(' ').slice(0, -1).join(' ')
 
   return `${fixedPartFromTitle} @D`
 }

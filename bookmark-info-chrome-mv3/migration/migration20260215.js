@@ -12,35 +12,36 @@ import {
 } from './migration.unit.js'
 
 
-function isOldDatedFolderTitle(str) {
+function isOldDatedFolderTitleWithWeekday(str) {
   const partList = str.split(' ')
 
   if (!(4 <= partList.length)) {
     return false
   }
 
-  const result = isWeekday(partList.at(-1)) && partList.at(-3).length == 3 && isDate(partList.at(-2)) && !!partList.at(-4)
-
-  return result
-}
-
-function fromOldTitleToNewTitle(str) {
-  const partList = str.split(' ')
-
-  if (!(4 <= partList.length)) {
-    return false
-  }
-
-  const weekday = partList.at(-1)
-  const date = partList.at(-2)
-  const order = partList.at(-3)
   const fixed = partList.slice(0, -3).join(' ')
+  const date = partList.at(-3)
+  const weekday = partList.at(-2)
+  const order = partList.at(-1)
 
-  return `${fixed} ${date} ${weekday} ${order}`
+  return order.startsWith('#o:') && isWeekday(weekday) && isDate(date) && !!fixed
 }
 
-export async function migration20250520() {
+function fromOldTitleToNewTitleWithoutWeekday(str) {
+  const partList = str.split(' ')
 
+  if (!(4 <= partList.length)) {
+    return false
+  }
+
+  const fixed = partList.slice(0, -3).join(' ')
+  const date = partList.at(-3)
+  const order = partList.at(-1)
+
+  return `${fixed} ${date} ${order}`
+}
+
+export async function migration20260215() {
   const renameList = []
 
   async function onFolder({ folder, level }) {
@@ -48,10 +49,10 @@ export async function migration20250520() {
       return
     }
 
-    if (isOldDatedFolderTitle(folder.title)) {
+    if (isOldDatedFolderTitleWithWeekday(folder.title)) {
       renameList.push({
         id: folder.id,
-        title: fromOldTitleToNewTitle(folder.title),
+        title: fromOldTitleToNewTitleWithoutWeekday(folder.title),
       })
     }
   }

@@ -1,6 +1,5 @@
 import {
   isDate,
-  isWeekday,
 } from '../folder-api/index.js'
 import {
   updateFolderIgnoreInController,
@@ -8,6 +7,10 @@ import {
 import {
   traverseTreeRecursively,
 } from '../bookmark-list-ops/index.js'
+import {
+  isWeekday,
+} from './migration.unit.js'
+
 
 function isOldDatedFolderTitleNoDirective(str) {
   const partList = str.split(' ')
