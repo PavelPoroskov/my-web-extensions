@@ -75,17 +75,14 @@ async function getParentFolderList(bookmarkList) {
       objDirectives,
     } = getTitleDetails(folder.title)
 
-    memo.bkmFolderById.add(
-      folder.id,
-      {
-        title: onlyTitle,
-        color: objDirectives['#c'],
-        parentId: folder.parentId,
-        id: folder.id,
-      }
-    )
-
-    knownFolderList.push(folder)
+    const folderInfo = {
+      title: onlyTitle,
+      color: objDirectives['#c'],
+      parentId: folder.parentId,
+      id: folder.id,
+    }
+    memo.bkmFolderById.add(folder.id,  folderInfo)
+    knownFolderList.push(folderInfo)
   })
 
   return knownFolderList
