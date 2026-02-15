@@ -138,7 +138,9 @@ export async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
   }
 
   resultBookmarkList = resultBookmarkList.map((obj) => (isDatedFolderTitle(obj.parentTitle)
-    ? Object.assign({}, obj, { templateTitle: getDatedTemplate(obj.parentTitle) })
+    ? Object.assign({}, obj, {
+        templateTitle: getDatedTemplate(obj.parentTitle)
+      })
     : obj
   ))
 
