@@ -105,6 +105,7 @@ await createFileForFirefox(
     'command/addBookmark.js',
     'command/clearUrlInActiveTab.js',
     'command/closeDuplicateTabs.js',
+    'command/sortTabsByTitle.js',
     'command/getUrlFromUrl.js',
     'command/moveToFlatFolderStructure.js',
     'command/toggleYoutubeHeader.js',

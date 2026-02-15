@@ -52,6 +52,11 @@ async function createContextMenu(settings) {
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'close duplicate tabs',
   });
+  chrome.contextMenus.create({
+    id: CONTEXT_MENU_CMD_ID.SORT_TABS_BY_TITLE,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'Sort Tabs by Title',
+  });
 
   if (settings[USER_OPTION.YOUTUBE_HIDE_PAGE_HEADER]) {
     chrome.contextMenus.create({

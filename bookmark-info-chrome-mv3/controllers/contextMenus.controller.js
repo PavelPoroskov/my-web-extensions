@@ -8,6 +8,7 @@ import {
   startAddBookmarkFromSelection,
   toggleYoutubeHeader,
   getUrlFromUrl,
+  sortTabsByTitle,
 } from '../command/index.js'
 import {
   makeLogFunction,
@@ -30,6 +31,10 @@ export const contextMenusController = {
       }
       case CONTEXT_MENU_CMD_ID.CLOSE_DUPLICATE: {
         closeDuplicateTabs();
+        break;
+      }
+      case CONTEXT_MENU_CMD_ID.SORT_TABS_BY_TITLE: {
+        sortTabsByTitle();
         break;
       }
       case CONTEXT_MENU_CMD_ID.CLEAR_URL: {
