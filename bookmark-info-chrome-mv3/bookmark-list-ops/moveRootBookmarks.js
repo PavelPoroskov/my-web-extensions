@@ -35,8 +35,6 @@ async function moveRootBookmarks({ fromId }) {
 }
 
 export async function moveRootBookmarksToUnclassified() {
-
-  // await moveRootBookmarks({ fromId: BOOKMARKS_BAR_FOLDER_ID, unclassifiedId })
-  // await moveRootBookmarks({ fromId: BOOKMARKS_MENU_FOLDER_ID, unclassifiedId })
+  await moveRootBookmarks({ fromId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
   await moveRootBookmarks({ fromId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
 }
