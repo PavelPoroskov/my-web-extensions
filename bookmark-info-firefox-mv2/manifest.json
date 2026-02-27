@@ -34,11 +34,11 @@
     "default_popup": "popup/popup.html"
   },
   "commands": {
-    "ADD_BOOKMARK_FROM_INPUT_KBD": {
+    "BOOKMARK_ADD_FROM_INPUT_KBD": {
       "suggested_key": { "default": "Ctrl+Shift+Comma" },
       "description": "Bookmark page. Get folder name from input"
     },
-    "ADD_BOOKMARK_FROM_SELECTION_KBD": {
+    "BOOKMARK_ADD_FROM_SELECTION_KBD": {
       "suggested_key": { "default": "Ctrl+Shift+Period" },
       "description": "Bookmark page. Get folder name from selection"
     }

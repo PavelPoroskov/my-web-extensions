@@ -61,7 +61,7 @@ async function getUserInputInPage(tabId) {
 async function toggleYoutubeHeaderInPage(tabId) {
   logPA('toggleYoutubeHeaderInPage () 00', tabId)
   const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER,
+    command: CONTENT_SCRIPT_MSG_ID.YOUTUBE_TOGGLE_PAGE_HEADER,
   }
   logPA('toggleYoutubeHeaderInPage () sendMessage', tabId)
   await chrome.tabs.sendMessage(tabId, msg)

@@ -21,32 +21,31 @@ export const contextMenusController = {
     logCMC('contextMenus.onClicked 00', OnClickData.menuItemId);
 
     switch (OnClickData.menuItemId) {
-      case CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_INPUT_MENU: {
+      case CONTEXT_MENU_CMD_ID.BOOKMARK_ADD_FROM_INPUT_MENU: {
         startAddBookmarkFromInput()
         break;
       }
-      case CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_SELECTION_MENU: {
+      case CONTEXT_MENU_CMD_ID.BOOKMARK_ADD_FROM_SELECTION_MENU: {
         startAddBookmarkFromSelection()
         break;
       }
-      case CONTEXT_MENU_CMD_ID.CLOSE_DUPLICATE: {
+      case CONTEXT_MENU_CMD_ID.TABS_CLOSE_DUPLICATE: {
         closeDuplicateTabs();
         break;
       }
-      case CONTEXT_MENU_CMD_ID.SORT_TABS_BY_TITLE: {
+      case CONTEXT_MENU_CMD_ID.TABS_SORT_BY_TITLE: {
         sortTabsByTitle();
         break;
       }
-      case CONTEXT_MENU_CMD_ID.CLEAR_URL: {
+      case CONTEXT_MENU_CMD_ID.URL_CLEAR: {
         removeFromUrlHashAndSearchParamsInActiveTab()
         break;
       }
-      case CONTEXT_MENU_CMD_ID.GET_URL_FROM_URL: {
-        logCMC('contextMenus.onClicked 11 CONTEXT_MENU_CMD_ID.GET_URL_FROM_URL')
+      case CONTEXT_MENU_CMD_ID.URL_GET_URL_FROM_URL: {
         getUrlFromUrl();
         break;
       }
-      case CONTEXT_MENU_CMD_ID.TOGGLE_YOUTUBE_HEADER: {
+      case CONTEXT_MENU_CMD_ID.YOUTUBE_TOGGLE_PAGE_HEADER: {
         toggleYoutubeHeader()
         break;
       }

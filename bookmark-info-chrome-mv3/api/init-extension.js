@@ -28,39 +28,39 @@ async function createContextMenu(settings) {
   await chrome.contextMenus.removeAll();
 
   chrome.contextMenus.create({
-    id: CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_SELECTION_MENU,
+    id: CONTEXT_MENU_CMD_ID.BOOKMARK_ADD_FROM_SELECTION_MENU,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'add bookmark, selection as a tag',
   });
   chrome.contextMenus.create({
-    id: CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_INPUT_MENU,
+    id: CONTEXT_MENU_CMD_ID.BOOKMARK_ADD_FROM_INPUT_MENU,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'add bookmark, tag from input',
   });
   chrome.contextMenus.create({
-    id: CONTEXT_MENU_CMD_ID.CLEAR_URL,
+    id: CONTEXT_MENU_CMD_ID.URL_CLEAR,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'clear url from hash and all search params',
   });
   chrome.contextMenus.create({
-    id: CONTEXT_MENU_CMD_ID.GET_URL_FROM_URL,
+    id: CONTEXT_MENU_CMD_ID.URL_GET_URL_FROM_URL,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'get url from url',
   });
   chrome.contextMenus.create({
-    id: CONTEXT_MENU_CMD_ID.CLOSE_DUPLICATE,
+    id: CONTEXT_MENU_CMD_ID.TABS_CLOSE_DUPLICATE,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'close duplicate tabs',
   });
   chrome.contextMenus.create({
-    id: CONTEXT_MENU_CMD_ID.SORT_TABS_BY_TITLE,
+    id: CONTEXT_MENU_CMD_ID.TABS_SORT_BY_TITLE,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'Sort Tabs by Title',
   });
 
   if (settings[USER_OPTION.YOUTUBE_HIDE_PAGE_HEADER]) {
     chrome.contextMenus.create({
-      id: CONTEXT_MENU_CMD_ID.TOGGLE_YOUTUBE_HEADER,
+      id: CONTEXT_MENU_CMD_ID.YOUTUBE_TOGGLE_PAGE_HEADER,
       contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
       title: 'toggle youtube page header',
     });
