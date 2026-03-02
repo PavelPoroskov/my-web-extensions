@@ -46,6 +46,18 @@ async function getSelectionInPage(tabId) {
     })
 }
 
+async function getSelectionAndEditInPage(tabId) {
+  logPA('getSelectionInPage () 00', tabId)
+  const msg = {
+    command: CONTENT_SCRIPT_MSG_ID.GET_SELECTION_AND_EDIT,
+  }
+  logPA('getSelectionInPage () sendMessage', tabId)
+  await chrome.tabs.sendMessage(tabId, msg)
+    .catch((err) => {
+      logPA('getSelectionInPage () IGNORE', err)
+    })
+}
+
 async function getUserInputInPage(tabId) {
   logPA('getUserInputInPage () 00', tabId)
   const msg = {
@@ -104,6 +116,7 @@ export const page = {
   changeUrlInTab,
   replaceUrlInTab,
   getSelectionInPage,
+  getSelectionAndEditInPage,
   getUserInputInPage,
   toggleYoutubeHeaderInPage,
   updateBookmarkInfoInPage,

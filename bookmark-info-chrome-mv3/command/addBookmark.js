@@ -9,6 +9,15 @@ export async function startAddBookmarkFromSelection() {
   }
 }
 
+export async function startAddBookmarkFromSelectionAndEdit() {
+  const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  const [activeTab] = tabs;
+
+  if (activeTab?.id) {
+    await page.getSelectionAndEditInPage(activeTab.id)
+  }
+}
+
 export async function startAddBookmarkFromInput() {
   const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   const [activeTab] = tabs;

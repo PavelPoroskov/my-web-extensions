@@ -38,6 +38,11 @@ async function createContextMenu(settings) {
     title: 'add bookmark, tag from input',
   });
   chrome.contextMenus.create({
+    id: CONTEXT_MENU_CMD_ID.BOOKMARK_ADD_FROM_SELECTION_AND_EDIT,
+    contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
+    title: 'add bookmark, edit selection',
+  });
+  chrome.contextMenus.create({
     id: CONTEXT_MENU_CMD_ID.URL_CLEAR,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'clear url from hash and all search params',
