@@ -1600,7 +1600,8 @@
         break
       }
       case CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT: {
-        const userInput = window.prompt("Enter folder for your bookmark")
+        const selection = document.getSelection().toString()
+        const userInput = window.prompt("Enter folder for your bookmark", selection || '')
         // addBookmarkListByNameWithComma(userInput)
         if (!userInput) {
           break
