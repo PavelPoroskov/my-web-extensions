@@ -6,7 +6,6 @@ import {
   closeDuplicateTabs,
   startAddBookmarkFromInput,
   startAddBookmarkFromSelection,
-  startAddBookmarkFromSelectionAndEdit,
   toggleYoutubeHeader,
   getUrlFromUrl,
   sortTabsByTitle,
@@ -28,10 +27,6 @@ export const contextMenusController = {
       }
       case CONTEXT_MENU_CMD_ID.BOOKMARK_ADD_FROM_SELECTION_MENU: {
         startAddBookmarkFromSelection()
-        break;
-      }
-      case CONTEXT_MENU_CMD_ID.BOOKMARK_ADD_FROM_SELECTION_AND_EDIT: {
-        startAddBookmarkFromSelectionAndEdit()
         break;
       }
       case CONTEXT_MENU_CMD_ID.TABS_CLOSE_DUPLICATE: {

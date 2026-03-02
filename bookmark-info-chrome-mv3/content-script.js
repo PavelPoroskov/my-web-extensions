@@ -31,7 +31,6 @@
     YOUTUBE_TOGGLE_PAGE_HEADER: 'YOUTUBE_TOGGLE_PAGE_HEADER',
     GET_USER_INPUT: 'GET_USER_INPUT',
     GET_SELECTION: 'GET_SELECTION',
-    GET_SELECTION_AND_EDIT: 'GET_SELECTION_AND_EDIT',
     REPLACE_URL: 'REPLACE_URL',
     SEND_ME_AUTHOR: 'SEND_ME_AUTHOR',
   }
@@ -1601,7 +1600,8 @@
         break
       }
       case CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT: {
-        const userInput = window.prompt("Enter folder for your bookmark",)
+        const userInput = window.prompt("Enter folder for your bookmark")
+        // addBookmarkListByNameWithComma(userInput)
         if (!userInput) {
           break
         }
@@ -1617,21 +1617,6 @@
       case CONTENT_SCRIPT_MSG_ID.GET_SELECTION: {
         const selection = document.getSelection().toString()
         addBookmarkByFolderNameList([selection])
-        break
-      }
-      case CONTENT_SCRIPT_MSG_ID.GET_SELECTION_AND_EDIT: {
-        const selection = document.getSelection().toString()
-        const userInput = window.prompt("Enter folder for your bookmark", selection)
-        if (!userInput) {
-          break
-        }
-
-        const folderNameList = userInput
-          .split('---')
-          .map((s) => s.trim())
-          .filter(Boolean)
-
-        addBookmarkByFolderNameList(folderNameList)
         break
       }
       case CONTENT_SCRIPT_MSG_ID.SEND_ME_AUTHOR: {
