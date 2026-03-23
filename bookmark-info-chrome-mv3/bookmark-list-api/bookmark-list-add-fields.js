@@ -45,6 +45,12 @@ const getColor = (id) => {
   return folder?.color
 }
 
+const getIcon = (id) => {
+   const folder = memo.bkmFolderById.get(id);
+
+  return folder?.icon
+}
+
 async function getParentFolderList(bookmarkList) {
   // parentIdList.length <= bookmarkList.length
   // for root folders parentIdList=[]
@@ -78,6 +84,7 @@ async function getParentFolderList(bookmarkList) {
     const folderInfo = {
       title: onlyTitle,
       color: objDirectives['#c'],
+      icon: objDirectives['#i'],
       parentId: folder.parentId,
       id: folder.id,
     }
@@ -120,6 +127,7 @@ export async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
     .map((bookmark) => ({
       parentTitle: parentMap[bookmark.parentId]?.title || '',
       color: getColor(bookmark.parentId),
+      icon: getIcon(bookmark.parentId),
       ...bookmark
     }))
 
@@ -154,17 +162,18 @@ export async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
 
   const templateInfoList = await Promise.all(templateTitleList.map(
     (templateTitle) => folderCreator.createFolder(templateTitle)
-      .then(({ id: templateId, color: templateColor }) => ({ templateId, templateTitle, templateColor }))
+      .then(({ id: templateId, color: templateColor, icon }) => ({ templateId, templateTitle, templateColor, icon }))
   ))
 
   const templateTitleMap = Object.fromEntries(
-    templateInfoList.map(({ templateId, templateTitle, templateColor }) => [templateTitle, { templateId, templateColor }])
+    templateInfoList.map(({ templateId, templateTitle, templateColor, icon }) => [templateTitle, { templateId, templateColor, icon }])
   )
 
   resultBookmarkList = resultBookmarkList.map((obj) => (obj.templateTitle
     ? Object.assign({}, obj, {
       templateId: templateTitleMap[obj.templateTitle].templateId,
       color: templateTitleMap[obj.templateTitle].templateColor || obj.color,
+      icon: templateTitleMap[obj.templateTitle].icon || obj.icon,
       isInternal: isVisitedDatedTemplate(obj.templateTitle)
     })
     : obj

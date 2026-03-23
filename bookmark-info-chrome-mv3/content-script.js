@@ -921,7 +921,7 @@
 
       switch (type) {
         case 'bookmark': {
-          const { id, path, parentTitle, parentColor } = value
+          const { id, path, parentTitle, parentColor, icon } = value
 
           const divLabel = document.createElement('div');
           const bkmCssClasses = [
@@ -929,7 +929,20 @@
             'bkm-info--bkm',
             colorIndex && `bkm-info--bkm-${colorIndex}`
           ].filter(Boolean)
+
           divLabel.classList.add(...bkmCssClasses);
+
+          if (icon) {
+            const [iconValue, textColor] = icon.split(':')
+            const divSpan = document.createElement('span');
+            divSpan.setHTML(`${iconValue}&nbsp;`)
+
+            if (textColor) {
+              divSpan.style.color = textColor
+            }
+            divLabel.appendChild(divSpan);
+          }
+
           const textNode = document.createTextNode(parentTitle);
           divLabel.appendChild(textNode);
           divLabel.setAttribute('data-restpath', path);

@@ -53,5 +53,6 @@ export async function getPartialBookmarkList({ url, exactBkmIdList = [], pathnam
         parentId: bookmark.parentId,
         parentTitle: bookmark.parentTitle,
         parentColor: formatColorDirectiveValue(bookmark.color),
+        icon: bookmark.icon,
     }));
 }

@@ -19,6 +19,7 @@ export async function getDirectBookmarkList(url) {
         parentId: bookmark.parentId,
         parentTitle: bookmark.parentTitle,
         parentColor: formatColorDirectiveValue(bookmark.color),
+        icon: bookmark.icon,
         path: bookmark.path,
         templateId: bookmark.templateId,
         templateTitle: bookmark.templateTitle,

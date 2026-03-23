@@ -1,4 +1,4 @@
-import { isCorrectColorDirectiveValue } from '../api-low/color.js'
+import { isCorrectColorDirectiveValue, isCorrectIconDirectiveValue } from '../api-low/color.js'
 
 export function getTitleDetails(title) {
   const partList = title
@@ -38,6 +38,12 @@ export function getTitleDetails(title) {
       // case '#color':
       case '#c': {
         if (isCorrectColorDirectiveValue(directiveValue)) {
+          value = directiveValue
+        }
+        break
+      }
+      case '#i': {
+        if (isCorrectIconDirectiveValue(directiveValue)) {
           value = directiveValue
         }
         break

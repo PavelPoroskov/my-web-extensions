@@ -257,7 +257,8 @@ class FolderCreator {
 
     return {
       ...result,
-      color: result.objDirectives?.['#c']
+      color: result.objDirectives?.['#c'],
+      icon: result.objDirectives?.['#i'],
     }
   }
 
