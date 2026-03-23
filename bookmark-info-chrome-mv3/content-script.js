@@ -920,16 +920,23 @@
       let divRow
 
       switch (type) {
-        case 'bookmark': {
-          const { id, path, parentTitle, parentColor, icon } = value
+        case 'bookmark':
+        case 'partial-bookmark':
+        case 'author-bookmark': {
+          const { id, path, url, parentTitle, parentColor, icon } = value
 
-          const divLabel = document.createElement('div');
           const bkmCssClasses = [
             'bkm-info--label',
-            'bkm-info--bkm',
-            colorIndex && `bkm-info--bkm-${colorIndex}`
-          ].filter(Boolean)
+            'bkm-info--bkm'
+          ]
+          if (colorIndex) {
+            bkmCssClasses.push(`bkm-info--bkm-${colorIndex}`)
+          }
+          if (type === 'author-bookmark') {
+            bkmCssClasses.push('bkm-info--author')
+          }
 
+          const divLabel = document.createElement('div');
           divLabel.classList.add(...bkmCssClasses);
 
           if (icon) {
@@ -943,16 +950,31 @@
             divLabel.appendChild(divSpan);
           }
 
-          const textNode = document.createTextNode(parentTitle);
-          divLabel.appendChild(textNode);
-          divLabel.setAttribute('data-restpath', path);
+          let text
+          let dataId
+          let dataPath
 
-          if (parentColor) {
-            const [bgColor, textColor] = parentColor.split(':')
-            divLabel.style.backgroundColor = bgColor
-            divLabel.style.color = textColor || contrastColor(bgColor)
+          switch (type) {
+            case 'bookmark':
+              text = parentTitle;
+              dataId = `b#${id}`
+              dataPath = path
+              break
+            case 'partial-bookmark':
+              text = `url*: ${parentTitle}`;
+              dataId = `pb#${id}`
+              dataPath = `url*: ${url}`
+              break
+            case 'author-bookmark':
+              text = `author: ${parentTitle}`;
+              dataId = `h#${id}`
+              dataPath = url
+              break
           }
-
+          const textNode = document.createTextNode(text);
+          divLabel.appendChild(textNode);
+          divLabel.setAttribute('data-id', dataId);
+          divLabel.setAttribute('data-restpath', dataPath);
           // TODO sanitize: remove ",<,>
           // const sanitizedFullPath = fullPath
           //   .replaceAll('"', '&quot;')
@@ -961,46 +983,6 @@
           // divLabel.setAttribute('data-restpath', sanitizedFullPath);
           //
           // Symbols ( " > < ) don't break html and displayed as text.
-          divLabel.setAttribute('data-id', `b#${id}`);
-
-          const divDelBtn = document.createElement('div');
-          divDelBtn.setAttribute('data-id', `db#${id}`);
-          divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-del');
-
-          const divDelBtnLetter = document.createElement('div');
-          divDelBtnLetter.classList.add('bkm-info--btn-letter');
-          const textNodeDel = document.createTextNode('X');
-          divDelBtnLetter.appendChild(textNodeDel);
-
-          divDelBtn.appendChild(divDelBtnLetter);
-
-          const divLabelContainer = document.createElement('div');
-          divLabelContainer.classList.add('bkm-info--label-container');
-          divLabelContainer.appendChild(divLabel);
-          divLabelContainer.appendChild(divDelBtn);
-
-          divRow = document.createElement('div');
-          divRow.classList.add('bkm-info--row');
-          divRow.appendChild(divLabelContainer);
-
-          break
-        }
-        case 'partial-bookmark': {
-          // TODO? go to original bookmark
-          const { id, parentTitle, url, parentColor } = value
-
-          const divLabel = document.createElement('div');
-          const bkmCssClasses = [
-            'bkm-info--label',
-            'bkm-info--bkm',
-            colorIndex && `bkm-info--bkm-${colorIndex}`
-          ].filter(Boolean)
-          divLabel.classList.add(...bkmCssClasses);
-
-          const textNode = document.createTextNode(`url*: ${parentTitle}`);
-          divLabel.appendChild(textNode);
-          divLabel.setAttribute('data-restpath', `url*: ${url}`);
-          divLabel.setAttribute('data-id', `pb#${id}`);
 
           if (parentColor) {
             const [bgColor, textColor] = parentColor.split(':')
@@ -1012,32 +994,20 @@
           divLabelContainer.classList.add('bkm-info--label-container');
           divLabelContainer.appendChild(divLabel);
 
-          divRow = document.createElement('div');
-          divRow.classList.add('bkm-info--row');
-          divRow.appendChild(divLabelContainer);
+          if (type === 'bookmark') {
+            const divDelBtn = document.createElement('div');
+            divDelBtn.setAttribute('data-id', `db#${id}`);
+            divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-del');
 
-          break
-        }
-        case 'author-bookmark': {
-          const { id, parentTitle, url, parentColor } = value
+            const divDelBtnLetter = document.createElement('div');
+            divDelBtnLetter.classList.add('bkm-info--btn-letter');
+            const textNodeDel = document.createTextNode('X');
+            divDelBtnLetter.appendChild(textNodeDel);
 
-          const divLabel = document.createElement('div');
-          divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', 'bkm-info--author');
+            divDelBtn.appendChild(divDelBtnLetter);
 
-          const textNode = document.createTextNode(`author: ${parentTitle}`);
-          divLabel.appendChild(textNode);
-          divLabel.setAttribute('data-restpath', url);
-          divLabel.setAttribute('data-id', `h#${id}`);
-
-          if (parentColor) {
-            const [bgColor, textColor] = parentColor.split(':')
-            divLabel.style.backgroundColor = bgColor
-            divLabel.style.color = textColor || contrastColor(bgColor)
+            divLabelContainer.appendChild(divDelBtn);
           }
-
-          const divLabelContainer = document.createElement('div');
-          divLabelContainer.classList.add('bkm-info--label-container');
-          divLabelContainer.appendChild(divLabel);
 
           divRow = document.createElement('div');
           divRow.classList.add('bkm-info--row');
