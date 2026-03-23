@@ -44,7 +44,7 @@ const CONTENT_SCRIPT_MSG_ID = {
   HISTORY_INFO: 'HISTORY_INFO',
   TAGS_INFO: 'TAGS_INFO',
   CHANGE_URL: 'CHANGE_URL',
-  TOGGLE_YOUTUBE_HEADER: 'TOGGLE_YOUTUBE_HEADER',
+  YOUTUBE_TOGGLE_PAGE_HEADER: 'YOUTUBE_TOGGLE_PAGE_HEADER',
   GET_USER_INPUT: 'GET_USER_INPUT',
   GET_SELECTION: 'GET_SELECTION',
   REPLACE_URL: 'REPLACE_URL',
@@ -53,18 +53,19 @@ const CONTENT_SCRIPT_MSG_ID = {
 const BASE_ID = 'BKM_INF';
 
 const CONTEXT_MENU_CMD_ID = {
-  CLOSE_DUPLICATE: `${BASE_ID}_CLOSE_DUPLICATE`,
-  CLOSE_BOOKMARKED: `${BASE_ID}_CLOSE_BOOKMARKED`,
-  CLEAR_URL: `${BASE_ID}_CLEAR_URL`,
-  TOGGLE_YOUTUBE_HEADER: `${BASE_ID}_TOGGLE_YOUTUBE_HEADER`,
-  ADD_BOOKMARK_FROM_SELECTION_MENU: `${BASE_ID}_ADD_BOOKMARK_FROM_SELECTION_MENU`,
-  ADD_BOOKMARK_FROM_INPUT_MENU: `${BASE_ID}_ADD_BOOKMARK_FROM_INPUT_MENU`,
-  GET_URL_FROM_URL: `${BASE_ID}_GET_URL_FROM_URL`,
+  BOOKMARK_ADD_FROM_INPUT_MENU: `${BASE_ID}_BOOKMARK_ADD_FROM_INPUT_MENU`,
+  BOOKMARK_ADD_FROM_SELECTION_MENU: `${BASE_ID}_BOOKMARK_ADD_FROM_SELECTION_MENU`,
+  TABS_CLOSE_DUPLICATE: `${BASE_ID}_TABS_CLOSE_DUPLICATE`,
+  TABS_SORT_BY_TITLE: `${BASE_ID}_TABS_SORT_BY_TITLE`,
+  TABS_SAVE_TO_CONTINUE_AND_CLOSE: `${BASE_ID}_TABS_SAVE_TO_CONTINUE_AND_CLOSE`,
+  URL_CLEAR: `${BASE_ID}_URL_CLEAR`,
+  URL_GET_URL_FROM_URL: `${BASE_ID}_URL_GET_URL_FROM_URL`,
+  YOUTUBE_TOGGLE_PAGE_HEADER: `${BASE_ID}_YOUTUBE_TOGGLE_PAGE_HEADER`,
 };
 
 const KEYBOARD_CMD_ID = {
-  ADD_BOOKMARK_FROM_INPUT_KBD: `ADD_BOOKMARK_FROM_INPUT_KBD`,
-  ADD_BOOKMARK_FROM_SELECTION_KBD: `ADD_BOOKMARK_FROM_SELECTION_KBD`,
+  BOOKMARK_ADD_FROM_INPUT_KBD: `ADD_BOOKMARK_FROM_INPUT_KBD`,
+  BOOKMARK_ADD_FROM_SELECTION_KBD: `BOOKMARK_ADD_FROM_SELECTION_KBD`,
 };
 const STORAGE_TYPE = {
   LOCAL: 'LOCAL',
@@ -159,7 +160,7 @@ const USER_OPTION_META = {
 }
 
 // used for migrations
-const DATA_FORMAT = 20260105;
+const DATA_FORMAT = 20260215;
 
 const INTERNAL_VALUES_META = {
   TAG_LIST_IS_OPEN: {
@@ -272,6 +273,10 @@ const logModuleMap = Object.fromEntries(
   isHashRequired: false,
   searchParamList: [
     '*id',
+    'text', // translate.google.com
+    'q', // www.google.com
+    'search',
+    's',
     ['any'],
     ['email_hash'],
     ['pid=0'],
@@ -1237,14 +1242,29 @@ class NodeTaskQueue {
     this.enqueue({ ...task, action: NODE_ACTION.DELETE });
   }
 }
-const hexDigitSet = new Set('0123456789abcdef')
+const digitSet = new Set('0123456789')
+const hexDigitSet = new Set('0123456789abcdef')
 const letterSet = new Set('abcdefghijklmnopqrstuvwxy')
 
-function isLettersOnly(str) {
-  if (!(str.length < 25)) {
-    return false
-  }
+function isDigitValue(str) {
+  const strLow = str.toLowerCase()
 
+  return strLow.at(0) != '0' && Array.from(strLow)
+    .every(letter =>  digitSet.has(letter))
+}
+
+function isHexDigitsOnly(str) {
+  const strLow = str.toLowerCase()
+
+  return Array.from(strLow)
+    .every(letter =>  hexDigitSet.has(letter))
+}
+
+function isHexValue(str) {
+  return str.at(0) != '0' && isHexDigitsOnly(str)
+}
+
+function isLettersOnly(str) {
   const strLow = str.toLowerCase()
 
   return Array.from(strLow)
@@ -1252,18 +1272,11 @@ function isLettersOnly(str) {
 }
 
 function isHexColorValue(str) {
-  if (!str) {
-    return str
-  }
+  return str.length === 6 && isHexDigitsOnly(str)
+}
 
-  if (!(str.length === 6)) {
-    return false
-  }
-
-  const strLow = str.toLowerCase()
-
-  return Array.from(strLow)
-    .every(letter => hexDigitSet.has(letter))
+function isLettersColorValue(str) {
+  return (0 < str.length && str.length <= 25) && isLettersOnly(str)
 }
 
 function isCorrectColorValue(str) {
@@ -1271,13 +1284,78 @@ function isCorrectColorValue(str) {
     return false
   }
 
-  return isLettersOnly(str) || isHexColorValue(str)
+  return isLettersColorValue(str) || isHexColorValue(str)
+}
+
+function isCorrectColorDirectiveValue(str) {
+  if (!str) {
+    return false
+  }
+
+  const [bgColor, textColor] = str.split(':')
+
+  return isCorrectColorValue(bgColor) && (textColor
+    ?  isCorrectColorValue(textColor)
+    : true
+  )
 }
 
 function formatColor(str) {
   return isHexColorValue(str)
     ? `#${str}`
     : str
+}
+
+function formatColorDirectiveValue(str) {
+  if (!str) {
+    return ''
+  }
+
+  const [bgColor, textColor] = str.split(':')
+  const formattedBgColor = formatColor(bgColor)
+
+  return textColor
+    ? `${formattedBgColor}:${formatColor(textColor)}`
+    : formattedBgColor
+}
+
+function isCorrectIconValue(str) {
+  if (!str) {
+    return false
+  }
+
+  let strRest
+  if (str.endsWith(';')) {
+    strRest = str.slice(0, -1)
+  } else {
+    return false
+  }
+
+  if (strRest.startsWith('&#x')) {
+    strRest = strRest.slice(3)
+    return strRest.length === 4 && isHexValue(strRest)
+  } else if (strRest.startsWith('&#')) {
+    strRest = strRest.slice(2)
+    return (strRest.length === 4 || strRest.length === 5) && isDigitValue(strRest)
+  } else if (strRest.startsWith('&')) {
+    strRest = strRest.slice(1)
+    return strRest.length > 0 && isLettersOnly(strRest)
+  } else {
+    return false
+  }
+}
+
+function isCorrectIconDirectiveValue(str) {
+  if (!str) {
+    return false
+  }
+
+  const [iconCode, textColor] = str.split(':')
+
+  return isCorrectIconValue(iconCode) && (textColor
+    ?  isCorrectColorValue(textColor)
+    : true
+  )
 }
 
 function getTitleDetails(title) {
@@ -1297,7 +1375,8 @@ function formatColor(str) {
     }
 
     const directive = lastWord
-    const [directiveName, directiveValue] = directive.split(':')
+    const [directiveName, ...restDirectiveValue] = directive.split(':')
+    const directiveValue = restDirectiveValue.join(':')
 
     let value
 
@@ -1316,7 +1395,13 @@ function formatColor(str) {
       }
       // case '#color':
       case '#c': {
-        if (isCorrectColorValue(directiveValue)) {
+        if (isCorrectColorDirectiveValue(directiveValue)) {
+          value = directiveValue
+        }
+        break
+      }
+      case '#i': {
+        if (isCorrectIconDirectiveValue(directiveValue)) {
           value = directiveValue
         }
         break
@@ -1385,12 +1470,12 @@ function isChangesInDirectives({ oldDirectives, newDirectives }) {
   return false
 }
 const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric'})
-const weekdayFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'short' })
 const futureDate = new Date('01/01/2125')
 const oneDayMs = 24*60*60*1000
-const weekdaySet = new Set(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
 
-const isWeekday = (str) => weekdaySet.has(str)
+// const weekdayFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'short' })
+// const weekdaySet = new Set(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
+// const isWeekday = (str) => weekdaySet.has(str)
 
 const inRange = ({ n, from, to }) => {
   if (!Number.isInteger(n)) {
@@ -1425,18 +1510,15 @@ const isDate = (str) => {
 function isDatedFolderTemplate(folderTitle) {
   const { onlyTitle, objDirectives }  = getTitleDetails(folderTitle)
 
-  // return onlyTitle.endsWith(' @D') && 3 < folderTitle.length
-  return objDirectives['@D'] !== undefined && 3 < onlyTitle.length
+  return objDirectives['@D'] !== undefined && 0 < onlyTitle.length
 }
 
 function getDatedTitle(datedTemplate) {
   const { onlyTitle }  = getTitleDetails(datedTemplate)
-  // const fixedPart = onlyTitle.slice(0, -3).trim()
   const fixedPart = onlyTitle
 
   const today = new Date()
   const sToday = dateFormatter.format(today).replaceAll('/', '-')
-  const sWeekday = weekdayFormatter.format(today)
 
   const days = Math.floor((futureDate - today)/oneDayMs)
   const order = new Number(days).toString(36).padStart(3,'0')
@@ -1444,7 +1526,7 @@ function getDatedTitle(datedTemplate) {
   const objDirectives = { '#o': order }
 
   return getTitleWithDirectives({
-    onlyTitle: `${fixedPart} ${sToday} ${sWeekday}`,
+    onlyTitle: `${fixedPart} ${sToday}`,
     objDirectives
   })
 }
@@ -1452,7 +1534,7 @@ function getDatedTitle(datedTemplate) {
 const getDateFromDatedTitle = (title) => {
   const { onlyTitle }  = getTitleDetails(title)
   const partList = onlyTitle.split(' ')
-  const strDDMMYYYY = partList.at(-2)
+  const strDDMMYYYY = partList.at(-1)
 
   return strDDMMYYYY.split('-').toReversed().join('')
 }
@@ -1483,13 +1565,11 @@ function isDatedFolderTitle(str) {
   const { onlyTitle, objDirectives }  = getTitleDetails(str)
   const partList = onlyTitle.split(' ')
 
-  if (!!objDirectives['#o'] && !(3 <= partList.length)) {
+  if (!!objDirectives['#o'] && !(2 <= partList.length)) {
     return false
   }
 
-  const result = isWeekday(partList.at(-1)) && isDate(partList.at(-2))
-
-  return result
+  return isDate(partList.at(-1))
 }
 
 function isDatedTitleForTemplate({ title, template }) {
@@ -1501,10 +1581,9 @@ function isDatedTitleForTemplate({ title, template }) {
   }
 
   const { onlyTitle: onlyTitleTitle }  = getTitleDetails(title)
-  const fixedPartFromTitle = onlyTitleTitle.split(' ').slice(0, -2).join(' ')
+  const fixedPartFromTitle = onlyTitleTitle.split(' ').slice(0, -1).join(' ')
 
   const { onlyTitle: onlyTitleTemplate }  = getTitleDetails(template)
-  // const fixedPartFromTemplate = onlyTitleTemplate.slice(0, -3).trim()
   const fixedPartFromTemplate = onlyTitleTemplate
 
   return fixedPartFromTitle == fixedPartFromTemplate
@@ -1512,7 +1591,7 @@ function isDatedTitleForTemplate({ title, template }) {
 
 function getDatedTemplate(title) {
   const { onlyTitle }  = getTitleDetails(title)
-  const fixedPartFromTitle = onlyTitle.split(' ').slice(0, -2).join(' ')
+  const fixedPartFromTitle = onlyTitle.split(' ').slice(0, -1).join(' ')
 
   return `${fixedPartFromTitle} @D`
 }
@@ -1737,7 +1816,7 @@ async function getUserInputInPage(tabId) {
 async function toggleYoutubeHeaderInPage(tabId) {
   logPA('toggleYoutubeHeaderInPage () 00', tabId)
   const msg = {
-    command: CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER,
+    command: CONTENT_SCRIPT_MSG_ID.YOUTUBE_TOGGLE_PAGE_HEADER,
   }
   logPA('toggleYoutubeHeaderInPage () sendMessage', tabId)
   await browser.tabs.sendMessage(tabId, msg)
@@ -1884,7 +1963,7 @@ const browserStartTime = new BrowserStartTime()
   return resultList
 }
 
-async function getBookmarkList(url) {
+async function searchBookmarksForUrl(url) {
   if (url.startsWith('chrome:') || url.startsWith('about:')) {
     return []
   }
@@ -1892,6 +1971,33 @@ async function getBookmarkList(url) {
   const bookmarkList = await browser.bookmarks.search({ url });
 
   return bookmarkList
+}
+
+async function addBookmarkParentInfo(bookmarkList) {
+  const parentIdList = bookmarkList.map(({ parentId }) => parentId).filter(Boolean)
+  const uniqueParentIdList = Array.from(new Set(parentIdList))
+  const parentFolderList = await getBookmarkNodeList(uniqueParentIdList)
+
+  const parentMap = Object.fromEntries(
+    parentFolderList
+      .map(({ id, title }) => [id, title])
+  )
+
+  const resultList = bookmarkList
+    .map((bookmark) => ({
+      parentTitle: parentMap[bookmark.parentId] || '',
+      ...bookmark
+    }))
+
+  return resultList
+}
+
+async function getBookmarkListWithParent(url) {
+  const bookmarkList = await searchBookmarksForUrl(url)
+  // add { parentTitle }
+  const listWithParent = await addBookmarkParentInfo(bookmarkList)
+
+  return listWithParent
 }
 class RootFolders {
   BOOKMARKS_BAR_FOLDER_ID = 'toolbar_____'
@@ -3313,12 +3419,12 @@ async function findFolderWithExactTitle(title) {
   return foundItem
 }
 
-async function findSubFolderWithExactTitle({ title, parentId }) {
-  const nodeList = await browser.bookmarks.search({ title });
-  const foundItem = nodeList.find((node) => !node.url && node.parentId == parentId)
+// async function findSubFolderWithExactTitle({ title, parentId }) {
+//   const nodeList = await browser.bookmarks.search({ title });
+//   const foundItem = nodeList.find((node) => !node.url && node.parentId == parentId)
 
-  return foundItem
-}
+//   return foundItem
+// }
 
 function makeIsTitleMatch({ title, normalizeFn = (str) => str }) {
   const onlyTitlePattern = getTitleDetails(title).onlyTitle
@@ -3809,7 +3915,8 @@ function getExistingFolderPlaceParentTitleList(folderTitle) {
 
     return {
       ...result,
-      color: result.objDirectives?.['#c']
+      color: result.objDirectives?.['#c'],
+      icon: result.objDirectives?.['#i'],
     }
   }
 
@@ -3842,6 +3949,256 @@ function getExistingFolderPlaceParentTitleList(folderTitle) {
 }
 
 const folderCreator = new FolderCreator()
+
+const getParentIdList = (bookmarkList = []) => {
+  const parentIdList = bookmarkList
+    .map(({ parentId }) => parentId)
+    .filter(Boolean)
+
+  return Array.from(new Set(parentIdList))
+}
+
+const getFullPath = (id) => {
+  const path = [];
+
+  let currentId = id;
+  while (currentId) {
+    const folder = memo.bkmFolderById.get(currentId);
+
+    if (folder) {
+      path.push(folder.title);
+    }
+
+    currentId = folder?.parentId;
+  }
+
+  return path.filter(Boolean).toReversed().concat('').join('/ ')
+}
+
+const getColor = (id) => {
+   const folder = memo.bkmFolderById.get(id);
+
+  return folder?.color
+}
+
+const getIcon = (id) => {
+   const folder = memo.bkmFolderById.get(id);
+
+  return folder?.icon
+}
+
+async function getParentFolderList(bookmarkList) {
+  // parentIdList.length <= bookmarkList.length
+  // for root folders parentIdList=[]
+  const parentIdList = getParentIdList(bookmarkList)
+
+  if (parentIdList.length === 0) {
+    return []
+  }
+
+  const knownParentIdList = [];
+  const unknownParentIdList = [];
+
+  parentIdList.forEach((id) => {
+    if (memo.bkmFolderById.has(id)) {
+      knownParentIdList.push(id)
+    } else {
+      unknownParentIdList.push(id)
+    }
+  })
+
+  const knownFolderList = knownParentIdList.map((id) => memo.bkmFolderById.get(id))
+
+  const unknownFolderList = await getBookmarkNodeList(unknownParentIdList)
+
+  unknownFolderList.forEach((folder) => {
+    const {
+      onlyTitle,
+      objDirectives,
+    } = getTitleDetails(folder.title)
+
+    const folderInfo = {
+      title: onlyTitle,
+      color: objDirectives['#c'],
+      icon: objDirectives['#i'],
+      parentId: folder.parentId,
+      id: folder.id,
+    }
+    memo.bkmFolderById.add(folder.id,  folderInfo)
+    knownFolderList.push(folderInfo)
+  })
+
+  return knownFolderList
+}
+
+async function getParentInfoRecursively(bookmarkList) {
+  if (bookmarkList.length == 0) {
+    return
+  }
+
+  const parentFolderList = await getParentFolderList(bookmarkList)
+  await getParentInfoRecursively(parentFolderList)
+}
+
+// bookmarkList: [{ id, parentId }]
+async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
+
+  const addFieldMap = Object.fromEntries(
+    addFieldList.map(field => [field, true])
+  )
+
+  const isAddFieldPath = addFieldMap['path']
+
+  let resultBookmarkList = bookmarkList.map(bookmark => ({ ...bookmark }))
+
+  const parentNodeList = await getParentFolderList(resultBookmarkList)
+
+  const parentMap = Object.fromEntries(
+    parentNodeList.map(
+      (folder) => [folder.id, folder]
+    )
+  )
+
+  resultBookmarkList = resultBookmarkList
+    .map((bookmark) => ({
+      parentTitle: parentMap[bookmark.parentId]?.title || '',
+      color: getColor(bookmark.parentId),
+      icon: getIcon(bookmark.parentId),
+      ...bookmark
+    }))
+
+  if (isAddFieldPath) {
+    await getParentInfoRecursively(parentNodeList)
+
+    for (const parentId in parentMap) {
+      parentMap[parentId].path = parentMap[parentId].parentId && getFullPath(parentMap[parentId].parentId) || ''
+    }
+
+    resultBookmarkList = resultBookmarkList
+      .map((bookmark) => ({
+          path: parentMap[bookmark.parentId]?.path || '',
+          ...bookmark
+      }))
+  }
+
+  resultBookmarkList = resultBookmarkList.map((obj) => (isDatedFolderTitle(obj.parentTitle)
+    ? Object.assign({}, obj, {
+        templateTitle: getDatedTemplate(obj.parentTitle)
+      })
+    : obj
+  ))
+
+  const templateTitleList = Array.from(
+    new Set(
+      resultBookmarkList
+        .map(({ templateTitle }) => templateTitle)
+        .filter(Boolean)
+    )
+  )
+
+  const templateInfoList = await Promise.all(templateTitleList.map(
+    (templateTitle) => folderCreator.createFolder(templateTitle)
+      .then(({ id: templateId, color: templateColor, icon }) => ({ templateId, templateTitle, templateColor, icon }))
+  ))
+
+  const templateTitleMap = Object.fromEntries(
+    templateInfoList.map(({ templateId, templateTitle, templateColor, icon }) => [templateTitle, { templateId, templateColor, icon }])
+  )
+
+  resultBookmarkList = resultBookmarkList.map((obj) => (obj.templateTitle
+    ? Object.assign({}, obj, {
+      templateId: templateTitleMap[obj.templateTitle].templateId,
+      color: templateTitleMap[obj.templateTitle].templateColor || obj.color,
+      icon: templateTitleMap[obj.templateTitle].icon || obj.icon,
+      isInternal: isVisitedDatedTemplate(obj.templateTitle)
+    })
+    : obj
+  ))
+
+  return resultBookmarkList
+}
+
+// addBookmarkParentTitle
+//  ?use cache DONE
+// addBookmarkFullPath
+//  use cache DONE
+//  only parent.parentId (do not parent) DONE
+// addBookmarkTemplateTitle
+//  ?use cache NO
+// addBookmarkColor
+//  TemplateTitle -> TemplateColor
+//  ParentTemplate -> ParentColor
+//  color: TemplateColor || ParentColor
+//
+//  field onlyTitle and title
+// ?always get color? in cache
+async function getDirectBookmarkList(url) {
+  const bookmarkList = await searchBookmarksForUrl(url)
+  const listWithTemplate = await addFieldsToBookmarkList(bookmarkList, ['path'])
+
+  const selectedBookmarkList = listWithTemplate
+    .map((bookmark) => ({
+        id: bookmark.id,
+        title: bookmark.title,
+        parentId: bookmark.parentId,
+        parentTitle: bookmark.parentTitle,
+        parentColor: formatColorDirectiveValue(bookmark.color),
+        icon: bookmark.icon,
+        path: bookmark.path,
+        templateId: bookmark.templateId,
+        templateTitle: bookmark.templateTitle,
+        isInternal: bookmark.isInternal,
+      }));
+
+  return selectedBookmarkList
+}
+const logBLP = makeLogFunction({ module: 'bookmark-list-partial.js' })
+
+// TODO clear logic
+//  showPartialBookmarks(
+//    const bookmarkList = await getPartialBookmarkList ({ url, exactBkmIdList })
+//  showAuthorBookmarksStep2(
+//    getPartialBookmarkList({ url: cleanedAuthorUrl, pathnamePattern: matchedGetAuthor?.authorPattern })
+async function getPartialBookmarkList({ url, exactBkmIdList = [], pathnamePattern }) {
+  // 1 < pathname.length : it is not root path
+  //    for https://www.youtube.com/watch?v=qqqqq other conditions than 1 < pathname.length
+  // urlForSearch !== url : original url has search params, ending /, index[.xxxx]
+  //  original url can be normalized yet, but I want get url with search params, ending /, index[.xxxx]
+
+  const {
+    isSearchAvailable,
+    urlForSearch,
+    isUrlMatchToPartialUrlSearch,
+  } = await startPartialUrlSearch({ url, pathnamePattern })
+  logBLP('getPartialBookmarkList () 22 startPartialUrlSearch', { isSearchAvailable, urlForSearch })
+
+  if (!isSearchAvailable) {
+    return []
+  }
+
+  const bkmListForSubstring = await browser.bookmarks.search(urlForSearch);
+  logBLP('getPartialBookmarkList () 33 search(normalizedUrl)', bkmListForSubstring.length, bkmListForSubstring)
+
+  const yetSet = new Set(exactBkmIdList)
+  const partialBookmarkList = []
+  bkmListForSubstring.forEach((bkm) => {
+    if (bkm.url && isUrlMatchToPartialUrlSearch(bkm.url) && !yetSet.has(bkm.id)) {
+      partialBookmarkList.push(bkm)
+    }
+  })
+
+  const listWithParent = await addFieldsToBookmarkList(partialBookmarkList)
+
+  return listWithParent
+    .map((bookmark) => ({
+        id: bookmark.id,
+        url: bookmark.url,
+        parentId: bookmark.parentId,
+        parentTitle: bookmark.parentTitle,
+        parentColor: formatColorDirectiveValue(bookmark.color),
+        icon: bookmark.icon,
+    }));
+}
 
 const logBI = makeLogFunction({ module: 'bookmark-ignore.js' })
 
@@ -3905,74 +4262,6 @@ async function removeBookmark(bkmId) {
   // eslint-disable-next-line no-empty
   {
   }
-}
-async function addBookmarkParentInfo(bookmarkList) {
-
-  const parentIdList = bookmarkList.map(({ parentId }) => parentId).filter(Boolean)
-  const uniqueParentIdList = Array.from(new Set(parentIdList))
-  const parentFolderList = await getBookmarkNodeList(uniqueParentIdList)
-
-  const parentMap = Object.fromEntries(
-    parentFolderList
-      .map(({ id, title }) => [id, title])
-  )
-
-  const resultList = bookmarkList
-    .map((bookmark) => ({
-      parentTitle: parentMap[bookmark.parentId] || '',
-      ...bookmark
-    }))
-
-  return resultList
-}
-
-async function addBookmarkColorInfo(bookmarkList) {
-  const bkmListWithTemplate = bookmarkList.map((obj) => {
-    const {
-      onlyTitle,
-      objDirectives,
-    } = getTitleDetails(obj.parentTitle)
-
-    return {
-      ...obj,
-      parentTitle: onlyTitle,
-      parentColor: objDirectives['#c'],
-      templateTitle: isDatedFolderTitle(obj.parentTitle) ? getDatedTemplate(obj.parentTitle) : undefined,
-    }
-  })
-
-  const templateTitleList = Array.from(
-    new Set(
-      bkmListWithTemplate
-        .map(({ templateTitle }) => templateTitle)
-        .filter(Boolean)
-    )
-  )
-
-  const templateInfoList = await Promise.all(templateTitleList.map(
-    (templateTitle) => folderCreator.createFolder(templateTitle)
-      .then(({ color }) => ({ templateTitle, color }))
-  ))
-
-  const templateTitleMap = Object.fromEntries(
-    templateInfoList.map(({ templateTitle, color }) => [templateTitle, color])
-  )
-
-  const resultList = bkmListWithTemplate
-    .map((bookmark) => ({
-      ...bookmark,
-      templateColor: bookmark.templateTitle ? templateTitleMap[bookmark.templateTitle] : undefined,
-    }))
-
-  return resultList
-}
-
-async function getBookmarkListWithParent(url) {
-  const bookmarkList = await getBookmarkList(url)
-  // add { parentTitle }
-  const listWithParent = await addBookmarkParentInfo(bookmarkList)
-
-  return listWithParent
 }
 async function getDatedBookmarkList({ url, template }) {
   const bookmarkListWithParent = await getBookmarkListWithParent(url)
@@ -4501,39 +4790,39 @@ async function createContextMenu(settings) {
   await browser.menus.removeAll();
 
   browser.menus.create({
-    id: CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_SELECTION_MENU,
+    id: CONTEXT_MENU_CMD_ID.BOOKMARK_ADD_FROM_SELECTION_MENU,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'add bookmark, selection as a tag',
   });
   browser.menus.create({
-    id: CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_INPUT_MENU,
+    id: CONTEXT_MENU_CMD_ID.BOOKMARK_ADD_FROM_INPUT_MENU,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'add bookmark, tag from input',
   });
   browser.menus.create({
-    id: CONTEXT_MENU_CMD_ID.CLEAR_URL,
+    id: CONTEXT_MENU_CMD_ID.URL_CLEAR,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'clear url from hash and all search params',
   });
   browser.menus.create({
-    id: CONTEXT_MENU_CMD_ID.GET_URL_FROM_URL,
+    id: CONTEXT_MENU_CMD_ID.URL_GET_URL_FROM_URL,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'get url from url',
   });
   browser.menus.create({
-    id: CONTEXT_MENU_CMD_ID.CLOSE_DUPLICATE,
+    id: CONTEXT_MENU_CMD_ID.TABS_CLOSE_DUPLICATE,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
     title: 'close duplicate tabs',
   });
   browser.menus.create({
-    id: CONTEXT_MENU_CMD_ID.CLOSE_BOOKMARKED,
+    id: CONTEXT_MENU_CMD_ID.TABS_SORT_BY_TITLE,
     contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
-    title: 'close bookmarked tabs',
+    title: 'Sort Tabs by Title',
   });
 
   if (settings[USER_OPTION.YOUTUBE_HIDE_PAGE_HEADER]) {
     browser.menus.create({
-      id: CONTEXT_MENU_CMD_ID.TOGGLE_YOUTUBE_HEADER,
+      id: CONTEXT_MENU_CMD_ID.YOUTUBE_TOGGLE_PAGE_HEADER,
       contexts: BROWSER_SPECIFIC.MENU_CONTEXT,
       title: 'toggle youtube page header',
     });
@@ -4742,53 +5031,6 @@ async function getHistoryInfo({ url }) {
     visitString
   };
 }
-const logBLP = makeLogFunction({ module: 'bookmark-list-partial.js' })
-
-// TODO clear logic
-//  showPartialBookmarks(
-//    const bookmarkList = await getPartialBookmarkList ({ url, exactBkmIdList })
-//  showAuthorBookmarksStep2(
-//    getPartialBookmarkList({ url: cleanedAuthorUrl, pathnamePattern: matchedGetAuthor?.authorPattern })
-async function getPartialBookmarkList({ url, exactBkmIdList = [], pathnamePattern }) {
-  // 1 < pathname.length : it is not root path
-  //    for https://www.youtube.com/watch?v=qqqqq other conditions than 1 < pathname.length
-  // urlForSearch !== url : original url has search params, ending /, index[.xxxx]
-  //  original url can be normalized yet, but I want get url with search params, ending /, index[.xxxx]
-
-  const {
-    isSearchAvailable,
-    urlForSearch,
-    isUrlMatchToPartialUrlSearch,
-  } = await startPartialUrlSearch({ url, pathnamePattern })
-  logBLP('getPartialBookmarkList () 22 startPartialUrlSearch', { isSearchAvailable, urlForSearch })
-
-  if (!isSearchAvailable) {
-    return []
-  }
-
-  const bkmListForSubstring = await browser.bookmarks.search(urlForSearch);
-  logBLP('getPartialBookmarkList () 33 search(normalizedUrl)', bkmListForSubstring.length, bkmListForSubstring)
-
-  const yetSet = new Set(exactBkmIdList)
-  const partialBookmarkList = []
-  bkmListForSubstring.forEach((bkm) => {
-    if (bkm.url && isUrlMatchToPartialUrlSearch(bkm.url) && !yetSet.has(bkm.id)) {
-      partialBookmarkList.push(bkm)
-    }
-  })
-
-  const listWithParent = await addBookmarkParentInfo(partialBookmarkList)
-  const listWithParent2 = await addBookmarkColorInfo(listWithParent)
-
-  return listWithParent2
-    .map((bookmark) => ({
-        id: bookmark.id,
-        url: bookmark.url,
-        parentId: bookmark.parentId,
-        parentTitle: bookmark.parentTitle,
-        parentColor: formatColor(bookmark.templateColor || bookmark.parentColor),
-    }));
-}
 const logSHA = makeLogFunction({ module: 'showAuthorBookmarks.js' })
 
 // TODO clear logic
@@ -4839,164 +5081,6 @@ async function showAuthorBookmarks({ tabId, url }) {
       showAuthorBookmarksStep2({ tabId })
   }
 }
-const getParentIdList = (bookmarkList = []) => {
-  const parentIdList = bookmarkList
-    .map(({ parentId }) => parentId)
-    .filter(Boolean)
-
-  return Array.from(new Set(parentIdList))
-}
-
-const getFullPath = (id, bkmFolderById) => {
-  const path = [];
-
-  let currentId = id;
-  while (currentId) {
-    const folder = bkmFolderById.get(currentId);
-
-    if (folder) {
-      path.push(folder.title);
-    }
-
-    currentId = folder?.parentId;
-  }
-
-  return path.filter(Boolean).toReversed()
-}
-
-const getColor = (id, bkmFolderById) => {
-   const folder = bkmFolderById.get(id);
-
-  return folder?.color
-}
-
-async function getFolderInfoRecursively({ bookmarkList, folderByIdMap }) {
-  // parentIdList.length <= bookmarkList.length
-  // for root folders parentIdList=[]
-  const parentIdList = getParentIdList(bookmarkList)
-
-  if (parentIdList.length === 0) {
-    return
-  }
-
-  const knownParentIdList = [];
-  const unknownParentIdList = [];
-
-  parentIdList.forEach((id) => {
-    if (folderByIdMap.has(id)) {
-      knownParentIdList.push(id)
-    } else {
-      unknownParentIdList.push(id)
-    }
-  })
-
-  const knownFolderList = knownParentIdList.map((id) => folderByIdMap.get(id))
-
-  const unknownFolderList = await getBookmarkNodeList(unknownParentIdList)
-
-  unknownFolderList.forEach((folder) => {
-    const {
-      onlyTitle,
-      objDirectives,
-    } = getTitleDetails(folder.title)
-
-    folderByIdMap.add(
-      folder.id,
-      {
-        title: onlyTitle,
-        color: objDirectives['#c'],
-        parentId: folder.parentId,
-      }
-    )
-
-    knownFolderList.push(folder)
-  })
-
-  await getFolderInfoRecursively({
-    bookmarkList: knownFolderList,
-    folderByIdMap,
-  })
-}
-
-async function addBookmarkPathInfo(bookmarkList) {
-
-  await getFolderInfoRecursively({
-    bookmarkList,
-    folderByIdMap: memo.bkmFolderById,
-  })
-
-  const listWithPath = bookmarkList
-    .map((bookmark) => {
-      const fullPathList = getFullPath(bookmark.parentId, memo.bkmFolderById)
-
-      return {
-        ...bookmark,
-        parentTitle: fullPathList.at(-1),
-        parentColor: getColor(bookmark.parentId, memo.bkmFolderById),
-        path: fullPathList.slice(0, -1).concat('').join('/ '),
-      }
-    });
-
-  return listWithPath
-}
-async function addBookmarkTemplateInfo(bookmarkList) {
-  let resultList = bookmarkList.map((obj) => (isDatedFolderTitle(obj.parentTitle)
-    ? Object.assign({}, obj, { templateTitle: getDatedTemplate(obj.parentTitle) })
-    : obj
-  ))
-
-  const templateTitleList = Array.from(
-    new Set(
-      resultList
-        .map(({ templateTitle }) => templateTitle)
-        .filter(Boolean)
-    )
-  )
-
-  const templateInfoList = await Promise.all(templateTitleList.map(
-    (templateTitle) => folderCreator.createFolder(templateTitle)
-      .then(({ id: templateId, color: templateColor }) => ({ templateId, templateTitle, templateColor }))
-  ))
-
-  const templateTitleMap = Object.fromEntries(
-    templateInfoList.map(({ templateId, templateTitle, templateColor }) => [templateTitle, { templateId, templateColor }])
-  )
-
-  resultList = resultList.map((obj) => (obj.templateTitle
-    ? Object.assign({}, obj, {
-      templateId: templateTitleMap[obj.templateTitle].templateId,
-      templateColor: templateTitleMap[obj.templateTitle].templateColor,
-      isInternal: isVisitedDatedTemplate(obj.templateTitle)
-    })
-    : obj
-  ))
-
-  return resultList
-}
-
-async function getBookmarkListWithTemplate(url) {
-  const bookmarkList = await getBookmarkList(url)
-  // add { parentTitle, path }
-  const listWithPath = await addBookmarkPathInfo(bookmarkList)
-  // add { templateId, templateTitle }
-  const listWithTemplate = await addBookmarkTemplateInfo(listWithPath)
-
-  const selectedBookmarkList = listWithTemplate
-    .map((bookmark) => ({
-        id: bookmark.id,
-        title: bookmark.title,
-        parentId: bookmark.parentId,
-        parentTitle: bookmark.parentTitle,
-        parentColor: formatColor(bookmark.templateColor || bookmark.parentColor),
-        path: bookmark.path,
-        templateId: bookmark.templateId,
-        templateTitle: bookmark.templateTitle,
-        isInternal: bookmark.isInternal,
-      }));
-
-  return selectedBookmarkList
-}
-
 const logUTB = makeLogFunction({ module: 'updateTab.js' })
 
 async function showVisits({ tabId, url }) {
@@ -5037,7 +5121,7 @@ async function updateTab({ tabId, url, debugCaller }) {
   logUTB('UPDATE-TAB () 11', url);
 
   const userSettings = await extensionSettings.get()
-  const bookmarkList = await getBookmarkListWithTemplate(url)
+  const bookmarkList = await getDirectBookmarkList(url)
 
   let filteredBookmarkList = bookmarkList
   if (userSettings[USER_OPTION.SHOW_VISITED] === SHOW_VISITED_OPTIONS.IF_NO_OTHER) {
@@ -5558,9 +5642,7 @@ async function moveNotDescriptiveFoldersToUnclassified() {
 }
 
 async function moveRootBookmarksToUnclassified() {
-
-  // await moveRootBookmarks({ fromId: BOOKMARKS_BAR_FOLDER_ID, unclassifiedId })
-  // await moveRootBookmarks({ fromId: BOOKMARKS_MENU_FOLDER_ID, unclassifiedId })
+  await moveRootBookmarks({ fromId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
   await moveRootBookmarks({ fromId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
 }
 const logMF = makeLogFunction({ module: 'moveFolders.js' })
@@ -5927,6 +6009,8 @@ async function orderBookmarks() {
   logOD('orderBookmarks() 99')
 }
 
+const weekdaySet = new Set(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
+const isWeekday = (str) => weekdaySet.has(str)
 function isOldDatedFolderTitle(str) {
   const partList = str.split(' ')
 
@@ -6107,6 +6191,60 @@ async function migration20260105() {
     Promise.resolve(),
   );
 }
+function isOldDatedFolderTitleWithWeekday(str) {
+  const partList = str.split(' ')
+
+  if (!(4 <= partList.length)) {
+    return false
+  }
+
+  const fixed = partList.slice(0, -3).join(' ')
+  const date = partList.at(-3)
+  const weekday = partList.at(-2)
+  const order = partList.at(-1)
+
+  return order.startsWith('#o:') && isWeekday(weekday) && isDate(date) && !!fixed
+}
+
+function fromOldTitleToNewTitleWithoutWeekday(str) {
+  const partList = str.split(' ')
+
+  if (!(4 <= partList.length)) {
+    return false
+  }
+
+  const fixed = partList.slice(0, -3).join(' ')
+  const date = partList.at(-3)
+  const order = partList.at(-1)
+
+  return `${fixed} ${date} ${order}`
+}
+
+async function migration20260215() {
+  const renameList = []
+
+  async function onFolder({ folder, level }) {
+    if (level < 2) {
+      return
+    }
+
+    if (isOldDatedFolderTitleWithWeekday(folder.title)) {
+      renameList.push({
+        id: folder.id,
+        title: fromOldTitleToNewTitleWithoutWeekday(folder.title),
+      })
+    }
+  }
+
+  await traverseTreeRecursively({ onFolder })
+
+  await renameList.reduce(
+    (promiseChain, { id, title }) => promiseChain.then(
+      () => updateFolderIgnoreInController({ id,  title })
+    ),
+    Promise.resolve(),
+  );
+}
 async function migration({ from }) {
   let actualFormat
   let stepFormat
@@ -6152,6 +6290,16 @@ async function migration20260105() {
       [INTERNAL_VALUES.DATA_FORMAT]: actualFormat,
     })
   }
+
+  stepFormat = 20260215
+  if (actualFormat < stepFormat) {
+    await migration20260215()
+
+    actualFormat = stepFormat
+    await setOptions({
+      [INTERNAL_VALUES.DATA_FORMAT]: actualFormat,
+    })
+  }
 }
 
 async function startAddBookmarkFromSelection() {
@@ -6186,100 +6334,6 @@ async function removeFromUrlHashAndSearchParamsInActiveTab() {
       await page.changeUrlInTab({ tabId: activeTab.id, url: cleanUrl })
     }
   }
-}
-async function isHasBookmark(url) {
-  const bookmarks = await browser.bookmarks.search({ url });
-
-  return bookmarks.length > 0;
-}
-
-async function getTabsWithBookmark(tabList) {
-  const tabIdAndUrlList = [];
-
-  tabList
-    .filter((Tab) => !Tab.pinned)
-    .forEach((Tab) => {
-      const url = Tab.pendingUrl || Tab.url;
-
-      if (url) {
-        tabIdAndUrlList.push({ tabId: Tab.id, url });
-      }
-    });
-
-  const uniqUrlList = Array.from(new Set(
-    tabIdAndUrlList.map(({ url }) => url)
-  ));
-
-  // firefox rejects browser.bookmarks.search({ url: 'about:preferences' })
-  const urlHasBookmarkList = (
-    await Promise.allSettled(uniqUrlList.map(
-      (url) => isHasBookmark(url).then((isHasBkm) => isHasBkm && url)
-    ))
-  )
-    .map(({ value }) => value)
-    .filter(Boolean);
-
-  const urlWithBookmarkSet = new Set(urlHasBookmarkList);
-  const tabWithBookmarkIdList = tabIdAndUrlList
-    .filter(({ url }) => urlWithBookmarkSet.has(url))
-    .map(({ tabId }) => tabId)
-
-  return {
-    tabWithBookmarkIdList,
-  }
-}
-
-async function closeBookmarkedTabs() {
-  const [activeTab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
-
-  const tabs = await browser.tabs.query({ lastFocusedWindow: true });
-  const tabWithIdList = tabs.filter(({ id }) => id);
-
-  const {
-    tabWithBookmarkIdList: closeTabIdList,
-  } = await getTabsWithBookmark(tabWithIdList);
-
-  const closeTabIdSet = new Set(closeTabIdList)
-  let newActiveTabId
-
-  if (activeTab) {
-    const activeTabId = activeTab.id;
-
-    if (closeTabIdSet.has(activeTabId)) {
-
-      let leftIndex = activeTabId.index - 1
-      while (0 <= leftIndex) {
-        const testTab = tabWithIdList[leftIndex]
-        if (!closeTabIdSet.has(testTab.id)) {
-          newActiveTabId = testTab.id
-          break
-        }
-        leftIndex -= 1
-      }
-
-      if (!newActiveTabId) {
-        let rightIndex = activeTabId.index + 1
-        while (rightIndex < tabWithIdList.length) {
-          const testTab = tabWithIdList[rightIndex]
-          if (!closeTabIdSet.has(testTab.id)) {
-            newActiveTabId = testTab.id
-            break
-          }
-          leftIndex += 1
-        }
-      }
-    }
-  }
-
-  if (closeTabIdList.length === tabs.length) {
-    // do not close all tabs. It will close window.
-    await browser.tabs.create({ index: 0 });
-  }
-
-  await Promise.all([
-    newActiveTabId && browser.tabs.update(newActiveTabId, { active: true }),
-    closeTabIdList.length > 0 && browser.tabs.remove(closeTabIdList),
-  ])
 }
 async function getDuplicatesTabs(inTabList) {
   const tabList = inTabList.toReversed();
@@ -6340,6 +6394,25 @@ async function closeDuplicateTabs() {
     newActiveTabId && browser.tabs.update(newActiveTabId, { active: true }),
     duplicateTabIdList.length > 0 && browser.tabs.remove(duplicateTabIdList),
   ])
+}
+async function sortTabsByTitle() {
+  const tabs = await browser.tabs.query({ lastFocusedWindow: true });
+  const tabsWithId = tabs.filter(({ id }) => id);
+
+  const firstUnpinnedTab = tabsWithId.find((tab) => !tab.pinned)
+
+  if (!firstUnpinnedTab) {
+    return
+  }
+
+  const iFirstUnpinnedTab = firstUnpinnedTab.index
+  const unpinnedTabList = tabsWithId.slice(iFirstUnpinnedTab)
+  unpinnedTabList.sort((a,b) => (a.title || '').localeCompare((b.title || '')))
+
+  await browser.tabs.move(
+    unpinnedTabList.map(({ id }) => id),
+    { index: iFirstUnpinnedTab }
+  )
 }
 const logUU = makeLogFunction({ module: 'getUrlFromUrl' })
 
@@ -6483,11 +6556,11 @@ const commandsController = {
     logCC('commandsController.onCommand', command);
 
     switch (command) {
-      case KEYBOARD_CMD_ID.ADD_BOOKMARK_FROM_INPUT_KBD: {
+      case KEYBOARD_CMD_ID.BOOKMARK_ADD_FROM_INPUT_KBD: {
         startAddBookmarkFromInput()
         break;
       }
-      case KEYBOARD_CMD_ID.ADD_BOOKMARK_FROM_SELECTION_KBD: {
+      case KEYBOARD_CMD_ID.BOOKMARK_ADD_FROM_SELECTION_KBD: {
         startAddBookmarkFromSelection()
         break;
       }
@@ -6501,32 +6574,31 @@ const contextMenusController = {
     logCMC('contextMenus.onClicked 00', OnClickData.menuItemId);
 
     switch (OnClickData.menuItemId) {
-      case CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_INPUT_MENU: {
+      case CONTEXT_MENU_CMD_ID.BOOKMARK_ADD_FROM_INPUT_MENU: {
         startAddBookmarkFromInput()
         break;
       }
-      case CONTEXT_MENU_CMD_ID.ADD_BOOKMARK_FROM_SELECTION_MENU: {
+      case CONTEXT_MENU_CMD_ID.BOOKMARK_ADD_FROM_SELECTION_MENU: {
         startAddBookmarkFromSelection()
         break;
       }
-      case CONTEXT_MENU_CMD_ID.CLOSE_DUPLICATE: {
+      case CONTEXT_MENU_CMD_ID.TABS_CLOSE_DUPLICATE: {
         closeDuplicateTabs();
         break;
       }
-      case CONTEXT_MENU_CMD_ID.CLOSE_BOOKMARKED: {
-        closeBookmarkedTabs();
+      case CONTEXT_MENU_CMD_ID.TABS_SORT_BY_TITLE: {
+        sortTabsByTitle();
         break;
       }
-      case CONTEXT_MENU_CMD_ID.CLEAR_URL: {
+      case CONTEXT_MENU_CMD_ID.URL_CLEAR: {
         removeFromUrlHashAndSearchParamsInActiveTab()
         break;
       }
-      case CONTEXT_MENU_CMD_ID.GET_URL_FROM_URL: {
-        logCMC('contextMenus.onClicked 11 CONTEXT_MENU_CMD_ID.GET_URL_FROM_URL')
+      case CONTEXT_MENU_CMD_ID.URL_GET_URL_FROM_URL: {
         getUrlFromUrl();
         break;
       }
-      case CONTEXT_MENU_CMD_ID.TOGGLE_YOUTUBE_HEADER: {
+      case CONTEXT_MENU_CMD_ID.YOUTUBE_TOGGLE_PAGE_HEADER: {
         toggleYoutubeHeader()
         break;
       }

@@ -28,7 +28,7 @@
     // HISTORY_INFO: 'HISTORY_INFO',
     // TAGS_INFO: 'TAGS_INFO',
     CHANGE_URL: 'CHANGE_URL',
-    TOGGLE_YOUTUBE_HEADER: 'TOGGLE_YOUTUBE_HEADER',
+    YOUTUBE_TOGGLE_PAGE_HEADER: 'YOUTUBE_TOGGLE_PAGE_HEADER',
     GET_USER_INPUT: 'GET_USER_INPUT',
     GET_SELECTION: 'GET_SELECTION',
     REPLACE_URL: 'REPLACE_URL',
@@ -328,6 +328,12 @@
     WITH_RECENT: 'WITH_RECENT',
   }
   const ALLOWED_DISTANCE = 3
+
+  function contrastColor(bgColor) {
+    return (IS_BROWSER_FIREFOX
+      ? `contrast-color(${bgColor})`
+      : `oklch(from ${bgColor} calc(l + .60) c h)`)
+  }
 
   function getIsConditionFromUp(letterList, iTest) {
     let distanceFromUp = 0
@@ -843,7 +849,9 @@
 
     const drawList = []
     let prevTitle
-    bookmarkList.forEach((value, index) => {
+
+    let colorIndex = 0
+    bookmarkList.forEach((value) => {
       const { title } = value
 
       if (isShowTitle && title) {
@@ -853,10 +861,16 @@
         }
       }
 
-      drawList.push({ type: 'bookmark', value, bkmIndex: index })
+      if (value.parentColor) {
+        drawList.push({ type: 'bookmark', value })
+      } else {
+        drawList.push({ type: 'bookmark', value, colorIndex: colorIndex % 2 + 1 })
+        colorIndex = colorIndex + 1
+      }
     })
-    partialBookmarkList.forEach((value, index) => {
-      drawList.push({ type: 'partial-bookmark', value, bkmIndex: index + bookmarkList.length })
+    partialBookmarkList.forEach((value) => {
+      drawList.push({ type: 'partial-bookmark', value, colorIndex: colorIndex % 2 + 1 })
+      colorIndex = colorIndex + 1
     })
     authorBookmarkList.forEach((value) => {
       drawList.push({ type: 'author-bookmark', value })
@@ -902,28 +916,65 @@
     const rawNodeList = rootDiv.childNodes;
     const beforeRawLength = rawNodeList.length;
 
-    drawList.forEach(({ type, value, bkmIndex }, index) => {
+    drawList.forEach(({ type, value, colorIndex }, index) => {
       let divRow
 
       switch (type) {
-        case 'bookmark': {
-          const { id, path, parentTitle, parentColor } = value
+        case 'bookmark':
+        case 'partial-bookmark':
+        case 'author-bookmark': {
+          const { id, path, url, parentTitle, parentColor, icon } = value
 
-          const divLabel = document.createElement('div');
-          divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
-          const textNode = document.createTextNode(parentTitle);
-          divLabel.appendChild(textNode);
-          divLabel.setAttribute('data-restpath', path);
-
-          if (parentColor) {
-            divLabel.style.backgroundColor = `${parentColor}`
-            divLabel.style.color = `oklch(from ${parentColor} calc(l + .60) c h)`;
-
-            if (IS_BROWSER_FIREFOX) {
-              divLabel.style.color = `contrast-color(${parentColor})`;
-            }
+          const bkmCssClasses = [
+            'bkm-info--label',
+            'bkm-info--bkm'
+          ]
+          if (colorIndex) {
+            bkmCssClasses.push(`bkm-info--bkm-${colorIndex}`)
+          }
+          if (type === 'author-bookmark') {
+            bkmCssClasses.push('bkm-info--author')
           }
 
+          const divLabel = document.createElement('div');
+          divLabel.classList.add(...bkmCssClasses);
+
+          if (icon) {
+            const [iconValue, textColor] = icon.split(':')
+            const divSpan = document.createElement('span');
+            divSpan.setHTML(`${iconValue}&nbsp;`)
+
+            if (textColor) {
+              divSpan.style.color = textColor
+            }
+            divLabel.appendChild(divSpan);
+          }
+
+          let text
+          let dataId
+          let dataPath
+
+          switch (type) {
+            case 'bookmark':
+              text = parentTitle;
+              dataId = `b#${id}`
+              dataPath = path
+              break
+            case 'partial-bookmark':
+              text = `url*: ${parentTitle}`;
+              dataId = `pb#${id}`
+              dataPath = `url*: ${url}`
+              break
+            case 'author-bookmark':
+              text = `author: ${parentTitle}`;
+              dataId = `h#${id}`
+              dataPath = url
+              break
+          }
+          const textNode = document.createTextNode(text);
+          divLabel.appendChild(textNode);
+          divLabel.setAttribute('data-id', dataId);
+          divLabel.setAttribute('data-restpath', dataPath);
           // TODO sanitize: remove ",<,>
           // const sanitizedFullPath = fullPath
           //   .replaceAll('"', '&quot;')
@@ -932,84 +983,31 @@
           // divLabel.setAttribute('data-restpath', sanitizedFullPath);
           //
           // Symbols ( " > < ) don't break html and displayed as text.
-          divLabel.setAttribute('data-id', `b#${id}`);
-
-          const divDelBtn = document.createElement('div');
-          divDelBtn.setAttribute('data-id', `db#${id}`);
-          divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-del');
-
-          const divDelBtnLetter = document.createElement('div');
-          divDelBtnLetter.classList.add('bkm-info--btn-letter');
-          const textNodeDel = document.createTextNode('X');
-          divDelBtnLetter.appendChild(textNodeDel);
-
-          divDelBtn.appendChild(divDelBtnLetter);
-
-          const divLabelContainer = document.createElement('div');
-          divLabelContainer.classList.add('bkm-info--label-container');
-          divLabelContainer.appendChild(divLabel);
-          divLabelContainer.appendChild(divDelBtn);
-
-          divRow = document.createElement('div');
-          divRow.classList.add('bkm-info--row');
-          divRow.appendChild(divLabelContainer);
-
-          break
-        }
-        case 'partial-bookmark': {
-          // TODO? go to original bookmark
-          const { id, parentTitle, url, parentColor } = value
-
-          const divLabel = document.createElement('div');
-          divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', bkmIndex % 2 == 0 ? 'bkm-info--bkm-1' : 'bkm-info--bkm-2');
-
-          const textNode = document.createTextNode(`url*: ${parentTitle}`);
-          divLabel.appendChild(textNode);
-          divLabel.setAttribute('data-restpath', `url*: ${url}`);
-          divLabel.setAttribute('data-id', `pb#${id}`);
 
           if (parentColor) {
-            divLabel.style.backgroundColor = `${parentColor}`
-            divLabel.style.color = `oklch(from ${parentColor} calc(l + .60) c h)`;
-
-            if (IS_BROWSER_FIREFOX) {
-              divLabel.style.color = `contrast-color(${parentColor})`;
-            }
+            const [bgColor, textColor] = parentColor.split(':')
+            divLabel.style.backgroundColor = bgColor
+            divLabel.style.color = textColor || contrastColor(bgColor)
           }
 
           const divLabelContainer = document.createElement('div');
           divLabelContainer.classList.add('bkm-info--label-container');
           divLabelContainer.appendChild(divLabel);
 
-          divRow = document.createElement('div');
-          divRow.classList.add('bkm-info--row');
-          divRow.appendChild(divLabelContainer);
+          if (type === 'bookmark') {
+            const divDelBtn = document.createElement('div');
+            divDelBtn.setAttribute('data-id', `db#${id}`);
+            divDelBtn.classList.add('bkm-info--btn', 'bkm-info--btn-del');
 
-          break
-        }
-        case 'author-bookmark': {
-          const { id, parentTitle, url, parentColor } = value
+            const divDelBtnLetter = document.createElement('div');
+            divDelBtnLetter.classList.add('bkm-info--btn-letter');
+            const textNodeDel = document.createTextNode('X');
+            divDelBtnLetter.appendChild(textNodeDel);
 
-          const divLabel = document.createElement('div');
-          divLabel.classList.add('bkm-info--label', 'bkm-info--bkm', 'bkm-info--author');
+            divDelBtn.appendChild(divDelBtnLetter);
 
-          const textNode = document.createTextNode(`author: ${parentTitle}`);
-          divLabel.appendChild(textNode);
-          divLabel.setAttribute('data-restpath', url);
-          divLabel.setAttribute('data-id', `h#${id}`);
-
-          if (parentColor) {
-            divLabel.style.backgroundColor = `${parentColor}`
-            divLabel.style.color = `oklch(from ${parentColor} calc(l + .60) c h)`;
-
-            if (IS_BROWSER_FIREFOX) {
-              divLabel.style.color = `contrast-color(${parentColor})`;
-            }
+            divLabelContainer.appendChild(divDelBtn);
           }
-
-          const divLabelContainer = document.createElement('div');
-          divLabelContainer.classList.add('bkm-info--label-container');
-          divLabelContainer.appendChild(divLabel);
 
           divRow = document.createElement('div');
           divRow.classList.add('bkm-info--row');
@@ -1579,13 +1577,14 @@
 
         break
       }
-      case CONTENT_SCRIPT_MSG_ID.TOGGLE_YOUTUBE_HEADER: {
+      case CONTENT_SCRIPT_MSG_ID.YOUTUBE_TOGGLE_PAGE_HEADER: {
         cToggleYoutubePageHeader += 1
         toggleYoutubePageHeaderInDom()
         break
       }
       case CONTENT_SCRIPT_MSG_ID.GET_USER_INPUT: {
-        const userInput = window.prompt("Enter folder for your bookmark")
+        const selection = document.getSelection().toString()
+        const userInput = window.prompt("Enter folder for your bookmark", selection || '')
         // addBookmarkListByNameWithComma(userInput)
         if (!userInput) {
           break
