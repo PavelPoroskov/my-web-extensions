@@ -88,6 +88,9 @@ const USER_OPTION_META = {
   YOUTUBE_REDIRECT_CHANNEL_TO_VIDEOS: {
     default: true
   },
+  USE_FOR_LOCALHOST: {
+    default: false
+  },
 }
 
 // used for migrations

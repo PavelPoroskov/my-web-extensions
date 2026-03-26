@@ -250,6 +250,12 @@ function restoreOptions(settings) {
   element = document.querySelector(domId)
   element.value = settings[optionId].join('\n');
   element.addEventListener('change', makeSaveTextareaHandler(optionId) );
+
+  optionId = USER_OPTION.USE_FOR_LOCALHOST;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.checked = settings[optionId];
+  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 }
 
 let HOST_LIST_FOR_PAGE_OPTIONS

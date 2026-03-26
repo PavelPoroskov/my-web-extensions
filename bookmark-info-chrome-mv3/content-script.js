@@ -779,6 +779,10 @@
     return formatTagList({ tagList: resultList, pinnedTagPosition })
   }
   function renderBookmarkInfo(input, prevState) {
+    if (input.isUseExtension === false) {
+      return
+    }
+
     log('renderBookmarkInfo 00');
 
     const bookmarkList = (input.bookmarkList || [])
