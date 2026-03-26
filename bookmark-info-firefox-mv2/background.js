@@ -157,6 +157,9 @@ const USER_OPTION_META = {
   YOUTUBE_REDIRECT_CHANNEL_TO_VIDEOS: {
     default: true
   },
+  USE_FOR_LOCALHOST: {
+    default: false
+  },
 }
 
 // used for migrations
@@ -5121,6 +5124,25 @@ async function updateTab({ tabId, url, debugCaller }) {
   logUTB('UPDATE-TAB () 11', url);
 
   const userSettings = await extensionSettings.get()
+
+  if (!userSettings[USER_OPTION.USE_FOR_LOCALHOST]) {
+      try {
+        const oUrl = new URL(url)
+
+        if (oUrl.hostname === 'localhost' || oUrl.hostname === '127.0.0.1') {
+          const data = {
+            isUseExtension: false
+          }
+          await page.updateBookmarkInfoInPage({ tabId, data })
+
+          return
+        }
+      // eslint-disable-next-line no-empty
+      } finally {
+
+      }
+  }
+
   const bookmarkList = await getDirectBookmarkList(url)
 
   let filteredBookmarkList = bookmarkList
