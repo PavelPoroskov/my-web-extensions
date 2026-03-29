@@ -101,6 +101,7 @@
 
   font-size: var(--bkm-info-font-size);
   width: var(--bkm-info-tag-length);
+  text-transform: none;
 }
 .bkm-info--tag {
   min-width: var(--bkm-info-tag-length);
