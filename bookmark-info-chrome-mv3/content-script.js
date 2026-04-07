@@ -64,6 +64,7 @@
 
   const bkmInfoRootId = 'bkm-info--root';
   const bkmInfoStyleId = 'bkm-info--style';
+  const bkmInfoStyleVisitedId = 'bkm-info--style-visited';
 
   function getStyleText({ fontSize, fontSizeLetter, tagLength, onPrint }) {
 
@@ -810,6 +811,8 @@
     const fontSizeLetter = Math.floor(10/14*(+fontSize))
     const onPrint = isHideSemanticHtmlTagsOnPrinting ? 'none' : 'unset'
 
+    const isMarkVisited = input.isMarkVisited || false
+
     let rootStyle = document.getElementById(bkmInfoStyleId);
     let rootDiv = document.getElementById(bkmInfoRootId);
     if (!rootStyle) {
@@ -826,6 +829,34 @@
       rootDiv.setAttribute('id', bkmInfoRootId);
       rootDiv.addEventListener('click', rootListener, { capture: true });
       rootStyle.insertAdjacentElement('afterend', rootDiv);
+    }
+
+    let rootStyleVisited = document.getElementById(bkmInfoStyleVisitedId);
+    if (isMarkVisited && !rootStyleVisited) {
+        const compStyles = window.getComputedStyle(document.body);
+        let bgColor = compStyles.getPropertyValue("background-color")
+        const bgNot = 'rgba(0, 0, 0, 0)'
+        if (bgColor == bgNot) {
+          bgColor ='white'
+        }
+        const rootStyleVisited = document.createElement('style');
+        rootStyleVisited.setAttribute('id', bkmInfoStyleVisitedId);
+        const textNodeStyleVisited = document.createTextNode(
+`:link {
+  background-color: ${bgColor};
+}
+
+:visited {
+  outline-color: orange; /* Visited links have an orange outline */
+  background-color: lightgray; /* Visited links have a green background */
+}
+`
+        );
+        rootStyleVisited.appendChild(textNodeStyleVisited);
+        document.body.insertAdjacentElement('afterbegin', rootStyleVisited);
+
+    }else if (!isMarkVisited && rootStyleVisited) {
+      document.body.removeChild(rootStyleVisited);
     }
 
     if (fontSize != prevState.fontSize) {

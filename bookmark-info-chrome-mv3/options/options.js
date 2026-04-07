@@ -256,6 +256,12 @@ function restoreOptions(settings) {
   element = document.querySelector(domId)
   element.checked = settings[optionId];
   element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
+
+  optionId = USER_OPTION.MARK_VISITED_LINKS;
+  domId = `#${optionId}`
+  element = document.querySelector(domId)
+  element.checked = settings[optionId];
+  element.addEventListener('change', makeSaveCheckboxHandler(optionId) );
 }
 
 let HOST_LIST_FOR_PAGE_OPTIONS

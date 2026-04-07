@@ -91,6 +91,9 @@ const USER_OPTION_META = {
   USE_FOR_LOCALHOST: {
     default: false
   },
+  MARK_VISITED_LINKS: {
+    default: false
+  },
 }
 
 // used for migrations
