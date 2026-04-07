@@ -160,6 +160,9 @@ const USER_OPTION_META = {
   USE_FOR_LOCALHOST: {
     default: false
   },
+  MARK_VISITED_LINKS: {
+    default: false
+  },
 }
 
 // used for migrations
@@ -5179,6 +5182,7 @@ async function updateTab({ tabId, url, debugCaller }) {
 
     isHideSemanticHtmlTagsOnPrinting: userSettings[USER_OPTION.HIDE_TAG_HEADER_ON_PRINTING],
     isHideHeaderForYoutube: userSettings[USER_OPTION.YOUTUBE_HIDE_PAGE_HEADER],
+    isMarkVisited: userSettings[USER_OPTION.MARK_VISITED_LINKS],
   }
   logUTB('UPDATE-TAB () 99 sendMessage', tabId, data);
   await page.updateBookmarkInfoInPage({ tabId, data })
