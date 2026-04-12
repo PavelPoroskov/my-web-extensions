@@ -847,8 +847,8 @@
 }
 
 :visited, :visited * {
-  outline-color: orange; /* Visited links have an orange outline */
-  background-color: lightgray; /* Visited links have a green background */
+  outline-color: orange;
+  background-color: lightgray;
 }
 `
         );
