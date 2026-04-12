@@ -842,11 +842,11 @@
         const rootStyleVisited = document.createElement('style');
         rootStyleVisited.setAttribute('id', bkmInfoStyleVisitedId);
         const textNodeStyleVisited = document.createTextNode(
-`:link {
+`:link, :link * {
   background-color: ${bgColor};
 }
 
-:visited {
+:visited, :visited * {
   outline-color: orange; /* Visited links have an orange outline */
   background-color: lightgray; /* Visited links have a green background */
 }
