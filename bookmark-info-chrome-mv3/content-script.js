@@ -1110,11 +1110,7 @@
           divLabel.classList.add('bkm-info--tag');
 
           if (isUsed) {
-            if (parentTitle.endsWith(' @D')) {
-              divLabel.setAttribute('data-id', `t#${parentId}`);
-            } else {
-              divLabel.setAttribute('data-id', `ut#${parentId}`);
-            }
+            divLabel.setAttribute('data-id', `ut#${parentId}`);
           } else {
             divLabel.setAttribute('data-id', `t#${parentId}`);
           }
