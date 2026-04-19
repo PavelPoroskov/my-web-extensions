@@ -145,12 +145,18 @@ export async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
       }))
   }
 
-  resultBookmarkList = resultBookmarkList.map((obj) => (isDatedFolderTitle(obj.parentTitle)
-    ? Object.assign({}, obj, {
-        templateTitle: getDatedTemplate(obj.parentTitle)
+  resultBookmarkList = resultBookmarkList.map((obj) => {
+    if (isDatedFolderTitle(obj.parentTitle)) {
+      const templateTitle=  getDatedTemplate(obj.parentTitle)
+
+      return Object.assign({}, obj, {
+        templateTitle,
+        onlyTitle: getTitleDetails(templateTitle).onlyTitle,
       })
-    : obj
-  ))
+    }
+
+    return obj
+  })
 
   const templateTitleList = Array.from(
     new Set(

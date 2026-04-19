@@ -3,6 +3,10 @@ export const STORAGE_TYPE = {
   SESSION: 'SESSION',
 }
 
+export const TAG_LIST_ACTION_OPTIONS = {
+  ADD_REMOVE: 'ADD_REMOVE',
+  READD: 'READD',
+}
 export const TAG_LIST_OPEN_MODE_OPTIONS = {
   GLOBAL: 'GLOBAL',
   PER_PAGE: 'PER_PAGE',
@@ -57,6 +61,9 @@ const USER_OPTION_META = {
   },
   SHOW_PREVIOUS_VISIT: {
     default: false
+  },
+  TAG_LIST_ACTION: {
+    default: TAG_LIST_ACTION_OPTIONS.ADD_REMOVE,
   },
   TAG_LIST_HIGHLIGHT_LAST: {
     default: 7

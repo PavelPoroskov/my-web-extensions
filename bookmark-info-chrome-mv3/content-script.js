@@ -34,6 +34,10 @@
     REPLACE_URL: 'REPLACE_URL',
     SEND_ME_AUTHOR: 'SEND_ME_AUTHOR',
   }
+  const TAG_LIST_ACTION_OPTIONS = {
+    ADD_REMOVE: 'ADD_REMOVE',
+    READD: 'READD',
+  }
 
   // TODO-DOUBLE remove duplication BROWSER in browser-specific.js and content-scripts.js
   const BROWSER_OPTIONS = {
@@ -505,6 +509,11 @@
       const bookmark = bookmarkList.find((item) => item.parentId === parentId)
       bookmarkId = bookmark?.id
 
+      if (!bookmarkId) {
+        const bookmark = bookmarkList.find((item) => item.templateId === parentId)
+        bookmarkId = bookmark?.id
+      }
+
       updateObj.optimisticDelFromTagList = fullState.optimisticDelFromTagList + 1
     }
 
@@ -591,49 +600,71 @@
         }
         break
       }
-      case 't': {
+      case 't':
+      case 'ut': {
         const parentId = id
         const fullState = stateContainer.getState()
         const bookmarkList = fullState.bookmarkList || []
 
-        // optimistic ui
-        const tagList = fullState.tagList || []
-        const tag = tagList.find((item) => item.parentId === parentId)
-        if (tag) {
-          const newBookmarkList = bookmarkList.concat({
-            id: '',
-            title: document.title,
-            parentTitle: tag.parentTitle,
-            path: '',
-            parentId,
-            optimisticAdd: true,
-          })
-          const update = { bookmarkList: newBookmarkList }
+        if (fullState.tagListAction === TAG_LIST_ACTION_OPTIONS.ADD_REMOVE) {
+          if (action === 't') {
 
-          if (fullState.optimisticAddFromTagList < fullState.optimisticDelFromTagList) {
-            Object.assign(update, { optimisticAddFromTagList: fullState.optimisticAddFromTagList + 1 })
+            // optimistic ui
+            const tagList = fullState.tagList || []
+            const tag = tagList.find((item) => item.parentId === parentId)
+            if (tag) {
+              const newBookmarkList = bookmarkList.concat({
+                id: '',
+                title: document.title,
+                parentTitle: tag.parentTitle,
+                path: '',
+                parentId,
+                optimisticAdd: true,
+              })
+              const update = { bookmarkList: newBookmarkList }
+
+              if (fullState.optimisticAddFromTagList < fullState.optimisticDelFromTagList) {
+                Object.assign(update, { optimisticAddFromTagList: fullState.optimisticAddFromTagList + 1 })
+              }
+              if (fullState.tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.CLOSE_AFTER_ADD) {
+                Object.assign(update, {
+                  isTagListOpenLocal: false,
+                  optimisticDelFromTagList: 0,
+                  optimisticAddFromTagList: 0,
+                  optimisticToStorageDel: 0,
+                  optimisticToStorageAdd: 0,
+                })
+              }
+              stateContainer.update(update)
+            }
+            await chrome.runtime.sendMessage({
+              command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_ID,
+              parentId,
+              url: document.location.href,
+              title: document.title,
+            });
+          } else if (action === 'ut') {
+            await deleteBookmark({ parentId: id })
           }
-          if (fullState.tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.CLOSE_AFTER_ADD) {
-            Object.assign(update, {
-              isTagListOpenLocal: false,
-              optimisticDelFromTagList: 0,
-              optimisticAddFromTagList: 0,
-              optimisticToStorageDel: 0,
-              optimisticToStorageAdd: 0,
-            })
+        } else if (fullState.tagListAction === TAG_LIST_ACTION_OPTIONS.READD) {
+
+          const bookmark = bookmarkList.find((item) => item.parentId === parentId)
+          const bookmarkId = bookmark?.id
+
+          if (bookmarkId) {
+            await chrome.runtime.sendMessage({
+              command: EXTENSION_MSG_ID.DELETE_BOOKMARK,
+              bookmarkId,
+            });
           }
-          stateContainer.update(update)
+
+          await chrome.runtime.sendMessage({
+            command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_ID,
+            parentId,
+            url: document.location.href,
+            title: document.title,
+          });
         }
-        await chrome.runtime.sendMessage({
-          command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_ID,
-          parentId,
-          url: document.location.href,
-          title: document.title,
-        });
-        break
-      }
-      case 'ut': {
-        await deleteBookmark({ parentId: id })
         break
       }
       case 'fx': {
@@ -711,18 +742,18 @@
     const usedTagObj = Object.fromEntries(
       (usedTagList || [])
         .filter(({ parentId, isInternal }) => parentId && !isInternal)
-        .map(({ parentId, parentTitle, templateId, templateTitle }) => ({
+        .map(({ parentId, parentTitle, templateId, onlyTitle }) => ({
           parentId: templateId || parentId,
-          parentTitle: templateTitle || parentTitle,
+          parentTitle: onlyTitle || parentTitle,
         }))
         .map(({ parentId, parentTitle }) => [parentId, parentTitle])
     )
     const deletedTagObj = Object.fromEntries(
       (deletedTagList || [])
         .filter(({ parentId, isInternal }) => parentId && !isInternal)
-        .map(({ parentId, parentTitle, templateId, templateTitle }) => ({
+        .map(({ parentId, parentTitle, templateId, onlyTitle }) => ({
           parentId: templateId || parentId,
-          parentTitle: templateTitle || parentTitle,
+          parentTitle: onlyTitle || parentTitle,
         }))
         .map(({ parentId, parentTitle }) => [parentId, parentTitle])
     )
@@ -737,9 +768,14 @@
     )
     const addTagSet = new Set(Object.keys(addTagObj))
     const onlyAddTagSet = addTagSet.difference(tagSet)
+    const usedTagSet = new Set(Object.keys(usedTagObj))
 
     if (onlyAddTagSet.size == 0 && tagList.length <= nAvailableTags) {
       return tagList
+        .map((obj) => (usedTagSet.has(obj.parentId)
+            ? Object.assign({}, obj, { isUsed: 1 })
+            : obj
+        ))
     }
 
     const fixedTagList = tagList.filter(({ isFixed }) => isFixed)
@@ -748,7 +784,6 @@
         parentId,
         parentTitle: addTagObj[parentId],
       }))
-    const usedTagSet = new Set(Object.keys(usedTagObj))
     const addUsedTagList = addTagList.filter(({ parentId }) => usedTagSet.has(parentId))
     const addDeletedTagList = addTagList.filter(({ parentId }) => !usedTagSet.has(parentId))
 

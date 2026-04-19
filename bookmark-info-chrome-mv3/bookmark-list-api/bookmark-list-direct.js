@@ -23,6 +23,7 @@ export async function getDirectBookmarkList(url) {
         path: bookmark.path,
         templateId: bookmark.templateId,
         templateTitle: bookmark.templateTitle,
+        onlyTitle: bookmark.onlyTitle,
         isInternal: bookmark.isInternal,
       }));
 
