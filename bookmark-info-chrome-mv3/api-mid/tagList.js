@@ -57,7 +57,7 @@ class TagList {
     this.isRestoringDone = true
   }
 
-  get nAvailableRows() {
+  get availableRows() {
     return this.AVAILABLE_ROWS
   }
   _markUpdates() {

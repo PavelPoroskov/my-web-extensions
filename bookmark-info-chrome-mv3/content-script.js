@@ -579,8 +579,8 @@
         const tagListOpenMode = fullMessage.tagListOpenMode
 
         if (tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL) {
-          const before = !!fullMessage.isTagListOpenGlobal
-          stateContainer.update({ isTagListOpenGlobal: !before })
+          const before = !!fullMessage.tagListIsOpenGlobal
+          stateContainer.update({ tagListIsOpenGlobal: !before })
           await chrome.runtime.sendMessage({
             command: EXTENSION_MSG_ID.SHOW_TAG_LIST,
             value: !before,
@@ -795,18 +795,18 @@
 
     const visitString = input.visitString || ''
     const isShowTitle = input.isShowTitle || false
-    const isTagListAvailable = input.isTagListAvailable || false
     const tagList = input.tagList || []
+    const tagListIsAvailable = input.tagListIsAvailable || false
     const tagListOpenMode = input.tagListOpenMode
     const isTagListOpen = tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL
-      ? (input.isTagListOpenGlobal || false)
+      ? (input.tagListIsOpenGlobal || false)
       : (input.isTagListOpenLocal || false)
 
     const optimisticDelFromTagList = input.optimisticDelFromTagList
     const optimisticAddFromTagList = input.optimisticAddFromTagList
 
     const fontSize = input.fontSize
-    const tagLength = input.tagLength
+    const tagLength = input.tagListTagLength
     const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting
     const fontSizeLetter = Math.floor(10/14*(+fontSize))
     const onPrint = isHideSemanticHtmlTagsOnPrinting ? 'none' : 'unset'
@@ -871,15 +871,15 @@
     }
 
     // const usedParentIdSet = new Set(bookmarkList.map(({ parentId }) => parentId))
-    let nTagListAvailableRows = input.nTagListAvailableRows
+    let tagListAvailableRows = input.tagListAvailableRows
     if (rootDiv.firstChild) {
       const viewportHeight = window.visualViewport.height || window.innerHeight
       // const rowHeight = rootDiv.firstChild.clientHeight
       const rowHeight = rootDiv.firstChild.getBoundingClientRect().height
 
       if (rowHeight) {
-        nTagListAvailableRows = Math.floor(viewportHeight / rowHeight)
-        // log('nTagListAvailableRows ', nTagListAvailableRows, 'viewportHeight', viewportHeight, 'rowHeight', rowHeight)
+        tagListAvailableRows = Math.floor(viewportHeight / rowHeight)
+        // log('tagListAvailableRows ', tagListAvailableRows, 'viewportHeight', viewportHeight, 'rowHeight', rowHeight)
       }
     }
 
@@ -912,7 +912,7 @@
       drawList.push({ type: 'author-bookmark', value })
     })
 
-    if (isTagListAvailable) {
+    if (tagListIsAvailable) {
     //if (tagList.length > 0 && isTagListOpen) {
       const emptySlotsForDel = Math.max(0, optimisticDelFromTagList - optimisticAddFromTagList)
       const emptySlotsForAdd = Math.max(0, 2 - bookmarkList.length - partialBookmarkList.length - authorBookmarkList.length - emptySlotsForDel)
@@ -927,11 +927,11 @@
       drawList.push({ type: 'history', value: visitString })
     }
 
-    if (isTagListAvailable) {
+    if (tagListIsAvailable) {
       drawList.push({ type: 'separator' })
 
       if (isTagListOpen) {
-        const nAvailableRows = nTagListAvailableRows
+        const nAvailableRows = tagListAvailableRows
         const nUsedRows = drawList.length
         const nAvailableTags = Math.max(0, nAvailableRows - nUsedRows)
 
@@ -940,7 +940,7 @@
           nAvailableTags,
           usedTagList: input.bookmarkList,
           deletedTagList: input.deletedTagList,
-          pinnedTagPosition: input.pinnedTagPosition,
+          pinnedTagPosition: input.tagListPinnedPosition,
         })
 
         filteredTagList.forEach((tag) => {
@@ -1221,7 +1221,7 @@
       if (rowHeight) {
         const availableRows = Math.floor(viewportHeight / rowHeight)
 
-        if (availableRows != input.nTagListAvailableRows) {
+        if (availableRows != input.tagListAvailableRows) {
           updateAvailableRowsInExtension(availableRows)
         }
       }
