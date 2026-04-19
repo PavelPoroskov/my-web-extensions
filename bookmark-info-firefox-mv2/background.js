@@ -72,6 +72,10 @@ const KEYBOARD_CMD_ID = {
   SESSION: 'SESSION',
 }
 
+const TAG_LIST_ACTION_OPTIONS = {
+  ADD_REMOVE: 'ADD_REMOVE',
+  READD: 'READD',
+}
 const TAG_LIST_OPEN_MODE_OPTIONS = {
   GLOBAL: 'GLOBAL',
   PER_PAGE: 'PER_PAGE',
@@ -126,6 +130,9 @@ const USER_OPTION_META = {
   },
   SHOW_PREVIOUS_VISIT: {
     default: false
+  },
+  TAG_LIST_ACTION: {
+    default: TAG_LIST_ACTION_OPTIONS.ADD_REMOVE,
   },
   TAG_LIST_HIGHLIGHT_LAST: {
     default: 7
@@ -2372,7 +2379,7 @@ class TagList {
     this.isRestoringDone = true
   }
 
-  get nAvailableRows() {
+  get availableRows() {
     return this.AVAILABLE_ROWS
   }
   _markUpdates() {
@@ -4087,12 +4094,18 @@ async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
       }))
   }
 
-  resultBookmarkList = resultBookmarkList.map((obj) => (isDatedFolderTitle(obj.parentTitle)
-    ? Object.assign({}, obj, {
-        templateTitle: getDatedTemplate(obj.parentTitle)
+  resultBookmarkList = resultBookmarkList.map((obj) => {
+    if (isDatedFolderTitle(obj.parentTitle)) {
+      const templateTitle=  getDatedTemplate(obj.parentTitle)
+
+      return Object.assign({}, obj, {
+        templateTitle,
+        onlyTitle: getTitleDetails(templateTitle).onlyTitle,
       })
-    : obj
-  ))
+    }
+
+    return obj
+  })
 
   const templateTitleList = Array.from(
     new Set(
@@ -4153,6 +4166,7 @@ async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
         path: bookmark.path,
         templateId: bookmark.templateId,
         templateTitle: bookmark.templateTitle,
+        onlyTitle: bookmark.onlyTitle,
         isInternal: bookmark.isInternal,
       }));
 
@@ -5172,13 +5186,14 @@ async function updateTab({ tabId, url, debugCaller }) {
     fontSize: userSettings[USER_OPTION.FONT_SIZE],
     isShowTitle: userSettings[USER_OPTION.SHOW_BOOKMARK_TITLE],
 
-    isTagListAvailable: tagList.isOn,
     tagList: tagList.list,
+    tagListAction: userSettings[USER_OPTION.TAG_LIST_ACTION],
+    tagListAvailableRows: tagList.availableRows,
+    tagListIsAvailable: tagList.isOn,
+    tagListIsOpenGlobal: tagList.isOpenGlobal,
     tagListOpenMode: userSettings[USER_OPTION.TAG_LIST_OPEN_MODE],
-    isTagListOpenGlobal: tagList.isOpenGlobal,
-    tagLength: userSettings[USER_OPTION.TAG_LIST_TAG_LENGTH],
-    nTagListAvailableRows: tagList.nAvailableRows,
-    pinnedTagPosition: userSettings[USER_OPTION.TAG_LIST_PINNED_TAGS_POSITION],
+    tagListPinnedPosition: userSettings[USER_OPTION.TAG_LIST_PINNED_TAGS_POSITION],
+    tagListTagLength: userSettings[USER_OPTION.TAG_LIST_TAG_LENGTH],
 
     isHideSemanticHtmlTagsOnPrinting: userSettings[USER_OPTION.HIDE_TAG_HEADER_ON_PRINTING],
     isHideHeaderForYoutube: userSettings[USER_OPTION.YOUTUBE_HIDE_PAGE_HEADER],

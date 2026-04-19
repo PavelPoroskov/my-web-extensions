@@ -34,6 +34,10 @@
     REPLACE_URL: 'REPLACE_URL',
     SEND_ME_AUTHOR: 'SEND_ME_AUTHOR',
   }
+  const TAG_LIST_ACTION_OPTIONS = {
+    ADD_REMOVE: 'ADD_REMOVE',
+    READD: 'READD',
+  }
 
   // TODO-DOUBLE remove duplication BROWSER in browser-specific.js and content-scripts.js
   const BROWSER_OPTIONS = {
@@ -505,6 +509,11 @@
       const bookmark = bookmarkList.find((item) => item.parentId === parentId)
       bookmarkId = bookmark?.id
 
+      if (!bookmarkId) {
+        const bookmark = bookmarkList.find((item) => item.templateId === parentId)
+        bookmarkId = bookmark?.id
+      }
+
       updateObj.optimisticDelFromTagList = fullState.optimisticDelFromTagList + 1
     }
 
@@ -579,8 +588,8 @@
         const tagListOpenMode = fullMessage.tagListOpenMode
 
         if (tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL) {
-          const before = !!fullMessage.isTagListOpenGlobal
-          stateContainer.update({ isTagListOpenGlobal: !before })
+          const before = !!fullMessage.tagListIsOpenGlobal
+          stateContainer.update({ tagListIsOpenGlobal: !before })
           await browser.runtime.sendMessage({
             command: EXTENSION_MSG_ID.SHOW_TAG_LIST,
             value: !before,
@@ -591,49 +600,71 @@
         }
         break
       }
-      case 't': {
+      case 't':
+      case 'ut': {
         const parentId = id
         const fullState = stateContainer.getState()
         const bookmarkList = fullState.bookmarkList || []
 
-        // optimistic ui
-        const tagList = fullState.tagList || []
-        const tag = tagList.find((item) => item.parentId === parentId)
-        if (tag) {
-          const newBookmarkList = bookmarkList.concat({
-            id: '',
-            title: document.title,
-            parentTitle: tag.parentTitle,
-            path: '',
-            parentId,
-            optimisticAdd: true,
-          })
-          const update = { bookmarkList: newBookmarkList }
+        if (fullState.tagListAction === TAG_LIST_ACTION_OPTIONS.ADD_REMOVE) {
+          if (action === 't') {
 
-          if (fullState.optimisticAddFromTagList < fullState.optimisticDelFromTagList) {
-            Object.assign(update, { optimisticAddFromTagList: fullState.optimisticAddFromTagList + 1 })
+            // optimistic ui
+            const tagList = fullState.tagList || []
+            const tag = tagList.find((item) => item.parentId === parentId)
+            if (tag) {
+              const newBookmarkList = bookmarkList.concat({
+                id: '',
+                title: document.title,
+                parentTitle: tag.parentTitle,
+                path: '',
+                parentId,
+                optimisticAdd: true,
+              })
+              const update = { bookmarkList: newBookmarkList }
+
+              if (fullState.optimisticAddFromTagList < fullState.optimisticDelFromTagList) {
+                Object.assign(update, { optimisticAddFromTagList: fullState.optimisticAddFromTagList + 1 })
+              }
+              if (fullState.tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.CLOSE_AFTER_ADD) {
+                Object.assign(update, {
+                  isTagListOpenLocal: false,
+                  optimisticDelFromTagList: 0,
+                  optimisticAddFromTagList: 0,
+                  optimisticToStorageDel: 0,
+                  optimisticToStorageAdd: 0,
+                })
+              }
+              stateContainer.update(update)
+            }
+            await browser.runtime.sendMessage({
+              command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_ID,
+              parentId,
+              url: document.location.href,
+              title: document.title,
+            });
+          } else if (action === 'ut') {
+            await deleteBookmark({ parentId: id })
           }
-          if (fullState.tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.CLOSE_AFTER_ADD) {
-            Object.assign(update, {
-              isTagListOpenLocal: false,
-              optimisticDelFromTagList: 0,
-              optimisticAddFromTagList: 0,
-              optimisticToStorageDel: 0,
-              optimisticToStorageAdd: 0,
-            })
+        } else if (fullState.tagListAction === TAG_LIST_ACTION_OPTIONS.READD) {
+
+          const bookmark = bookmarkList.find((item) => item.parentId === parentId)
+          const bookmarkId = bookmark?.id
+
+          if (bookmarkId) {
+            await browser.runtime.sendMessage({
+              command: EXTENSION_MSG_ID.DELETE_BOOKMARK,
+              bookmarkId,
+            });
           }
-          stateContainer.update(update)
+
+          await browser.runtime.sendMessage({
+            command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_ID,
+            parentId,
+            url: document.location.href,
+            title: document.title,
+          });
         }
-        await browser.runtime.sendMessage({
-          command: EXTENSION_MSG_ID.ADD_BOOKMARK_FOLDER_BY_ID,
-          parentId,
-          url: document.location.href,
-          title: document.title,
-        });
-        break
-      }
-      case 'ut': {
-        await deleteBookmark({ parentId: id })
         break
       }
       case 'fx': {
@@ -711,18 +742,18 @@
     const usedTagObj = Object.fromEntries(
       (usedTagList || [])
         .filter(({ parentId, isInternal }) => parentId && !isInternal)
-        .map(({ parentId, parentTitle, templateId, templateTitle }) => ({
+        .map(({ parentId, parentTitle, templateId, onlyTitle }) => ({
           parentId: templateId || parentId,
-          parentTitle: templateTitle || parentTitle,
+          parentTitle: onlyTitle || parentTitle,
         }))
         .map(({ parentId, parentTitle }) => [parentId, parentTitle])
     )
     const deletedTagObj = Object.fromEntries(
       (deletedTagList || [])
         .filter(({ parentId, isInternal }) => parentId && !isInternal)
-        .map(({ parentId, parentTitle, templateId, templateTitle }) => ({
+        .map(({ parentId, parentTitle, templateId, onlyTitle }) => ({
           parentId: templateId || parentId,
-          parentTitle: templateTitle || parentTitle,
+          parentTitle: onlyTitle || parentTitle,
         }))
         .map(({ parentId, parentTitle }) => [parentId, parentTitle])
     )
@@ -737,9 +768,14 @@
     )
     const addTagSet = new Set(Object.keys(addTagObj))
     const onlyAddTagSet = addTagSet.difference(tagSet)
+    const usedTagSet = new Set(Object.keys(usedTagObj))
 
     if (onlyAddTagSet.size == 0 && tagList.length <= nAvailableTags) {
       return tagList
+        .map((obj) => (usedTagSet.has(obj.parentId)
+            ? Object.assign({}, obj, { isUsed: 1 })
+            : obj
+        ))
     }
 
     const fixedTagList = tagList.filter(({ isFixed }) => isFixed)
@@ -748,7 +784,6 @@
         parentId,
         parentTitle: addTagObj[parentId],
       }))
-    const usedTagSet = new Set(Object.keys(usedTagObj))
     const addUsedTagList = addTagList.filter(({ parentId }) => usedTagSet.has(parentId))
     const addDeletedTagList = addTagList.filter(({ parentId }) => !usedTagSet.has(parentId))
 
@@ -795,18 +830,18 @@
 
     const visitString = input.visitString || ''
     const isShowTitle = input.isShowTitle || false
-    const isTagListAvailable = input.isTagListAvailable || false
     const tagList = input.tagList || []
+    const tagListIsAvailable = input.tagListIsAvailable || false
     const tagListOpenMode = input.tagListOpenMode
     const isTagListOpen = tagListOpenMode == TAG_LIST_OPEN_MODE_OPTIONS.GLOBAL
-      ? (input.isTagListOpenGlobal || false)
+      ? (input.tagListIsOpenGlobal || false)
       : (input.isTagListOpenLocal || false)
 
     const optimisticDelFromTagList = input.optimisticDelFromTagList
     const optimisticAddFromTagList = input.optimisticAddFromTagList
 
     const fontSize = input.fontSize
-    const tagLength = input.tagLength
+    const tagLength = input.tagListTagLength
     const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting
     const fontSizeLetter = Math.floor(10/14*(+fontSize))
     const onPrint = isHideSemanticHtmlTagsOnPrinting ? 'none' : 'unset'
@@ -847,8 +882,8 @@
 }
 
 :visited, :visited * {
-  outline-color: orange; /* Visited links have an orange outline */
-  background-color: lightgray; /* Visited links have a green background */
+  outline-color: orange;
+  background-color: lightgray;
 }
 `
         );
@@ -871,15 +906,15 @@
     }
 
     // const usedParentIdSet = new Set(bookmarkList.map(({ parentId }) => parentId))
-    let nTagListAvailableRows = input.nTagListAvailableRows
+    let tagListAvailableRows = input.tagListAvailableRows
     if (rootDiv.firstChild) {
       const viewportHeight = window.visualViewport.height || window.innerHeight
       // const rowHeight = rootDiv.firstChild.clientHeight
       const rowHeight = rootDiv.firstChild.getBoundingClientRect().height
 
       if (rowHeight) {
-        nTagListAvailableRows = Math.floor(viewportHeight / rowHeight)
-        // log('nTagListAvailableRows ', nTagListAvailableRows, 'viewportHeight', viewportHeight, 'rowHeight', rowHeight)
+        tagListAvailableRows = Math.floor(viewportHeight / rowHeight)
+        // log('tagListAvailableRows ', tagListAvailableRows, 'viewportHeight', viewportHeight, 'rowHeight', rowHeight)
       }
     }
 
@@ -912,7 +947,7 @@
       drawList.push({ type: 'author-bookmark', value })
     })
 
-    if (isTagListAvailable) {
+    if (tagListIsAvailable) {
     //if (tagList.length > 0 && isTagListOpen) {
       const emptySlotsForDel = Math.max(0, optimisticDelFromTagList - optimisticAddFromTagList)
       const emptySlotsForAdd = Math.max(0, 2 - bookmarkList.length - partialBookmarkList.length - authorBookmarkList.length - emptySlotsForDel)
@@ -927,11 +962,11 @@
       drawList.push({ type: 'history', value: visitString })
     }
 
-    if (isTagListAvailable) {
+    if (tagListIsAvailable) {
       drawList.push({ type: 'separator' })
 
       if (isTagListOpen) {
-        const nAvailableRows = nTagListAvailableRows
+        const nAvailableRows = tagListAvailableRows
         const nUsedRows = drawList.length
         const nAvailableTags = Math.max(0, nAvailableRows - nUsedRows)
 
@@ -940,7 +975,7 @@
           nAvailableTags,
           usedTagList: input.bookmarkList,
           deletedTagList: input.deletedTagList,
-          pinnedTagPosition: input.pinnedTagPosition,
+          pinnedTagPosition: input.tagListPinnedPosition,
         })
 
         filteredTagList.forEach((tag) => {
@@ -1110,11 +1145,7 @@
           divLabel.classList.add('bkm-info--tag');
 
           if (isUsed) {
-            if (parentTitle.endsWith(' @D')) {
-              divLabel.setAttribute('data-id', `t#${parentId}`);
-            } else {
-              divLabel.setAttribute('data-id', `ut#${parentId}`);
-            }
+            divLabel.setAttribute('data-id', `ut#${parentId}`);
           } else {
             divLabel.setAttribute('data-id', `t#${parentId}`);
           }
@@ -1225,7 +1256,7 @@
       if (rowHeight) {
         const availableRows = Math.floor(viewportHeight / rowHeight)
 
-        if (availableRows != input.nTagListAvailableRows) {
+        if (availableRows != input.tagListAvailableRows) {
           updateAvailableRowsInExtension(availableRows)
         }
       }
