@@ -115,13 +115,13 @@ async function updateTab({ tabId, url, debugCaller }) {
     fontSize: userSettings[USER_OPTION.FONT_SIZE],
     isShowTitle: userSettings[USER_OPTION.SHOW_BOOKMARK_TITLE],
 
-    tagListIsAvailable: tagList.isOn,
     tagList: tagList.list,
-    tagListOpenMode: userSettings[USER_OPTION.TAG_LIST_OPEN_MODE],
-    tagListIsOpenGlobal: tagList.isOpenGlobal,
-    tagListTagLength: userSettings[USER_OPTION.TAG_LIST_TAG_LENGTH],
     tagListAvailableRows: tagList.availableRows,
+    tagListIsAvailable: tagList.isOn,
+    tagListIsOpenGlobal: tagList.isOpenGlobal,
+    tagListOpenMode: userSettings[USER_OPTION.TAG_LIST_OPEN_MODE],
     tagListPinnedPosition: userSettings[USER_OPTION.TAG_LIST_PINNED_TAGS_POSITION],
+    tagListTagLength: userSettings[USER_OPTION.TAG_LIST_TAG_LENGTH],
 
     isHideSemanticHtmlTagsOnPrinting: userSettings[USER_OPTION.HIDE_TAG_HEADER_ON_PRINTING],
     isHideHeaderForYoutube: userSettings[USER_OPTION.YOUTUBE_HIDE_PAGE_HEADER],
