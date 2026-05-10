@@ -880,10 +880,14 @@
 `:link, :link * {
   background-color: ${bgColor};
 }
-
 :visited, :visited * {
-  outline-color: orange;
   background-color: lightgray;
+}
+.featured :link {
+  background: oklch(28% 20% 253deg);
+}
+.featured :visited {
+  background: lightgray;
 }
 `
         );
