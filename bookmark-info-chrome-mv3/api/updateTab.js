@@ -65,28 +65,32 @@ async function showExtra({ tabId, url, userSettings, exactBkmIdList }) {
   ])
 }
 
+function isLocalhostUrl(url) {
+  let result = false
+
+  try {
+    const oUrl = new URL(url)
+    const hostname = oUrl.hostname
+
+    result  = (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '0000:0000:0000:0000:0000:0000:0000:0001')
+  // eslint-disable-next-line no-empty
+  } finally {
+
+  }
+
+  return result
+}
+
 async function updateTab({ tabId, url, debugCaller }) {
   logUTB(`UPDATE-TAB () 00 <- ${debugCaller}`, tabId);
   logUTB('UPDATE-TAB () 11', url);
 
   const userSettings = await extensionSettings.get()
 
-  if (!userSettings[USER_OPTION.USE_FOR_LOCALHOST]) {
-      try {
-        const oUrl = new URL(url)
+  if (!userSettings[USER_OPTION.USE_FOR_LOCALHOST] && isLocalhostUrl(url)) {
+    await page.updateBookmarkInfoInPage({ tabId, data: { isUseExtension: false } })
 
-        if (oUrl.hostname === 'localhost' || oUrl.hostname === '127.0.0.1') {
-          const data = {
-            isUseExtension: false
-          }
-          await page.updateBookmarkInfoInPage({ tabId, data })
-
-          return
-        }
-      // eslint-disable-next-line no-empty
-      } finally {
-
-      }
+    return
   }
 
   const bookmarkList = await getDirectBookmarkList(url)
