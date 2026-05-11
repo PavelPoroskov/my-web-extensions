@@ -55,7 +55,6 @@
     }
   }
   const BROWSER = BROWSER_OPTIONS.FIREFOX;
-  const IS_BROWSER_FIREFOX = BROWSER === BROWSER_OPTIONS.FIREFOX;
   const BROWSER_SPECIFIC = Object.fromEntries(
     Object.entries(BROWSER_SPECIFIC_OPTIONS)
       .map(([option, obj]) => [option, obj[BROWSER]])
@@ -70,7 +69,27 @@
   const bkmInfoStyleId = 'bkm-info--style';
   const bkmInfoStyleVisitedId = 'bkm-info--style-visited';
 
-  function getStyleText({ fontSize, fontSizeLetter, tagLength, onPrint }) {
+  function getStylesVisitedLink({ bgColorLink, bgColorVisited }) {
+    return (
+`:link, :link * {
+  background-color: ${bgColorLink};
+}
+:visited, :visited * {
+  background-color: ${bgColorVisited};
+  color: contrast-color(${bgColorVisited})
+}
+.featured :link {
+  background: oklch(28% 20% 253deg);
+}
+.featured :visited {
+  background: ${bgColorVisited};
+  color: contrast-color(${bgColorVisited})
+}
+`
+    )
+  }
+
+  function getStyleText({ fontSize, fontSizeLetter, tagListTagLength, onPrint }) {
 
     return (
 `
@@ -100,7 +119,7 @@
 #bkm-info--root {
   --bkm-info-font-size: ${fontSize}px;
   --bkm-info-font-letter: ${fontSizeLetter}px;
-  --bkm-info-tag-length: ${tagLength}ch;
+  --bkm-info-tag-length: ${tagListTagLength}ch;
   --bkm-info-label-rpad: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
   --bkm-info-del-rpad: ${BROWSER_SPECIFIC.DEL_BTN_RIGHT_PADDING};
 
@@ -334,12 +353,6 @@
     WITH_RECENT: 'WITH_RECENT',
   }
   const ALLOWED_DISTANCE = 3
-
-  function contrastColor(bgColor) {
-    return (IS_BROWSER_FIREFOX
-      ? `contrast-color(${bgColor})`
-      : `oklch(from ${bgColor} calc(l + .60) c h)`)
-  }
 
   function getIsConditionFromUp(letterList, iTest) {
     let distanceFromUp = 0
@@ -841,7 +854,7 @@
     const optimisticAddFromTagList = input.optimisticAddFromTagList
 
     const fontSize = input.fontSize
-    const tagLength = input.tagListTagLength
+    const tagListTagLength = input.tagListTagLength
     const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting
     const fontSizeLetter = Math.floor(10/14*(+fontSize))
     const onPrint = isHideSemanticHtmlTagsOnPrinting ? 'none' : 'unset'
@@ -854,7 +867,7 @@
       const rootStyle = document.createElement('style');
       rootStyle.setAttribute('id', bkmInfoStyleId);
       const textNodeStyle = document.createTextNode(
-        getStyleText({ fontSize, fontSizeLetter, tagLength, onPrint })
+        getStyleText({ fontSize, fontSizeLetter, tagListTagLength, onPrint })
       );
       rootStyle.appendChild(textNodeStyle);
 
@@ -868,24 +881,21 @@
 
     let rootStyleVisited = document.getElementById(bkmInfoStyleVisitedId);
     if (isMarkVisited && !rootStyleVisited) {
-        const compStyles = window.getComputedStyle(document.body);
-        let bgColor = compStyles.getPropertyValue("background-color")
+        const mainEl = document.querySelector("main") || document.body
+        const mainStyles = window.getComputedStyle(mainEl);
+
+        let bgColor = mainStyles.getPropertyValue("background-color")
+
+        // ??
         const bgNot = 'rgba(0, 0, 0, 0)'
         if (bgColor == bgNot) {
           bgColor ='white'
         }
+
         const rootStyleVisited = document.createElement('style');
         rootStyleVisited.setAttribute('id', bkmInfoStyleVisitedId);
         const textNodeStyleVisited = document.createTextNode(
-`:link, :link * {
-  background-color: ${bgColor};
-}
-
-:visited, :visited * {
-  outline-color: orange;
-  background-color: lightgray;
-}
-`
+          getStylesVisitedLink({ bgColorLink: bgColor, bgColorVisited: 'lightgray' })
         );
         rootStyleVisited.appendChild(textNodeStyleVisited);
         document.body.insertAdjacentElement('afterbegin', rootStyleVisited);
@@ -898,8 +908,8 @@
       rootDiv.style.setProperty("--bkm-info-font-size", fontSize);
       rootDiv.style.setProperty("--bkm-info-font-letter", fontSizeLetter);
     }
-    if (tagLength != prevState.tagLength) {
-      rootDiv.style.setProperty("--bkm-info-tag-length", tagLength);
+    if (tagListTagLength != prevState.tagListTagLength) {
+      rootDiv.style.setProperty("--bkm-info-tag-length", tagListTagLength);
     }
     if (isHideSemanticHtmlTagsOnPrinting != prevState.isHideSemanticHtmlTagsOnPrinting) {
       document.body.style.setProperty("--bkm-info-onprint", onPrint);
@@ -1058,7 +1068,7 @@
           if (parentColor) {
             const [bgColor, textColor] = parentColor.split(':')
             divLabel.style.backgroundColor = bgColor
-            divLabel.style.color = textColor || contrastColor(bgColor)
+            divLabel.style.color = textColor || `contrast-color(${bgColor})`
           }
 
           const divLabelContainer = document.createElement('div');
@@ -1347,7 +1357,7 @@
         // const isUpdates = Object.keys(sumUpdate).length > 0
         prevState = {
           fontSize: this.state.fontSize,
-          tagLength: this.state.tagLength,
+          tagListTagLength: this.state.tagListTagLength,
           isHideSemanticHtmlTagsOnPrinting: this.state.isHideSemanticHtmlTagsOnPrinting,
         }
         Object.assign(this.state, sumUpdate)
@@ -1366,7 +1376,7 @@
     optimisticToStorageDel: 0,
     optimisticToStorageAdd: 0,
     fontSize: 14,
-    tagLength: 15,
+    tagListTagLength: 15,
     isHideSemanticHtmlTagsOnPrinting: false,
   })
   const renderQueue = new TaskQueue()
