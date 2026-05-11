@@ -70,7 +70,7 @@
   const bkmInfoStyleId = 'bkm-info--style';
   const bkmInfoStyleVisitedId = 'bkm-info--style-visited';
 
-  function getStyleText({ fontSize, fontSizeLetter, tagLength, onPrint }) {
+  function getStyleText({ fontSize, fontSizeLetter, tagListTagLength, onPrint }) {
 
     return (
 `
@@ -100,7 +100,7 @@
 #bkm-info--root {
   --bkm-info-font-size: ${fontSize}px;
   --bkm-info-font-letter: ${fontSizeLetter}px;
-  --bkm-info-tag-length: ${tagLength}ch;
+  --bkm-info-tag-length: ${tagListTagLength}ch;
   --bkm-info-label-rpad: ${BROWSER_SPECIFIC.LABEL_RIGHT_PADDING};
   --bkm-info-del-rpad: ${BROWSER_SPECIFIC.DEL_BTN_RIGHT_PADDING};
 
@@ -841,7 +841,7 @@
     const optimisticAddFromTagList = input.optimisticAddFromTagList
 
     const fontSize = input.fontSize
-    const tagLength = input.tagListTagLength
+    const tagListTagLength = input.tagListTagLength
     const isHideSemanticHtmlTagsOnPrinting = input.isHideSemanticHtmlTagsOnPrinting
     const fontSizeLetter = Math.floor(10/14*(+fontSize))
     const onPrint = isHideSemanticHtmlTagsOnPrinting ? 'none' : 'unset'
@@ -854,7 +854,7 @@
       const rootStyle = document.createElement('style');
       rootStyle.setAttribute('id', bkmInfoStyleId);
       const textNodeStyle = document.createTextNode(
-        getStyleText({ fontSize, fontSizeLetter, tagLength, onPrint })
+        getStyleText({ fontSize, fontSizeLetter, tagListTagLength, onPrint })
       );
       rootStyle.appendChild(textNodeStyle);
 
@@ -902,8 +902,8 @@
       rootDiv.style.setProperty("--bkm-info-font-size", fontSize);
       rootDiv.style.setProperty("--bkm-info-font-letter", fontSizeLetter);
     }
-    if (tagLength != prevState.tagLength) {
-      rootDiv.style.setProperty("--bkm-info-tag-length", tagLength);
+    if (tagListTagLength != prevState.tagListTagLength) {
+      rootDiv.style.setProperty("--bkm-info-tag-length", tagListTagLength);
     }
     if (isHideSemanticHtmlTagsOnPrinting != prevState.isHideSemanticHtmlTagsOnPrinting) {
       document.body.style.setProperty("--bkm-info-onprint", onPrint);
@@ -1351,7 +1351,7 @@
         // const isUpdates = Object.keys(sumUpdate).length > 0
         prevState = {
           fontSize: this.state.fontSize,
-          tagLength: this.state.tagLength,
+          tagListTagLength: this.state.tagListTagLength,
           isHideSemanticHtmlTagsOnPrinting: this.state.isHideSemanticHtmlTagsOnPrinting,
         }
         Object.assign(this.state, sumUpdate)
