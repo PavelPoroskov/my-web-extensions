@@ -76,12 +76,14 @@
 }
 :visited, :visited * {
   background-color: ${bgColorVisited};
+  color: contrast-color(${bgColorVisited})
 }
 .featured :link {
   background: oklch(28% 20% 253deg);
 }
 .featured :visited {
   background: ${bgColorVisited};
+  color: contrast-color(${bgColorVisited})
 }
 `
     )
