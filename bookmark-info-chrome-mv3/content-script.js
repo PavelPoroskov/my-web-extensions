@@ -70,6 +70,24 @@
   const bkmInfoStyleId = 'bkm-info--style';
   const bkmInfoStyleVisitedId = 'bkm-info--style-visited';
 
+  function getStylesVisitedLink({ bgColorLink, bgColorVisited }) {
+    return (
+`:link, :link * {
+  background-color: ${bgColorLink};
+}
+:visited, :visited * {
+  background-color: ${bgColorVisited};
+}
+.featured :link {
+  background: oklch(28% 20% 253deg);
+}
+.featured :visited {
+  background: ${bgColorVisited};
+}
+`
+    )
+  }
+
   function getStyleText({ fontSize, fontSizeLetter, tagListTagLength, onPrint }) {
 
     return (
@@ -868,28 +886,21 @@
 
     let rootStyleVisited = document.getElementById(bkmInfoStyleVisitedId);
     if (isMarkVisited && !rootStyleVisited) {
-        const compStyles = window.getComputedStyle(document.body);
-        let bgColor = compStyles.getPropertyValue("background-color")
+        const mainEl = document.querySelector("main") || document.body
+        const mainStyles = window.getComputedStyle(mainEl);
+
+        let bgColor = mainStyles.getPropertyValue("background-color")
+
+        // ??
         const bgNot = 'rgba(0, 0, 0, 0)'
         if (bgColor == bgNot) {
           bgColor ='white'
         }
+
         const rootStyleVisited = document.createElement('style');
         rootStyleVisited.setAttribute('id', bkmInfoStyleVisitedId);
         const textNodeStyleVisited = document.createTextNode(
-`:link, :link * {
-  background-color: ${bgColor};
-}
-:visited, :visited * {
-  background-color: lightgray;
-}
-.featured :link {
-  background: oklch(28% 20% 253deg);
-}
-.featured :visited {
-  background: lightgray;
-}
-`
+          getStylesVisitedLink({ bgColorLink: bgColor, bgColorVisited: 'lightgray' })
         );
         rootStyleVisited.appendChild(textNodeStyleVisited);
         document.body.insertAdjacentElement('afterbegin', rootStyleVisited);
