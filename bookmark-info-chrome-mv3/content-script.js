@@ -1370,7 +1370,7 @@
     optimisticToStorageDel: 0,
     optimisticToStorageAdd: 0,
     fontSize: 14,
-    tagLength: 15,
+    tagListTagLength: 15,
     isHideSemanticHtmlTagsOnPrinting: false,
   })
   const renderQueue = new TaskQueue()
