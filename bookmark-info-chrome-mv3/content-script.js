@@ -55,7 +55,6 @@
     }
   }
   const BROWSER = BROWSER_OPTIONS.CHROME;
-  const IS_BROWSER_FIREFOX = BROWSER === BROWSER_OPTIONS.FIREFOX;
   const BROWSER_SPECIFIC = Object.fromEntries(
     Object.entries(BROWSER_SPECIFIC_OPTIONS)
       .map(([option, obj]) => [option, obj[BROWSER]])
@@ -352,12 +351,6 @@
     WITH_RECENT: 'WITH_RECENT',
   }
   const ALLOWED_DISTANCE = 3
-
-  function contrastColor(bgColor) {
-    return (IS_BROWSER_FIREFOX
-      ? `contrast-color(${bgColor})`
-      : `oklch(from ${bgColor} calc(l + .60) c h)`)
-  }
 
   function getIsConditionFromUp(letterList, iTest) {
     let distanceFromUp = 0
@@ -1073,7 +1066,7 @@
           if (parentColor) {
             const [bgColor, textColor] = parentColor.split(':')
             divLabel.style.backgroundColor = bgColor
-            divLabel.style.color = textColor || contrastColor(bgColor)
+            divLabel.style.color = textColor || `contrast-color(${bgColor})`
           }
 
           const divLabelContainer = document.createElement('div');
