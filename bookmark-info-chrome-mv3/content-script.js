@@ -881,21 +881,43 @@
 
     let rootStyleVisited = document.getElementById(bkmInfoStyleVisitedId);
     if (isMarkVisited && !rootStyleVisited) {
-        const mainEl = document.querySelector("main") || document.body
-        const mainStyles = window.getComputedStyle(mainEl);
+        const bodyStyles = window.getComputedStyle(document.body);
+        let bgColorBody = bodyStyles.getPropertyValue("background-color")
 
-        let bgColor = mainStyles.getPropertyValue("background-color")
+        let bgColorMain
+        const mainEl = document.querySelector("main")
+        if (mainEl) {
+          const mainStyles = window.getComputedStyle(mainEl);
+          bgColorMain = mainStyles.getPropertyValue("background-color")
+        }
 
-        // ??
-        const bgNot = 'rgba(0, 0, 0, 0)'
-        if (bgColor == bgNot) {
-          bgColor ='white'
+        bgColorBody = bgColorBody == 'rgba(0, 0, 0, 0)' ? undefined : bgColorBody
+        bgColorMain = bgColorMain == 'rgba(0, 0, 0, 0)' ? undefined : bgColorMain
+        const bgColor = bgColorMain || bgColorBody || 'rgb(255, 255, 255)'
+
+        // let bgColorLink = 'white'
+        const bgColorLink = bgColor
+        let bgColorVisited
+
+        let strColor = bgColor
+        strColor = strColor.replace('rgba(', '')
+        strColor = strColor.replace('rgb(', '')
+        strColor = strColor.replace(')', '')
+        const [r, g, b] = strColor.split(', ')
+        const brightness=0.2126*(+r) + 0.7152*(+g) + 0.0722*(+b)
+        const isDarkColor = brightness < 128
+
+        if (isDarkColor) {
+          bgColorVisited = 'rgba(38, 1, 4, 1)'
+          // bgColorVisited = 'rgba(90, 0, 44, 1)'
+        } else {
+          bgColorVisited = 'lightgray'
         }
 
         const rootStyleVisited = document.createElement('style');
         rootStyleVisited.setAttribute('id', bkmInfoStyleVisitedId);
         const textNodeStyleVisited = document.createTextNode(
-          getStylesVisitedLink({ bgColorLink: bgColor, bgColorVisited: 'lightgray' })
+          getStylesVisitedLink({ bgColorLink, bgColorVisited })
         );
         rootStyleVisited.appendChild(textNodeStyleVisited);
         document.body.insertAdjacentElement('afterbegin', rootStyleVisited);
