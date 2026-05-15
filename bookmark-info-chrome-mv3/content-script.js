@@ -1694,13 +1694,11 @@
           .map((s) => s.trim())
           .filter(Boolean)
 
-        addBookmarkByFolderNameList(folderNameList)
-        break
+        return addBookmarkByFolderNameList(folderNameList)
       }
       case CONTENT_SCRIPT_MSG_ID.GET_SELECTION: {
         const selection = document.getSelection().toString()
-        addBookmarkByFolderNameList([selection])
-        break
+        return addBookmarkByFolderNameList([selection])
       }
       case CONTENT_SCRIPT_MSG_ID.SEND_ME_AUTHOR: {
         const authorSelector = message.authorSelector
