@@ -71,17 +71,24 @@
 
   function getStylesVisitedLink({ bgColorLink, bgColorVisited }) {
     return (
-`:link, :link * {
+`:link {
   background-color: ${bgColorLink};
 }
-:visited, :visited * {
+:visited {
   background-color: ${bgColorVisited};
   color: contrast-color(${bgColorVisited})
 }
-.featured :link {
+.featured article :link {
   background: oklch(28% 20% 253deg);
 }
-.featured :visited {
+.featured article :visited {
+  background: ${bgColorVisited};
+  color: contrast-color(${bgColorVisited})
+}
+:link .post-card-title {
+  background-color: ${bgColorLink};
+}
+:visited .post-card-title {
   background: ${bgColorVisited};
   color: contrast-color(${bgColorVisited})
 }
@@ -881,25 +888,41 @@
 
     let rootStyleVisited = document.getElementById(bkmInfoStyleVisitedId);
     if (isMarkVisited && !rootStyleVisited) {
-        const bodyStyles = window.getComputedStyle(document.body);
-        let bgColorBody = bodyStyles.getPropertyValue("background-color")
+        const selectorList = [
+          'article',
+          '.post-card', // fedoramagazine.org
+          '.crayons-story', // dev.to,
+          'main',
+          '.content',
+          'body',
+          'html'
+        ]
+        let bgColor
 
-        let bgColorMain
-        const mainEl = document.querySelector("main")
-        if (mainEl) {
-          const mainStyles = window.getComputedStyle(mainEl);
-          bgColorMain = mainStyles.getPropertyValue("background-color")
+        let iSelector = 0
+        while (!bgColor && iSelector < selectorList.length) {
+          const cssSelector = selectorList[iSelector]
+          iSelector = iSelector + 1
+
+          const domEl = document.querySelector(cssSelector)
+          // console.log('#### cssSelector', cssSelector, !!domEl)
+
+          if (domEl) {
+            const styles = window.getComputedStyle(domEl);
+            bgColor = styles.getPropertyValue("background-color")
+            bgColor = bgColor == 'rgba(0, 0, 0, 0)' ? undefined : bgColor
+          }
+
+          // if (bgColor) {
+          //   console.log('#### bgColor', bgColor, cssSelector)
+          // }
         }
 
-        bgColorBody = bgColorBody == 'rgba(0, 0, 0, 0)' ? undefined : bgColorBody
-        bgColorMain = bgColorMain == 'rgba(0, 0, 0, 0)' ? undefined : bgColorMain
-        const bgColor = bgColorMain || bgColorBody || 'rgb(255, 255, 255)'
-
         // let bgColorLink = 'white'
-        const bgColorLink = bgColor
+        const bgColorLink = bgColor || 'rgb(255, 255, 255)'
         let bgColorVisited
 
-        let strColor = bgColor
+        let strColor = bgColorLink
         strColor = strColor.replace('rgba(', '')
         strColor = strColor.replace('rgb(', '')
         strColor = strColor.replace(')', '')
