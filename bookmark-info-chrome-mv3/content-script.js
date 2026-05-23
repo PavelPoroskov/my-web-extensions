@@ -71,10 +71,10 @@
 
   function getStylesVisitedLink({ bgColorLink, bgColorVisited }) {
     return (
-`:link, :link * {
+`:link {
   background-color: ${bgColorLink};
 }
-:visited, :visited * {
+:visited {
   background-color: ${bgColorVisited};
   color: contrast-color(${bgColorVisited})
 }
