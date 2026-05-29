@@ -320,8 +320,9 @@ const urlSettingsGo = {
       'v',
       // ['list'],
       ['index'],
-      ['start_radio'],
+      ['pp'],
       ['rv'],
+      ['start_radio'],
     ],
     getAuthor: {
       pagePattern: '/watch?v=:id',

@@ -69,31 +69,80 @@
   const bkmInfoStyleId = 'bkm-info--style';
   const bkmInfoStyleVisitedId = 'bkm-info--style-visited';
 
-  function getStylesVisitedLink({ bgColorLink, bgColorVisited }) {
-    return (
-`:link {
+  function getStylesVisitedLink({ bgColorLink, bgColorVisited, hostname }) {
+    // console.log('getStylesVisitedLink hostname', hostname)
+    const defaultStyles = (`
+:link {
   background-color: ${bgColorLink};
 }
 :visited {
   background-color: ${bgColorVisited};
   color: contrast-color(${bgColorVisited})
-}
-.featured article :link {
-  background: oklch(28% 20% 253deg);
-}
-.featured article :visited {
-  background: ${bgColorVisited};
-  color: contrast-color(${bgColorVisited})
-}
+}`)
+    let styles
+
+    switch (hostname) {
+      case 'blog.logrocket.com': {
+        styles = (`
 :link .post-card-title {
   background-color: ${bgColorLink};
 }
 :visited .post-card-title {
   background: ${bgColorVisited};
   color: contrast-color(${bgColorVisited})
+}`)
+        break;
+      }
+      case 'fedoramagazine.org': {
+        styles = (`
+.posts :link {
+  background-color: white;
 }
-`
-    )
+.posts :visited {
+  background-color: ${bgColorVisited};
+  color: contrast-color(${bgColorVisited})
+}`)
+        break;
+      }
+      case 'www.freecodecamp.org': {
+        styles = (`
+.post-feed :link {
+  background-color: white;
+}
+.post-feed :visited {
+  background-color: ${bgColorVisited};
+  color: contrast-color(${bgColorVisited})
+}`)
+        break;
+      }
+      case 'frontendmasters.com': {
+        styles = styles = defaultStyles + (`
+.featured article :link {
+  background: oklch(28% 20% 253deg);
+}
+.featured article :visited {
+  background: ${bgColorVisited};
+  color: contrast-color(${bgColorVisited})
+}`)
+        break;
+      }
+      case 'www.youtube.com': {
+        styles = (`
+#contents :link {
+  background-color: ${bgColorLink};
+}
+#contents :visited {
+  background-color: ${bgColorVisited};
+  color: contrast-color(${bgColorVisited})
+}`)
+        break;
+      }
+      default: {
+        styles = defaultStyles
+      }
+    }
+
+    return styles
   }
 
   function getStyleText({ fontSize, fontSizeLetter, tagListTagLength, onPrint }) {
@@ -890,10 +939,10 @@
     if (isMarkVisited && !rootStyleVisited) {
         const selectorList = [
           'article',
-          '.post-card', // fedoramagazine.org
+          '.post-feed', // www.freecodecamp.org
           '.crayons-story', // dev.to,
+          '.body-wrap',
           'main',
-          '.content',
           'body',
           'html'
         ]
@@ -905,17 +954,14 @@
           iSelector = iSelector + 1
 
           const domEl = document.querySelector(cssSelector)
-          // console.log('#### cssSelector', cssSelector, !!domEl)
 
           if (domEl) {
             const styles = window.getComputedStyle(domEl);
             bgColor = styles.getPropertyValue("background-color")
+            // console.log('#### cssSelector', cssSelector, bgColor)
             bgColor = bgColor == 'rgba(0, 0, 0, 0)' ? undefined : bgColor
           }
 
-          // if (bgColor) {
-          //   console.log('#### bgColor', bgColor, cssSelector)
-          // }
         }
 
         // let bgColorLink = 'white'
@@ -940,7 +986,7 @@
         const rootStyleVisited = document.createElement('style');
         rootStyleVisited.setAttribute('id', bkmInfoStyleVisitedId);
         const textNodeStyleVisited = document.createTextNode(
-          getStylesVisitedLink({ bgColorLink, bgColorVisited })
+          getStylesVisitedLink({ bgColorLink, bgColorVisited, hostname: document.location.hostname })
         );
         rootStyleVisited.appendChild(textNodeStyleVisited);
         document.body.insertAdjacentElement('afterbegin', rootStyleVisited);
