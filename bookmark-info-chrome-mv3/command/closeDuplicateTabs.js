@@ -1,61 +1,53 @@
+function getUniqueTabList(tabList) {
+  const urlToTabList = new Map();
+  const validTabList = [];
 
-async function getDuplicatesTabs(inTabList) {
-  const tabList = inTabList.toReversed();
-  const duplicateTabIdList = [];
-  const uniqUrls = new Map();
-  let newActiveTabId;
-
-  // do not change pinned tabs
   tabList
-    .filter((Tab) => Tab.pinned)
     .forEach((Tab) => {
       const url = Tab.pendingUrl || Tab.url || '';
-      uniqUrls.set(url, Tab.id);
+      const tabListForUrl = urlToTabList.get(url) || [];
+
+      tabListForUrl.push(Tab)
+      urlToTabList.set(url, tabListForUrl);
     });
 
-  // priority for active tab
-  tabList
-    .filter((Tab) => !Tab.pinned && Tab.active)
-    .forEach((Tab) => {
-      const url = Tab.pendingUrl || Tab.url || '';
+  urlToTabList.values()
+    .forEach(tabListForUrl => {
 
-      if (uniqUrls.has(url)) {
-        newActiveTabId = uniqUrls.get(url);
-        duplicateTabIdList.push(Tab.id);
+      if (tabListForUrl.length === 1) {
+        validTabList.push(tabListForUrl[0])
       } else {
-        uniqUrls.set(url, Tab.id);
+        const hasFixedTab = tabListForUrl.some((Tab) => Tab.pinned || Tab.active)
+
+        if (hasFixedTab) {
+          const fixedTabList = tabListForUrl.filter((Tab) => Tab.pinned || Tab.active)
+          validTabList.push(...fixedTabList)
+        } else {
+          const sortedTabList = tabListForUrl.toSorted((a, b) => a.index - b.index)
+          validTabList.push(sortedTabList.at(-1))
+        }
       }
-    });
+    })
 
-  // other tabs
-  tabList
-    .filter((Tab) => !Tab.pinned && !Tab.active)
-    .forEach((Tab) => {
-      const url = Tab.pendingUrl || Tab.url || '';
-
-      if (uniqUrls.has(url)) {
-        duplicateTabIdList.push(Tab.id);
-      } else {
-        uniqUrls.set(url, Tab.id);
-      }
-    });
-
-  return {
-    duplicateTabIdList,
-    newActiveTabId,
-  }
+  return validTabList
 }
 
 export async function closeDuplicateTabs() {
-  const tabs = await chrome.tabs.query({ lastFocusedWindow: true });
-  const tabsWithId = tabs.filter(({ id }) => id);
-  const {
-    duplicateTabIdList,
-    newActiveTabId,
-  } = await getDuplicatesTabs(tabsWithId);
+  const tabList = await chrome.tabs.query({ lastFocusedWindow: true });
+  const validTabList = getUniqueTabList(tabList);
+  const validTabIdSet = new Set(
+    validTabList
+      .map(Tab => Tab.id)
+      .filter(Boolean)
+  )
+  console.log()
+  const duplicateTabList = tabList.filter(Tab => !validTabIdSet.has(Tab.id))
 
-  await Promise.all([
-    newActiveTabId && chrome.tabs.update(newActiveTabId, { active: true }),
-    duplicateTabIdList.length > 0 && chrome.tabs.remove(duplicateTabIdList),
-  ])
+  const duplicateTabIdList = duplicateTabList
+    .map(Tab => Tab.id)
+    .filter(Boolean)
+
+  if (0 < duplicateTabIdList.length) {
+    await chrome.tabs.remove(duplicateTabIdList)
+  }
 }
