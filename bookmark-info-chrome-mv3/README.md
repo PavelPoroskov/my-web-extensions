@@ -3,11 +3,12 @@ The extension improves the browser's capabilities for working with bookmarks.
 
 * fast add bookmarks:
   * from selection in page.  
-    &nbsp;&nbsp;&nbsp;Shortcut Ctrl+Shift+Period(dot) and context command.  
+    &nbsp;&nbsp;&nbsp;Shortcut Ctrl+Shift+Period(dot) and context command. 
     &nbsp;&nbsp;&nbsp;Selection is used as folder name for new bookmark.  
     &nbsp;&nbsp;&nbsp;The extension is looking for folder (case and plural insensitive) or create new. 
   * from user input.  
     &nbsp;&nbsp;&nbsp;Shortcut Ctrl+Shift+Comma and context command.  
+    &nbsp;&nbsp;&nbsp;Select text in a page. Use shortcut Ctrl+Shift+Comma to edit selected text before use it for folder name.
   * from last used list.  
     &nbsp;&nbsp;&nbsp;Last used list contains up to 50 last used folders.  
     &nbsp;&nbsp;&nbsp;Standard browser last used list contains only 5 items.  
