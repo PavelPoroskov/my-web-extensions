@@ -6,6 +6,7 @@ export const DEFAULT_HOST_SETTINGS = {
     'q', // www.google.com
     'search',
     's',
+    'query', // https://www.freecodecamp.org/news/search?query=feature%20flag
     ['any'],
     ['email_hash'],
     ['pid=0'],
