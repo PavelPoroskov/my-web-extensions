@@ -45,6 +45,10 @@ async function addSubfolders({ parentId, nameSet }) {
       },
     )
 
+    if (objDirectives['#top-'] != undefined) {
+      continue
+    }
+
     if (!nameSet[normalizedTitle]) {
       nameSet[normalizedTitle] = [nodeData]
     } else {

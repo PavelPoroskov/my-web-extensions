@@ -34,8 +34,12 @@ function makeIsTitleMatch({ title, normalizeFn = (str) => str }) {
   // logFF('makeIsTitleMatch 00', title, onlyTitlePattern, normalizedPattern)
 
   return function isTitleMatch(testTitle) {
-    const onlyTitleTestTitle = getTitleDetails(testTitle).onlyTitle
-    const normalizedTestTitle = normalizeFn(onlyTitleTestTitle)
+    const { onlyTitle, objDirectives }= getTitleDetails(testTitle)
+    const normalizedTestTitle = normalizeFn(onlyTitle)
+
+    if (objDirectives['#top-'] != undefined) {
+      return false
+    }
 
     if (normalizedTestTitle === normalizedPattern) {
       // logFF('isTitleMatch 00', testTitle, onlyTitleTestTitle, normalizedTestTitle)
@@ -168,15 +172,20 @@ function findFolderFrom({ isTitleMatch, startFolder }) {
   return traverseSubFolder(startFolder)
 }
 
-async function findFolderInSubtree({ title, parentId }) {
-  const normalizedTitle = normalizeTitle(title)
-  logFF('findFolderInSubtree 00 normalizedTitle', normalizedTitle, parentId)
-  // search in direct children
+export async function findChildFolder({ title, parentId }) {
   const isTitleMatch = makeIsTitleMatch({ title, normalizeFn: normalizeTitle })
 
   const firstLevelNodeList = await chrome.bookmarks.getChildren(parentId)
   let foundItem = firstLevelNodeList.find((node) => !node.url && isTitleMatch(node.title))
-  logFF('findFolderInSubtree 11 firstLevelNodeList', foundItem)
+
+  return foundItem
+}
+
+async function findFolderInSubtree({ title, parentId }) {
+  const isTitleMatch = makeIsTitleMatch({ title, normalizeFn: normalizeTitle })
+
+  const firstLevelNodeList = await chrome.bookmarks.getChildren(parentId)
+  let foundItem = firstLevelNodeList.find((node) => !node.url && isTitleMatch(node.title))
 
   if (!foundItem) {
     // search in subfolders of direct children
@@ -197,7 +206,6 @@ async function findFolderInSubtree({ title, parentId }) {
       foundItem = findFolderFrom({ isTitleMatch, startFolder: allSecondLevelFolderList[i] })
       i += 1
     }
-    logFF('findFolderInSubtree 22 secondLevelFolderList', foundItem)
   }
 
   return foundItem

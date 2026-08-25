@@ -35,6 +35,10 @@ export function getTitleDetails(title) {
         value = ''
         break
       }
+      case '#top-': {
+        value = ''
+        break
+      }
       // case '#color':
       case '#c': {
         if (isCorrectColorDirectiveValue(directiveValue)) {

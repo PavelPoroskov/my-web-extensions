@@ -25,8 +25,7 @@ import {
   rootFolders,
 } from './root-folders.js';
 import {
-  getExistingFolderPlaceParentTitleList,
-  getNewFolderPlaceParentTitle,
+  getFolderInfo,
 } from './folder-place.js';
 import {
   findFolderMultiWay,
@@ -46,10 +45,10 @@ class FolderCreator {
     }
   }
 
-  async _parentTitleToParentId(parentTitle) {
+  async _folderTitleToFolderId(folderTitle) {
     let parentId
 
-    switch (parentTitle) {
+    switch (folderTitle) {
       case OTHER_BOOKMARKS_FOLDER_TITLE:
         parentId = rootFolders.OTHER_BOOKMARKS_FOLDER_ID
         break
@@ -57,40 +56,32 @@ class FolderCreator {
         parentId = rootFolders.BOOKMARKS_BAR_FOLDER_ID
         break
       default: {
-        const parentFolder = await this._findFolder({ title: parentTitle, isCreate: true })
+        const parentFolder = await this._findFolder({ title: folderTitle, isCreate: true })
         parentId = parentFolder.id
       }
     }
 
     return parentId
   }
-  async getNewFolderPlaceParentId(title) {
-    const parentTitle = getNewFolderPlaceParentTitle(title)
-    const parentId = await this._parentTitleToParentId(parentTitle)
 
-    return parentId
-  }
-  async getExistingFolderPlaceParentIdList(title) {
-    const parentTitleList = getExistingFolderPlaceParentTitleList(title)
+  async getFolderInfoWithParentId(title) {
+    const folderInfo = getFolderInfo(title)
+    const parentId = await this._folderTitleToFolderId(folderInfo.parentTitle)
 
-    const parentIdList = await Promise.all(
-      parentTitleList.map(
-        parentTitle => this._parentTitleToParentId(parentTitle)
-      )
-    )
-
-    return parentIdList
+    return {
+      ...folderInfo,
+      parentId,
+    }
   }
 
   async moveFolderAfterRename({ id, parentId, title, index }) {
     const moveArgs = {}
     const settings = await extensionSettings.get()
+    const folderInfo = await this.getFolderInfoWithParentId(title)
 
     if (settings[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
-      const correctParentIdList = await this.getExistingFolderPlaceParentIdList(title)
-
-      if (!correctParentIdList.includes(parentId)) {
-        moveArgs.parentId = correctParentIdList[0]
+      if (parentId !== folderInfo.parentId) {
+        moveArgs.parentId = folderInfo.parentId
       }
     }
 
@@ -106,10 +97,32 @@ class FolderCreator {
     }
 
     if (0 < Object.keys(moveArgs).length) {
-      moveFolderIgnoreInController({
+      await moveFolderIgnoreInController({
         id,
         ...moveArgs,
       })
+
+      switch (folderInfo.folderType) {
+        case 'top folder': {
+          const onlyTitle = getTitleDetails(title).onlyTitle
+          const placeholderTitle = `${onlyTitle} #top-`
+          const nodeList = await chrome.bookmarks.search({ title: placeholderTitle });
+          const foundPlaceholder = nodeList.find((node) => !node.url && node.parentId == rootFolders.OTHER_BOOKMARKS_FOLDER_ID)
+
+          if (!foundPlaceholder) {
+            await this.createFolderInParent({
+              title: placeholderTitle,
+              parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID
+            })
+          }
+
+          break
+        }
+        case 'top folder placeholder': {
+
+          break
+        }
+      }
     }
   }
   async mergeFolderTitleToNode({ folder, newTitle }) {
@@ -152,8 +165,7 @@ class FolderCreator {
       }
     }
   }
-  async createFolderInBookmarks(title) {
-    const parentId = await this.getNewFolderPlaceParentId(title)
+  async createFolderInParent({ title, parentId }) {
     const firstLevelNodeList = await chrome.bookmarks.getChildren(parentId)
 
     let findIndex
@@ -175,6 +187,22 @@ class FolderCreator {
     }
 
     const folder = await createFolderIgnoreInController(folderParams)
+
+    return folder
+  }
+  async createFolderInBookmarks(title) {
+    const folderInfo = await this.getFolderInfoWithParentId(title)
+    const folder = await this.createFolderInParent(folderInfo)
+
+    if (folderInfo.folderType === 'top folder') {
+      const onlyTitle = getTitleDetails(title).onlyTitle
+      const placeholderTitle = `${onlyTitle} #top-`
+
+      await this.createFolderInParent({
+        title: placeholderTitle,
+        parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID
+      })
+    }
 
     const {
       objDirectives

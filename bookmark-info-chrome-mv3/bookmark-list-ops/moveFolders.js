@@ -24,6 +24,7 @@ async function getFolderMovements() {
   const removeList = []
   const moveList = []
   const renameList = []
+  const datedRootOldId = await folderCreator.findDatedRootOld()
 
   async function onFolder({ folder, level, bookmarkList, folderListLength }) {
     logMF('onFolder() 00', folder.title, folder.id)
@@ -39,18 +40,34 @@ async function getFolderMovements() {
       return
     }
 
-    // logMF('orderChildren() 11 folder')
-    // logMF(folder)
-    logMF('onFolder() 11')
-    const parentIdList = await folderCreator.getExistingFolderPlaceParentIdList(folder.title)
+    const folderInfo = await folderCreator.getFolderInfoWithParentId(folder.title)
 
-    if (!parentIdList.includes(folder.parentId)) {
-      logMF('onFolder() 33')
-      moveList.push({
-        id: folder.id,
-        parentId: parentIdList[0],
-        level,
-      })
+    switch (folderInfo.folderType) {
+      case 'dated folder': {
+        const correctParentSet = new Set([folderInfo.parentId])
+        if (datedRootOldId) {
+          correctParentSet.add(datedRootOldId)
+        }
+
+        if (!correctParentSet.has(folder.parentId)) {
+          moveList.push({
+            id: folder.id,
+            parentId: folderInfo.parentId,
+            level,
+          })
+        }
+
+        break
+      }
+      default: {
+        if (folder.parentId !== folderInfo.parentId) {
+          moveList.push({
+            id: folder.id,
+            parentId: folderInfo.parentId,
+            level,
+          })
+        }
+      }
     }
 
     const trimmedTitle = trimTitle(folder.title)

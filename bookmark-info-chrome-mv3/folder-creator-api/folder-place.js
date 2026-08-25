@@ -2,7 +2,7 @@ import {
   BOOKMARKS_BAR_FOLDER_TITLE,
   OTHER_BOOKMARKS_FOLDER_TITLE,
   DATED_ROOT_NEW_FOLDER_TITLE,
-  DATED_ROOT_OLD_FOLDER_TITLE,
+  // DATED_ROOT_OLD_FOLDER_TITLE,
   DATED_ROOT_SERVICE_FOLDER_TITLE,
   DATED_TEMPLATE_VISITED,
   DATED_TEMPLATE_OPENED,
@@ -18,36 +18,50 @@ const datedTemplatesInDatedRootServiceSet = new Set([
   DATED_TEMPLATE_DONE
 ])
 
-// getFolderPlaceTitleByTitle
-export function getNewFolderPlaceParentTitle(folderTitle) {
-  const isTopFolder = folderTitle.includes(' #top')
+export function getFolderInfo(title) {
 
-  if (isTopFolder) {
-    return BOOKMARKS_BAR_FOLDER_TITLE
-  }
+  let info
 
-  if (isDatedFolderTitle(folderTitle)) {
-    const datedTemplate = getDatedTemplate(folderTitle)
-
-    if (datedTemplatesInDatedRootServiceSet.has(datedTemplate)) {
-      return DATED_ROOT_SERVICE_FOLDER_TITLE
+  switch (true) {
+    case title.includes(' #top-'): {
+      info = {
+        parentTitle: OTHER_BOOKMARKS_FOLDER_TITLE,
+        folderType: 'top folder placeholder'
+      }
+      break
     }
+    case title.includes(' #top'): {
+      info = {
+        parentTitle: BOOKMARKS_BAR_FOLDER_TITLE,
+        folderType: 'top folder'
+      }
+      break
+    }
+    case isDatedFolderTitle(title): {
+      const datedTemplate = getDatedTemplate(title)
 
-    return DATED_ROOT_NEW_FOLDER_TITLE
+      if (datedTemplatesInDatedRootServiceSet.has(datedTemplate)) {
+        info = {
+          parentTitle: DATED_ROOT_SERVICE_FOLDER_TITLE,
+          folderType: 'service folder'
+        }
+      } else {
+        info = {
+          parentTitle: DATED_ROOT_NEW_FOLDER_TITLE,
+          folderType: 'dated folder'
+        }
+      }
+
+      break
+    }
+    default:
+      info = {
+        parentTitle: OTHER_BOOKMARKS_FOLDER_TITLE
+      }
   }
 
-  return OTHER_BOOKMARKS_FOLDER_TITLE
-}
-
-export function getExistingFolderPlaceParentTitleList(folderTitle) {
-  const parentTitle = getNewFolderPlaceParentTitle(folderTitle)
-
-  if (parentTitle == DATED_ROOT_NEW_FOLDER_TITLE) {
-    return [
-      DATED_ROOT_NEW_FOLDER_TITLE,
-      DATED_ROOT_OLD_FOLDER_TITLE,
-    ]
+  return {
+    ...info,
+    title,
   }
-
-  return [parentTitle]
 }
