@@ -40,7 +40,19 @@ const logOD = makeLogFunction({ module: 'orderBookmarks.js' })
 
 export async function orderBookmarks() {
   logOD('orderBookmarks() 00')
-  // await replaceHostname({ originalHostname: 'hostname1', newHostname: 'hostname2' })
+  // function getNewUrl(url) {
+  //   const oUrl = new URL(url)
+
+  //   if (oUrl.pathname.startsWith('/blog/')) {
+  //     oUrl.pathname = oUrl.pathname.slice(5)
+  //     oUrl.hostname = 'blog.master.dev'
+  //   } else {
+  //     oUrl.hostname = 'master.dev'
+  //   }
+
+  //   return oUrl.toString()
+  // }
+  // await replaceHostname({ originalHostname: 'frontendmasters.com', newHostname: 'master.dev', getNewUrl })
 
   logOD('orderBookmarks() 11')
   await moveFolders()

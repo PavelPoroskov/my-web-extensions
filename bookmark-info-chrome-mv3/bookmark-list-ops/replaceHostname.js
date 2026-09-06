@@ -5,7 +5,8 @@ import {
   traverseTreeRecursively,
 } from './traverseFolder.js'
 
-async function getReplaceList({ originalHostname, newHostname }) {
+
+async function getReplaceList({ originalHostname, newHostname, getNewUrl }) {
   const taskList = []
 
   function onFolder({ bookmarkList }) {
@@ -15,11 +16,19 @@ async function getReplaceList({ originalHostname, newHostname }) {
         const oUrl = new URL(url)
 
         if (oUrl.hostname == originalHostname) {
-          oUrl.hostname = newHostname
+
+          let newUrl
+
+          if (getNewUrl) {
+            newUrl = getNewUrl(url)
+          } else {
+            oUrl.hostname = newHostname
+            newUrl = oUrl.toString()
+          }
 
           taskList.push({
             id,
-            newUrl: oUrl.toString(),
+            newUrl,
           })
         }
 
@@ -36,8 +45,8 @@ async function getReplaceList({ originalHostname, newHostname }) {
 }
 
 // eslint-disable-next-line no-unused-vars
-export async function replaceHostname({ originalHostname, newHostname }) {
-  const replaceList = await getReplaceList({ originalHostname, newHostname })
+export async function replaceHostname({ originalHostname, newHostname, getNewUrl }) {
+  const replaceList = await getReplaceList({ originalHostname, newHostname, getNewUrl })
 
   await replaceList.reduce(
     (promiseChain, { id, newUrl }) => promiseChain.then(
