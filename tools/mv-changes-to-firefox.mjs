@@ -91,7 +91,7 @@ await createFileForFirefox(
     'bookmark-list-ops/removeDoubleBookmarks.js',
     'bookmark-list-ops/removeDoubleDatedBookmarks.js',
     'bookmark-list-ops/sortFolders.js',
-    'bookmark-list-ops/replaceHostname.js',
+    'bookmark-list-ops/updateBookmarks.js',
     'bookmark-list-ops/orderBookmarks.js',
     'bookmark-list-ops/index.js',
 

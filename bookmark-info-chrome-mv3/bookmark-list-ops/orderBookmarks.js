@@ -29,9 +29,9 @@ import {
 import {
   sortFolders,
 } from './sortFolders.js'
-import {
-  updateBookmarks,
-} from './replaceHostname.js'
+// import {
+//   updateBookmarks,
+// } from './updateBookmarks.js'
 import {
   makeLogFunction,
 } from '../api-low/index.js';
@@ -40,36 +40,36 @@ const logOD = makeLogFunction({ module: 'orderBookmarks.js' })
 
 export async function orderBookmarks() {
   logOD('orderBookmarks() 00')
-  await updateBookmarks(({ url, title }) => {
-    try {
-      const oUrl = new URL(url)
+  // await updateBookmarks(({ url, title }) => {
+  //   try {
+  //     const oUrl = new URL(url)
 
-      if (oUrl.hostname == 'frontendmasters.com') {
-        if (oUrl.pathname.startsWith('/blog/')) {
-          oUrl.pathname = oUrl.pathname.slice(5)
-          oUrl.hostname = 'blog.master.dev'
-        } else {
-          oUrl.hostname = 'master.dev'
-        }
+  //     if (oUrl.hostname == 'frontendmasters.com') {
+  //       if (oUrl.pathname.startsWith('/blog/')) {
+  //         oUrl.pathname = oUrl.pathname.slice(5)
+  //         oUrl.hostname = 'blog.master.dev'
+  //       } else {
+  //         oUrl.hostname = 'master.dev'
+  //       }
 
-        return {
-          url: oUrl.toString(),
-          title: title.replace('Frontend Masters', 'Master.dev')
-        }
-      }
+  //       return {
+  //         url: oUrl.toString(),
+  //         title: title.replace('Frontend Masters', 'Master.dev')
+  //       }
+  //     }
 
 
-      if ((oUrl.hostname == 'master.dev' || oUrl.hostname == 'blog.master.dev') && title.includes('Frontend Masters')) {
-        return {
-          title: title.replace('Frontend Masters', 'Master.dev')
-        }
-      }
+  //     if ((oUrl.hostname == 'master.dev' || oUrl.hostname == 'blog.master.dev') && title.includes('Frontend Masters')) {
+  //       return {
+  //         title: title.replace('Frontend Masters', 'Master.dev')
+  //       }
+  //     }
 
-    // eslint-disable-next-line no-empty
-    } finally {
+  //   // eslint-disable-next-line no-empty
+  //   } finally {
 
-    }
-  })
+  //   }
+  // })
 
   logOD('orderBookmarks() 11')
   await moveFolders()
