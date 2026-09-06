@@ -5,36 +5,19 @@ import {
   traverseTreeRecursively,
 } from './traverseFolder.js'
 
-
-async function getReplaceList({ originalHostname, newHostname, getNewUrl }) {
+async function getUpdateList(fnGetUpdateForBookmark) {
   const taskList = []
 
   function onFolder({ bookmarkList }) {
+    bookmarkList.forEach(({ id, url, title }) => {
+      const bkmUpdate = fnGetUpdateForBookmark({ url, title })
 
-    bookmarkList.forEach(({ url, id }) => {
-      try {
-        const oUrl = new URL(url)
-
-        if (oUrl.hostname == originalHostname) {
-
-          let newUrl
-
-          if (getNewUrl) {
-            newUrl = getNewUrl(url)
-          } else {
-            oUrl.hostname = newHostname
-            newUrl = oUrl.toString()
-          }
-
-          taskList.push({
-            id,
-            newUrl,
-          })
-        }
-
-      // eslint-disable-next-line no-empty
-      } finally {
-
+      if (bkmUpdate?.url || bkmUpdate?.title) {
+        taskList.push({
+          id,
+          url: bkmUpdate.url,
+          title: bkmUpdate.title,
+        })
       }
     })
   }
@@ -44,13 +27,12 @@ async function getReplaceList({ originalHostname, newHostname, getNewUrl }) {
   return taskList
 }
 
-// eslint-disable-next-line no-unused-vars
-export async function replaceHostname({ originalHostname, newHostname, getNewUrl }) {
-  const replaceList = await getReplaceList({ originalHostname, newHostname, getNewUrl })
+export async function updateBookmarks(fnGetUpdateForBookmark) {
+  const updateList = await getUpdateList(fnGetUpdateForBookmark)
 
-  await replaceList.reduce(
-    (promiseChain, { id, newUrl }) => promiseChain.then(
-      () => updateBookmarkIgnoreInController({ id, url: newUrl })
+  await updateList.reduce(
+    (promiseChain, { id, url, title }) => promiseChain.then(
+      () => updateBookmarkIgnoreInController({ id, url, title })
     ),
     Promise.resolve(),
   );
