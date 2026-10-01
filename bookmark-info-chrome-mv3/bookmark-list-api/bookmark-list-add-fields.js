@@ -185,7 +185,7 @@ export async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
     : obj
   ))
 
-  return resultBookmarkList
+  return resultBookmarkList.toSorted((a,b) => -((a.templateId ? 1: 0) - (b.templateId ? 1: 0)))
 }
 
 // addBookmarkParentTitle
