@@ -1020,8 +1020,14 @@
     }
 
     const drawList = []
-    let prevTitle
 
+
+    authorBookmarkList.forEach((value) => {
+      drawList.push({ type: 'author-bookmark', value })
+    })
+
+
+    let prevTitle
     let colorIndex = 0
     bookmarkList.forEach((value) => {
       const { title } = value
@@ -1040,12 +1046,10 @@
         colorIndex = colorIndex + 1
       }
     })
+
     partialBookmarkList.forEach((value) => {
       drawList.push({ type: 'partial-bookmark', value, colorIndex: colorIndex % 2 + 1 })
       colorIndex = colorIndex + 1
-    })
-    authorBookmarkList.forEach((value) => {
-      drawList.push({ type: 'author-bookmark', value })
     })
 
     if (tagListIsAvailable) {
