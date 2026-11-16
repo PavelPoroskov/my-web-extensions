@@ -2,7 +2,7 @@ import {
   rootFolders,
 } from './root-folders.js';
 import {
-  getTitleDetails,
+  makeIsTitleMatch,
   normalizeTitle,
   trimLow,
   trimLowSingular,
@@ -19,35 +19,6 @@ async function findFolderWithExactTitle(title) {
   const foundItem = nodeList.find((node) => !node.url)
 
   return foundItem
-}
-
-// export async function findSubFolderWithExactTitle({ title, parentId }) {
-//   const nodeList = await chrome.bookmarks.search({ title });
-//   const foundItem = nodeList.find((node) => !node.url && node.parentId == parentId)
-
-//   return foundItem
-// }
-
-function makeIsTitleMatch({ title, normalizeFn = (str) => str }) {
-  const onlyTitlePattern = getTitleDetails(title).onlyTitle
-  const normalizedPattern = normalizeFn(onlyTitlePattern)
-  // logFF('makeIsTitleMatch 00', title, onlyTitlePattern, normalizedPattern)
-
-  return function isTitleMatch(testTitle) {
-    const { onlyTitle, objDirectives }= getTitleDetails(testTitle)
-    const normalizedTestTitle = normalizeFn(onlyTitle)
-
-    if (objDirectives['#top-'] != undefined) {
-      return false
-    }
-
-    if (normalizedTestTitle === normalizedPattern) {
-      // logFF('isTitleMatch 00', testTitle, onlyTitleTestTitle, normalizedTestTitle)
-      return true
-    }
-
-    return false
-  }
 }
 
 async function findByTitle({ title, normalizeFn }) {
@@ -170,15 +141,6 @@ function findFolderFrom({ isTitleMatch, startFolder }) {
   }
 
   return traverseSubFolder(startFolder)
-}
-
-export async function findChildFolder({ title, parentId }) {
-  const isTitleMatch = makeIsTitleMatch({ title, normalizeFn: normalizeTitle })
-
-  const firstLevelNodeList = await chrome.bookmarks.getChildren(parentId)
-  let foundItem = firstLevelNodeList.find((node) => !node.url && isTitleMatch(node.title))
-
-  return foundItem
 }
 
 async function findFolderInSubtree({ title, parentId }) {

@@ -2,6 +2,17 @@ import {
   getTitleDetails,
   getTitleWithDirectives,
 } from './folder-title-directives.js'
+import {
+  DATED_TEMPLATE_VISITED,
+  DATED_TEMPLATE_OPENED,
+  DATED_TEMPLATE_DONE,
+} from './special-folders.js';
+
+const datedTemplatesInDatedRootServiceSet = new Set([
+  DATED_TEMPLATE_VISITED,
+  DATED_TEMPLATE_OPENED,
+  DATED_TEMPLATE_DONE
+])
 
 const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric'})
 const futureDate = new Date('01/01/2125')
@@ -129,3 +140,10 @@ export function getDatedTemplate(title) {
 
   return `${fixedPartFromTitle} @D`
 }
+
+export function isDatedServiceTitle(title) {
+  const datedTemplate = getDatedTemplate(title)
+
+  return datedTemplatesInDatedRootServiceSet.has(datedTemplate)
+}
+

@@ -1,11 +1,7 @@
 import {
-  isDatedFolderTitle,
-  trimTitle,
-} from '../folder-api/index.js'
-import {
+  createFolderIgnoreInController,
+  copyFolderContentToStart,
   moveFolderIgnoreInController,
-  removeFolder,
-  updateFolder,
 } from '../bookmark-controller-api/index.js'
 import {
   folderCreator,
@@ -14,116 +10,126 @@ import {
   makeLogFunction,
 } from '../api-low/index.js'
 import {
-  traverseTreeRecursively,
+  traverseChildFoldersRecursively,
+  traverseChildFolders,
 } from './traverseFolder.js'
+import {
+  findChildFolder,
+} from './folder-directives.js'
 
 const logMF = makeLogFunction({ module: 'moveFolders.js' })
 
-async function getFolderMovements() {
+export async function flatChildFolders({ folderId, isMovingFolder, level }) {
+  logMF('flatChildFolders() 00')
 
-  const removeList = []
   const moveList = []
-  const renameList = []
-  const datedRootOldId = await folderCreator.findDatedRootOld()
 
-  async function onFolder({ folder, level, bookmarkList, folderListLength }) {
-    logMF('onFolder() 00', folder.title, folder.id)
+  async function onFolderInFlatChildFolders({ folder }) {
 
-    // level 0: ROOT_FOLDER_ID
-    // level 1: BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID
-    if (level < 2) {
-      return
+    let isMovingCondition = false
+
+    if (folder.parentId !== folderId) {
+      isMovingCondition = await isMovingFolder(folder)
     }
 
-    if (bookmarkList.length == 0 && folderListLength == 0 && isDatedFolderTitle(folder.title)) {
-      removeList.push(folder.id)
-      return
-    }
-
-    const folderInfo = await folderCreator.getFolderInfoWithParentId(folder.title)
-
-    switch (folderInfo.folderType) {
-      case 'dated folder': {
-        const correctParentSet = new Set([folderInfo.parentId])
-        if (datedRootOldId) {
-          correctParentSet.add(datedRootOldId)
-        }
-
-        if (!correctParentSet.has(folder.parentId)) {
-          moveList.push({
-            id: folder.id,
-            parentId: folderInfo.parentId,
-            level,
-          })
-        }
-
-        break
-      }
-      default: {
-        if (folder.parentId !== folderInfo.parentId) {
-          moveList.push({
-            id: folder.id,
-            parentId: folderInfo.parentId,
-            level,
-          })
-        }
-      }
-    }
-
-    const trimmedTitle = trimTitle(folder.title)
-
-    if (folder.title !== trimmedTitle) {
-      renameList.push({
+    if (isMovingCondition) {
+      moveList.push({
         id: folder.id,
-        title: trimmedTitle,
+        parentId: folderId,
+        level,
       })
     }
   }
 
-  await traverseTreeRecursively({ onFolder })
+  await traverseChildFoldersRecursively({ folderId, onFolder: onFolderInFlatChildFolders })
 
-  return {
-    removeList,
-    moveList,
-    renameList,
-  };
-}
-
-export async function moveFolders() {
-  logMF('moveFolders() 00')
-
-  const {
-    removeList,
-    moveList,
-    renameList,
-  } = await getFolderMovements()
-
+  logMF('flatChildFolders() 22')
   const sortedMoveList = moveList
     .sort((a,b) => -(a.level - b.level))
 
-  logMF('moveFolders() 44')
-  logMF(sortedMoveList)
-
-  await removeList.reduce(
-    (promiseChain, folderId) => promiseChain.then(
-      () => removeFolder(folderId)
-    ),
-    Promise.resolve(),
-  );
-
+  logMF('flatChildFolders() 33')
   await sortedMoveList.reduce(
     (promiseChain, { id, parentId }) => promiseChain.then(
       () => moveFolderIgnoreInController({ id, parentId })
     ),
     Promise.resolve(),
   );
+}
 
-  await renameList.reduce(
-    (promiseChain, { id, title }) => promiseChain.then(
-      () => updateFolder({ id,  title })
+export async function moveChildFolders({ fromId, toId, isMovingFolder, filterList, createToId }) {
+  logMF('moveChildFolders() 00')
+  let moveList = []
+
+  async function onFolderInMoveChildFolders({ folder }) {
+    let isMovingCondition
+
+    if (isMovingFolder == undefined) {
+      isMovingCondition = true
+    } else {
+      isMovingCondition = await isMovingFolder(folder)
+      // logMF('onFolderInMoveChildFolders() 11', 'isMovingFolder', folder.title, isMovingCondition)
+    }
+
+    if (isMovingCondition) {
+      moveList.push(folder)
+    }
+  }
+
+  await traverseChildFolders({ folderId: fromId, onFolder: onFolderInMoveChildFolders })
+
+  logMF('moveChildFolders() 11')
+  if (filterList != undefined) {
+    moveList = filterList(moveList)
+  }
+
+  let finalToId = toId
+
+  logMF('moveChildFolders() 22')
+  if (!finalToId && !!createToId) {
+    finalToId = await createToId()
+  }
+
+  logMF('moveChildFolders() 33')
+  await moveList.reduce(
+    (promiseChain, { id }) => promiseChain.then(
+      () => moveFolderIgnoreInController({ id, parentId: finalToId })
     ),
     Promise.resolve(),
   );
+}
 
-  logMF('moveFolders() 99')
+export async function copyChildFolders({ fromId, toId, isMovingFolder, getNewFolderTitle }) {
+  let folderList = []
+
+  async function onFolderInCopyChildFolders({ folder }) {
+    let isMovingCondition
+
+    if (isMovingFolder == undefined) {
+      isMovingCondition = true
+    } else {
+      isMovingCondition = isMovingFolder(folder)
+      // logMF('onFolderInCopyChildFolders() 11', 'isMovingFolder', folder.title, isMovingCondition)
+    }
+
+    if (isMovingCondition) {
+      folderList.push(folder)
+    }
+  }
+
+  await traverseChildFolders({ folderId: fromId, onFolder: onFolderInCopyChildFolders })
+
+  await folderList.reduce(
+    (promiseChain, fromFolder) => promiseChain.then(
+      async () => {
+        let toFolder = await findChildFolder({ title: fromFolder.title, parentId: toId })
+
+        if (!toFolder) {
+          toFolder = await createFolderIgnoreInController({ title: getNewFolderTitle(fromFolder), parentId: toId })
+        }
+
+        await copyFolderContentToStart(fromFolder.id, toFolder.id)
+      }
+    ),
+    Promise.resolve(),
+  );
 }

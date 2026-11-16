@@ -1,12 +1,8 @@
 import {
   moveBookmarkIgnoreInController,
 } from '../bookmark-controller-api/index.js'
-import {
-  folderCreator,
-  rootFolders,
-} from '../folder-creator-api/index.js'
 
-async function moveRootBookmarks({ fromId }) {
+export async function moveRootBookmarksToUnclassified({ fromId, createToId }) {
   if (!fromId) {
     return
   }
@@ -24,17 +20,12 @@ async function moveRootBookmarks({ fromId }) {
     return
   }
 
-  const unclassifiedId = await folderCreator.findOrCreateUnclassified()
+  const toId = await createToId()
 
   await bkmList.reduce(
     (promiseChain, bkm) => promiseChain.then(
-      () => moveBookmarkIgnoreInController({ id: bkm.id, parentId: unclassifiedId })
+      () => moveBookmarkIgnoreInController({ id: bkm.id, parentId: toId })
     ),
     Promise.resolve(),
   );
-}
-
-export async function moveRootBookmarksToUnclassified() {
-  await moveRootBookmarks({ fromId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
-  await moveRootBookmarks({ fromId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
 }

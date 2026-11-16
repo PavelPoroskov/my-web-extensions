@@ -10,10 +10,10 @@ import {
   updateFolder,
 } from '../bookmark-controller-api/folder-ignore.js';
 import {
-  BOOKMARKS_BAR_FOLDER_TITLE,
   OTHER_BOOKMARKS_FOLDER_TITLE,
   DATED_ROOT_NEW_FOLDER_TITLE,
   DATED_ROOT_OLD_FOLDER_TITLE,
+  DATED_ROOT_SERVICE_FOLDER_TITLE,
   UNCLASSIFIED_TITLE,
 
   getTitleDetails,
@@ -31,6 +31,12 @@ import {
   findFolderMultiWay,
 } from './find-folder.js';
 
+export async function findChildFolderWithExactTitle({ title, parentId }) {
+  const nodeList = await chrome.bookmarks.search({ title });
+  const foundItem = nodeList.find((node) => !node.url && node.parentId == parentId)
+
+  return foundItem
+}
 
 class FolderCreator {
   mapTitleToInfo = {}
@@ -52,11 +58,11 @@ class FolderCreator {
       case OTHER_BOOKMARKS_FOLDER_TITLE:
         parentId = rootFolders.OTHER_BOOKMARKS_FOLDER_ID
         break
-      case BOOKMARKS_BAR_FOLDER_TITLE:
-        parentId = rootFolders.BOOKMARKS_BAR_FOLDER_ID
-        break
+      // case BOOKMARKS_BAR_FOLDER_TITLE:
+      //   parentId = rootFolders.BOOKMARKS_BAR_FOLDER_ID
+      //   break
       default: {
-        const parentFolder = await this._findFolder({ title: folderTitle, isCreate: true })
+        const parentFolder = await this._provideFolder({ title: folderTitle, isCreate: true })
         parentId = parentFolder.id
       }
     }
@@ -74,6 +80,21 @@ class FolderCreator {
     }
   }
 
+  async provideFolderInBar(title) {
+    const onlyTitle = getTitleDetails(title).onlyTitle
+    let folder
+
+    folder = await findChildFolderWithExactTitle({ title: onlyTitle, parentId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
+
+    if (!folder) {
+      folder = await this.createFolderInParent({
+        title: onlyTitle,
+        parentId: rootFolders.BOOKMARKS_BAR_FOLDER_ID
+      })
+    }
+
+    return folder
+  }
   async moveFolderAfterRename({ id, parentId, title, index }) {
     const moveArgs = {}
     const settings = await extensionSettings.get()
@@ -102,26 +123,8 @@ class FolderCreator {
         ...moveArgs,
       })
 
-      switch (folderInfo.folderType) {
-        case 'top folder': {
-          const onlyTitle = getTitleDetails(title).onlyTitle
-          const placeholderTitle = `${onlyTitle} #top-`
-          const nodeList = await chrome.bookmarks.search({ title: placeholderTitle });
-          const foundPlaceholder = nodeList.find((node) => !node.url && node.parentId == rootFolders.OTHER_BOOKMARKS_FOLDER_ID)
-
-          if (!foundPlaceholder) {
-            await this.createFolderInParent({
-              title: placeholderTitle,
-              parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID
-            })
-          }
-
-          break
-        }
-        case 'top folder placeholder': {
-
-          break
-        }
+      if (folderInfo.folderType === 'top folder') {
+        await this.provideFolderInBar(title)
       }
     }
   }
@@ -192,21 +195,16 @@ class FolderCreator {
   }
   async createFolderInBookmarks(title) {
     const folderInfo = await this.getFolderInfoWithParentId(title)
-    const folder = await this.createFolderInParent(folderInfo)
-
-    if (folderInfo.folderType === 'top folder') {
-      const onlyTitle = getTitleDetails(title).onlyTitle
-      const placeholderTitle = `${onlyTitle} #top-`
-
-      await this.createFolderInParent({
-        title: placeholderTitle,
-        parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID
-      })
-    }
+    let folder = await this.createFolderInParent(folderInfo)
 
     const {
-      objDirectives
+      objDirectives,
     } = getTitleDetails(title)
+
+    if (folderInfo.folderType === 'top folder') {
+
+      folder = await this.provideFolderInBar(title)
+    }
 
     return {
       id: folder.id,
@@ -216,7 +214,7 @@ class FolderCreator {
       )
     }
   }
-  async _findFolder({ title, isCreate=false }) {
+  async _provideFolder({ title, isCreate=false }) {
     let result
 
     if (this.mapTitleToInfo[title] === undefined) {
@@ -278,10 +276,10 @@ class FolderCreator {
   }
 
   async findFolder(title) {
-    return this._findFolder({ title, isCreate: false })
+    return this._provideFolder({ title, isCreate: false })
   }
   async createFolder(title) {
-    const result = await this._findFolder({ title, isCreate: true })
+    const result = await this._provideFolder({ title, isCreate: true })
 
     return {
       ...result,
@@ -305,6 +303,10 @@ class FolderCreator {
   }
   async findDatedRootOld() {
     const result = await this.findFolder(DATED_ROOT_OLD_FOLDER_TITLE)
+    return result?.id
+  }
+  async findDatedRootService() {
+    const result = await this.findFolder(DATED_ROOT_SERVICE_FOLDER_TITLE)
     return result?.id
   }
 

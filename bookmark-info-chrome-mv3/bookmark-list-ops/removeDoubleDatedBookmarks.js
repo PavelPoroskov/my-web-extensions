@@ -5,7 +5,7 @@ import {
   removeBookmark,
 } from '../bookmark-controller-api/index.js'
 import {
-  traverseTreeRecursively,
+  traverseChildFolders,
 } from './traverseFolder.js'
 import {
   compareDatedTitle,
@@ -13,7 +13,7 @@ import {
   isDatedFolderTitle,
 } from '../folder-api/index.js'
 
-async function getDated() {
+async function getDated({ parentId }) {
   const datedList = []
 
   function onFolder({ folder, bookmarkList }) {
@@ -24,13 +24,13 @@ async function getDated() {
     }
   }
 
-  await traverseTreeRecursively({ onFolder })
+  await traverseChildFolders({ folderId: parentId, onFolder })
 
   return datedList
 }
 
-async function getDoubleDated() {
-  const datedList = await getDated()
+async function getDoubleDated({ parentId }) {
+  const datedList = await getDated({ parentId })
   const doubleList = []
 
   const urlToIdMap = new ExtraMap()
@@ -64,8 +64,11 @@ async function getDoubleDated() {
   return doubleList
 }
 
-export async function removeDoubleDatedBookmarks() {
-  const doubleList = await getDoubleDated()
+export async function removeDoubleDatedBookmarks({ parentId }) {
+  if (!parentId) {
+    return
+  }
+  const doubleList = await getDoubleDated({ parentId })
 
   await doubleList.reduce(
     (promiseChain, bkmId) => promiseChain.then(

@@ -35,10 +35,6 @@ export function getTitleDetails(title) {
         value = ''
         break
       }
-      case '#top-': {
-        value = ''
-        break
-      }
       // case '#color':
       case '#c': {
         if (isCorrectColorDirectiveValue(directiveValue)) {
@@ -80,6 +76,12 @@ export function getTitleDetails(title) {
   }
 }
 
+export function isTitleHasDirectives(title) {
+  const { objDirectives } = getTitleDetails(title)
+
+  return 0 < Object.keys(objDirectives).length
+}
+
 export function getTitleWithDirectives({ onlyTitle, objDirectives }) {
   const objFilteredDirectives = Object.assign({}, objDirectives)
 
@@ -114,4 +116,17 @@ export function isChangesInDirectives({ oldDirectives, newDirectives }) {
   }
 
   return false
+}
+
+export function makeIsTitleMatch({ title, normalizeFn = (str) => str }) {
+  const onlyTitlePattern = getTitleDetails(title).onlyTitle
+  const normalizedPattern = normalizeFn(onlyTitlePattern)
+  // logFF('makeIsTitleMatch 00', title, onlyTitlePattern, normalizedPattern)
+
+  return function isTitleMatch(testTitle) {
+    const { onlyTitle }= getTitleDetails(testTitle)
+    const normalizedTestTitle = normalizeFn(onlyTitle)
+
+    return (normalizedTestTitle === normalizedPattern)
+  }
 }

@@ -5,12 +5,12 @@ import {
   traverseTreeRecursively,
 } from './traverseFolder.js'
 
-async function getUpdateList(fnGetUpdateForBookmark) {
+async function getUpdateList({ getUpdateForBookmark }) {
   const taskList = []
 
   function onFolder({ bookmarkList }) {
     bookmarkList.forEach(({ id, url, title }) => {
-      const bkmUpdate = fnGetUpdateForBookmark({ url, title })
+      const bkmUpdate = getUpdateForBookmark({ url, title })
 
       if (bkmUpdate?.url || bkmUpdate?.title) {
         taskList.push({
@@ -27,8 +27,9 @@ async function getUpdateList(fnGetUpdateForBookmark) {
   return taskList
 }
 
-export async function updateBookmarks(fnGetUpdateForBookmark) {
-  const updateList = await getUpdateList(fnGetUpdateForBookmark)
+// eslint-disable-next-line no-unused-vars
+export async function updateBookmarks({ getUpdateForBookmark }) {
+  const updateList = await getUpdateList({ getUpdateForBookmark })
 
   await updateList.reduce(
     (promiseChain, { id, url, title }) => promiseChain.then(

@@ -3,6 +3,7 @@ import {
   getTitleWithDirectives,
   isChangesInDirectives,
   normalizeTitle,
+  trimTitle,
 } from '../folder-api/index.js'
 import {
   moveFolderContentToStart,
@@ -10,20 +11,17 @@ import {
   updateFolder
 } from '../bookmark-controller-api/index.js'
 import {
-  rootFolders,
-  folderCreator,
-} from '../folder-creator-api/index.js'
-import {
   makeLogFunction,
 } from '../api-low/index.js'
 
 const logMRG = makeLogFunction({ module: 'mergeFolders.js' })
 
-async function addSubfolders({ parentId, nameSet }) {
-  logMRG('addSubfolders 00', parentId)
+export async function mergeChildFolders({ parentId }) {
   if (!parentId) {
     return
   }
+
+  const nameSet = {}
 
   const nodeList = await chrome.bookmarks.getChildren(parentId)
   const folderNodeList = nodeList.filter(({ url }) => !url)
@@ -45,26 +43,12 @@ async function addSubfolders({ parentId, nameSet }) {
       },
     )
 
-    if (objDirectives['#top-'] != undefined) {
-      continue
-    }
-
     if (!nameSet[normalizedTitle]) {
       nameSet[normalizedTitle] = [nodeData]
     } else {
       nameSet[normalizedTitle].push(nodeData)
     }
   }
-}
-
-async function mergeRootSubFolders() {
-  logMRG('mergeRootSubFolders 00')
-
-  const nameSet = {}
-
-  await addSubfolders({ parentId: rootFolders.BOOKMARKS_BAR_FOLDER_ID, nameSet })
-  await addSubfolders({ parentId: rootFolders.BOOKMARKS_MENU_FOLDER_ID, nameSet })
-  await addSubfolders({ parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID, nameSet })
 
   const moveTaskList = []
   const renameTaskList = []
@@ -100,6 +84,20 @@ async function mergeRootSubFolders() {
   logMRG('renameTaskList', renameTaskList)
   logMRG('moveTaskList', moveTaskList)
 
+  const uniqList = Object.entries(nameSet).filter(([, nodeList]) => nodeList.length == 1)
+  for (const [, nodeList] of uniqList) {
+    const [folder] = nodeList
+
+    const trimmedTitle = trimTitle(folder.title)
+
+    if (folder.title !== trimmedTitle) {
+      renameTaskList.push({
+        id: folder.id,
+        title: trimmedTitle,
+      })
+    }
+  }
+
   await renameTaskList.reduce(
     (promiseChain, { id, title }) => promiseChain.then(
       () => updateFolder({ id,  title })
@@ -120,66 +118,4 @@ async function mergeRootSubFolders() {
     ),
     Promise.resolve(),
   );
-}
-
-async function mergeSubFoldersLevelOne(parentId) {
-  if (!parentId) {
-    return
-  }
-
-  // console.log('### mergeSubFolder 00,', parentId)
-  const nodeList = await chrome.bookmarks.getChildren(parentId)
-  const folderNodeList = nodeList.filter(({ url }) => !url)
-  const nameSet = {}
-
-  for (const node of folderNodeList) {
-    const normalizedTitle = normalizeTitle(node.title)
-
-    if (!nameSet[normalizedTitle]) {
-      nameSet[normalizedTitle] = [node]
-    } else {
-      nameSet[normalizedTitle].push(node)
-    }
-  }
-  // console.log('### mergeSubFolder 11: nameSet', nameSet)
-
-  const notUniqList = Object.entries(nameSet).filter(([, nodeList]) => nodeList.length > 1)
-  const moveTaskList = []
-  for (const [, nodeList] of notUniqList) {
-    const sortedList = nodeList.toSorted((a, b) => -a.title.localeCompare(b.title))
-    const firstNode = sortedList[0]
-    const restNodeList = nodeList.filter((item) => item.id != firstNode.id)
-
-    for (const fromNode of restNodeList) {
-      moveTaskList.push({
-        fromNode,
-        toNode: firstNode,
-      })
-    }
-  }
-  // console.log('### moveTaskList', moveTaskList.map(({ fromNode, toNode }) => `${fromNode.title} -> ${toNode.title}`))
-
-  await moveTaskList.reduce(
-    (promiseChain, { fromNode, toNode }) => promiseChain.then(
-      () => moveFolderContentToStart(fromNode.id, toNode.id)
-    ),
-    Promise.resolve(),
-  );
-
-  await moveTaskList.reduce(
-    (promiseChain, { fromNode }) => promiseChain.then(
-      () => removeFolder(fromNode.id)
-    ),
-    Promise.resolve(),
-  );
-}
-
-export async function mergeFolders() {
-
-  await mergeRootSubFolders()
-
-  const datedRootNewId = await folderCreator.findDatedRootNew()
-  const datedRootOldId = await folderCreator.findDatedRootOld()
-  await mergeSubFoldersLevelOne(datedRootNewId)
-  await mergeSubFoldersLevelOne(datedRootOldId)
 }

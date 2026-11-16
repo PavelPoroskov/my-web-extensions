@@ -82,7 +82,8 @@ async function getParentFolderList(bookmarkList) {
     } = getTitleDetails(folder.title)
 
     const folderInfo = {
-      title: onlyTitle,
+      title: folder.title,
+      titleOnly: onlyTitle,
       color: objDirectives['#c'],
       icon: objDirectives['#i'],
       parentId: folder.parentId,
@@ -126,6 +127,7 @@ export async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
   resultBookmarkList = resultBookmarkList
     .map((bookmark) => ({
       parentTitle: parentMap[bookmark.parentId]?.title || '',
+      parentTitleOnly: parentMap[bookmark.parentId]?.titleOnly || '',
       color: getColor(bookmark.parentId),
       icon: getIcon(bookmark.parentId),
       ...bookmark
