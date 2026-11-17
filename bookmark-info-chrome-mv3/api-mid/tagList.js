@@ -1,8 +1,5 @@
 import {
   getTitleDetails,
-  isIgnoreInRecentList,
-  isDescriptiveFolderTitle,
-  isDatedFolderTitle,
 } from '../folder-api/index.js'
 import {
   USER_OPTION,
@@ -12,6 +9,7 @@ import {
 import {
   filterRecentTagObj,
   getRecentTagObj,
+  isTitleForRecentList,
 } from './tagList-getRecent.js'
 import {
   highlightAlphabet,
@@ -248,25 +246,17 @@ class TagList {
       return
     }
 
+    if (!isTitleForRecentList(parentTitle)) {
+      return
+    }
+
     logTL('addTag 00', parentId, parentTitle)
     // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
-    if (this.isFlatStructure) {
-      // if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
-      //   return
-      // }
-
-      if (isIgnoreInRecentList(parentTitle)) {
-        return
-      }
-    }
-
-    if (!isDescriptiveFolderTitle(parentTitle)) {
-      return
-    }
-
-    if (isDatedFolderTitle(parentTitle)) {
-      return
-    }
+    // if (this.isFlatStructure) {
+    //   // if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
+    //   //   return
+    //   // }
+    // }
 
     const dateAdded = Date.now()
     this._recentTagObj[parentId] = {

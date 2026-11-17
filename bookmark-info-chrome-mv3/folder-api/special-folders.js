@@ -16,17 +16,6 @@ export const DATED_TEMPLATE_VISITED = 'visited @D'
 // export const DATED_TEMPLATE_SELECTED = 'selected @D'
 export const DATED_TEMPLATE_DONE = 'DONE @D'
 
-const IgnoreInRecentListSet = new Set([
-  DATED_ROOT_NEW_FOLDER_TITLE,
-  DATED_ROOT_OLD_FOLDER_TITLE,
-  DATED_ROOT_SERVICE_FOLDER_TITLE,
-  UNCLASSIFIED_TITLE,
-])
-
-export function isIgnoreInRecentList(title) {
-  return IgnoreInRecentListSet.has(title)
-}
-
 export function isVisitedDatedTemplate(templateTitle) {
   return templateTitle == DATED_TEMPLATE_VISITED
     || templateTitle == DATED_TEMPLATE_OPENED

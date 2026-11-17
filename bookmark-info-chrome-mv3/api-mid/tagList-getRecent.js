@@ -1,5 +1,9 @@
 import {
-  isIgnoreInRecentList,
+  DATED_ROOT_NEW_FOLDER_TITLE,
+  DATED_ROOT_OLD_FOLDER_TITLE,
+  DATED_ROOT_SERVICE_FOLDER_TITLE,
+  UNCLASSIFIED_TITLE,
+
   isDatedFolderTitle,
   isDescriptiveFolderTitle,
   isVisitedDatedTemplate,
@@ -15,6 +19,21 @@ import {
 } from '../api-low/index.js'
 
 const logRA = makeLogFunction({ module: 'tagList-getRecent.js' })
+
+const IgnoreInRecentListSet = new Set([
+  DATED_ROOT_NEW_FOLDER_TITLE,
+  DATED_ROOT_OLD_FOLDER_TITLE,
+  DATED_ROOT_SERVICE_FOLDER_TITLE,
+  UNCLASSIFIED_TITLE,
+])
+
+export function isTitleForRecentList(title) {
+  return isDescriptiveFolderTitle(title)
+    && !isDatedFolderTitle(title)
+    && !isVisitedDatedTemplate(title)
+    && !IgnoreInRecentListSet.has(title)
+    && !(title.endsWith(' #top') || title.includes(' #top '))
+}
 
 async function getRecentList(nItems) {
   const list = await chrome.bookmarks.getRecent(nItems);
@@ -79,19 +98,13 @@ async function filterFolders(idList, isFlatStructure) {
   const folderList = await getBookmarkNodeList(idList)
   logRA('filterFolders () 22', 'folderList', folderList.length, folderList)
   let filteredFolderList = folderList
-    .filter(({ title }) => !!title)
-    .filter(({ title }) => isDescriptiveFolderTitle(title))
-    .filter(({ title }) => !isDatedFolderTitle(title))
-    .filter(({ title }) => !isVisitedDatedTemplate(title))
+    .filter(({ title }) => isTitleForRecentList(title))
 
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {
     filteredFolderList = filteredFolderList
       .filter(
         ({ parentId }) => parentId === rootFolders.OTHER_BOOKMARKS_FOLDER_ID || parentId === rootFolders.BOOKMARKS_BAR_FOLDER_ID
-      )
-      .filter(
-        ({ title }) => !isIgnoreInRecentList(title)
       )
   }
   logRA('filterFolders () 33', 'filteredFolderList', filteredFolderList.length, filteredFolderList)
