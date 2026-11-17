@@ -56,13 +56,18 @@ export async function traverseChildFolders({ folderId, onFolder }) {
     return
   }
 
-  const childrenList = await chrome.bookmarks.getChildren(folderId)
-  const childFolderList = childrenList
+  const [rootFolder] = await chrome.bookmarks.getSubTree(folderId)
+  const childFolderList = rootFolder.children
     .filter(({ url }) => !url)
 
   await childFolderList.reduce(
     (promiseChain, childFolder) => promiseChain.then(
-      () => onFolder({ folder: childFolder })
+      () => {
+        const bookmarkList = childFolder.children
+          .filter(({ url }) => !!url)
+
+        onFolder({ folder: childFolder, bookmarkList })
+      }
     ),
     Promise.resolve(),
   );

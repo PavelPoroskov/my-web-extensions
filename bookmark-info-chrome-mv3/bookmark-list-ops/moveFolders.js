@@ -4,9 +4,6 @@ import {
   moveFolderIgnoreInController,
 } from '../bookmark-controller-api/index.js'
 import {
-  folderCreator,
-} from '../folder-creator-api/index.js'
-import {
   makeLogFunction,
 } from '../api-low/index.js'
 import {
@@ -26,9 +23,9 @@ export async function flatChildFolders({ folderId, isMovingFolder, level }) {
 
   async function onFolderInFlatChildFolders({ folder }) {
 
-    let isMovingCondition = false
+    let isMovingCondition = (folder.parentId !== folderId)
 
-    if (folder.parentId !== folderId) {
+    if (isMovingCondition && isMovingFolder != undefined) {
       isMovingCondition = await isMovingFolder(folder)
     }
 
