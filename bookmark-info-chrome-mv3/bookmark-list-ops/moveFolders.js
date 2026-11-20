@@ -115,12 +115,15 @@ export async function copyChildFolders({ fromId, toId, isMovingFolder, getNewFol
 
   await traverseChildFolders({ folderId: fromId, onFolder: onFolderInCopyChildFolders })
 
+  logMF('copyChildFolders() 11 folderList', folderList)
   await folderList.reduce(
     (promiseChain, fromFolder) => promiseChain.then(
       async () => {
+        logMF('copyChildFolders() 22.1 fromFolder.title', fromFolder.title)
         let toFolder = await findChildFolder({ title: fromFolder.title, parentId: toId })
 
         if (!toFolder) {
+          logMF('copyChildFolders() 22.2 fromFolder.title', fromFolder.title)
           toFolder = await createFolderIgnoreInController({ title: getNewFolderTitle(fromFolder), parentId: toId })
         }
 

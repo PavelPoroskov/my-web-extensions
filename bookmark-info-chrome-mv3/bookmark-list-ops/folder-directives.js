@@ -8,12 +8,13 @@ import {
 } from '../folder-creator-api/index.js'
 
 export async function findChildFolder({ title, parentId }) {
-  const isTitleMatch = makeIsTitleMatch({ title, normalizeFn: normalizeTitle })
+  const onlyTitle = getTitleDetails(title).onlyTitle
+  const isTitleMatch = makeIsTitleMatch({ title: onlyTitle, normalizeFn: normalizeTitle })
 
   // const nodeList = await chrome.bookmarks.getChildren(parentId)
   // const foundItem = nodeList.find((node) => !node.url && isTitleMatch(node.title))
 
-  const nodeList = await chrome.bookmarks.search(title);
+  const nodeList = await chrome.bookmarks.search(onlyTitle);
   const foundItem = nodeList.find((node) => !node.url && node.parentId == parentId && isTitleMatch(node.title))
 
   return foundItem

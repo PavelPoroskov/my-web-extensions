@@ -127,15 +127,12 @@ export async function orderBookmarks() {
     getNewFolderTitle: ({ title }) => `${title} #top`,
   })
   // sync top folders: to top
-  function isCopingTopFolderFromOthersToBkmBar({ title }) {
-    return (title.endsWith(' #top') || title.includes(' #top '))
-  }
   logOD('orderBookmarks() before top folders Others -> BAR')
   await copyChildFolders({
     fromId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID,
     toId: rootFolders.BOOKMARKS_BAR_FOLDER_ID,
     // TODO with directive #top
-    isMovingFolder: isCopingTopFolderFromOthersToBkmBar,
+    isMovingFolder: ({ title }) =>  (title.endsWith(' #top') || title.includes(' #top ')),
     getNewFolderTitle: ({ title }) => getTitleDetails(title).onlyTitle
   })
 
@@ -144,15 +141,15 @@ export async function orderBookmarks() {
   // move dated from root to dated new
   await moveChildFolders({
     fromId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID,
-    isMovingFolder: ({ title }) => isDatedFolderTitle(title) && !isDatedServiceTitle(title),
     createToId: () => folderCreator.findOrCreateDatedRootNew(),
+    isMovingFolder: ({ title }) => isDatedFolderTitle(title) && !isDatedServiceTitle(title),
   })
 
   // move dated from root to dated service
   await moveChildFolders({
     fromId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID,
-    isMovingFolder: ({ title }) => isDatedFolderTitle(title) && isDatedServiceTitle(title),
     createToId: () => folderCreator.findDatedRootService(),
+    isMovingFolder: ({ title }) => isDatedFolderTitle(title) && isDatedServiceTitle(title),
   })
 
   // move old dated folders
@@ -178,9 +175,9 @@ export async function orderBookmarks() {
   }
   await moveChildFolders({
     fromId: datedRootNewId,
+    createToId: () => folderCreator.findOrCreateDatedRootOld(),
     isMovingFolder: ({ title }) => isDatedFolderTitle(title),
     filterList: filterDatedFolders,
-    createToId: () => folderCreator.findOrCreateDatedRootOld(),
   })
 
   logOD('orderBookmarks() 22')
@@ -209,6 +206,7 @@ export async function orderBookmarks() {
   // await mergeChildFolders({ parentId: rootFolders.BOOKMARKS_MENU_FOLDER_ID })
   await mergeChildFolders({ parentId: datedRootNewId })
   await mergeChildFolders({ parentId: datedRootOldId })
+  await mergeChildFolders({ parentId: datedRootServiceId })
 
   logOD('orderBookmarks() 44')
   await sortFolders({ parentId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
@@ -216,6 +214,7 @@ export async function orderBookmarks() {
   // await sortFolders({ parentId: rootFolders.BOOKMARKS_MENU_FOLDER_ID })
   await sortFolders({ parentId: datedRootNewId, compare: compareDatedTitle })
   await sortFolders({ parentId: datedRootOldId, compare: compareDatedTitle })
+  await sortFolders({ parentId: datedRootServiceId, compare: compareDatedTitle })
 
   logOD('orderBookmarks() 55')
   await removeDoubleBookmarks()
