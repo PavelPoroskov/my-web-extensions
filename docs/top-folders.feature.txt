@@ -1,0 +1,25 @@
+
++1) bookmark labels show two bookmarks with the same name
+  one from Bar\Folder
+  one from Others\Folder
+solution:
+  dont show bookmarks if parent has #top
+
+
++2) new bkm is created in Others\Folder
+solution:
+  create or move to Bar\Folder
+test:
+  1. create new top bookmark with new folder
+  2. create second top bookmark for folder from step 1
+
++3) recent list show two
+solution: show only one
+
+4) chrome start with freezing
+change orderBookmarks
+)change algorithm
+)do onIdle (only for chrome, not for ff)
+
+
+mv changes to ff
