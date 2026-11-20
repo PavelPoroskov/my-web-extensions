@@ -13,7 +13,11 @@ async function traverseFolderRecursively({ folder, onFolder, level }) {
   }
 
   await onFolder({
-    folder,
+    folder: {
+      id: folder.id,
+      title: folder.title,
+      parentId: folder.parentId,
+    },
     bookmarkList: childBookmarkList,
     folderListLength: childFolderList.length,
     level,
@@ -62,11 +66,18 @@ export async function traverseChildFolders({ folderId, onFolder }) {
 
   await childFolderList.reduce(
     (promiseChain, childFolder) => promiseChain.then(
-      () => {
+      async () => {
         const bookmarkList = childFolder.children
           .filter(({ url }) => !!url)
 
-        onFolder({ folder: childFolder, bookmarkList })
+        return onFolder({
+          folder: {
+            id: childFolder.id,
+            title: childFolder.title,
+            parentId: childFolder.parentId,
+          },
+          bookmarkList,
+        })
       }
     ),
     Promise.resolve(),
