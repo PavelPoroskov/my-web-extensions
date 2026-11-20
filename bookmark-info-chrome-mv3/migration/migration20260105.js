@@ -6,7 +6,7 @@ import {
 } from '../bookmark-controller-api/index.js'
 import {
   traverseTreeRecursively,
-} from '../bookmark-list-ops/index.js'
+} from '../bookmark-tree/index.js'
 import {
   isWeekday,
 } from './migration.unit.js'

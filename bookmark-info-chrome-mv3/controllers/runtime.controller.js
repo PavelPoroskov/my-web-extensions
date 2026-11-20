@@ -1,5 +1,5 @@
 import { updateActiveTab } from '../api/index.js'
-import { orderBookmarks } from '../bookmark-list-ops/index.js'
+import { orderBookmarkTree } from '../bookmark-tree/index.js'
 import { migration } from '../migration/index.js'
 import {
   DATA_FORMAT,
@@ -34,7 +34,7 @@ export const runtimeController = {
     }
 
     if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
-      await orderBookmarks()
+      await orderBookmarkTree()
     }
   },
   async onInstalled () {
@@ -54,7 +54,7 @@ export const runtimeController = {
       await migration({ from: savedObj[INTERNAL_VALUES.DATA_FORMAT] })
 
       if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
-        await orderBookmarks()
+        await orderBookmarkTree()
       }
     }
 

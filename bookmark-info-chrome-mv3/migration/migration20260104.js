@@ -7,7 +7,7 @@ import {
 } from '../bookmark-controller-api/index.js'
 import {
   traverseTreeRecursively,
-} from '../bookmark-list-ops/index.js'
+} from '../bookmark-tree/index.js'
 
 export function isOldTopFolder(folderName) {
   const name = folderName.trim().toLowerCase()

@@ -1,4 +1,4 @@
-// is used in bookmark-list-ops/
+// is used in bookmark-tree/
 export * from './folder-ignore.js'
 export * from './bookmark-ignore.js'
 

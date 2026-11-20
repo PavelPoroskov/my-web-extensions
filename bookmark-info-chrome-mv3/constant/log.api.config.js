@@ -26,7 +26,7 @@ const logModuleList = [
   // 'mergeFolders.js',
   // 'moveFolders.js',
   // 'moveOldDatedFolders.js',
-  // 'orderBookmarks.js',
+  // 'orderBookmarkTree.js',
   // 'page.api.js',
   // 'pageReady.js',
   // 'runtime.controller',

@@ -1,7 +1,7 @@
 import {
-  orderBookmarks,
+  orderBookmarkTree,
   // replaceHostname,
-} from '../bookmark-list-ops/index.js'
+} from '../bookmark-tree/index.js'
 import {
   USER_OPTION,
 } from '../constant/index.js'
@@ -18,7 +18,5 @@ export async function moveToFlatFolderStructure() {
     })
   }
 
-  await orderBookmarks()
-
-  // await replaceHostname()
+  await orderBookmarkTree()
 }

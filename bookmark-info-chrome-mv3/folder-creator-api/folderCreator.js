@@ -305,6 +305,11 @@ class FolderCreator {
     const result = await this.findFolder(DATED_ROOT_OLD_FOLDER_TITLE)
     return result?.id
   }
+
+  async findOrCreateDatedRootService() {
+    const result = await this.createFolder(DATED_ROOT_SERVICE_FOLDER_TITLE)
+    return result.id
+  }
   async findDatedRootService() {
     const result = await this.findFolder(DATED_ROOT_SERVICE_FOLDER_TITLE)
     return result?.id
