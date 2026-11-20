@@ -59,7 +59,7 @@ async function orderFolders() {
 
   await flatChildFolders({
     folderId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID,
-    isMoving: (folder) => !(correctDatedRootSet(folder.parentId) && isDatedFolderTitle(folder.title)),
+    isMovingFolder: (folder) => !(correctDatedRootSet.has(folder.parentId) && isDatedFolderTitle(folder.title)),
   })
 
   logOD('11')
