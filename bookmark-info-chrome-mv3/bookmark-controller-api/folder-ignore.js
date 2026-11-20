@@ -1,19 +1,21 @@
 import {
   ignoreBkmControllerApiActionSet,
 } from './ignoreBkmControllerApiActionSet.js'
-// import {
-//   makeLogFunction,
-// } from '../api-low/index.js'
+import {
+  makeLogFunction,
+} from '../api-low/index.js'
 import {
   createBookmarkIgnoreInController,
 } from './bookmark-ignore.js'
-// const logFI = makeLogFunction({ module: 'folder-ignore.js' })
+const logFI = makeLogFunction({ module: 'folder-ignore.js' })
 
 export async function createFolderIgnoreInController({
   title,
   parentId,
   index,
+  parentTitleForDebug,
 }) {
+  logFI('CREATE FOLDER ', title, ' -> ', parentTitleForDebug)
   const options = { parentId, title }
   if (index != undefined) {
     options.index = index
@@ -41,7 +43,8 @@ async function moveNodeIgnoreInController({ id, parentId, index }) {
   return await chrome.bookmarks.move(id, options)
 }
 
-export async function moveFolderIgnoreInController({ id, parentId, index }) {
+export async function moveFolderIgnoreInController({ id, parentId, index, titleForDebug, parentTitleForDebug }) {
+  logFI('MOVE FOLDER ', titleForDebug, ' -> ', parentTitleForDebug)
   // logFI('moveFolderIgnoreInController 00', id, parentId)
   return await moveNodeIgnoreInController({ id, parentId, index })
 }
@@ -79,7 +82,7 @@ export async function copyFolderContentToStart(fromFolderId, toFolderId) {
   const toSet = new Set(toBookmarkList.map(({ url }) => url))
 
   const addList = fromBookmarkList.filter(({ url }) => !toSet.has(url))
-  console.log('copyFolderContentToStart', 'addList.length', addList.length)
+  // console.log('copyFolderContentToStart', 'addList.length', addList.length)
 
   await addList.toReversed().reduce(
     (promiseChain, node) => promiseChain.then(

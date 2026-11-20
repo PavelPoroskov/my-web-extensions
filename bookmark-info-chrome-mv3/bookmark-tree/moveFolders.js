@@ -16,7 +16,7 @@ import {
 
 const logMF = makeLogFunction({ module: 'moveFolders.js' })
 
-export async function flatChildFolders({ folderId, isMovingFolder, level }) {
+export async function flatChildFolders({ folderId, isMovingFolder, level, titleForDebug }) {
   logMF('flatChildFolders() 00')
 
   const moveList = []
@@ -26,13 +26,12 @@ export async function flatChildFolders({ folderId, isMovingFolder, level }) {
     let isMovingCondition = (folder.parentId !== folderId)
 
     if (isMovingCondition && isMovingFolder != undefined) {
-      isMovingCondition = await isMovingFolder(folder)
+      isMovingCondition = isMovingFolder(folder)
     }
 
     if (isMovingCondition) {
       moveList.push({
-        id: folder.id,
-        parentId: folderId,
+        ...folder,
         level,
       })
     }
@@ -46,14 +45,19 @@ export async function flatChildFolders({ folderId, isMovingFolder, level }) {
 
   logMF('flatChildFolders() 33')
   await sortedMoveList.reduce(
-    (promiseChain, { id, parentId }) => promiseChain.then(
-      () => moveFolderIgnoreInController({ id, parentId })
+    (promiseChain, folder) => promiseChain.then(
+      () => moveFolderIgnoreInController({
+        id: folder.id,
+        parentId: folderId,
+        titleForDebug: folder.title,
+        parentTitleForDebug: titleForDebug
+      })
     ),
     Promise.resolve(),
   );
 }
 
-export async function moveChildFolders({ fromId, toId, isMovingFolder, filterList, createToId }) {
+export async function moveChildFolders({ fromId, toId, isMovingFolder, filterList, createToId, titleForDebug }) {
   logMF('moveChildFolders() 00')
   let moveList = []
 
@@ -63,7 +67,7 @@ export async function moveChildFolders({ fromId, toId, isMovingFolder, filterLis
     if (isMovingFolder == undefined) {
       isMovingCondition = true
     } else {
-      isMovingCondition = await isMovingFolder(folder)
+      isMovingCondition = isMovingFolder(folder)
       // logMF('onFolderInMoveChildFolders() 11', 'isMovingFolder', folder.title, isMovingCondition)
     }
 
@@ -88,14 +92,19 @@ export async function moveChildFolders({ fromId, toId, isMovingFolder, filterLis
 
   logMF('moveChildFolders() 33')
   await moveList.reduce(
-    (promiseChain, { id }) => promiseChain.then(
-      () => moveFolderIgnoreInController({ id, parentId: finalToId })
+    (promiseChain, folder) => promiseChain.then(
+      () => moveFolderIgnoreInController({
+        id: folder.id,
+        parentId: finalToId,
+        titleForDebug: folder.title,
+        parentTitleForDebug: titleForDebug
+      })
     ),
     Promise.resolve(),
   );
 }
 
-export async function copyChildFolders({ fromId, toId, isMovingFolder, getNewFolderTitle }) {
+export async function copyChildFolders({ fromId, toId, isMovingFolder, getNewFolderTitle, titleForDebug }) {
   let folderList = []
 
   async function onFolderInCopyChildFolders({ folder }) {
@@ -124,7 +133,11 @@ export async function copyChildFolders({ fromId, toId, isMovingFolder, getNewFol
 
         if (!toFolder) {
           logMF('copyChildFolders() 22.2 fromFolder.title', fromFolder.title)
-          toFolder = await createFolderIgnoreInController({ title: getNewFolderTitle(fromFolder), parentId: toId })
+          toFolder = await createFolderIgnoreInController({
+            title: getNewFolderTitle(fromFolder),
+            parentId: toId,
+            parentTitleForDebug: titleForDebug,
+          })
         }
 
         await copyFolderContentToStart(fromFolder.id, toFolder.id)

@@ -34,9 +34,8 @@ import {
   sortFolders,
 } from './sortFolders.js'
 import {
-  isTopFolder,
-} from './folder-directives.js'
-// import {
+  makeIsTopFolder,
+} from './folder-directives.js'// import {
 //   updateBookmarks,
 // } from './updateBookmarks.js'
 import {
@@ -46,10 +45,11 @@ import {
 const logOD = makeLogFunction({ module: 'orderBookmarkTree.js' })
 
 async function orderFolders() {
-  logOD('00')
-
-  logOD('before flatChildFolders')
-  await flatChildFolders({ folderId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
+  logOD('00 flatChildFolders')
+  await flatChildFolders({
+    folderId: rootFolders.BOOKMARKS_BAR_FOLDER_ID,
+    titleForDebug: 'BOOKMARKS_BAR',
+  })
   // await flatChildFolders({ folderId: rootFolders.BOOKMARKS_MENU_FOLDER_ID })
 
   const datedRootNewId = await folderCreator.findDatedRootNew()
@@ -60,16 +60,17 @@ async function orderFolders() {
   await flatChildFolders({
     folderId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID,
     isMovingFolder: (folder) => !(correctDatedRootSet.has(folder.parentId) && isDatedFolderTitle(folder.title)),
+    titleForDebug: 'OTHER_BOOKMARKS',
   })
 
   logOD('11')
-
-  async function isMovingFolderFromBkmBarToOthers({ title }) {
+  const isTopFolder = await makeIsTopFolder()
+  function isMovingFolderFromBkmBarToOthers({ title }) {
     if (isTitleHasDirectives(title)) {
       return true
     }
 
-    const isTopFolderCondition = await isTopFolder(title)
+    const isTopFolderCondition = isTopFolder(title)
     if (!isTopFolderCondition) {
       return true
     }
@@ -81,11 +82,13 @@ async function orderFolders() {
     fromId: rootFolders.BOOKMARKS_BAR_FOLDER_ID,
     toId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID,
     isMovingFolder: isMovingFolderFromBkmBarToOthers,
+    titleForDebug: 'OTHER_BOOKMARKS',
   })
   // await moveChildFolders({
   //   fromId: rootFolders.BOOKMARKS_MENU_FOLDER_ID,
   //   toId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID,
   // })
+
 
   logOD('before top folders BAR -> Others')
   // sync top folders: to others
@@ -93,6 +96,7 @@ async function orderFolders() {
     fromId: rootFolders.BOOKMARKS_BAR_FOLDER_ID,
     toId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID,
     getNewFolderTitle: ({ title }) => `${title} #top`,
+    titleForDebug: 'OTHER_BOOKMARKS',
   })
   // sync top folders: to top
   logOD('before top folders Others -> BAR')
@@ -101,7 +105,8 @@ async function orderFolders() {
     toId: rootFolders.BOOKMARKS_BAR_FOLDER_ID,
     // TODO with directive #top
     isMovingFolder: ({ title }) =>  (title.endsWith(' #top') || title.includes(' #top ')),
-    getNewFolderTitle: ({ title }) => getTitleDetails(title).onlyTitle
+    getNewFolderTitle: ({ title }) => getTitleDetails(title).onlyTitle,
+    titleForDebug: 'BOOKMARKS_BAR',
   })
 
   logOD('33')

@@ -15,27 +15,33 @@ import {
 
 const logRC = makeLogFunction({ module: 'runtime.controller' })
 
+async function onStartup() {
+  logRC('runtime.onStartup');
+
+  await initExtension({ debugCaller: 'runtime.onStartup' })
+  updateActiveTab({
+    debugCaller: 'runtime.onStartup'
+  });
+
+  const savedObj = await getOptions([
+    INTERNAL_VALUES.DATA_FORMAT,
+    USER_OPTION.USE_FLAT_FOLDER_STRUCTURE,
+  ]);
+
+  if (savedObj[INTERNAL_VALUES.DATA_FORMAT] !== DATA_FORMAT) {
+    await migration({ from: savedObj[INTERNAL_VALUES.DATA_FORMAT] })
+  }
+
+  if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
+    await orderBookmarkTree()
+  }
+}
+
 export const runtimeController = {
   async onStartup() {
-    logRC('runtime.onStartup');
-
-    await initExtension({ debugCaller: 'runtime.onStartup' })
-    updateActiveTab({
-      debugCaller: 'runtime.onStartup'
-    });
-
-    const savedObj = await getOptions([
-      INTERNAL_VALUES.DATA_FORMAT,
-      USER_OPTION.USE_FLAT_FOLDER_STRUCTURE,
-    ]);
-
-    if (savedObj[INTERNAL_VALUES.DATA_FORMAT] !== DATA_FORMAT) {
-      await migration({ from: savedObj[INTERNAL_VALUES.DATA_FORMAT] })
-    }
-
-    if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
-      await orderBookmarkTree()
-    }
+    setTimeout(() => {
+      onStartup()
+    },5000)
   },
   async onInstalled () {
     logRC('runtime.onInstalled');
@@ -54,7 +60,7 @@ export const runtimeController = {
       await migration({ from: savedObj[INTERNAL_VALUES.DATA_FORMAT] })
 
       if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
-        await orderBookmarkTree()
+        orderBookmarkTree()
       }
     }
 

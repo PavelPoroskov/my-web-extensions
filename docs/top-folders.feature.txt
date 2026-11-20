@@ -17,9 +17,15 @@ test:
 solution: show only one
 
 4) chrome start with freezing
+turning this extension off removes freezing on start
+
 change orderBookmarks
 )change algorithm
+  fix in sync top folder Other to Bar. Not Enough
+  ?return MoveFolders() instead of flatFolders(), MoveFolders(), ()
 )do onIdle (only for chrome, not for ff)
+)start orderBookmarks onTimer 20s after start
+)do orderBookmarks partially: flat on manual command, other on start
 
 
 mv changes to ff
