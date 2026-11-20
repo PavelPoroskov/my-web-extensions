@@ -2,14 +2,14 @@ import {
   singular,
 } from '../api-low/index.js';
 import {
-  getDatedTemplate,
-  isDatedFolderTitle,
-} from './folder-title-dated.js';
-import {
   getTitleWithDirectives,
   isChangesInDirectives,
   getTitleDetails,
 } from './folder-title-directives.js';
+import {
+  getDatedTemplate,
+  isDatedFolderTitle,
+} from './folder-title-dated.js';
 
 export const isDescriptiveFolderTitle = (title) => !!title
   && !(

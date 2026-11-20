@@ -1,6 +1,6 @@
 import {
   createFolderIgnoreInController,
-  copyFolderContentToStart,
+  createBookmarkIgnoreInController,
   moveFolderIgnoreInController,
 } from '../bookmark-controller-api/index.js'
 import {
@@ -99,6 +99,25 @@ export async function moveChildFolders({ fromId, toId, isMovingFolder, filterLis
         titleForDebug: folder.title,
         parentTitleForDebug: titleForDebug
       })
+    ),
+    Promise.resolve(),
+  );
+}
+
+async function copyFolderContentToStart(fromFolderId, toFolderId) {
+  const fromNodeList = await chrome.bookmarks.getChildren(fromFolderId)
+  const fromBookmarkList = fromNodeList.filter(({ url }) => !!url)
+
+  const toNodeList = await chrome.bookmarks.getChildren(toFolderId)
+  const toBookmarkList = toNodeList.filter(({ url }) => !!url)
+  const toSet = new Set(toBookmarkList.map(({ url }) => url))
+
+  const addList = fromBookmarkList.filter(({ url }) => !toSet.has(url))
+  // console.log('copyFolderContentToStart', 'addList.length', addList.length)
+
+  await addList.toReversed().reduce(
+    (promiseChain, node) => promiseChain.then(
+      () => createBookmarkIgnoreInController({ url: node.url, title: node.title,  parentId: toFolderId, index: 0 })
     ),
     Promise.resolve(),
   );

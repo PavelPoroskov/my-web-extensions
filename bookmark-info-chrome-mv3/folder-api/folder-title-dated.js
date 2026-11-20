@@ -147,3 +147,14 @@ export function isDatedServiceTitle(title) {
   return datedTemplatesInDatedRootServiceSet.has(datedTemplate)
 }
 
+export function isVisitedDatedTemplate(templateTitle) {
+  return templateTitle == DATED_TEMPLATE_VISITED
+    || templateTitle == DATED_TEMPLATE_OPENED
+}
+
+export function isVisitedDatedTitle(title) {
+  return (
+    (title.startsWith('visited ') && isDatedTitleForTemplate({ title, template: DATED_TEMPLATE_VISITED }))
+    || (title.startsWith('opened ') && isDatedTitleForTemplate({ title, template: DATED_TEMPLATE_OPENED }))
+  )
+}

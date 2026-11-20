@@ -260,7 +260,7 @@ const INTERNAL_VALUES = Object.fromEntries(
   // 'mergeFolders.js',
   // 'moveFolders.js',
   // 'moveOldDatedFolders.js',
-  // 'orderBookmarks.js',
+  // 'orderBookmarkTree.js',
   // 'page.api.js',
   // 'pageReady.js',
   // 'runtime.controller',
@@ -1408,10 +1408,6 @@ function isCorrectIconDirectiveValue(str) {
         value = ''
         break
       }
-      case '#top-': {
-        value = ''
-        break
-      }
       // case '#color':
       case '#c': {
         if (isCorrectColorDirectiveValue(directiveValue)) {
@@ -1453,6 +1449,12 @@ function isCorrectIconDirectiveValue(str) {
   }
 }
 
+function isTitleHasDirectives(title) {
+  const { objDirectives } = getTitleDetails(title)
+
+  return 0 < Object.keys(objDirectives).length
+}
+
 function getTitleWithDirectives({ onlyTitle, objDirectives }) {
   const objFilteredDirectives = Object.assign({}, objDirectives)
 
@@ -1488,7 +1490,40 @@ function isChangesInDirectives({ oldDirectives, newDirectives }) {
 
   return false
 }
-const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric'})
+
+function makeIsTitleMatch({ title, normalizeFn = (str) => str }) {
+  const onlyTitlePattern = getTitleDetails(title).onlyTitle
+  const normalizedPattern = normalizeFn(onlyTitlePattern)
+  // logFF('makeIsTitleMatch 00', title, onlyTitlePattern, normalizedPattern)
+
+  return function isTitleMatch(testTitle) {
+    const { onlyTitle }= getTitleDetails(testTitle)
+    const normalizedTestTitle = normalizeFn(onlyTitle)
+
+    return (normalizedTestTitle === normalizedPattern)
+  }
+}
+// const BOOKMARKS_BAR_FOLDER_TITLE = 'Bookmarks bar' // Chrome
+// const BOOKMARKS_MENU_FOLDER_TITLE = 'Bookmarks Menu' // Firefox
+const OTHER_BOOKMARKS_FOLDER_TITLE = 'Other bookmarks' // Chrome
+
+const DATED_ROOT_NEW_FOLDER_TITLE = '@D new'
+const DATED_ROOT_OLD_FOLDER_TITLE = '@D old'
+const DATED_ROOT_SERVICE_FOLDER_TITLE = '@D service'
+const UNCLASSIFIED_TITLE = '@ unclassified'
+// const CONTINUE_TITLE = 'continue'
+
+const DATED_TEMPLATE_OPENED = 'opened @D'
+const DATED_TEMPLATE_VISITED = 'visited @D'
+// const DATED_TEMPLATE_SELECTED = 'selected @D'
+const DATED_TEMPLATE_DONE = 'DONE @D'
+const datedTemplatesInDatedRootServiceSet = new Set([
+  DATED_TEMPLATE_VISITED,
+  DATED_TEMPLATE_OPENED,
+  DATED_TEMPLATE_DONE
+])
+
+const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric'})
 const futureDate = new Date('01/01/2125')
 const oneDayMs = 24*60*60*1000
 
@@ -1614,6 +1649,24 @@ function getDatedTemplate(title) {
 
   return `${fixedPartFromTitle} @D`
 }
+
+function isDatedServiceTitle(title) {
+  const datedTemplate = getDatedTemplate(title)
+
+  return datedTemplatesInDatedRootServiceSet.has(datedTemplate)
+}
+
+function isVisitedDatedTemplate(templateTitle) {
+  return templateTitle == DATED_TEMPLATE_VISITED
+    || templateTitle == DATED_TEMPLATE_OPENED
+}
+
+function isVisitedDatedTitle(title) {
+  return (
+    (title.startsWith('visited ') && isDatedTitleForTemplate({ title, template: DATED_TEMPLATE_VISITED }))
+    || (title.startsWith('opened ') && isDatedTitleForTemplate({ title, template: DATED_TEMPLATE_OPENED }))
+  )
+}
 const isDescriptiveFolderTitle = (title) => !!title
   && !(
     title.startsWith('New folder')
@@ -1690,43 +1743,6 @@ function mergeFolderTitle({ oldTitle, newTitle }) {
 
     return mergedTitle
   }
-}
-const BOOKMARKS_BAR_FOLDER_TITLE = 'Bookmarks bar' // Chrome
-// const BOOKMARKS_MENU_FOLDER_TITLE = 'Bookmarks Menu' // Firefox
-const OTHER_BOOKMARKS_FOLDER_TITLE = 'Other bookmarks' // Chrome
-
-const DATED_ROOT_NEW_FOLDER_TITLE = '@D new'
-const DATED_ROOT_OLD_FOLDER_TITLE = '@D old'
-const DATED_ROOT_SERVICE_FOLDER_TITLE = '@D service'
-const UNCLASSIFIED_TITLE = 'zz-bookmark-info--unclassified'
-// const CONTINUE_TITLE = 'continue'
-
-const DATED_TEMPLATE_OPENED = 'opened @D'
-const DATED_TEMPLATE_VISITED = 'visited @D'
-// const DATED_TEMPLATE_SELECTED = 'selected @D'
-const DATED_TEMPLATE_DONE = 'DONE @D'
-
-const IgnoreInRecentListSet = new Set([
-  DATED_ROOT_NEW_FOLDER_TITLE,
-  DATED_ROOT_OLD_FOLDER_TITLE,
-  DATED_ROOT_SERVICE_FOLDER_TITLE,
-  UNCLASSIFIED_TITLE,
-])
-
-function isIgnoreInRecentList(title) {
-  return IgnoreInRecentListSet.has(title)
-}
-
-function isVisitedDatedTemplate(templateTitle) {
-  return templateTitle == DATED_TEMPLATE_VISITED
-    || templateTitle == DATED_TEMPLATE_OPENED
-}
-
-function isVisitedDatedTitle(title) {
-  return (
-    (title.startsWith('visited ') && isDatedTitleForTemplate({ title, template: DATED_TEMPLATE_VISITED }))
-    || (title.startsWith('opened ') && isDatedTitleForTemplate({ title, template: DATED_TEMPLATE_OPENED }))
-  )
 }
 
 const logES = makeLogFunction({ module: 'extensionSettings.js' })
@@ -2100,6 +2116,21 @@ async function getBookmarkListWithParent(url) {
 const rootFolders = new RootFolders()
 const logRA = makeLogFunction({ module: 'tagList-getRecent.js' })
 
+const IgnoreInRecentListSet = new Set([
+  DATED_ROOT_NEW_FOLDER_TITLE,
+  DATED_ROOT_OLD_FOLDER_TITLE,
+  DATED_ROOT_SERVICE_FOLDER_TITLE,
+  UNCLASSIFIED_TITLE,
+])
+
+function isTitleForRecentList(title) {
+  return isDescriptiveFolderTitle(title)
+    && !isDatedFolderTitle(title)
+    && !isVisitedDatedTemplate(title)
+    && !IgnoreInRecentListSet.has(title)
+    && !(title.endsWith(' #top') || title.includes(' #top '))
+}
+
 async function getRecentList(nItems) {
   const list = await browser.bookmarks.getRecent(nItems);
   const folderList = list
@@ -2163,19 +2194,13 @@ async function filterFolders(idList, isFlatStructure) {
   const folderList = await getBookmarkNodeList(idList)
   logRA('filterFolders () 22', 'folderList', folderList.length, folderList)
   let filteredFolderList = folderList
-    .filter(({ title }) => !!title)
-    .filter(({ title }) => isDescriptiveFolderTitle(title))
-    .filter(({ title }) => !isDatedFolderTitle(title))
-    .filter(({ title }) => !isVisitedDatedTemplate(title))
+    .filter(({ title }) => isTitleForRecentList(title))
 
   // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
   if (isFlatStructure) {
     filteredFolderList = filteredFolderList
       .filter(
         ({ parentId }) => parentId === rootFolders.OTHER_BOOKMARKS_FOLDER_ID || parentId === rootFolders.BOOKMARKS_BAR_FOLDER_ID
-      )
-      .filter(
-        ({ title }) => !isIgnoreInRecentList(title)
       )
   }
   logRA('filterFolders () 33', 'filteredFolderList', filteredFolderList.length, filteredFolderList)
@@ -2576,25 +2601,17 @@ class TagList {
       return
     }
 
+    if (!isTitleForRecentList(parentTitle)) {
+      return
+    }
+
     logTL('addTag 00', parentId, parentTitle)
     // FEATURE.FIX: when use flat folder structure, only fist level folder get to recent list
-    if (this.isFlatStructure) {
-      // if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
-      //   return
-      // }
-
-      if (isIgnoreInRecentList(parentTitle)) {
-        return
-      }
-    }
-
-    if (!isDescriptiveFolderTitle(parentTitle)) {
-      return
-    }
-
-    if (isDatedFolderTitle(parentTitle)) {
-      return
-    }
+    // if (this.isFlatStructure) {
+    //   // if (!(newFolder.parentId === OTHER_BOOKMARKS_FOLDER_ID)) {
+    //   //   return
+    //   // }
+    // }
 
     const dateAdded = Date.now()
     this._recentTagObj[parentId] = {
@@ -3350,17 +3367,15 @@ class IgnoreBkmControllerApiActionSet {
 }
 
 const ignoreBkmControllerApiActionSet = new IgnoreBkmControllerApiActionSet()
-// import {
-//   makeLogFunction,
-// } from '../api-low/index.js'
-
-// const logFI = makeLogFunction({ module: 'folder-ignore.js' })
+const logFI = makeLogFunction({ module: 'folder-ignore.js' })
 
 async function createFolderIgnoreInController({
   title,
   parentId,
   index,
+  parentTitleForDebug,
 }) {
+  logFI('CREATE FOLDER ', title, ' -> ', parentTitleForDebug)
   const options = { parentId, title }
   if (index != undefined) {
     options.index = index
@@ -3388,7 +3403,8 @@ async function moveNodeIgnoreInController({ id, parentId, index }) {
   return await browser.bookmarks.move(id, options)
 }
 
-async function moveFolderIgnoreInController({ id, parentId, index }) {
+async function moveFolderIgnoreInController({ id, parentId, index, titleForDebug, parentTitleForDebug }) {
+  logFI('MOVE FOLDER ', titleForDebug, ' -> ', parentTitleForDebug)
   // logFI('moveFolderIgnoreInController 00', id, parentId)
   return await moveNodeIgnoreInController({ id, parentId, index })
 }
@@ -3436,35 +3452,6 @@ async function findFolderWithExactTitle(title) {
   const foundItem = nodeList.find((node) => !node.url)
 
   return foundItem
-}
-
-// async function findSubFolderWithExactTitle({ title, parentId }) {
-//   const nodeList = await browser.bookmarks.search({ title });
-//   const foundItem = nodeList.find((node) => !node.url && node.parentId == parentId)
-
-//   return foundItem
-// }
-
-function makeIsTitleMatch({ title, normalizeFn = (str) => str }) {
-  const onlyTitlePattern = getTitleDetails(title).onlyTitle
-  const normalizedPattern = normalizeFn(onlyTitlePattern)
-  // logFF('makeIsTitleMatch 00', title, onlyTitlePattern, normalizedPattern)
-
-  return function isTitleMatch(testTitle) {
-    const { onlyTitle, objDirectives }= getTitleDetails(testTitle)
-    const normalizedTestTitle = normalizeFn(onlyTitle)
-
-    if (objDirectives['#top-'] != undefined) {
-      return false
-    }
-
-    if (normalizedTestTitle === normalizedPattern) {
-      // logFF('isTitleMatch 00', testTitle, onlyTitleTestTitle, normalizedTestTitle)
-      return true
-    }
-
-    return false
-  }
 }
 
 async function findByTitle({ title, normalizeFn }) {
@@ -3589,15 +3576,6 @@ function findFolderFrom({ isTitleMatch, startFolder }) {
   return traverseSubFolder(startFolder)
 }
 
-async function findChildFolder({ title, parentId }) {
-  const isTitleMatch = makeIsTitleMatch({ title, normalizeFn: normalizeTitle })
-
-  const firstLevelNodeList = await browser.bookmarks.getChildren(parentId)
-  let foundItem = firstLevelNodeList.find((node) => !node.url && isTitleMatch(node.title))
-
-  return foundItem
-}
-
 async function findFolderInSubtree({ title, parentId }) {
   const isTitleMatch = makeIsTitleMatch({ title, normalizeFn: normalizeTitle })
 
@@ -3679,41 +3657,26 @@ async function findFolderMultiWay(title) {
 
   return foundItem
 }
-const datedTemplatesInDatedRootServiceSet = new Set([
-  DATED_TEMPLATE_VISITED,
-  DATED_TEMPLATE_OPENED,
-  DATED_TEMPLATE_DONE
-])
+function getFolderInfo(title) {
 
-function getFolderInfo(title) {
-
-  let info
+  let specialInfo
 
   switch (true) {
-    case title.includes(' #top-'): {
-      info = {
-        parentTitle: OTHER_BOOKMARKS_FOLDER_TITLE,
-        folderType: 'top folder placeholder'
-      }
-      break
-    }
     case title.includes(' #top'): {
-      info = {
-        parentTitle: BOOKMARKS_BAR_FOLDER_TITLE,
+      specialInfo = {
         folderType: 'top folder'
       }
       break
     }
     case isDatedFolderTitle(title): {
-      const datedTemplate = getDatedTemplate(title)
 
-      if (datedTemplatesInDatedRootServiceSet.has(datedTemplate)) {
-        info = {
+      if (isDatedServiceTitle(title)) {
+        specialInfo = {
           parentTitle: DATED_ROOT_SERVICE_FOLDER_TITLE,
           folderType: 'service folder'
         }
       } else {
-        info = {
+        specialInfo = {
           parentTitle: DATED_ROOT_NEW_FOLDER_TITLE,
           folderType: 'dated folder'
         }
@@ -3721,18 +3684,22 @@ function getFolderInfo(title) {
 
       break
     }
-    default:
-      info = {
-        parentTitle: OTHER_BOOKMARKS_FOLDER_TITLE
-      }
   }
 
   return {
-    ...info,
     title,
+    parentTitle: OTHER_BOOKMARKS_FOLDER_TITLE,
+    ...specialInfo,
   }
 }
-class FolderCreator {
+async function findChildFolderWithExactTitle({ title, parentId }) {
+  const nodeList = await browser.bookmarks.search({ title });
+  const foundItem = nodeList.find((node) => !node.url && node.parentId == parentId)
+
+  return foundItem
+}
+
+class FolderCreator {
   mapTitleToInfo = {}
   mapIdToTitle = {}
 
@@ -3752,11 +3719,11 @@ function getFolderInfo(title) {
       case OTHER_BOOKMARKS_FOLDER_TITLE:
         parentId = rootFolders.OTHER_BOOKMARKS_FOLDER_ID
         break
-      case BOOKMARKS_BAR_FOLDER_TITLE:
-        parentId = rootFolders.BOOKMARKS_BAR_FOLDER_ID
-        break
+      // case BOOKMARKS_BAR_FOLDER_TITLE:
+      //   parentId = rootFolders.BOOKMARKS_BAR_FOLDER_ID
+      //   break
       default: {
-        const parentFolder = await this._findFolder({ title: folderTitle, isCreate: true })
+        const parentFolder = await this._provideFolder({ title: folderTitle, isCreate: true })
         parentId = parentFolder.id
       }
     }
@@ -3774,6 +3741,21 @@ function getFolderInfo(title) {
     }
   }
 
+  async provideFolderInBar(title) {
+    const onlyTitle = getTitleDetails(title).onlyTitle
+    let folder
+
+    folder = await findChildFolderWithExactTitle({ title: onlyTitle, parentId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
+
+    if (!folder) {
+      folder = await this.createFolderInParent({
+        title: onlyTitle,
+        parentId: rootFolders.BOOKMARKS_BAR_FOLDER_ID
+      })
+    }
+
+    return folder
+  }
   async moveFolderAfterRename({ id, parentId, title, index }) {
     const moveArgs = {}
     const settings = await extensionSettings.get()
@@ -3802,26 +3784,8 @@ function getFolderInfo(title) {
         ...moveArgs,
       })
 
-      switch (folderInfo.folderType) {
-        case 'top folder': {
-          const onlyTitle = getTitleDetails(title).onlyTitle
-          const placeholderTitle = `${onlyTitle} #top-`
-          const nodeList = await browser.bookmarks.search({ title: placeholderTitle });
-          const foundPlaceholder = nodeList.find((node) => !node.url && node.parentId == rootFolders.OTHER_BOOKMARKS_FOLDER_ID)
-
-          if (!foundPlaceholder) {
-            await this.createFolderInParent({
-              title: placeholderTitle,
-              parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID
-            })
-          }
-
-          break
-        }
-        case 'top folder placeholder': {
-
-          break
-        }
+      if (folderInfo.folderType === 'top folder') {
+        await this.provideFolderInBar(title)
       }
     }
   }
@@ -3892,21 +3856,16 @@ function getFolderInfo(title) {
   }
   async createFolderInBookmarks(title) {
     const folderInfo = await this.getFolderInfoWithParentId(title)
-    const folder = await this.createFolderInParent(folderInfo)
-
-    if (folderInfo.folderType === 'top folder') {
-      const onlyTitle = getTitleDetails(title).onlyTitle
-      const placeholderTitle = `${onlyTitle} #top-`
-
-      await this.createFolderInParent({
-        title: placeholderTitle,
-        parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID
-      })
-    }
+    let folder = await this.createFolderInParent(folderInfo)
 
     const {
-      objDirectives
+      objDirectives,
     } = getTitleDetails(title)
+
+    if (folderInfo.folderType === 'top folder') {
+
+      folder = await this.provideFolderInBar(title)
+    }
 
     return {
       id: folder.id,
@@ -3916,7 +3875,7 @@ function getFolderInfo(title) {
       )
     }
   }
-  async _findFolder({ title, isCreate=false }) {
+  async _provideFolder({ title, isCreate=false }) {
     let result
 
     if (this.mapTitleToInfo[title] === undefined) {
@@ -3978,10 +3937,10 @@ function getFolderInfo(title) {
   }
 
   async findFolder(title) {
-    return this._findFolder({ title, isCreate: false })
+    return this._provideFolder({ title, isCreate: false })
   }
   async createFolder(title) {
-    const result = await this._findFolder({ title, isCreate: true })
+    const result = await this._provideFolder({ title, isCreate: true })
 
     return {
       ...result,
@@ -4005,6 +3964,15 @@ function getFolderInfo(title) {
   }
   async findDatedRootOld() {
     const result = await this.findFolder(DATED_ROOT_OLD_FOLDER_TITLE)
+    return result?.id
+  }
+
+  async findOrCreateDatedRootService() {
+    const result = await this.createFolder(DATED_ROOT_SERVICE_FOLDER_TITLE)
+    return result.id
+  }
+  async findDatedRootService() {
+    const result = await this.findFolder(DATED_ROOT_SERVICE_FOLDER_TITLE)
     return result?.id
   }
 
@@ -4088,7 +4056,8 @@ async function getParentFolderList(bookmarkList) {
     } = getTitleDetails(folder.title)
 
     const folderInfo = {
-      title: onlyTitle,
+      title: folder.title,
+      titleOnly: onlyTitle,
       color: objDirectives['#c'],
       icon: objDirectives['#i'],
       parentId: folder.parentId,
@@ -4132,6 +4101,7 @@ async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
   resultBookmarkList = resultBookmarkList
     .map((bookmark) => ({
       parentTitle: parentMap[bookmark.parentId]?.title || '',
+      parentTitleOnly: parentMap[bookmark.parentId]?.titleOnly || '',
       color: getColor(bookmark.parentId),
       icon: getIcon(bookmark.parentId),
       ...bookmark
@@ -4211,13 +4181,15 @@ async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
 async function getDirectBookmarkList(url) {
   const bookmarkList = await searchBookmarksForUrl(url)
   const listWithTemplate = await addFieldsToBookmarkList(bookmarkList, ['path'])
+  console.log('getDirectBookmarkList listWithTemplate', listWithTemplate)
 
   const selectedBookmarkList = listWithTemplate
+    .filter(({ parentTitle }) => !(parentTitle.endsWith(' #top') || parentTitle.includes(' #top ')))
     .map((bookmark) => ({
         id: bookmark.id,
         title: bookmark.title,
         parentId: bookmark.parentId,
-        parentTitle: bookmark.parentTitle,
+        parentTitle: bookmark.parentTitleOnly,
         parentColor: formatColorDirectiveValue(bookmark.color),
         icon: bookmark.icon,
         path: bookmark.path,
@@ -5475,41 +5447,41 @@ async function folderQueueRunner(task) {
 }
 
 const folderQueue = new NodeTaskQueue(folderQueueRunner)
-// is used in bookmark-list-ops/
+// is used in bookmark-tree/
 // is used in command/addBookmark.js
 // is used in controllers/bookmarks.controller.js
-async function traverseFolderRecursively({ folder: rootFolder, onFolder, startLevel=0 }) {
-  async function traverseFolder({ folder, level }) {
-    const childBookmarkList = []
-    const childFolderList = []
+async function traverseFolderRecursively({ folder, onFolder, level }) {
+  const childBookmarkList = []
+  const childFolderList = []
 
-    if (folder.children) {
-      for (const child of folder.children) {
-        if (child.url) {
-          childBookmarkList.push(child)
-        } else {
-          childFolderList.push(child)
-        }
+  if (folder.children) {
+    for (const child of folder.children) {
+      if (child.url) {
+        childBookmarkList.push(child)
+      } else {
+        childFolderList.push(child)
       }
     }
-
-    await onFolder({
-      folder,
-      bookmarkList: childBookmarkList,
-      folderListLength: childFolderList.length,
-      level,
-    })
-
-    const nextLevel = level + 1
-    await childFolderList.reduce(
-      (promiseChain, childFolder) => promiseChain.then(
-        () => traverseFolder({ folder: childFolder, level: nextLevel })
-      ),
-      Promise.resolve(),
-    );
   }
 
-  await traverseFolder({ folder: rootFolder, level: startLevel })
+  await onFolder({
+    folder: {
+      id: folder.id,
+      title: folder.title,
+      parentId: folder.parentId,
+    },
+    bookmarkList: childBookmarkList,
+    folderListLength: childFolderList.length,
+    level,
+  })
+
+  const nextLevel = level + 1
+  await childFolderList.reduce(
+    (promiseChain, childFolder) => promiseChain.then(
+      () => traverseFolderRecursively({ folder: childFolder, onFolder, level: nextLevel })
+    ),
+    Promise.resolve(),
+  );
 }
 
 async function traverseTreeRecursively({ onFolder }) {
@@ -5517,13 +5489,60 @@ async function traverseTreeRecursively({ onFolder }) {
   const [rootFolder] = await browser.bookmarks.getTree()
   await traverseFolderRecursively({ folder: rootFolder, onFolder, startLevel: 0 })
 }
+
+async function traverseChildFoldersRecursively({ folderId, onFolder }) {
+  if (!folderId) {
+    return
+  }
+
+  const [rootFolder] = await browser.bookmarks.getSubTree(folderId)
+  const childFolderList = rootFolder.children
+    .filter(({ url }) => !url)
+
+  await childFolderList.reduce(
+    (promiseChain, childFolder) => promiseChain.then(
+      () => traverseFolderRecursively({ folder: childFolder, onFolder, level: 1 })
+    ),
+    Promise.resolve(),
+  );
+}
+
+async function traverseChildFolders({ folderId, onFolder }) {
+  if (!folderId) {
+    return
+  }
+
+  const [rootFolder] = await browser.bookmarks.getSubTree(folderId)
+  const childFolderList = rootFolder.children
+    .filter(({ url }) => !url)
+
+  await childFolderList.reduce(
+    (promiseChain, childFolder) => promiseChain.then(
+      async () => {
+        const bookmarkList = childFolder.children
+          .filter(({ url }) => !!url)
+
+        return onFolder({
+          folder: {
+            id: childFolder.id,
+            title: childFolder.title,
+            parentId: childFolder.parentId,
+          },
+          bookmarkList,
+        })
+      }
+    ),
+    Promise.resolve(),
+  );
+}
 const logMRG = makeLogFunction({ module: 'mergeFolders.js' })
 
-async function addSubfolders({ parentId, nameSet }) {
-  logMRG('addSubfolders 00', parentId)
+async function mergeChildFolders({ parentId }) {
   if (!parentId) {
     return
   }
+
+  const nameSet = {}
 
   const nodeList = await browser.bookmarks.getChildren(parentId)
   const folderNodeList = nodeList.filter(({ url }) => !url)
@@ -5545,26 +5564,12 @@ async function addSubfolders({ parentId, nameSet }) {
       },
     )
 
-    if (objDirectives['#top-'] != undefined) {
-      continue
-    }
-
     if (!nameSet[normalizedTitle]) {
       nameSet[normalizedTitle] = [nodeData]
     } else {
       nameSet[normalizedTitle].push(nodeData)
     }
   }
-}
-
-async function mergeRootSubFolders() {
-  logMRG('mergeRootSubFolders 00')
-
-  const nameSet = {}
-
-  await addSubfolders({ parentId: rootFolders.BOOKMARKS_BAR_FOLDER_ID, nameSet })
-  await addSubfolders({ parentId: rootFolders.BOOKMARKS_MENU_FOLDER_ID, nameSet })
-  await addSubfolders({ parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID, nameSet })
 
   const moveTaskList = []
   const renameTaskList = []
@@ -5600,6 +5605,20 @@ async function mergeRootSubFolders() {
   logMRG('renameTaskList', renameTaskList)
   logMRG('moveTaskList', moveTaskList)
 
+  const uniqList = Object.entries(nameSet).filter(([, nodeList]) => nodeList.length == 1)
+  for (const [, nodeList] of uniqList) {
+    const [folder] = nodeList
+
+    const trimmedTitle = trimTitle(folder.title)
+
+    if (folder.title !== trimmedTitle) {
+      renameTaskList.push({
+        id: folder.id,
+        title: trimmedTitle,
+      })
+    }
+  }
+
   await renameTaskList.reduce(
     (promiseChain, { id, title }) => promiseChain.then(
       () => updateFolder({ id,  title })
@@ -5621,69 +5640,7 @@ async function mergeRootSubFolders() {
     Promise.resolve(),
   );
 }
-
-async function mergeSubFoldersLevelOne(parentId) {
-  if (!parentId) {
-    return
-  }
-
-  // console.log('### mergeSubFolder 00,', parentId)
-  const nodeList = await browser.bookmarks.getChildren(parentId)
-  const folderNodeList = nodeList.filter(({ url }) => !url)
-  const nameSet = {}
-
-  for (const node of folderNodeList) {
-    const normalizedTitle = normalizeTitle(node.title)
-
-    if (!nameSet[normalizedTitle]) {
-      nameSet[normalizedTitle] = [node]
-    } else {
-      nameSet[normalizedTitle].push(node)
-    }
-  }
-  // console.log('### mergeSubFolder 11: nameSet', nameSet)
-
-  const notUniqList = Object.entries(nameSet).filter(([, nodeList]) => nodeList.length > 1)
-  const moveTaskList = []
-  for (const [, nodeList] of notUniqList) {
-    const sortedList = nodeList.toSorted((a, b) => -a.title.localeCompare(b.title))
-    const firstNode = sortedList[0]
-    const restNodeList = nodeList.filter((item) => item.id != firstNode.id)
-
-    for (const fromNode of restNodeList) {
-      moveTaskList.push({
-        fromNode,
-        toNode: firstNode,
-      })
-    }
-  }
-  // console.log('### moveTaskList', moveTaskList.map(({ fromNode, toNode }) => `${fromNode.title} -> ${toNode.title}`))
-
-  await moveTaskList.reduce(
-    (promiseChain, { fromNode, toNode }) => promiseChain.then(
-      () => moveFolderContentToStart(fromNode.id, toNode.id)
-    ),
-    Promise.resolve(),
-  );
-
-  await moveTaskList.reduce(
-    (promiseChain, { fromNode }) => promiseChain.then(
-      () => removeFolder(fromNode.id)
-    ),
-    Promise.resolve(),
-  );
-}
-
-async function mergeFolders() {
-
-  await mergeRootSubFolders()
-
-  const datedRootNewId = await folderCreator.findDatedRootNew()
-  const datedRootOldId = await folderCreator.findDatedRootOld()
-  await mergeSubFoldersLevelOne(datedRootNewId)
-  await mergeSubFoldersLevelOne(datedRootOldId)
-}
-async function moveNotDescriptiveFolders({ fromId }) {
+async function moveNotDescriptiveFoldersToUnclassified({ fromId, createToId }) {
   if (!fromId) {
     return
   }
@@ -5697,11 +5654,11 @@ async function mergeFolders() {
     return
   }
 
-  const unclassifiedId = await folderCreator.findOrCreateUnclassified()
+  const toId = await createToId()
 
   await folderList.reduce(
     (promiseChain, folderNode) => promiseChain.then(
-      () => moveFolderContentToStart(folderNode.id, unclassifiedId)
+      () => moveFolderContentToStart(folderNode.id, toId)
     ),
     Promise.resolve(),
   );
@@ -5713,13 +5670,7 @@ async function mergeFolders() {
     Promise.resolve(),
   );
 }
-
-async function moveNotDescriptiveFoldersToUnclassified() {
-
-  await moveNotDescriptiveFolders({ fromId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
-  await moveNotDescriptiveFolders({ fromId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
-}
-async function moveRootBookmarks({ fromId }) {
+async function moveRootBookmarksToUnclassified({ fromId, createToId }) {
   if (!fromId) {
     return
   }
@@ -5737,169 +5688,223 @@ async function moveNotDescriptiveFoldersToUnclassified() {
     return
   }
 
-  const unclassifiedId = await folderCreator.findOrCreateUnclassified()
+  const toId = await createToId()
 
   await bkmList.reduce(
     (promiseChain, bkm) => promiseChain.then(
-      () => moveBookmarkIgnoreInController({ id: bkm.id, parentId: unclassifiedId })
+      () => moveBookmarkIgnoreInController({ id: bkm.id, parentId: toId })
     ),
     Promise.resolve(),
   );
 }
+async function findChildFolder({ title, parentId }) {
+  const onlyTitle = getTitleDetails(title).onlyTitle
+  const isTitleMatch = makeIsTitleMatch({ title: onlyTitle, normalizeFn: normalizeTitle })
 
-async function moveRootBookmarksToUnclassified() {
-  await moveRootBookmarks({ fromId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
-  await moveRootBookmarks({ fromId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
+  // const nodeList = await browser.bookmarks.getChildren(parentId)
+  // const foundItem = nodeList.find((node) => !node.url && isTitleMatch(node.title))
+
+  const nodeList = await browser.bookmarks.search(onlyTitle);
+  const foundItem = nodeList.find((node) => !node.url && node.parentId == parentId && isTitleMatch(node.title))
+
+  return foundItem
+}
+
+// async function getFolderInOthers(title) {
+//   const onlyTitle = getTitleDetails(title).onlyTitle
+
+//   const folder = await findChildFolder({ title: onlyTitle, parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
+
+//   return folder
+// }
+
+// async function getFolderDirectives(title) {
+//   const folder = await getFolderInOthers(title)
+
+//   if (folder) {
+//     return getTitleDetails(folder.title).objDirectives
+//   }
+
+//   return {}
+// }
+
+// async function isTopFolder(title) {
+//   const objDirectives = await getFolderDirectives(title)
+
+//   return (objDirectives['#top'] !== undefined)
+// }
+
+async function makeIsTopFolder() {
+  const otherNodeList = await browser.bookmarks.getChildren(rootFolders.OTHER_BOOKMARKS_FOLDER_ID)
+  const otherFolderList = otherNodeList
+    .filter(({ url, title }) => !url && (title.endsWith(' #top') || title.includes(' #top ')))
+    .map(({ id, title }) => ({
+      id,
+      titleNormalized: normalizeTitle(getTitleDetails(title).onlyTitle)
+    }))
+
+  function findOtherFolder(title) {
+    const onlyTitle = getTitleDetails(title).onlyTitle
+    const searchPattern = normalizeTitle(onlyTitle)
+
+    const foundItem = otherFolderList.find((node) => searchPattern == node.titleNormalized)
+
+    return foundItem
+  }
+
+  return (title) => {
+    const folder = findOtherFolder(title)
+
+    return !!folder
+  }
 }
 const logMF = makeLogFunction({ module: 'moveFolders.js' })
 
-async function getFolderMovements() {
+async function flatChildFolders({ folderId, isMovingFolder, level, titleForDebug }) {
+  logMF('flatChildFolders() 00')
 
-  const removeList = []
   const moveList = []
-  const renameList = []
-  const datedRootOldId = await folderCreator.findDatedRootOld()
 
-  async function onFolder({ folder, level, bookmarkList, folderListLength }) {
-    logMF('onFolder() 00', folder.title, folder.id)
+  async function onFolderInFlatChildFolders({ folder }) {
 
-    // level 0: ROOT_FOLDER_ID
-    // level 1: BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_MENU_FOLDER_ID, OTHER_BOOKMARKS_FOLDER_ID
-    if (level < 2) {
-      return
+    let isMovingCondition = (folder.parentId !== folderId)
+
+    if (isMovingCondition && isMovingFolder != undefined) {
+      isMovingCondition = isMovingFolder(folder)
     }
 
-    if (bookmarkList.length == 0 && folderListLength == 0 && isDatedFolderTitle(folder.title)) {
-      removeList.push(folder.id)
-      return
-    }
-
-    const folderInfo = await folderCreator.getFolderInfoWithParentId(folder.title)
-
-    switch (folderInfo.folderType) {
-      case 'dated folder': {
-        const correctParentSet = new Set([folderInfo.parentId])
-        if (datedRootOldId) {
-          correctParentSet.add(datedRootOldId)
-        }
-
-        if (!correctParentSet.has(folder.parentId)) {
-          moveList.push({
-            id: folder.id,
-            parentId: folderInfo.parentId,
-            level,
-          })
-        }
-
-        break
-      }
-      default: {
-        if (folder.parentId !== folderInfo.parentId) {
-          moveList.push({
-            id: folder.id,
-            parentId: folderInfo.parentId,
-            level,
-          })
-        }
-      }
-    }
-
-    const trimmedTitle = trimTitle(folder.title)
-
-    if (folder.title !== trimmedTitle) {
-      renameList.push({
-        id: folder.id,
-        title: trimmedTitle,
+    if (isMovingCondition) {
+      moveList.push({
+        ...folder,
+        level,
       })
     }
   }
 
-  await traverseTreeRecursively({ onFolder })
+  await traverseChildFoldersRecursively({ folderId, onFolder: onFolderInFlatChildFolders })
 
-  return {
-    removeList,
-    moveList,
-    renameList,
-  };
-}
-
-async function moveFolders() {
-  logMF('moveFolders() 00')
-
-  const {
-    removeList,
-    moveList,
-    renameList,
-  } = await getFolderMovements()
-
+  logMF('flatChildFolders() 22')
   const sortedMoveList = moveList
     .sort((a,b) => -(a.level - b.level))
 
-  logMF('moveFolders() 44')
-  logMF(sortedMoveList)
-
-  await removeList.reduce(
-    (promiseChain, folderId) => promiseChain.then(
-      () => removeFolder(folderId)
-    ),
-    Promise.resolve(),
-  );
-
+  logMF('flatChildFolders() 33')
   await sortedMoveList.reduce(
-    (promiseChain, { id, parentId }) => promiseChain.then(
-      () => moveFolderIgnoreInController({ id, parentId })
+    (promiseChain, folder) => promiseChain.then(
+      () => moveFolderIgnoreInController({
+        id: folder.id,
+        parentId: folderId,
+        titleForDebug: folder.title,
+        parentTitleForDebug: titleForDebug
+      })
     ),
     Promise.resolve(),
   );
-
-  await renameList.reduce(
-    (promiseChain, { id, title }) => promiseChain.then(
-      () => updateFolder({ id,  title })
-    ),
-    Promise.resolve(),
-  );
-
-  logMF('moveFolders() 99')
 }
-const logMOD = makeLogFunction({ module: 'moveOldDatedFolders.js' })
 
-const KEEP_DATED_FOLDERS = 5
+async function moveChildFolders({ fromId, toId, isMovingFolder, filterList, createToId, titleForDebug }) {
+  logMF('moveChildFolders() 00')
+  let moveList = []
 
-async function moveOldDatedFolders() {
-  const fromId = await folderCreator.findDatedRootNew()
+  async function onFolderInMoveChildFolders({ folder }) {
+    let isMovingCondition
 
-  if (!fromId) {
-    return
+    if (isMovingFolder == undefined) {
+      isMovingCondition = true
+    } else {
+      isMovingCondition = isMovingFolder(folder)
+      // logMF('onFolderInMoveChildFolders() 11', 'isMovingFolder', folder.title, isMovingCondition)
+    }
+
+    if (isMovingCondition) {
+      moveList.push(folder)
+    }
   }
 
-  logMOD('moveOldDatedFolders 00')
-  const childrenList = await browser.bookmarks.getChildren(fromId)
+  await traverseChildFolders({ folderId: fromId, onFolder: onFolderInMoveChildFolders })
 
-  const datedFolderList = childrenList
-    .filter(({ url, title }) => !url && isDatedFolderTitle(title))
-    .map(({ title, id }) => ({
-        id,
-        title,
-        date: getDateFromDatedTitle(title),
-    }))
-
-  const groupedObj = Object.groupBy(datedFolderList, ({ date }) => date)
-
-  const moveList = Object.entries(groupedObj)
-    .sort(([dateA],[dateB]) => -dateA.localeCompare(dateB))
-    .slice(KEEP_DATED_FOLDERS)
-    .map(([,list]) => list)
-    .flat()
-
-  if (moveList.length == 0) {
-    return
+  logMF('moveChildFolders() 11')
+  if (filterList != undefined) {
+    moveList = filterList(moveList)
   }
 
-  const toId = await folderCreator.findOrCreateDatedRootOld()
+  let finalToId = toId
 
+  logMF('moveChildFolders() 22')
+  if (!finalToId && !!createToId) {
+    finalToId = await createToId()
+  }
+
+  logMF('moveChildFolders() 33')
   await moveList.reduce(
+    (promiseChain, folder) => promiseChain.then(
+      () => moveFolderIgnoreInController({
+        id: folder.id,
+        parentId: finalToId,
+        titleForDebug: folder.title,
+        parentTitleForDebug: titleForDebug
+      })
+    ),
+    Promise.resolve(),
+  );
+}
+
+async function copyFolderContentToStart(fromFolderId, toFolderId) {
+  const fromNodeList = await browser.bookmarks.getChildren(fromFolderId)
+  const fromBookmarkList = fromNodeList.filter(({ url }) => !!url)
+
+  const toNodeList = await browser.bookmarks.getChildren(toFolderId)
+  const toBookmarkList = toNodeList.filter(({ url }) => !!url)
+  const toSet = new Set(toBookmarkList.map(({ url }) => url))
+
+  const addList = fromBookmarkList.filter(({ url }) => !toSet.has(url))
+  // console.log('copyFolderContentToStart', 'addList.length', addList.length)
+
+  await addList.toReversed().reduce(
     (promiseChain, node) => promiseChain.then(
-      () => moveFolderIgnoreInController({ id: node.id, parentId: toId })
+      () => createBookmarkIgnoreInController({ url: node.url, title: node.title,  parentId: toFolderId, index: 0 })
+    ),
+    Promise.resolve(),
+  );
+}
+
+async function copyChildFolders({ fromId, toId, isMovingFolder, getNewFolderTitle, titleForDebug }) {
+  let folderList = []
+
+  async function onFolderInCopyChildFolders({ folder }) {
+    let isMovingCondition
+
+    if (isMovingFolder == undefined) {
+      isMovingCondition = true
+    } else {
+      isMovingCondition = isMovingFolder(folder)
+      // logMF('onFolderInCopyChildFolders() 11', 'isMovingFolder', folder.title, isMovingCondition)
+    }
+
+    if (isMovingCondition) {
+      folderList.push(folder)
+    }
+  }
+
+  await traverseChildFolders({ folderId: fromId, onFolder: onFolderInCopyChildFolders })
+
+  logMF('copyChildFolders() 11 folderList', folderList)
+  await folderList.reduce(
+    (promiseChain, fromFolder) => promiseChain.then(
+      async () => {
+        logMF('copyChildFolders() 22.1 fromFolder.title', fromFolder.title)
+        let toFolder = await findChildFolder({ title: fromFolder.title, parentId: toId })
+
+        if (!toFolder) {
+          logMF('copyChildFolders() 22.2 fromFolder.title', fromFolder.title)
+          toFolder = await createFolderIgnoreInController({
+            title: getNewFolderTitle(fromFolder),
+            parentId: toId,
+            parentTitleForDebug: titleForDebug,
+          })
+        }
+
+        await copyFolderContentToStart(fromFolder.id, toFolder.id)
+      }
     ),
     Promise.resolve(),
   );
@@ -5955,7 +5960,7 @@ async function removeDoubleBookmarks() {
     nRemovedDoubles: doubleList.length
   }
 }
-async function getDated() {
+async function getDated({ parentId }) {
   const datedList = []
 
   function onFolder({ folder, bookmarkList }) {
@@ -5966,13 +5971,13 @@ async function removeDoubleBookmarks() {
     }
   }
 
-  await traverseTreeRecursively({ onFolder })
+  await traverseChildFolders({ folderId: parentId, onFolder })
 
   return datedList
 }
 
-async function getDoubleDated() {
-  const datedList = await getDated()
+async function getDoubleDated({ parentId }) {
+  const datedList = await getDated({ parentId })
   const doubleList = []
 
   const urlToIdMap = new ExtraMap()
@@ -6006,8 +6011,11 @@ async function getDoubleDated() {
   return doubleList
 }
 
-async function removeDoubleDatedBookmarks() {
-  const doubleList = await getDoubleDated()
+async function removeDoubleDatedBookmarks({ parentId }) {
+  if (!parentId) {
+    return
+  }
+  const doubleList = await getDoubleDated({ parentId })
 
   await doubleList.reduce(
     (promiseChain, bkmId) => promiseChain.then(
@@ -6053,12 +6061,12 @@ async function removeDoubleDatedBookmarks() {
     Promise.resolve(),
   );
 }
-async function getUpdateList(fnGetUpdateForBookmark) {
+async function getUpdateList({ getUpdateForBookmark }) {
   const taskList = []
 
   function onFolder({ bookmarkList }) {
     bookmarkList.forEach(({ id, url, title }) => {
-      const bkmUpdate = fnGetUpdateForBookmark({ url, title })
+      const bkmUpdate = getUpdateForBookmark({ url, title })
 
       if (bkmUpdate?.url || bkmUpdate?.title) {
         taskList.push({
@@ -6075,8 +6083,9 @@ async function removeDoubleDatedBookmarks() {
   return taskList
 }
 
-async function updateBookmarks(fnGetUpdateForBookmark) {
-  const updateList = await getUpdateList(fnGetUpdateForBookmark)
+// eslint-disable-next-line no-unused-vars
+async function updateBookmarks({ getUpdateForBookmark }) {
+  const updateList = await getUpdateList({ getUpdateForBookmark })
 
   await updateList.reduce(
     (promiseChain, { id, url, title }) => promiseChain.then(
@@ -6088,11 +6097,175 @@ async function updateBookmarks(fnGetUpdateForBookmark) {
 // import {
 //   updateBookmarks,
 // } from './updateBookmarks.js'
-const logOD = makeLogFunction({ module: 'orderBookmarks.js' })
+const logOD = makeLogFunction({ module: 'orderBookmarkTree.js' })
+
+async function orderFolders() {
+  logOD('00 flatChildFolders')
+  await flatChildFolders({
+    folderId: rootFolders.BOOKMARKS_BAR_FOLDER_ID,
+    titleForDebug: 'BOOKMARKS_BAR',
+  })
+  // await flatChildFolders({ folderId: rootFolders.BOOKMARKS_MENU_FOLDER_ID })
+
+  const datedRootNewId = await folderCreator.findDatedRootNew()
+  const datedRootOldId = await folderCreator.findDatedRootOld()
+  const datedRootServiceId = await folderCreator.findDatedRootService()
+  const correctDatedRootSet = new Set([datedRootNewId, datedRootOldId, datedRootServiceId].filter(Boolean))
+
+  await flatChildFolders({
+    folderId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID,
+    isMovingFolder: (folder) => !(correctDatedRootSet.has(folder.parentId) && isDatedFolderTitle(folder.title)),
+    titleForDebug: 'OTHER_BOOKMARKS',
+  })
+
+  logOD('11')
+  const isTopFolder = await makeIsTopFolder()
+  function isMovingFolderFromBkmBarToOthers({ title }) {
+    if (isTitleHasDirectives(title)) {
+      return true
+    }
+
+    const isTopFolderCondition = isTopFolder(title)
+    if (!isTopFolderCondition) {
+      return true
+    }
+
+    return false
+  }
+  logOD('before moveChildFolders BAR -> Others')
+  await moveChildFolders({
+    fromId: rootFolders.BOOKMARKS_BAR_FOLDER_ID,
+    toId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID,
+    isMovingFolder: isMovingFolderFromBkmBarToOthers,
+    titleForDebug: 'OTHER_BOOKMARKS',
+  })
+  // await moveChildFolders({
+  //   fromId: rootFolders.BOOKMARKS_MENU_FOLDER_ID,
+  //   toId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID,
+  // })
+
+
+  logOD('before top folders BAR -> Others')
+  // sync top folders: to others
+  await copyChildFolders({
+    fromId: rootFolders.BOOKMARKS_BAR_FOLDER_ID,
+    toId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID,
+    getNewFolderTitle: ({ title }) => `${title} #top`,
+    titleForDebug: 'OTHER_BOOKMARKS',
+  })
+  // sync top folders: to top
+  logOD('before top folders Others -> BAR')
+  await copyChildFolders({
+    fromId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID,
+    toId: rootFolders.BOOKMARKS_BAR_FOLDER_ID,
+    // TODO with directive #top
+    isMovingFolder: ({ title }) =>  (title.endsWith(' #top') || title.includes(' #top ')),
+    getNewFolderTitle: ({ title }) => getTitleDetails(title).onlyTitle,
+    titleForDebug: 'BOOKMARKS_BAR',
+  })
+
+  logOD('33')
+  await mergeChildFolders({ parentId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
+  await mergeChildFolders({ parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
+  // await mergeChildFolders({ parentId: rootFolders.BOOKMARKS_MENU_FOLDER_ID })
+
+  logOD('44')
+  await sortFolders({ parentId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
+  await sortFolders({ parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
+  // await sortFolders({ parentId: rootFolders.BOOKMARKS_MENU_FOLDER_ID })
+}
+
+async function orderDatedBookmarks() {
+  // move dated from root to dated new
+  await moveChildFolders({
+    fromId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID,
+    createToId: () => folderCreator.findOrCreateDatedRootNew(),
+    isMovingFolder: ({ title }) => isDatedFolderTitle(title) && !isDatedServiceTitle(title),
+  })
+
+  // move dated from root to dated service
+  await moveChildFolders({
+    fromId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID,
+    createToId: () => folderCreator.findOrCreateDatedRootService(),
+    isMovingFolder: ({ title }) => isDatedFolderTitle(title) && isDatedServiceTitle(title),
+  })
+
+  // move old dated folders
+  const KEEP_DATED_FOLDERS = 5
+
+  function filterDatedFolders(folderList) {
+    const folderListWithDate = folderList
+      .map(({ title, id }) => ({
+        id,
+        title,
+        date: getDateFromDatedTitle(title),
+      }))
+
+    const groupedObj = Object.groupBy(folderListWithDate, ({ date }) => date)
+
+    const filteredList = Object.entries(groupedObj)
+      .sort(([dateA],[dateB]) => -dateA.localeCompare(dateB))
+      .slice(KEEP_DATED_FOLDERS)
+      .map(([,list]) => list)
+      .flat()
+
+    return filteredList
+  }
+
+  const datedRootNewId = await folderCreator.findDatedRootNew()
+  const datedRootOldId = await folderCreator.findDatedRootOld()
+  const datedRootServiceId = await folderCreator.findDatedRootService()
+
+  await moveChildFolders({
+    fromId: datedRootNewId,
+    createToId: () => folderCreator.findOrCreateDatedRootOld(),
+    isMovingFolder: ({ title }) => isDatedFolderTitle(title),
+    filterList: filterDatedFolders,
+  })
+
+  await mergeChildFolders({ parentId: datedRootNewId })
+  await mergeChildFolders({ parentId: datedRootOldId })
+  await mergeChildFolders({ parentId: datedRootServiceId })
+
+  await sortFolders({ parentId: datedRootNewId, compare: compareDatedTitle })
+  await sortFolders({ parentId: datedRootOldId, compare: compareDatedTitle })
+  await sortFolders({ parentId: datedRootServiceId, compare: compareDatedTitle })
+
+  await removeDoubleDatedBookmarks({ parentId: datedRootNewId })
+  await removeDoubleDatedBookmarks({ parentId: datedRootOldId })
+  await removeDoubleDatedBookmarks({ parentId: datedRootServiceId })
+}
 
 async function orderBookmarks() {
-  logOD('orderBookmarks() 00')
-  // await updateBookmarks(({ url, title }) => {
+
+  logOD('22')
+  await moveRootBookmarksToUnclassified({
+    fromId: rootFolders.BOOKMARKS_BAR_FOLDER_ID,
+    createToId: () => folderCreator.findOrCreateUnclassified(),
+  })
+  await moveRootBookmarksToUnclassified({
+    fromId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID,
+    createToId: () => folderCreator.findOrCreateUnclassified(),
+  })
+
+  await moveNotDescriptiveFoldersToUnclassified({
+    fromId: rootFolders.BOOKMARKS_BAR_FOLDER_ID,
+    createToId: () => folderCreator.findOrCreateUnclassified(),
+  })
+  await moveNotDescriptiveFoldersToUnclassified({
+    fromId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID,
+    createToId: () => folderCreator.findOrCreateUnclassified(),
+  })
+
+  await removeDoubleBookmarks()
+}
+
+async function orderBookmarkTree() {
+  await orderFolders()
+  await orderDatedBookmarks()
+  await orderBookmarks()
+
+  // function getUpdateForBookmark({ url, title }) {
   //   try {
   //     const oUrl = new URL(url)
 
@@ -6121,35 +6294,8 @@ async function orderBookmarks() {
   //   } finally {
 
   //   }
-  // })
-
-  logOD('orderBookmarks() 11')
-  await moveFolders()
-  logOD('orderBookmarks() 11.2')
-  await moveOldDatedFolders()
-
-  logOD('orderBookmarks() 22')
-  await moveRootBookmarksToUnclassified()
-  await moveNotDescriptiveFoldersToUnclassified()
-
-  logOD('orderBookmarks() 33')
-  await mergeFolders()
-
-  logOD('orderBookmarks() 44')
-  await sortFolders({ parentId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
-  await sortFolders({ parentId: rootFolders.BOOKMARKS_MENU_FOLDER_ID })
-  await sortFolders({ parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
-
-  const datedRootNewId = await folderCreator.findDatedRootNew()
-  const datedRootOldId = await folderCreator.findDatedRootOld()
-  await sortFolders({ parentId: datedRootNewId, compare: compareDatedTitle })
-  await sortFolders({ parentId: datedRootOldId, compare: compareDatedTitle })
-
-  logOD('orderBookmarks() 55')
-  await removeDoubleBookmarks()
-  await removeDoubleDatedBookmarks()
-
-  logOD('orderBookmarks() 99')
+  // }
+  // await updateBookmarks({ getUpdateForBookmark })
 }
 
 const weekdaySet = new Set(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
@@ -6615,9 +6761,7 @@ async function getUrlFromUrl() {
     })
   }
 
-  await orderBookmarks()
-
-  // await replaceHostname()
+  await orderBookmarkTree()
 }
 async function toggleYoutubeHeader() {
   const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
@@ -6881,27 +7025,33 @@ async function onIncomingMessage (message, sender) {
 }
 const logRC = makeLogFunction({ module: 'runtime.controller' })
 
+async function onStartup() {
+  logRC('runtime.onStartup');
+
+  await initExtension({ debugCaller: 'runtime.onStartup' })
+  updateActiveTab({
+    debugCaller: 'runtime.onStartup'
+  });
+
+  const savedObj = await getOptions([
+    INTERNAL_VALUES.DATA_FORMAT,
+    USER_OPTION.USE_FLAT_FOLDER_STRUCTURE,
+  ]);
+
+  if (savedObj[INTERNAL_VALUES.DATA_FORMAT] !== DATA_FORMAT) {
+    await migration({ from: savedObj[INTERNAL_VALUES.DATA_FORMAT] })
+  }
+
+  if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
+    await orderBookmarkTree()
+  }
+}
+
 const runtimeController = {
   async onStartup() {
-    logRC('runtime.onStartup');
-
-    await initExtension({ debugCaller: 'runtime.onStartup' })
-    updateActiveTab({
-      debugCaller: 'runtime.onStartup'
-    });
-
-    const savedObj = await getOptions([
-      INTERNAL_VALUES.DATA_FORMAT,
-      USER_OPTION.USE_FLAT_FOLDER_STRUCTURE,
-    ]);
-
-    if (savedObj[INTERNAL_VALUES.DATA_FORMAT] !== DATA_FORMAT) {
-      await migration({ from: savedObj[INTERNAL_VALUES.DATA_FORMAT] })
-    }
-
-    if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
-      await orderBookmarks()
-    }
+    setTimeout(() => {
+      onStartup()
+    },5000)
   },
   async onInstalled () {
     logRC('runtime.onInstalled');
@@ -6920,7 +7070,7 @@ const runtimeController = {
       await migration({ from: savedObj[INTERNAL_VALUES.DATA_FORMAT] })
 
       if (savedObj[USER_OPTION.USE_FLAT_FOLDER_STRUCTURE]) {
-        await orderBookmarks()
+        orderBookmarkTree()
       }
     }
 

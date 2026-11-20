@@ -20,29 +20,29 @@ export async function findChildFolder({ title, parentId }) {
   return foundItem
 }
 
-export async function getFolderInOthers(title) {
-  const onlyTitle = getTitleDetails(title).onlyTitle
+// export async function getFolderInOthers(title) {
+//   const onlyTitle = getTitleDetails(title).onlyTitle
 
-  const folder = await findChildFolder({ title: onlyTitle, parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
+//   const folder = await findChildFolder({ title: onlyTitle, parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
 
-  return folder
-}
+//   return folder
+// }
 
-export async function getFolderDirectives(title) {
-  const folder = await getFolderInOthers(title)
+// export async function getFolderDirectives(title) {
+//   const folder = await getFolderInOthers(title)
 
-  if (folder) {
-    return getTitleDetails(folder.title).objDirectives
-  }
+//   if (folder) {
+//     return getTitleDetails(folder.title).objDirectives
+//   }
 
-  return {}
-}
+//   return {}
+// }
 
-export async function isTopFolder(title) {
-  const objDirectives = await getFolderDirectives(title)
+// export async function isTopFolder(title) {
+//   const objDirectives = await getFolderDirectives(title)
 
-  return (objDirectives['#top'] !== undefined)
-}
+//   return (objDirectives['#top'] !== undefined)
+// }
 
 export async function makeIsTopFolder() {
   const otherNodeList = await chrome.bookmarks.getChildren(rootFolders.OTHER_BOOKMARKS_FOLDER_ID)
