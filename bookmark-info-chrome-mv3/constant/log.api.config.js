@@ -1,6 +1,7 @@
 const logModuleList = [
   // 'bookmark-create.js',
   // 'bookmark-ignore.js',
+  //  'bookmark-search-partial.js',
   // 'bookmarkQueue.js',
   // 'bookmarks.controller.js',
   // 'browserStartTime',

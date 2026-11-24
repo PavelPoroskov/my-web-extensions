@@ -6,10 +6,9 @@ import {
   getPathnamePart,
 } from './url-partial.js'
 import {
-  makeIsSearchParamItemMatch,
-} from './url-search-is.js'
+  removeQueryParamsIfTarget,
+} from './clear-url.js'
 import {
-  isNotEmptyArray,
   makeLogFunction,
 } from '../api-low/index.js'
 
@@ -32,8 +31,11 @@ export async function startPartialUrlSearch({ url, pathnamePattern }) {
   logUS('startPartialUrlSearch () 00', url)
 
   try {
-    const targetHostSettings = getHostSettings(url)
     logUS('startPartialUrlSearch 11 targetHostSettings', !!targetHostSettings, targetHostSettings)
+
+    const targetHostSettings = getHostSettings(url)
+    const importantSearchParamList = targetHostSettings?.importantSearchParamList || []
+    const importantSearchParamSet = new Set(importantSearchParamList.filter((s) => !s.includes('*')))
 
     // if (!targetHostSettings) {
     //   return {
@@ -41,30 +43,25 @@ export async function startPartialUrlSearch({ url, pathnamePattern }) {
     //   }
     // }
 
-    const oUrl = new URL(url);
+    const cleanUrl = removeQueryParamsIfTarget(url);
+    const oUrl = new URL(cleanUrl);
+    const oSearchParams = oUrl.searchParams;
 
-    let requiredSearchParams
-    if (targetHostSettings) {
-      const { importantSearchParamList } = targetHostSettings
+    logUS('startPartialUrlSearch 22', 'oSearchParams', oSearchParams)
 
-      if (isNotEmptyArray(importantSearchParamList)) {
-        const isSearchParamItemMatch = makeIsSearchParamItemMatch(importantSearchParamList)
-        const oSearchParams = oUrl.searchParams;
-        logUS('startPartialUrlSearch 22', 'oSearchParams', oSearchParams)
+    const matchedParamList = []
+    for (const [key] of oSearchParams) {
+      matchedParamList.push(key)
+    }
 
-        const matchedParamList = []
-        for (const [key, value] of oSearchParams) {
-          logUS('startPartialUrlSearch 22', 'for (const [searchParam] of oSearchParams', key)
-          if (isSearchParamItemMatch({ key, value })) {
-            matchedParamList.push(key)
-          }
-        }
+    const requiredSearchParams = {}
+    matchedParamList.forEach((searchParam) => {
+      requiredSearchParams[searchParam] = oSearchParams.get(searchParam)
+      importantSearchParamSet.delete(searchParam)
+    })
 
-        requiredSearchParams = {}
-        matchedParamList.forEach((searchParam) => {
-          requiredSearchParams[searchParam] = oSearchParams.get(searchParam)
-        })
-      }
+    for (const searchParam of importantSearchParamSet.keys()) {
+      requiredSearchParams[searchParam] = undefined
     }
 
     if (!targetHostSettings?.isHashRequired) {

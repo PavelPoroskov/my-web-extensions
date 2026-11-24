@@ -12,7 +12,6 @@ export async function getDirectBookmarkList(url) {
 
   const bookmarkList = await chrome.bookmarks.search({ url });
   const listWithTemplate = await addFieldsToBookmarkList(bookmarkList, ['path'])
-  console.log('getDirectBookmarkList listWithTemplate', listWithTemplate)
 
   const selectedBookmarkList = listWithTemplate
     .filter(({ parentTitle }) => !(parentTitle.endsWith(' #top') || parentTitle.includes(' #top ')))

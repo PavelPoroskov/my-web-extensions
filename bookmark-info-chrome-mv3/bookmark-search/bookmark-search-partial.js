@@ -11,7 +11,7 @@ import {
   makeLogFunction,
 } from '../api-low/index.js'
 
-const logBLP = makeLogFunction({ module: 'bookmark-list-partial.js' })
+const logBLP = makeLogFunction({ module: 'bookmark-search-partial.js' })
 
 export async function getPartialBookmarkList({ url, exactBkmIdList = [] }) {
   // 1 < pathname.length : it is not root path
@@ -24,14 +24,14 @@ export async function getPartialBookmarkList({ url, exactBkmIdList = [] }) {
     urlForSearch,
     isUrlMatchToPartialUrlSearch,
   } = await startPartialUrlSearch({ url })
-  logBLP('getPartialBookmarkList () 22 startPartialUrlSearch', { isSearchAvailable, urlForSearch })
+  logBLP('22 startPartialUrlSearch', { isSearchAvailable, urlForSearch })
 
   if (!isSearchAvailable) {
     return []
   }
 
   const nodeListForSubstring = await chrome.bookmarks.search(urlForSearch);
-  logBLP('getPartialBookmarkList () 33 search(normalizedUrl)', nodeListForSubstring.length, nodeListForSubstring)
+  logBLP('33 search(normalizedUrl)', nodeListForSubstring.length, nodeListForSubstring)
 
   const yetSet = new Set(exactBkmIdList)
   const bookmarkList = nodeListForSubstring
