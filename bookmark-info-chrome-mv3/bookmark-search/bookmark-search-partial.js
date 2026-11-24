@@ -49,11 +49,12 @@ export async function getPartialBookmarkList({ url, exactBkmIdList = [], pathnam
   const listWithParent = await addFieldsToBookmarkList(partialBookmarkList)
 
   return listWithParent
+    .filter(({ parentTitle }) => !(parentTitle.endsWith(' #top') || parentTitle.includes(' #top ')))
     .map((bookmark) => ({
         id: bookmark.id,
         url: bookmark.url,
         parentId: bookmark.parentId,
-        parentTitle: bookmark.parentTitle,
+        parentTitle: bookmark.parentTitleOnly,
         parentColor: formatColorDirectiveValue(bookmark.color),
         icon: bookmark.icon,
     }));
