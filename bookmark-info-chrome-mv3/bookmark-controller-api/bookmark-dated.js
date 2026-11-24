@@ -1,6 +1,6 @@
 import {
   getBookmarkListWithParent,
-} from '../bookmark-search/bookmark-list-nodes.js';
+} from '../shared/bookmark-list.js';
 import {
   isDatedTitleForTemplate,
   compareDatedTitle,

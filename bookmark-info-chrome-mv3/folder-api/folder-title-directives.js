@@ -1,4 +1,4 @@
-import { isCorrectColorDirectiveValue, isCorrectIconDirectiveValue } from '../api-low/color.js'
+import { isCorrectColorDirectiveValue, isCorrectIconDirectiveValue } from '../shared/color.js'
 
 export function getTitleDetails(title) {
   const partList = title

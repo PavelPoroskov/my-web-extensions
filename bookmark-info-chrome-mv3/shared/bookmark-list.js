@@ -1,3 +1,7 @@
+// used in ../api-mid/tagList-getRecent/getRecentList()
+// used in ../api-mid/tagList-getRecent/filterFolders()
+// ../bookmark-search/getParentFolderList()
+// addBookmarkParentInfo() -> getBookmarkListWithParent() -> ../api/urlEvents._removeBookmarksByPatterns()
 export async function getBookmarkNodeList(idList) {
   if (!(Array.isArray(idList) && idList.length > 0)) {
     return []
@@ -23,16 +27,6 @@ export async function getBookmarkNodeList(idList) {
   }
 
   return resultList
-}
-
-export async function searchBookmarksForUrl(url) {
-  if (url.startsWith('chrome:') || url.startsWith('about:')) {
-    return []
-  }
-
-  const bookmarkList = await chrome.bookmarks.search({ url });
-
-  return bookmarkList
 }
 
 export const getParentIdList = (bookmarkList = []) => {
@@ -62,7 +56,11 @@ async function addBookmarkParentInfo(bookmarkList) {
 }
 
 export async function getBookmarkListWithParent(url) {
-  const bookmarkList = await searchBookmarksForUrl(url)
+  if (url.startsWith('chrome:') || url.startsWith('about:')) {
+    return []
+  }
+
+  const bookmarkList = await chrome.bookmarks.search({ url });
   // add { parentTitle }
   const listWithParent = await addBookmarkParentInfo(bookmarkList)
 

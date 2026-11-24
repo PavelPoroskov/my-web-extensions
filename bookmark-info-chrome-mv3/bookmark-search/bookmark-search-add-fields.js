@@ -13,7 +13,7 @@ import {
 import {
   getBookmarkNodeList,
   getParentIdList,
-} from './bookmark-list-nodes.js'
+} from '../shared/bookmark-list.js'
 
 const getFullPath = (id) => {
   const path = [];
@@ -30,18 +30,6 @@ const getFullPath = (id) => {
   }
 
   return path.filter(Boolean).toReversed().concat('').join('/ ')
-}
-
-const getColor = (id) => {
-   const folder = memo.bkmFolderById.get(id);
-
-  return folder?.color
-}
-
-const getIcon = (id) => {
-   const folder = memo.bkmFolderById.get(id);
-
-  return folder?.icon
 }
 
 async function getParentFolderList(bookmarkList) {
@@ -121,8 +109,8 @@ export async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
     .map((bookmark) => ({
       parentTitle: parentMap[bookmark.parentId]?.title || '',
       parentTitleOnly: parentMap[bookmark.parentId]?.titleOnly || '',
-      color: getColor(bookmark.parentId),
-      icon: getIcon(bookmark.parentId),
+      color: parentMap[bookmark.parentId]?.color || '',
+      icon: parentMap[bookmark.parentId]?.icon || '',
       ...bookmark
     }))
 

@@ -1,3 +1,2 @@
-export * from './bookmark-list-direct.js'
-export * from './bookmark-list-nodes.js'
-export * from './bookmark-list-partial.js'
+export * from './bookmark-search-direct.js'
+export * from './bookmark-search-partial.js'

@@ -3,10 +3,12 @@ import {
 } from '../url-api/index.js'
 import {
   addFieldsToBookmarkList,
-} from './bookmark-list-add-fields.js'
+} from './bookmark-search-add-fields.js'
+import {
+  formatColorDirectiveValue,
+} from '../shared/color.js'
 import {
   makeLogFunction,
-  formatColorDirectiveValue,
 } from '../api-low/index.js'
 
 const logBLP = makeLogFunction({ module: 'bookmark-list-partial.js' })

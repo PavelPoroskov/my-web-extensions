@@ -1,15 +1,16 @@
 import {
-  searchBookmarksForUrl,
-} from './bookmark-list-nodes.js'
-import {
   addFieldsToBookmarkList,
-} from './bookmark-list-add-fields.js'
+} from './bookmark-search-add-fields.js'
 import {
   formatColorDirectiveValue,
-} from '../api-low/index.js'
+} from '../shared/color.js'
 
 export async function getDirectBookmarkList(url) {
-  const bookmarkList = await searchBookmarksForUrl(url)
+  if (url.startsWith('chrome:') || url.startsWith('about:')) {
+    return []
+  }
+
+  const bookmarkList = await chrome.bookmarks.search({ url });
   const listWithTemplate = await addFieldsToBookmarkList(bookmarkList, ['path'])
   console.log('getDirectBookmarkList listWithTemplate', listWithTemplate)
 

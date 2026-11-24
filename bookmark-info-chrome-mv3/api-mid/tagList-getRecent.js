@@ -13,7 +13,7 @@ import {
 } from '../folder-creator-api/root-folders.js'
 import {
   getBookmarkNodeList,
-} from '../bookmark-search/bookmark-list-nodes.js'
+} from '../shared/bookmark-list.js'
 import {
   makeLogFunction,
 } from '../api-low/index.js'

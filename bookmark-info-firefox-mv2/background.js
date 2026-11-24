@@ -1971,7 +1971,11 @@ class BrowserStartTime {
 }
 
 const browserStartTime = new BrowserStartTime()
-async function getBookmarkNodeList(idList) {
+// used in ../api-mid/tagList-getRecent/getRecentList()
+// used in ../api-mid/tagList-getRecent/filterFolders()
+// ../bookmark-search/getParentFolderList()
+// addBookmarkParentInfo() -> getBookmarkListWithParent() -> ../api/urlEvents._removeBookmarksByPatterns()
+async function getBookmarkNodeList(idList) {
   if (!(Array.isArray(idList) && idList.length > 0)) {
     return []
   }
@@ -1998,20 +2002,17 @@ const browserStartTime = new BrowserStartTime()
   return resultList
 }
 
-async function searchBookmarksForUrl(url) {
-  if (url.startsWith('chrome:') || url.startsWith('about:')) {
-    return []
-  }
+const getParentIdList = (bookmarkList = []) => {
+  const parentIdList = bookmarkList
+    .map(({ parentId }) => parentId)
+    .filter(Boolean)
 
-  const bookmarkList = await browser.bookmarks.search({ url });
-
-  return bookmarkList
+  return Array.from(new Set(parentIdList))
 }
 
 async function addBookmarkParentInfo(bookmarkList) {
-  const parentIdList = bookmarkList.map(({ parentId }) => parentId).filter(Boolean)
-  const uniqueParentIdList = Array.from(new Set(parentIdList))
-  const parentFolderList = await getBookmarkNodeList(uniqueParentIdList)
+  const parentIdList = getParentIdList(bookmarkList)
+  const parentFolderList = await getBookmarkNodeList(parentIdList)
 
   const parentMap = Object.fromEntries(
     parentFolderList
@@ -2028,7 +2029,11 @@ async function addBookmarkParentInfo(bookmarkList) {
 }
 
 async function getBookmarkListWithParent(url) {
-  const bookmarkList = await searchBookmarksForUrl(url)
+  if (url.startsWith('chrome:') || url.startsWith('about:')) {
+    return []
+  }
+
+  const bookmarkList = await browser.bookmarks.search({ url });
   // add { parentTitle }
   const listWithParent = await addBookmarkParentInfo(bookmarkList)
 
@@ -3988,15 +3993,7 @@ class FolderCreator {
 
 const folderCreator = new FolderCreator()
 
-const getParentIdList = (bookmarkList = []) => {
-  const parentIdList = bookmarkList
-    .map(({ parentId }) => parentId)
-    .filter(Boolean)
-
-  return Array.from(new Set(parentIdList))
-}
-
-const getFullPath = (id) => {
+const getFullPath = (id) => {
   const path = [];
 
   let currentId = id;
@@ -4179,7 +4176,11 @@ async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
 //  field onlyTitle and title
 // ?always get color? in cache
 async function getDirectBookmarkList(url) {
-  const bookmarkList = await searchBookmarksForUrl(url)
+  if (url.startsWith('chrome:') || url.startsWith('about:')) {
+    return []
+  }
+
+  const bookmarkList = await browser.bookmarks.search({ url });
   const listWithTemplate = await addFieldsToBookmarkList(bookmarkList, ['path'])
   console.log('getDirectBookmarkList listWithTemplate', listWithTemplate)
 

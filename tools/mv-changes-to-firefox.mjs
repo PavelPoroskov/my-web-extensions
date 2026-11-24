@@ -13,6 +13,8 @@ await createFileForFirefox(
     'constant/url.api.config.js',
     'constant/index.js',
 
+    'shared/bookmark-list.js',
+    'shared/color.js',
     'api-low/common.js',
     'api-low/pluralize-rules.js',
     'api-low/pluralize.js',
@@ -21,7 +23,6 @@ await createFileForFirefox(
     'api-low/cache.js',
     'api-low/extraMap.js',
     'api-low/nodeTaskQueue.js',
-    'api-low/color.js',
     'api-low/index.js',
 
     'folder-api/folder-title-directives.js',
@@ -34,7 +35,6 @@ await createFileForFirefox(
     'api-mid/page.api.js',
     'api-mid/memo.js',
     'api-mid/browserStartTime.js',
-      'bookmark-search/bookmark-list-nodes.js',
       'folder-creator-api/root-folders.js',
     'api-mid/tagList-getRecent.js',
     'api-mid/tagList-highlight.js',
@@ -58,9 +58,9 @@ await createFileForFirefox(
     'folder-creator-api/folderCreator.js',
     'folder-creator-api/index.js',
 
-    'bookmark-search/bookmark-list-add-fields.js',
-    'bookmark-search/bookmark-list-direct.js',
-    'bookmark-search/bookmark-list-partial.js',
+    'bookmark-search/bookmark-search-add-fields.js',
+    'bookmark-search/bookmark-search-direct.js',
+    'bookmark-search/bookmark-search-partial.js',
     'bookmark-search/index.js',
 
     'bookmark-controller-api/bookmark-ignore.js',
