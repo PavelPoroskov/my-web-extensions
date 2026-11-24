@@ -235,6 +235,7 @@ const INTERNAL_VALUES = Object.fromEntries(
 const logModuleList = [
   // 'bookmark-create.js',
   // 'bookmark-ignore.js',
+  //  'bookmark-search-partial.js',
   // 'bookmarkQueue.js',
   // 'bookmarks.controller.js',
   // 'browserStartTime',
@@ -521,6 +522,189 @@ const HOST_URL_SETTINGS_SHORT = Object.assign(
   urlSettingsEnt,
 )
 
+// used in ../api-mid/tagList-getRecent/getRecentList()
+// used in ../api-mid/tagList-getRecent/filterFolders()
+// ../bookmark-search/getParentFolderList()
+// addBookmarkParentInfo() -> getBookmarkListWithParent() -> ../api/urlEvents._removeBookmarksByPatterns()
+async function getBookmarkNodeList(idList) {
+  if (!(Array.isArray(idList) && idList.length > 0)) {
+    return []
+  }
+
+  let resultList
+
+  try {
+    resultList = await browser.bookmarks.get(idList)
+
+  // eslint-disable-next-line no-unused-vars
+  } catch (_er) {
+    const resultListByOne = await Promise.allSettled(
+      idList.map(
+        (id) => browser.bookmarks.get(id)
+      )
+    )
+
+    resultList = resultListByOne
+      .map((result) => result.value)
+      .filter(Boolean)
+      .flat()
+  }
+
+  return resultList
+}
+
+const getParentIdList = (bookmarkList = []) => {
+  const parentIdList = bookmarkList
+    .map(({ parentId }) => parentId)
+    .filter(Boolean)
+
+  return Array.from(new Set(parentIdList))
+}
+
+async function addBookmarkParentInfo(bookmarkList) {
+  const parentIdList = getParentIdList(bookmarkList)
+  const parentFolderList = await getBookmarkNodeList(parentIdList)
+
+  const parentMap = Object.fromEntries(
+    parentFolderList
+      .map(({ id, title }) => [id, title])
+  )
+
+  const resultList = bookmarkList
+    .map((bookmark) => ({
+      parentTitle: parentMap[bookmark.parentId] || '',
+      ...bookmark
+    }))
+
+  return resultList
+}
+
+async function getBookmarkListWithParent(url) {
+  if (url.startsWith('chrome:') || url.startsWith('about:')) {
+    return []
+  }
+
+  const bookmarkList = await browser.bookmarks.search({ url });
+  // add { parentTitle }
+  const listWithParent = await addBookmarkParentInfo(bookmarkList)
+
+  return listWithParent
+}
+const digitSet = new Set('0123456789')
+const hexDigitSet = new Set('0123456789abcdef')
+const letterSet = new Set('abcdefghijklmnopqrstuvwxy')
+
+function isDigitValue(str) {
+  const strLow = str.toLowerCase()
+
+  return strLow.at(0) != '0' && Array.from(strLow)
+    .every(letter =>  digitSet.has(letter))
+}
+
+function isHexDigitsOnly(str) {
+  const strLow = str.toLowerCase()
+
+  return Array.from(strLow)
+    .every(letter =>  hexDigitSet.has(letter))
+}
+
+function isHexValue(str) {
+  return str.at(0) != '0' && isHexDigitsOnly(str)
+}
+
+function isLettersOnly(str) {
+  const strLow = str.toLowerCase()
+
+  return Array.from(strLow)
+    .every(letter =>  letterSet.has(letter))
+}
+
+function isHexColorValue(str) {
+  return str.length === 6 && isHexDigitsOnly(str)
+}
+
+function isLettersColorValue(str) {
+  return (0 < str.length && str.length <= 25) && isLettersOnly(str)
+}
+
+function isCorrectColorValue(str) {
+  if (!str) {
+    return false
+  }
+
+  return isLettersColorValue(str) || isHexColorValue(str)
+}
+
+function isCorrectColorDirectiveValue(str) {
+  if (!str) {
+    return false
+  }
+
+  const [bgColor, textColor] = str.split(':')
+
+  return isCorrectColorValue(bgColor) && (textColor
+    ?  isCorrectColorValue(textColor)
+    : true
+  )
+}
+
+function formatColor(str) {
+  return isHexColorValue(str)
+    ? `#${str}`
+    : str
+}
+
+function formatColorDirectiveValue(str) {
+  if (!str) {
+    return ''
+  }
+
+  const [bgColor, textColor] = str.split(':')
+  const formattedBgColor = formatColor(bgColor)
+
+  return textColor
+    ? `${formattedBgColor}:${formatColor(textColor)}`
+    : formattedBgColor
+}
+
+function isCorrectIconValue(str) {
+  if (!str) {
+    return false
+  }
+
+  let strRest
+  if (str.endsWith(';')) {
+    strRest = str.slice(0, -1)
+  } else {
+    return false
+  }
+
+  if (strRest.startsWith('&#x')) {
+    strRest = strRest.slice(3)
+    return strRest.length === 4 && isHexValue(strRest)
+  } else if (strRest.startsWith('&#')) {
+    strRest = strRest.slice(2)
+    return (strRest.length === 4 || strRest.length === 5) && isDigitValue(strRest)
+  } else if (strRest.startsWith('&')) {
+    strRest = strRest.slice(1)
+    return strRest.length > 0 && isLettersOnly(strRest)
+  } else {
+    return false
+  }
+}
+
+function isCorrectIconDirectiveValue(str) {
+  if (!str) {
+    return false
+  }
+
+  const [iconCode, textColor] = str.split(':')
+
+  return isCorrectIconValue(iconCode) && (textColor
+    ?  isCorrectColorValue(textColor)
+    : true
+  )
+}
 const MS_DIFF_FOR_SINGLE_BKM = 80
 
 function debounce(func, timeout = 300){
@@ -1257,121 +1441,6 @@ class NodeTaskQueue {
     this.enqueue({ ...task, action: NODE_ACTION.DELETE });
   }
 }
-const digitSet = new Set('0123456789')
-const hexDigitSet = new Set('0123456789abcdef')
-const letterSet = new Set('abcdefghijklmnopqrstuvwxy')
-
-function isDigitValue(str) {
-  const strLow = str.toLowerCase()
-
-  return strLow.at(0) != '0' && Array.from(strLow)
-    .every(letter =>  digitSet.has(letter))
-}
-
-function isHexDigitsOnly(str) {
-  const strLow = str.toLowerCase()
-
-  return Array.from(strLow)
-    .every(letter =>  hexDigitSet.has(letter))
-}
-
-function isHexValue(str) {
-  return str.at(0) != '0' && isHexDigitsOnly(str)
-}
-
-function isLettersOnly(str) {
-  const strLow = str.toLowerCase()
-
-  return Array.from(strLow)
-    .every(letter =>  letterSet.has(letter))
-}
-
-function isHexColorValue(str) {
-  return str.length === 6 && isHexDigitsOnly(str)
-}
-
-function isLettersColorValue(str) {
-  return (0 < str.length && str.length <= 25) && isLettersOnly(str)
-}
-
-function isCorrectColorValue(str) {
-  if (!str) {
-    return false
-  }
-
-  return isLettersColorValue(str) || isHexColorValue(str)
-}
-
-function isCorrectColorDirectiveValue(str) {
-  if (!str) {
-    return false
-  }
-
-  const [bgColor, textColor] = str.split(':')
-
-  return isCorrectColorValue(bgColor) && (textColor
-    ?  isCorrectColorValue(textColor)
-    : true
-  )
-}
-
-function formatColor(str) {
-  return isHexColorValue(str)
-    ? `#${str}`
-    : str
-}
-
-function formatColorDirectiveValue(str) {
-  if (!str) {
-    return ''
-  }
-
-  const [bgColor, textColor] = str.split(':')
-  const formattedBgColor = formatColor(bgColor)
-
-  return textColor
-    ? `${formattedBgColor}:${formatColor(textColor)}`
-    : formattedBgColor
-}
-
-function isCorrectIconValue(str) {
-  if (!str) {
-    return false
-  }
-
-  let strRest
-  if (str.endsWith(';')) {
-    strRest = str.slice(0, -1)
-  } else {
-    return false
-  }
-
-  if (strRest.startsWith('&#x')) {
-    strRest = strRest.slice(3)
-    return strRest.length === 4 && isHexValue(strRest)
-  } else if (strRest.startsWith('&#')) {
-    strRest = strRest.slice(2)
-    return (strRest.length === 4 || strRest.length === 5) && isDigitValue(strRest)
-  } else if (strRest.startsWith('&')) {
-    strRest = strRest.slice(1)
-    return strRest.length > 0 && isLettersOnly(strRest)
-  } else {
-    return false
-  }
-}
-
-function isCorrectIconDirectiveValue(str) {
-  if (!str) {
-    return false
-  }
-
-  const [iconCode, textColor] = str.split(':')
-
-  return isCorrectIconValue(iconCode) && (textColor
-    ?  isCorrectColorValue(textColor)
-    : true
-  )
-}
 
 function getTitleDetails(title) {
   const partList = title
@@ -1971,74 +2040,6 @@ class BrowserStartTime {
 }
 
 const browserStartTime = new BrowserStartTime()
-// used in ../api-mid/tagList-getRecent/getRecentList()
-// used in ../api-mid/tagList-getRecent/filterFolders()
-// ../bookmark-search/getParentFolderList()
-// addBookmarkParentInfo() -> getBookmarkListWithParent() -> ../api/urlEvents._removeBookmarksByPatterns()
-async function getBookmarkNodeList(idList) {
-  if (!(Array.isArray(idList) && idList.length > 0)) {
-    return []
-  }
-
-  let resultList
-
-  try {
-    resultList = await browser.bookmarks.get(idList)
-
-  // eslint-disable-next-line no-unused-vars
-  } catch (_er) {
-    const resultListByOne = await Promise.allSettled(
-      idList.map(
-        (id) => browser.bookmarks.get(id)
-      )
-    )
-
-    resultList = resultListByOne
-      .map((result) => result.value)
-      .filter(Boolean)
-      .flat()
-  }
-
-  return resultList
-}
-
-const getParentIdList = (bookmarkList = []) => {
-  const parentIdList = bookmarkList
-    .map(({ parentId }) => parentId)
-    .filter(Boolean)
-
-  return Array.from(new Set(parentIdList))
-}
-
-async function addBookmarkParentInfo(bookmarkList) {
-  const parentIdList = getParentIdList(bookmarkList)
-  const parentFolderList = await getBookmarkNodeList(parentIdList)
-
-  const parentMap = Object.fromEntries(
-    parentFolderList
-      .map(({ id, title }) => [id, title])
-  )
-
-  const resultList = bookmarkList
-    .map((bookmark) => ({
-      parentTitle: parentMap[bookmark.parentId] || '',
-      ...bookmark
-    }))
-
-  return resultList
-}
-
-async function getBookmarkListWithParent(url) {
-  if (url.startsWith('chrome:') || url.startsWith('about:')) {
-    return []
-  }
-
-  const bookmarkList = await browser.bookmarks.search({ url });
-  // add { parentTitle }
-  const listWithParent = await addBookmarkParentInfo(bookmarkList)
-
-  return listWithParent
-}
 class RootFolders {
   BOOKMARKS_BAR_FOLDER_ID = 'toolbar_____'
   BOOKMARKS_MENU_FOLDER_ID = 'menu________'
@@ -3026,118 +3027,6 @@ function isUrlMathPathnameAndSearchParams({ url, pattern }) {
 
   return true
 }
-const logUS = makeLogFunction({ module: 'url-search.js' })
-
-function isHostnameMatchForSearch(hostname, requiredHostname) {
-  return hostname === requiredHostname
-}
-
-function isSearchParamListMatchForPartialSearch(searchParams, requiredSearchParams) {
-  if (!requiredSearchParams) {
-    return true
-  }
-
-  return Object.entries(requiredSearchParams)
-    .every(([key, value]) => searchParams.get(key) === value)
-}
-
-async function startPartialUrlSearch({ url, pathnamePattern }) {
-  logUS('startPartialUrlSearch () 00', url)
-
-  try {
-    const targetHostSettings = getHostSettings(url)
-    logUS('startPartialUrlSearch 11 targetHostSettings', !!targetHostSettings, targetHostSettings)
-
-    // if (!targetHostSettings) {
-    //   return {
-    //     isSearchAvailable: false,
-    //   }
-    // }
-
-    const oUrl = new URL(url);
-
-    let requiredSearchParams
-    if (targetHostSettings) {
-      const { importantSearchParamList } = targetHostSettings
-
-      if (isNotEmptyArray(importantSearchParamList)) {
-        const isSearchParamItemMatch = makeIsSearchParamItemMatch(importantSearchParamList)
-        const oSearchParams = oUrl.searchParams;
-        logUS('startPartialUrlSearch 22', 'oSearchParams', oSearchParams)
-
-        const matchedParamList = []
-        for (const [key, value] of oSearchParams) {
-          logUS('startPartialUrlSearch 22', 'for (const [searchParam] of oSearchParams', key)
-          if (isSearchParamItemMatch({ key, value })) {
-            matchedParamList.push(key)
-          }
-        }
-
-        requiredSearchParams = {}
-        matchedParamList.forEach((searchParam) => {
-          requiredSearchParams[searchParam] = oSearchParams.get(searchParam)
-        })
-      }
-    }
-
-    if (!targetHostSettings?.isHashRequired) {
-      oUrl.hash = ''
-    }
-
-
-    let newPathname
-    let isPathnameMatchForSearch
-
-    if (pathnamePattern) {
-      newPathname = getPathnamePart({
-        pathname: oUrl.pathname,
-        pattern: pathnamePattern,
-      })
-
-      isPathnameMatchForSearch = (pathname, requiredPathname) => {
-        const normalizedPathname = getPathnamePart({ pathname, pattern: pathnamePattern })
-
-        return normalizedPathname === requiredPathname
-      }
-
-    } else {
-      newPathname = getPathnameForSearch(oUrl.pathname)
-
-      isPathnameMatchForSearch = (pathname, requiredPathname) => {
-        const normalizedPathname = getPathnameForSearch(pathname)
-
-        return normalizedPathname === requiredPathname
-      }
-    }
-
-    oUrl.pathname = newPathname
-    oUrl.search = ''
-    const urlForSearch = oUrl.toString();
-    const {
-      hostname: requiredHostname,
-      pathname: requiredPathname,
-    } = new URL(urlForSearch);
-
-    logUS('startPartialUrlSearch 99', 'requiredSearchParams', requiredSearchParams)
-
-    return {
-      isSearchAvailable: true,
-      urlForSearch,
-      isUrlMatchToPartialUrlSearch: (testUrl) => {
-        const oUrl = new URL(testUrl)
-
-        return isHostnameMatchForSearch(oUrl.hostname, requiredHostname)
-          && isPathnameMatchForSearch(oUrl.pathname, requiredPathname)
-          && isSearchParamListMatchForPartialSearch(oUrl.searchParams, requiredSearchParams)
-      }
-    }
-    // eslint-disable-next-line no-unused-vars
-  } catch (_e) {
-    return {
-      isSearchAvailable: false,
-    }
-  }
-}
 const logCUA = makeLogFunction({ module: 'clear-url.js' })
 
 const removeQueryParamsIfTarget = (url) => {
@@ -3217,6 +3106,116 @@ function removeHashAndSearchParams(url) {
   // eslint-disable-next-line no-unused-vars
   } catch (e) {
     return url
+  }
+}
+const logUS = makeLogFunction({ module: 'url-search.js' })
+
+function isHostnameMatchForSearch(hostname, requiredHostname) {
+  return hostname === requiredHostname
+}
+
+function isSearchParamListMatchForPartialSearch(searchParams, requiredSearchParams) {
+  if (!requiredSearchParams) {
+    return true
+  }
+
+  return Object.entries(requiredSearchParams)
+    .every(([key, value]) => searchParams.get(key) === value)
+}
+
+async function startPartialUrlSearch({ url, pathnamePattern }) {
+  logUS('startPartialUrlSearch () 00', url)
+
+  try {
+    logUS('startPartialUrlSearch 11 targetHostSettings', !!targetHostSettings, targetHostSettings)
+
+    const targetHostSettings = getHostSettings(url)
+    const importantSearchParamList = targetHostSettings?.importantSearchParamList || []
+    const importantSearchParamSet = new Set(importantSearchParamList.filter((s) => !s.includes('*')))
+
+    // if (!targetHostSettings) {
+    //   return {
+    //     isSearchAvailable: false,
+    //   }
+    // }
+
+    const cleanUrl = removeQueryParamsIfTarget(url);
+    const oUrl = new URL(cleanUrl);
+    const oSearchParams = oUrl.searchParams;
+
+    logUS('startPartialUrlSearch 22', 'oSearchParams', oSearchParams)
+
+    const matchedParamList = []
+    for (const [key] of oSearchParams) {
+      matchedParamList.push(key)
+    }
+
+    const requiredSearchParams = {}
+    matchedParamList.forEach((searchParam) => {
+      requiredSearchParams[searchParam] = oSearchParams.get(searchParam)
+      importantSearchParamSet.delete(searchParam)
+    })
+
+    for (const searchParam of importantSearchParamSet.keys()) {
+      requiredSearchParams[searchParam] = undefined
+    }
+
+    if (!targetHostSettings?.isHashRequired) {
+      oUrl.hash = ''
+    }
+
+
+    let newPathname
+    let isPathnameMatchForSearch
+
+    if (pathnamePattern) {
+      newPathname = getPathnamePart({
+        pathname: oUrl.pathname,
+        pattern: pathnamePattern,
+      })
+
+      isPathnameMatchForSearch = (pathname, requiredPathname) => {
+        const normalizedPathname = getPathnamePart({ pathname, pattern: pathnamePattern })
+
+        return normalizedPathname === requiredPathname
+      }
+
+    } else {
+      newPathname = getPathnameForSearch(oUrl.pathname)
+
+      isPathnameMatchForSearch = (pathname, requiredPathname) => {
+        const normalizedPathname = getPathnameForSearch(pathname)
+
+        return normalizedPathname === requiredPathname
+      }
+    }
+
+    oUrl.pathname = newPathname
+    oUrl.search = ''
+    const urlForSearch = oUrl.toString();
+    const {
+      hostname: requiredHostname,
+      pathname: requiredPathname,
+    } = new URL(urlForSearch);
+
+    logUS('startPartialUrlSearch 99', 'requiredSearchParams', requiredSearchParams)
+
+    return {
+      isSearchAvailable: true,
+      urlForSearch,
+      isUrlMatchToPartialUrlSearch: (testUrl) => {
+        const oUrl = new URL(testUrl)
+
+        return isHostnameMatchForSearch(oUrl.hostname, requiredHostname)
+          && isPathnameMatchForSearch(oUrl.pathname, requiredPathname)
+          && isSearchParamListMatchForPartialSearch(oUrl.searchParams, requiredSearchParams)
+      }
+    }
+    // eslint-disable-next-line no-unused-vars
+  } catch (_e) {
+    return {
+      isSearchAvailable: false,
+    }
   }
 }
 const logUAU = makeLogFunction({ module: 'url-author.js' })
@@ -4010,18 +4009,6 @@ const folderCreator = new FolderCreator()
   return path.filter(Boolean).toReversed().concat('').join('/ ')
 }
 
-const getColor = (id) => {
-   const folder = memo.bkmFolderById.get(id);
-
-  return folder?.color
-}
-
-const getIcon = (id) => {
-   const folder = memo.bkmFolderById.get(id);
-
-  return folder?.icon
-}
-
 async function getParentFolderList(bookmarkList) {
   // parentIdList.length <= bookmarkList.length
   // for root folders parentIdList=[]
@@ -4099,8 +4086,8 @@ async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
     .map((bookmark) => ({
       parentTitle: parentMap[bookmark.parentId]?.title || '',
       parentTitleOnly: parentMap[bookmark.parentId]?.titleOnly || '',
-      color: getColor(bookmark.parentId),
-      icon: getIcon(bookmark.parentId),
+      color: parentMap[bookmark.parentId]?.color || '',
+      icon: parentMap[bookmark.parentId]?.icon || '',
       ...bookmark
     }))
 
@@ -4175,6 +4162,34 @@ async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
 //
 //  field onlyTitle and title
 // ?always get color? in cache
+async function getAuthorBookmarkList({ url, pathnamePattern }) {
+  const {
+    isSearchAvailable,
+    urlForSearch,
+    isUrlMatchToPartialUrlSearch,
+  } = await startPartialUrlSearch({ url, pathnamePattern })
+
+  if (!isSearchAvailable) {
+    return []
+  }
+
+  const nodeListForSubstring = await browser.bookmarks.search(urlForSearch);
+
+  const bookmarkList = nodeListForSubstring
+    .filter(({ url }) => !!url && isUrlMatchToPartialUrlSearch(url))
+  const listWithParent = await addFieldsToBookmarkList(bookmarkList)
+
+  return listWithParent
+    .filter(({ parentTitle }) => !(parentTitle.endsWith(' #top') || parentTitle.includes(' #top ')))
+    .map((bookmark) => ({
+        id: bookmark.id,
+        url: bookmark.url,
+        parentId: bookmark.parentId,
+        parentTitle: bookmark.parentTitleOnly,
+        parentColor: formatColorDirectiveValue(bookmark.color),
+        icon: bookmark.icon,
+    }));
+}
 async function getDirectBookmarkList(url) {
   if (url.startsWith('chrome:') || url.startsWith('about:')) {
     return []
@@ -4182,7 +4197,6 @@ async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
 
   const bookmarkList = await browser.bookmarks.search({ url });
   const listWithTemplate = await addFieldsToBookmarkList(bookmarkList, ['path'])
-  console.log('getDirectBookmarkList listWithTemplate', listWithTemplate)
 
   const selectedBookmarkList = listWithTemplate
     .filter(({ parentTitle }) => !(parentTitle.endsWith(' #top') || parentTitle.includes(' #top ')))
@@ -4202,14 +4216,9 @@ async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
 
   return selectedBookmarkList
 }
-const logBLP = makeLogFunction({ module: 'bookmark-list-partial.js' })
+const logBLP = makeLogFunction({ module: 'bookmark-search-partial.js' })
 
-// TODO clear logic
-//  showPartialBookmarks(
-//    const bookmarkList = await getPartialBookmarkList ({ url, exactBkmIdList })
-//  showAuthorBookmarksStep2(
-//    getPartialBookmarkList({ url: cleanedAuthorUrl, pathnamePattern: matchedGetAuthor?.authorPattern })
-async function getPartialBookmarkList({ url, exactBkmIdList = [], pathnamePattern }) {
+async function getPartialBookmarkList({ url, exactBkmIdList = [] }) {
   // 1 < pathname.length : it is not root path
   //    for https://www.youtube.com/watch?v=qqqqq other conditions than 1 < pathname.length
   // urlForSearch !== url : original url has search params, ending /, index[.xxxx]
@@ -4219,32 +4228,28 @@ async function getPartialBookmarkList({ url, exactBkmIdList = [], pathnamePatter
     isSearchAvailable,
     urlForSearch,
     isUrlMatchToPartialUrlSearch,
-  } = await startPartialUrlSearch({ url, pathnamePattern })
-  logBLP('getPartialBookmarkList () 22 startPartialUrlSearch', { isSearchAvailable, urlForSearch })
+  } = await startPartialUrlSearch({ url })
+  logBLP('22 startPartialUrlSearch', { isSearchAvailable, urlForSearch })
 
   if (!isSearchAvailable) {
     return []
   }
 
-  const bkmListForSubstring = await browser.bookmarks.search(urlForSearch);
-  logBLP('getPartialBookmarkList () 33 search(normalizedUrl)', bkmListForSubstring.length, bkmListForSubstring)
+  const nodeListForSubstring = await browser.bookmarks.search(urlForSearch);
+  logBLP('33 search(normalizedUrl)', nodeListForSubstring.length, nodeListForSubstring)
 
   const yetSet = new Set(exactBkmIdList)
-  const partialBookmarkList = []
-  bkmListForSubstring.forEach((bkm) => {
-    if (bkm.url && isUrlMatchToPartialUrlSearch(bkm.url) && !yetSet.has(bkm.id)) {
-      partialBookmarkList.push(bkm)
-    }
-  })
-
-  const listWithParent = await addFieldsToBookmarkList(partialBookmarkList)
+  const bookmarkList = nodeListForSubstring
+    .filter((node) => !!node.url && !yetSet.has(node.id) && isUrlMatchToPartialUrlSearch(node.url))
+  const listWithParent = await addFieldsToBookmarkList(bookmarkList)
 
   return listWithParent
+    .filter(({ parentTitle }) => !(parentTitle.endsWith(' #top') || parentTitle.includes(' #top ')))
     .map((bookmark) => ({
         id: bookmark.id,
         url: bookmark.url,
         parentId: bookmark.parentId,
-        parentTitle: bookmark.parentTitle,
+        parentTitle: bookmark.parentTitleOnly,
         parentColor: formatColorDirectiveValue(bookmark.color),
         icon: bookmark.icon,
     }));
@@ -5092,7 +5097,7 @@ async function showAuthorBookmarksStep2({ tabId, url, authorUrl }) {
     let cleanedAuthorUrl = removeHashAndSearchParams(authorUrl);
     const matchedGetAuthor = getMatchedGetAuthor(url)
 
-    authorBookmarkList = await getPartialBookmarkList({
+    authorBookmarkList = await getAuthorBookmarkList({
       url: cleanedAuthorUrl,
       pathnamePattern: matchedGetAuthor?.authorPattern,
     })
