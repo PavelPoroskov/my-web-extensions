@@ -99,20 +99,32 @@ export async function addFieldsToBookmarkList(bookmarkList, addFieldList = []) {
 
   const parentNodeList = await getParentFolderList(resultBookmarkList)
 
-  const parentMap = Object.fromEntries(
-    parentNodeList.map(
-      (folder) => [folder.id, folder]
-    )
-  )
+  const parentMap = {}
+  const parentMapByTitle = {}
+
+  parentNodeList.forEach((folder) => {
+    parentMap[folder.id] = folder
+    parentMapByTitle[folder.titleOnly] = parentMapByTitle[folder.titleOnly] || {}
+    parentMapByTitle[folder.titleOnly].color = (folder.color || parentMapByTitle[folder.titleOnly]?.color)
+    parentMapByTitle[folder.titleOnly].icon = (folder.icon || parentMapByTitle[folder.titleOnly]?.icon)
+    // console.log('addFieldsToBookmarkList 11', folder.titleOnly,  folder.color, parentMapByTitle[folder.titleOnly]?.color,  (folder.color || parentMapByTitle[folder.titleOnly]?.color))
+    // console.log('addFieldsToBookmarkList 22', folder.titleOnly,  parentMapByTitle[folder.titleOnly].color)
+  })
 
   resultBookmarkList = resultBookmarkList
     .map((bookmark) => ({
+      ...bookmark,
       parentTitle: parentMap[bookmark.parentId]?.title || '',
       parentTitleOnly: parentMap[bookmark.parentId]?.titleOnly || '',
-      color: parentMap[bookmark.parentId]?.color || '',
-      icon: parentMap[bookmark.parentId]?.icon || '',
-      ...bookmark
+      color: parentMapByTitle[parentMap[bookmark.parentId]?.titleOnly]?.color || '',
+      icon: parentMapByTitle[parentMap[bookmark.parentId]?.titleOnly]?.icon || '',
     }))
+
+  // console.log('addFieldsToBookmarkList() ')
+  // console.log('addFieldsToBookmarkList() parentNodeList', parentNodeList)
+  // console.log('addFieldsToBookmarkList() parentMap', parentMap)
+  // console.log('addFieldsToBookmarkList() parentMapByTitle', parentMapByTitle)
+  // console.log('addFieldsToBookmarkList() resultBookmarkList', resultBookmarkList)
 
   if (isAddFieldPath) {
     await getParentInfoRecursively(parentNodeList)
