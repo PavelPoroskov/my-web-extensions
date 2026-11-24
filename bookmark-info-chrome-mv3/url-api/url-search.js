@@ -31,9 +31,9 @@ export async function startPartialUrlSearch({ url, pathnamePattern }) {
   logUS('startPartialUrlSearch () 00', url)
 
   try {
+    const targetHostSettings = getHostSettings(url)
     logUS('startPartialUrlSearch 11 targetHostSettings', !!targetHostSettings, targetHostSettings)
 
-    const targetHostSettings = getHostSettings(url)
     const importantSearchParamList = targetHostSettings?.importantSearchParamList || []
     const importantSearchParamSet = new Set(importantSearchParamList.filter((s) => !s.includes('*')))
 
@@ -61,7 +61,7 @@ export async function startPartialUrlSearch({ url, pathnamePattern }) {
     })
 
     for (const searchParam of importantSearchParamSet.keys()) {
-      requiredSearchParams[searchParam] = undefined
+      requiredSearchParams[searchParam] = null
     }
 
     if (!targetHostSettings?.isHashRequired) {
@@ -110,6 +110,10 @@ export async function startPartialUrlSearch({ url, pathnamePattern }) {
       isUrlMatchToPartialUrlSearch: (testUrl) => {
         const oUrl = new URL(testUrl)
 
+        // console.log('oUrl.hostname', oUrl.hostname, requiredHostname, isHostnameMatchForSearch(oUrl.hostname, requiredHostname))
+        // console.log('oUrl.pathname', oUrl.pathname, requiredPathname, isPathnameMatchForSearch(oUrl.pathname, requiredPathname))
+        // console.log('oUrl.searchParams', oUrl.searchParams, requiredSearchParams, isSearchParamListMatchForPartialSearch(oUrl.searchParams, requiredSearchParams))
+
         return isHostnameMatchForSearch(oUrl.hostname, requiredHostname)
           && isPathnameMatchForSearch(oUrl.pathname, requiredPathname)
           && isSearchParamListMatchForPartialSearch(oUrl.searchParams, requiredSearchParams)
@@ -117,6 +121,7 @@ export async function startPartialUrlSearch({ url, pathnamePattern }) {
     }
     // eslint-disable-next-line no-unused-vars
   } catch (_e) {
+    console.log('startPartialUrlSearch error', _e)
     return {
       isSearchAvailable: false,
     }

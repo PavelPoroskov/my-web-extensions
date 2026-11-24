@@ -20,7 +20,6 @@ export async function getAuthorBookmarkList({ url, pathnamePattern }) {
   }
 
   const nodeListForSubstring = await chrome.bookmarks.search(urlForSearch);
-
   const bookmarkList = nodeListForSubstring
     .filter(({ url }) => !!url && isUrlMatchToPartialUrlSearch(url))
   const listWithParent = await addFieldsToBookmarkList(bookmarkList)
