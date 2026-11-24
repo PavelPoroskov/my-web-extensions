@@ -1,0 +1,6 @@
+
+current url https://fedoramagazine.org/
+bug1) showed results for https://fedoramagazine.org/s=123
+bug2) showed 2 times
+  direct link for https://fedoramagazine.org/ news
+  partial link for https://fedoramagazine.org/ news #top
