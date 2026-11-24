@@ -1,6 +1,6 @@
 import {
   getPartialBookmarkList,
-} from '../bookmark-list-api/bookmark-list-partial.js'
+} from '../bookmark-search/bookmark-list-partial.js'
 import {
   getAuthorUrlFromPostUrl,
   getMatchedGetAuthor,

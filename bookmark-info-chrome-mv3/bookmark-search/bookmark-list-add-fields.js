@@ -2,9 +2,7 @@ import {
   memo,
 } from '../api-mid/index.js'
 import {
-  getTitleDetails
-} from '../folder-api/folder-title-directives.js'
-import {
+  getTitleDetails,
   getDatedTemplate,
   isDatedFolderTitle,
   isVisitedDatedTemplate,
@@ -12,15 +10,10 @@ import {
 import {
   folderCreator,
 } from '../folder-creator-api/folderCreator.js';
-import { getBookmarkNodeList } from './bookmark-list-nodes.js'
-
-const getParentIdList = (bookmarkList = []) => {
-  const parentIdList = bookmarkList
-    .map(({ parentId }) => parentId)
-    .filter(Boolean)
-
-  return Array.from(new Set(parentIdList))
-}
+import {
+  getBookmarkNodeList,
+  getParentIdList,
+} from './bookmark-list-nodes.js'
 
 const getFullPath = (id) => {
   const path = [];

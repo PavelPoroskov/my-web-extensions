@@ -27,7 +27,7 @@ import {
 import {
   getDirectBookmarkList,
   getPartialBookmarkList,
-} from '../bookmark-list-api/index.js';
+} from '../bookmark-search/index.js';
 import { initExtension } from './init-extension.js'
 
 const logUTB = makeLogFunction({ module: 'updateTab.js' })

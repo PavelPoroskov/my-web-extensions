@@ -35,10 +35,17 @@ export async function searchBookmarksForUrl(url) {
   return bookmarkList
 }
 
+export const getParentIdList = (bookmarkList = []) => {
+  const parentIdList = bookmarkList
+    .map(({ parentId }) => parentId)
+    .filter(Boolean)
+
+  return Array.from(new Set(parentIdList))
+}
+
 async function addBookmarkParentInfo(bookmarkList) {
-  const parentIdList = bookmarkList.map(({ parentId }) => parentId).filter(Boolean)
-  const uniqueParentIdList = Array.from(new Set(parentIdList))
-  const parentFolderList = await getBookmarkNodeList(uniqueParentIdList)
+  const parentIdList = getParentIdList(bookmarkList)
+  const parentFolderList = await getBookmarkNodeList(parentIdList)
 
   const parentMap = Object.fromEntries(
     parentFolderList

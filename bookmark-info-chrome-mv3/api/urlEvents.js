@@ -6,7 +6,7 @@ import {
 } from '../api-mid/index.js'
 import {
   getBookmarkListWithParent,
-} from '../bookmark-list-api/bookmark-list-nodes.js';
+} from '../bookmark-search/bookmark-list-nodes.js';
 import {
   removeQueryParamsIfTarget,
 } from '../url-api/index.js'
