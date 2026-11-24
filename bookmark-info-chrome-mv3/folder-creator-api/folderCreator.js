@@ -29,14 +29,8 @@ import {
 } from './folder-place.js';
 import {
   findFolderMultiWay,
+  getFolderInBar,
 } from './find-folder.js';
-
-export async function findChildFolderWithExactTitle({ title, parentId }) {
-  const nodeList = await chrome.bookmarks.search({ title });
-  const foundItem = nodeList.find((node) => !node.url && node.parentId == parentId)
-
-  return foundItem
-}
 
 class FolderCreator {
   mapTitleToInfo = {}
@@ -82,9 +76,7 @@ class FolderCreator {
 
   async provideFolderInBar(title) {
     const onlyTitle = getTitleDetails(title).onlyTitle
-    let folder
-
-    folder = await findChildFolderWithExactTitle({ title: onlyTitle, parentId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
+    let folder = await getFolderInBar(onlyTitle)
 
     if (!folder) {
       folder = await this.createFolderInParent({
@@ -202,7 +194,6 @@ class FolderCreator {
     } = getTitleDetails(title)
 
     if (folderInfo.folderType === 'top folder') {
-
       folder = await this.provideFolderInBar(title)
     }
 

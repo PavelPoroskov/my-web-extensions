@@ -12,7 +12,7 @@ import {
 } from './traverseFolder.js'
 import {
   findChildFolder,
-} from './folder-directives.js'
+} from '../folder-creator-api/find-folder.js'
 
 const logMF = makeLogFunction({ module: 'moveFolders.js' })
 

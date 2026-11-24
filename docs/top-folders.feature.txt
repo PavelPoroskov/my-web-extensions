@@ -36,7 +36,7 @@ maybe issue with chrome itself
     link is shown two times: as direct link (wo #top) and as partial link (w #top)
 +6) author links show directives #top
 
-6) new link added to Others/Compare #top and not shown
++7) new link added to Others/Compare #top and not shown
   ff
     add bookmark from user input: Issue
     add bookmark from recent list: Ok

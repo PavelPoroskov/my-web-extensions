@@ -11,7 +11,7 @@ const logModuleList = [
   // 'commands.controller',
   // 'contextMenu.controller',
   // 'extensionSettings.js',
-  // 'find-folder.js',
+  'find-folder.js',
   // 'folder-create.js',
   // 'folder-ignore.js',
   // 'folderCreator.js',

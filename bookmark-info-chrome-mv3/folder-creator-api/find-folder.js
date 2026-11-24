@@ -7,19 +7,13 @@ import {
   trimLow,
   trimLowSingular,
   trimTitle,
+  getTitleDetails,
 } from '../folder-api/index.js';
 import {
   makeLogFunction,
 } from '../api-low/index.js';
 
 const logFF = makeLogFunction({ module: 'find-folder.js' })
-
-async function findFolderWithExactTitle(title) {
-  const nodeList = await chrome.bookmarks.search({ title });
-  const foundItem = nodeList.find((node) => !node.url)
-
-  return foundItem
-}
 
 async function findByTitle({ title, normalizeFn }) {
   let foundItem
@@ -173,19 +167,69 @@ async function findFolderInSubtree({ title, parentId }) {
   return foundItem
 }
 
+// async function findFolderWithExactTitle(title) {
+//   const nodeList = await chrome.bookmarks.search({ title });
+//   const foundItem = nodeList.find((node) => !node.url)
+
+//   return foundItem
+// }
+
+export async function findChildFolder({ title, parentId }) {
+  const onlyTitle = getTitleDetails(title).onlyTitle
+  const isTitleMatch = makeIsTitleMatch({ title: onlyTitle, normalizeFn: normalizeTitle })
+
+  // const nodeList = await chrome.bookmarks.getChildren(parentId)
+  // const foundItem = nodeList.find((node) => !node.url && isTitleMatch(node.title))
+
+  const nodeList = await chrome.bookmarks.search(onlyTitle);
+  const foundItem = nodeList.find((node) => !node.url && node.parentId == parentId && isTitleMatch(node.title))
+
+  return foundItem
+}
+
+export async function getFolderInOthers(title) {
+  const onlyTitle = getTitleDetails(title).onlyTitle
+
+  const folder = await findChildFolder({ title: onlyTitle, parentId: rootFolders.OTHER_BOOKMARKS_FOLDER_ID })
+
+  return folder
+}
+
+// async function findChildFolderWithExactTitle({ title, parentId }) {
+//   const nodeList = await chrome.bookmarks.search({ title });
+//   const foundItem = nodeList.find((node) => !node.url && node.parentId == parentId)
+
+//   return foundItem
+// }
+
+export async function getFolderInBar(title) {
+  const onlyTitle = getTitleDetails(title).onlyTitle
+
+  const folder = await findChildFolder({ title: onlyTitle, parentId: rootFolders.BOOKMARKS_BAR_FOLDER_ID })
+
+  return folder
+}
+
 export async function findFolderMultiWay(title) {
   logFF('findFolder 00 title', title)
   let foundItem
+
+  foundItem = await getFolderInOthers(title)
+  logFF('findFolder 11 in Others', foundItem)
+  if (foundItem && (foundItem.title.endsWith(' #top') || foundItem.title.includes(' #top '))) {
+    foundItem = await getFolderInBar(title)
+    logFF('findFolder 11 in Bar', foundItem)
+  }
 
   if (!foundItem) {
     foundItem = await findTitleNormalized(title)
     logFF('findTitleNormalized -> ', foundItem)
   }
 
-  if (!foundItem) {
-    foundItem = await findFolderWithExactTitle(title)
-    logFF('findFolderWithExactTitle -> ', foundItem)
-  }
+  // if (!foundItem) {
+  //   foundItem = await findFolderWithExactTitle(title)
+  //   logFF('findFolderWithExactTitle -> ', foundItem)
+  // }
 
   if (!foundItem) {
     foundItem = await findTitleEndsWithJS(title)
