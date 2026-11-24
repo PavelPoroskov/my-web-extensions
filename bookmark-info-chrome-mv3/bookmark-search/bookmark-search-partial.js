@@ -13,12 +13,7 @@ import {
 
 const logBLP = makeLogFunction({ module: 'bookmark-list-partial.js' })
 
-// TODO clear logic
-//  showPartialBookmarks(
-//    const bookmarkList = await getPartialBookmarkList ({ url, exactBkmIdList })
-//  showAuthorBookmarksStep2(
-//    getPartialBookmarkList({ url: cleanedAuthorUrl, pathnamePattern: matchedGetAuthor?.authorPattern })
-export async function getPartialBookmarkList({ url, exactBkmIdList = [], pathnamePattern }) {
+export async function getPartialBookmarkList({ url, exactBkmIdList = [] }) {
   // 1 < pathname.length : it is not root path
   //    for https://www.youtube.com/watch?v=qqqqq other conditions than 1 < pathname.length
   // urlForSearch !== url : original url has search params, ending /, index[.xxxx]
@@ -28,25 +23,20 @@ export async function getPartialBookmarkList({ url, exactBkmIdList = [], pathnam
     isSearchAvailable,
     urlForSearch,
     isUrlMatchToPartialUrlSearch,
-  } = await startPartialUrlSearch({ url, pathnamePattern })
+  } = await startPartialUrlSearch({ url })
   logBLP('getPartialBookmarkList () 22 startPartialUrlSearch', { isSearchAvailable, urlForSearch })
 
   if (!isSearchAvailable) {
     return []
   }
 
-  const bkmListForSubstring = await chrome.bookmarks.search(urlForSearch);
-  logBLP('getPartialBookmarkList () 33 search(normalizedUrl)', bkmListForSubstring.length, bkmListForSubstring)
+  const nodeListForSubstring = await chrome.bookmarks.search(urlForSearch);
+  logBLP('getPartialBookmarkList () 33 search(normalizedUrl)', nodeListForSubstring.length, nodeListForSubstring)
 
   const yetSet = new Set(exactBkmIdList)
-  const partialBookmarkList = []
-  bkmListForSubstring.forEach((bkm) => {
-    if (bkm.url && isUrlMatchToPartialUrlSearch(bkm.url) && !yetSet.has(bkm.id)) {
-      partialBookmarkList.push(bkm)
-    }
-  })
-
-  const listWithParent = await addFieldsToBookmarkList(partialBookmarkList)
+  const bookmarkList = nodeListForSubstring
+    .filter((node) => !!node.url && !yetSet.has(node.id) && isUrlMatchToPartialUrlSearch(node.url))
+  const listWithParent = await addFieldsToBookmarkList(bookmarkList)
 
   return listWithParent
     .filter(({ parentTitle }) => !(parentTitle.endsWith(' #top') || parentTitle.includes(' #top ')))

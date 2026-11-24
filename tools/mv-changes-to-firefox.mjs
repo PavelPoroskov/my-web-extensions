@@ -59,6 +59,7 @@ await createFileForFirefox(
     'folder-creator-api/index.js',
 
     'bookmark-search/bookmark-search-add-fields.js',
+    'bookmark-search/bookmark-search-author.js',
     'bookmark-search/bookmark-search-direct.js',
     'bookmark-search/bookmark-search-partial.js',
     'bookmark-search/index.js',

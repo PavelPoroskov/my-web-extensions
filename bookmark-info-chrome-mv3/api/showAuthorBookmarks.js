@@ -1,6 +1,6 @@
 import {
-  getPartialBookmarkList,
-} from '../bookmark-search/bookmark-search-partial.js'
+  getAuthorBookmarkList,
+} from '../bookmark-search/index.js'
 import {
   getAuthorUrlFromPostUrl,
   getMatchedGetAuthor,
@@ -25,7 +25,7 @@ export async function showAuthorBookmarksStep2({ tabId, url, authorUrl }) {
     let cleanedAuthorUrl = removeHashAndSearchParams(authorUrl);
     const matchedGetAuthor = getMatchedGetAuthor(url)
 
-    authorBookmarkList = await getPartialBookmarkList({
+    authorBookmarkList = await getAuthorBookmarkList({
       url: cleanedAuthorUrl,
       pathnamePattern: matchedGetAuthor?.authorPattern,
     })
